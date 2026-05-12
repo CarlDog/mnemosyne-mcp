@@ -56,3 +56,13 @@ export async function getCurrentStoryId(): Promise<string | undefined> {
   const cfg = await readConfig();
   return cfg.current_story_id;
 }
+
+export async function requireCurrentStoryId(): Promise<string> {
+  const id = await getCurrentStoryId();
+  if (!id) {
+    throw new Error(
+      "No active story. Call mnemo_story_use to set one before using this tool.",
+    );
+  }
+  return id;
+}

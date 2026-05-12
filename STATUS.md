@@ -1,12 +1,13 @@
 # Status
 
-**Last updated:** 2026-05-11 (Phase A landed; Phase B next)
+**Last updated:** 2026-05-11 (Phase B landed; Phase C next)
 
 ## Phase
 
-**v0 build, Phase A complete.** Story management surface live and
-tested against real OC. Next: Phase B (entities — `save_entity` +
-`recall`).
+**v0 build, Phase B complete.** Story management + entity management
+surfaces live and tested against real OC (15/15 tests pass). Next:
+Phase C (Ollama provider + `mnemo_continue` with v2 prompt block
+ordering preserved).
 
 ## Done
 
@@ -17,6 +18,28 @@ tested against real OC. Next: Phase B (entities — `save_entity` +
   pre-commit hooks (gitleaks + PII + author identity), `.gitattributes`.
   Initial commit `4e573ed`. Public repo at
   https://github.com/CarlDog/mnemosyne-mcp.
+- **Phase B shipped** — entity management:
+  - `src/entities.ts` — `EntityType` enum (`character | location | rule |
+    style | scene | lore | worldbuilding`), content format
+    (`[Type] Name\n\n<body>`), parser, `saveEntity` (overwrite by
+    type+name with explicit-pin honoring), `recall` (project-scoped
+    semantic search with type filter and client-side `slice(0, limit)`
+    to enforce hard cap past OC's pinned-always-surface bias).
+  - `src/tools/entities.ts` — `mnemo_save_entity` and `mnemo_recall`
+    tool registrations. Both require an active story (call
+    `mnemo_story_use` first).
+  - `OcClient` extended with `memoryUpdate` and `memoryPin`.
+  - `requireCurrentStoryId()` helper in `src/config.ts` for tools that
+    need an active story.
+  - `tests/entities.test.ts` — 11 tests (3 pure, 8 integration). All 15
+    suite tests now pass against real OC in ~10s.
+
+- **OpenChronicle docs note** (separate repo): added `project_delete`
+  MCP tool / API surface to `docs/V3_PLAN.md` "Post-cutover follow-ups"
+  with a recommended shape (hard-delete + `confirm:bool` flag, matching
+  `memory_delete`'s no-soft-delete posture). OC commit `34b3a5b2`,
+  pushed.
+
 - **Phase A shipped** — story management:
   - `src/oc-client.ts` — MCP client wrapper around OpenChronicle's HTTP
     MCP. Surfaces `project_create`, `project_list`, `memory_save`,
@@ -94,11 +117,11 @@ tested against real OC. Next: Phase B (entities — `save_entity` +
 
 - **Phase A — Foundation** ✅ shipped — OC MCP client wrapper, env
   validation, local config helpers, story marker logic, `story_list` +
-  `story_use` tools. Smoke test passing.
-- **Phase B — Entities** (next): `save_entity` + `recall`. Tests: save
-  several entity types, recall by query and by type. Commit.
-- **Phase C — Generation**: Ollama provider, prompt assembly with v2
-  block ordering documented in code, `mnemo_continue` (auto-save +
+  `story_use` tools.
+- **Phase B — Entities** ✅ shipped — `save_entity` + `recall` with
+  overwrite-by-(type,name) and client-side hard-cap slicing.
+- **Phase C — Generation** (next): Ollama provider, prompt assembly with
+  v2 block ordering documented in code, `mnemo_continue` (auto-save +
   optional validation pass). Tests: end-to-end story turn. Commit.
   Tag `v0.1.0` on the way out.
 
