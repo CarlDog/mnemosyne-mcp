@@ -1,16 +1,31 @@
 # Status
 
-**Last updated:** 2026-05-11 (v0.1.1 — quality-of-life patches from real-use testing)
+**Last updated:** 2026-05-11 (v0.1.2 — validator + prompt-precedence fixes from v0.1.1 testing)
 
 ## Phase
 
-**v0.1.1 shipped.** Three patches from the v0.1.0 dogfooding session:
-leading-whitespace strip on Ollama output (mythomax-l2 was prefixing
-responses with a stray space), validator prompt restructured to force
-quote-and-match analysis (the v0.1.0 validator hallucinated objections
-because it could "evaluate abstractly"), and a new `mnemo_delete_entity`
-tool (workaround was overwrite-by-name, but real workflow is "this
-scene was bad, remove it before continuing"). 30/30 tests pass.
+**v0.1.2 shipped.** Three more patches from the v0.1.1 dogfooding
+session, all targeting the rule-following gaps surfaced by the
+Dovecoast smoke test against `nous-hermes2-mixtral` + `phi4:14b`:
+
+1. Validator prompt restructured into a two-step process — enumerate
+   each distinct constraint first, then check each independently. The
+   v0.1.1 validator caught one constraint per rule and stopped, missing
+   structurally identical violations and missing entire constraint
+   axes (e.g., catching POV but missing tense in a compound rule).
+2. Rule-precedence statement inserted between the mode directive and
+   the constraint blocks. The mode directives prime narrative-present
+   prose ("Narrate actions, describe the environment..."), and even
+   instruction-tuned models followed the mode and the rules awkwardly.
+   Explicit precedence fixes that.
+3. `mnemo_validate(content)` standalone tool. Counterpart to
+   `mnemo_continue`'s `validate=true`; lets the user (or the host LLM)
+   feed arbitrary text through the validator without regenerating.
+   Splits "did the generator violate?" from "did the validator catch
+   it?" cleanly. Plus `scripts/dump-validation.mjs` companion for
+   command-line A/B work.
+
+34/34 tests pass.
 
 ## Done
 
@@ -21,6 +36,36 @@ scene was bad, remove it before continuing"). 30/30 tests pass.
   pre-commit hooks (gitleaks + PII + author identity), `.gitattributes`.
   Initial commit `4e573ed`. Public repo at
   https://github.com/CarlDog/mnemosyne-mcp.
+- **v0.1.2 shipped** — three patches from v0.1.1 dogfooding:
+  - **Validator prompt: enumerate constraints first.** Two-step
+    SYSTEM_PROMPT in `src/validator.ts`. Step 1 forces the LLM to
+    decompose compound rules (e.g., "third-person past tense from
+    Aria's perspective" = three constraints: third-person, past tense,
+    Aria's perspective only) into atomic constraints. Step 2 walks
+    each constraint through the new content independently. Fixes the
+    v0.1.1 failure where the validator caught one constraint per
+    rule and missed the rest.
+  - **Rule-precedence statement.** In `src/prompt.ts`'s
+    `buildSystemPrompt`, a single sentence inserted between the mode
+    directive and the RULES block when the story has rules or style
+    entries. States the constraints below are absolute and override
+    narration conventions implied by the mode. Fixes the
+    "even mixtral defaulted to present tense because the director
+    directive's verbs ('narrate', 'describe', 'advance') primed
+    narrative-present" issue from v0.1.1 testing.
+  - **`mnemo_validate(content)`** standalone tool —
+    `src/tools/validate.ts`. Pulls the active story's
+    rules / style / characters / locations and runs the validator LLM
+    against the supplied content. Returns the same `ValidationReport`
+    shape as `mnemo_continue`'s `validate=true`. Was deferred in the
+    v0 design as a "later if needed" tool; v0.1.1 testing made it
+    necessary for diagnostic A/B work.
+  - `scripts/dump-validation.mjs` companion to the existing
+    `dump-prompt.mjs`. Reads content from a file and runs the
+    validation pass against a story id from the command line. Useful
+    for A/B-ing validator prompts and models without going through
+    Claude Desktop.
+
 - **v0.1.1 shipped** — three patches from v0.1.0 dogfooding:
   - **Leading whitespace strip** in `OllamaProvider.generate()` —
     `replace(/^\s+/, "")` on the response. mythomax-l2 (and likely

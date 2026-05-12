@@ -79,10 +79,13 @@ v0 surface:
   validate?) — pull context from OC, generate the next beat via the
   generator LLM, auto-save the result as a scene entity. Mode defaults
   to 'director'. With validate=true, runs an LLM second pass and
-  attaches a verdict (issues + summary) to the response.`;
+  attaches a verdict (issues + summary) to the response.
+- mnemo_validate(content) — standalone validation pass over arbitrary
+  content (hand-written prose, previously-saved beats being re-audited).
+  Same ValidationReport shape as mnemo_continue's validate=true mode.`;
 
 const server = new McpServer(
-  { name: "mnemosyne-mcp", version: "0.1.1" },
+  { name: "mnemosyne-mcp", version: "0.1.2" },
   { instructions: INSTRUCTIONS },
 );
 

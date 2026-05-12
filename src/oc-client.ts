@@ -75,7 +75,7 @@ export class OcClient {
 
   constructor(private readonly url: URL) {
     this.client = new Client(
-      { name: "mnemosyne-mcp", version: "0.1.1" },
+      { name: "mnemosyne-mcp", version: "0.1.2" },
       { capabilities: {} },
     );
   }
