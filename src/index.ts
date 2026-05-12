@@ -38,11 +38,16 @@ Mnemosyne owns narrative logic; OC owns persistent memory. Each Mnemosyne
 story is one OC project bearing a Mnemosyne story marker memory; other
 OC projects are not visible through this MCP.
 
-Phase A surface (story management):
+v0 surface so far:
 - mnemo_story_list — list Mnemosyne stories
 - mnemo_story_use(name_or_id, create_if_missing?) — set active story
+- mnemo_save_entity(type, name, content, pinned?, extra_tags?) — write a
+  character/location/rule/style/scene/lore/worldbuilding entry to the
+  active story. Overwrites by (type, name).
+- mnemo_recall(query?, type?, limit?) — semantic recall over the active
+  story's entities.
 
-Phase B (entities) and Phase C (continuation) tools to follow.`;
+Continuation tool (Phase C) to follow.`;
 
 const server = new McpServer(
   { name: "mnemosyne-mcp", version: "0.0.1" },

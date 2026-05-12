@@ -1,9 +1,10 @@
 // MCP client wrapper around OpenChronicle (OC). OC v3 is a remote HTTP MCP
 // server — Mnemosyne is one of its clients, not embedded into it.
 //
-// Phase A surfaces only the OC tools we need for story management:
-// project_create, project_list, memory_save, memory_search.
-// Phase B will add memory_list, memory_get, memory_update, memory_delete.
+// Surfaces only the OC tools Mnemosyne actually uses. We add wrappers as
+// new phases need them — three similar lines is better than a premature
+// abstraction. Phase A: project_create, project_list, memory_save,
+// memory_search. Phase B adds: memory_update, memory_pin.
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
@@ -154,5 +155,20 @@ export class OcClient {
     if (opts.tags) args.tags = opts.tags;
     if (opts.topK !== undefined) args.top_k = opts.topK;
     return this.callTool<OcMemory[]>("memory_search", args);
+  }
+
+  async memoryUpdate(opts: {
+    memoryId: string;
+    content?: string;
+    tags?: string[];
+  }): Promise<OcMemory> {
+    const args: Record<string, unknown> = { memory_id: opts.memoryId };
+    if (opts.content !== undefined) args.content = opts.content;
+    if (opts.tags !== undefined) args.tags = opts.tags;
+    return this.callTool<OcMemory>("memory_update", args);
+  }
+
+  async memoryPin(memoryId: string, pinned = true): Promise<void> {
+    await this.callTool("memory_pin", { memory_id: memoryId, pinned });
   }
 }
