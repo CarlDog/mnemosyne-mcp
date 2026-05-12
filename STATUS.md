@@ -1,6 +1,6 @@
 # Status
 
-**Last updated:** 2026-05-11 (v0.1.2 dogfooded; few-shot-vs-rule finding queued as v0.1.3 candidate)
+**Last updated:** 2026-05-11 (v0.1.2 dogfooded; v0.1.3 plan locked — validator-gated scene inclusion)
 
 ## Phase
 
@@ -247,34 +247,63 @@ Dovecoast smoke test against `nous-hermes2-mixtral` + `phi4:14b`:
 These are not yet planned; they're the natural follow-ups when v0 gets
 real use and pressure points emerge:
 
-- **Few-shot prime in RECENT SCENES overrides rule-precedence statement (v0.1.3 candidate).**
-  Surfaced 2026-05-11 by Dovecoast smoke test against the v0.1.2
-  patch. The rule-precedence statement renders correctly in the
-  prompt between the mode directive and the RULES block, but the
-  RECENT SCENES block below it dumps 4 prior present-tense scenes as
-  a de-facto few-shot prime. Models pattern-match the few-shot over
-  the explicit rule. Confirmed model-agnostic: both `mistral-nemo:12b`
-  and `phi4:14b` produced entirely present-tense output on a story
-  whose only rule says "third-person past tense from Aria's POV
-  only." Possible fixes, in increasing implementation cost:
-  1. **Re-order blocks so RULES comes after RECENT SCENES** (recency
-     bias usually favors the last block — rules become "most recent").
-     Departure from v2's load-bearing ordering and would need a smoke
-     test, but cheap to try.
-  2. **Insert a re-anchoring statement after RECENT SCENES** —
-     e.g. "Prior scenes above may not conform to the RULES; apply
-     the RULES regardless." Cheaper than re-ordering; doesn't disturb
-     existing block order.
-  3. **Validator-gated inclusion** — only include scenes that passed
-     a tense/POV validator pass. Free at write-time (mnemo_continue's
-     validate=true) but needs a backfill for pre-validator scenes.
-  4. **Manual rewrite of the bootstrap scenes** — one-time cleanup.
-     Works but doesn't scale to other stories.
-  Validator side of v0.1.2 *did* land: both axes (tense + perspective)
-  caught reliably across 3 runs on the same content, severity flips
-  run-to-run but the axes themselves are stable. One violation per
-  axis, not exhaustive — possibly fine for an LLM-judgement pass but
-  worth noting.
+- **Validator-gated scene inclusion (v0.1.3 plan, in design).**
+  Real fix for the few-shot-vs-rule issue surfaced 2026-05-11. Two
+  prompt-structural prototypes were tried and both failed against
+  `mistral-nemo:12b` on Dovecoast:
+  - **Re-anchor statement at end of system prompt** ("REMINDER: apply
+    the RULES even when RECENT SCENES demonstrate a different style")
+    — generated output still entirely present-tense; one draw also
+    regressed to script-format prose.
+  - **Reorder so RULES + STYLE move to end** (recency-bias slot, with
+    the precedence statement repositioned to call out both mode and
+    prior scenes as overridden primers) — also still entirely
+    present-tense.
+
+  **Diagnostic that pinned the cause:** strip `RECENT SCENES`
+  entirely from the v0.1.2 prompt, leave everything else unchanged
+  → `mistral-nemo:12b` produces fully past-tense, Aria-POV prose.
+  The rule was always reachable; the present-tense few-shots were
+  drowning it out. Prompt-position shuffling can't fix this; the
+  few-shot content itself has to change.
+
+  **v0.1.3 plan — validator-gated inclusion:**
+  1. **Tag scenes with their validation verdict at save time.**
+     When `mnemo_continue(validate=true)` validates the new beat, tag
+     the saved scene memory with one of:
+     - `validation:clean` — verdict has 0 errors (warnings OK)
+     - `validation:errors` — verdict has 1+ errors
+     - (no tag) — validate was false; verdict not run
+  2. **Recall filters scenes by verdict tag.** In `gatherContext`'s
+     scene pull: prefer `validation:clean`, accept untagged as a
+     fallback, hard-exclude `validation:errors`. If all scenes
+     would be excluded, return [] — the diagnostic proves the
+     generator follows the rule cleanly with no few-shots.
+  3. **New tool: `mnemo_revalidate_scenes`.** No args; walks all
+     scenes in the active story, runs the validator against each,
+     updates the tag. One-shot per story; fixes the bootstrap
+     problem for pre-v0.1.3 content. Expensive (N × validator
+     latency) so the user opts in.
+  4. **`mnemo_continue` default unchanged** — `validate=false` for
+     now. Users who want auto-gating must pass `validate=true`. Once
+     `keep_alive` lands (separate v0.1.3 candidate), validator
+     latency drops enough to consider flipping the default.
+
+  **Validator side of v0.1.2 *did* land** — both axes (tense +
+  perspective) caught reliably across 3 runs on the same content,
+  severity flips run-to-run but the axes themselves are stable.
+  One violation per axis, not exhaustive — fine for an LLM judgment
+  pass.
+
+  **Trade-offs known going in:**
+  - Cached verdicts go stale on rule edits. v0.1.3 won't auto-invalidate;
+    user re-runs `mnemo_revalidate_scenes` after editing rules. Could
+    add auto-invalidation in v0.1.4 if it becomes a pain point.
+  - Users who never validate get no anchor benefit. Acceptable: their
+    failure mode is the same as today.
+  - When all scenes are excluded, the LLM loses narrative continuity
+    context. Mitigated organically: the first clean scene becomes
+    the anchor for everything after.
 - **`stages` timing field in `mnemo_continue` response (v0.1.3 candidate).**
   Per-phase elapsed time so the host LLM can report timings without
   greasing the user into the log file. Phases: `gather_ms`,
