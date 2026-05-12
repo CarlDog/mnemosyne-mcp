@@ -9,8 +9,9 @@ into this file, MEMORY.md, or Serena memories — reference STATUS.md.
 
 ## Current Sprint
 
-See [STATUS.md](STATUS.md). Currently: scaffolded, no tools. Next phase
-is v0 tool surface design.
+See [STATUS.md](STATUS.md). Current: v0.1.2 shipped, v0.1.3 plan locked
+(validator-gated scene inclusion — fix for the few-shot-vs-rule
+diagnostic from the Dovecoast smoke test).
 
 ## Stack
 
@@ -21,10 +22,18 @@ is v0 tool surface design.
 
 ## Layout
 
-- `src/index.ts` — MCP server entry. Currently stub: empty server,
-  stdio transport. Tools land here (or in `src/tools/`) per the
-  refactor trigger described in plex-mcp's CLAUDE.md.
-- `src/log.ts` — structured stderr logger. Same pattern as plex-mcp.
+- `src/index.ts` — MCP server entry, env validation, tool registration.
+- `src/oc-client.ts` — Streamable HTTP MCP client wrapper for OC.
+- `src/config.ts` — local config (current story pointer, OS-appropriate
+  config dir).
+- `src/stories.ts`, `src/entities.ts`, `src/prompt.ts`, `src/validator.ts`,
+  `src/llm.ts` — domain logic.
+- `src/tools/*.ts` — tool registrations (one file per tool surface).
+- `src/log.ts` — structured stderr logger.
+- `tests/` — vitest, real OC + real Ollama (env-gated).
+- `scripts/dump-prompt.mjs`, `scripts/dump-validation.mjs` —
+  command-line diagnostics. Used during v0.1.2 dogfooding to pin the
+  few-shot-vs-rule cause without going through Claude Desktop.
 - `docs/ARCHITECTURE.md` — locked architectural decisions. Read this
   first to understand project shape, state model, validation strategy,
   provider strategy, and build sequence.
