@@ -18,8 +18,12 @@ import type { ContextBundle } from "./prompt.js";
 
 export interface ValidationIssue {
   severity: "error" | "warning" | "info";
-  description: string;
-  rule?: string;
+  /** The name or first line of the rule that is being violated. */
+  rule: string;
+  /** Exact quote of the violating text, copied from the new content. */
+  violating_text: string;
+  /** One-sentence explanation of why this text violates the rule. */
+  explanation: string;
 }
 
 export interface ValidationReport {
@@ -30,17 +34,34 @@ export interface ValidationReport {
 const VALIDATOR_TEMPERATURE = 0.2;
 const VALIDATOR_MAX_TOKENS = 1024;
 
-const SYSTEM_PROMPT = `You are a story consistency checker. Evaluate new content against the established rules and entities provided in the user message. Identify contradictions, tone violations, and factual conflicts. Be precise — cite the specific rule or entity each issue conflicts with.
+// Quote-and-match prompt. The earlier (v0.1.0) prompt let the LLM "evaluate"
+// abstractly, which produced plausible-sounding but fabricated objections
+// (e.g., reporting "she" as a first-person pronoun violation). Forcing the
+// model to quote the specific violating text from the new content makes
+// hallucinated issues much harder — if it can't find a quote, the violation
+// can't go in the array.
+const SYSTEM_PROMPT = `You are a story consistency checker.
+
+For EACH RULE in the established context, walk through the new content and find specific text fragments that violate that rule. Quote the violating text directly — copy it from the new content character-for-character, do not paraphrase.
+
+A rule has been violated only if you can quote the specific words from the new content that break it. If you cannot find a direct quote, do NOT report a violation. Do not invent or generalize.
+
+Same logic applies for established characters and locations: if the new content describes them in a way that contradicts what the established context says, quote the contradicting text.
 
 Return ONLY valid JSON in this shape:
 {
   "issues": [
-    {"severity": "error" | "warning" | "info", "description": "...", "rule": "..."}
+    {
+      "severity": "error" | "warning" | "info",
+      "rule": "<name or first line of the violated rule (or character/location name)>",
+      "violating_text": "<exact quote from the new content>",
+      "explanation": "<one sentence: why this quote violates that rule>"
+    }
   ],
-  "summary": "brief overall assessment"
+  "summary": "<one-sentence overall assessment>"
 }
 
-If no issues, return {"issues": [], "summary": "..."}. Use "error" for hard contradictions, "warning" for likely-but-unconfirmed issues, "info" for stylistic notes.`;
+If no violations are found, return {"issues": [], "summary": "..."}. Use "error" for clear contradictions, "warning" for borderline cases, "info" for minor stylistic notes.`;
 
 function constraintsBlock(context: ContextBundle): string {
   const sections: string[] = [];

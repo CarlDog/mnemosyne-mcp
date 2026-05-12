@@ -190,6 +190,28 @@ export interface RecallArgs {
   limit?: number;
 }
 
+export interface DeleteEntityResult {
+  type: EntityType;
+  name: string;
+  memory_id: string;
+}
+
+export async function deleteEntity(
+  oc: OcClient,
+  storyId: string,
+  type: EntityType,
+  name: string,
+): Promise<DeleteEntityResult> {
+  const existing = await findExistingEntity(oc, storyId, type, name);
+  if (!existing) {
+    throw new Error(
+      `No ${type} named "${name}" in current story. Use mnemo_recall to see what's there.`,
+    );
+  }
+  await oc.memoryDelete(existing.id);
+  return { type, name, memory_id: existing.id };
+}
+
 export async function recall(
   oc: OcClient,
   storyId: string,

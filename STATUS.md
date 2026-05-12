@@ -1,13 +1,16 @@
 # Status
 
-**Last updated:** 2026-05-11 (v0.1.0 — feature-complete v0)
+**Last updated:** 2026-05-11 (v0.1.1 — quality-of-life patches from real-use testing)
 
 ## Phase
 
-**v0.1.0 shipped.** All five v0 tools live: `mnemo_story_list`,
-`mnemo_story_use`, `mnemo_save_entity`, `mnemo_recall`,
-`mnemo_continue` (with optional LLM validation pass). 28/28 tests
-pass against real OC + real Ollama. Tagged on the way out.
+**v0.1.1 shipped.** Three patches from the v0.1.0 dogfooding session:
+leading-whitespace strip on Ollama output (mythomax-l2 was prefixing
+responses with a stray space), validator prompt restructured to force
+quote-and-match analysis (the v0.1.0 validator hallucinated objections
+because it could "evaluate abstractly"), and a new `mnemo_delete_entity`
+tool (workaround was overwrite-by-name, but real workflow is "this
+scene was bad, remove it before continuing"). 30/30 tests pass.
 
 ## Done
 
@@ -18,6 +21,25 @@ pass against real OC + real Ollama. Tagged on the way out.
   pre-commit hooks (gitleaks + PII + author identity), `.gitattributes`.
   Initial commit `4e573ed`. Public repo at
   https://github.com/CarlDog/mnemosyne-mcp.
+- **v0.1.1 shipped** — three patches from v0.1.0 dogfooding:
+  - **Leading whitespace strip** in `OllamaProvider.generate()` —
+    `replace(/^\s+/, "")` on the response. mythomax-l2 (and likely
+    other roleplay finetunes) prefix responses with a stray space.
+  - **Validator prompt restructured** to force quote-and-match: each
+    issue must include a `rule` reference, a `violating_text` quote
+    pulled from the new content character-for-character, and an
+    `explanation` linking quote to rule. The v0.1.0 validator
+    fabricated a "she is first-person" objection because the prompt
+    let it evaluate abstractly; quote-and-match makes hallucinated
+    issues much harder (no quote, no issue). `ValidationIssue` shape
+    changed to `{severity, rule, violating_text, explanation}` —
+    breaking change for any caller that consumed v0.1.0's
+    `description` field.
+  - **`mnemo_delete_entity(type, name)`** tool. Same `(type, name)`
+    lookup as `save_entity`'s overwrite path. Throws when no match
+    exists. `OcClient` gains `memoryDelete` wrapper.
+  - 30/30 tests pass against real OC + real Ollama (~95s).
+
 - **Phase C-2 shipped** — validation pass:
   - `src/validator.ts` — `validateContent` builds a constraints block
     (RULES + STYLE + CHARACTERS + LOCATIONS), prompts the validator LLM
@@ -180,7 +202,7 @@ pass against real OC + real Ollama. Tagged on the way out.
 These are not yet planned; they're the natural follow-ups when v0 gets
 real use and pressure points emerge:
 
-- **Ollama warmup + extended keep-alive (v0.1.1 candidate).** First
+- **Ollama warmup + extended keep-alive (v0.1.2 candidate).** First
   `mnemo_continue` after Ollama idle pays a cold start while the model
   reloads into VRAM (Ollama unloads after default 5min idle). Two-part
   fix, both server-side; no client background process needed (that

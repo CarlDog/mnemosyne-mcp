@@ -4,7 +4,12 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { OcClient } from "../src/oc-client.js";
 import { createStory } from "../src/stories.js";
-import { parseEntityContent, recall, saveEntity } from "../src/entities.js";
+import {
+  deleteEntity,
+  parseEntityContent,
+  recall,
+  saveEntity,
+} from "../src/entities.js";
 
 describe("entities — pure", () => {
   it("parseEntityContent round-trips a well-formed entity", () => {
@@ -120,5 +125,31 @@ suite("Phase B — entities (real OC)", () => {
   it("recall respects limit", async () => {
     const limited = await recall(oc, storyId, { limit: 1 });
     expect(limited.length).toBe(1);
+  });
+
+  it("deletes an entity by (type, name); recall no longer returns it", async () => {
+    await saveEntity(oc, storyId, {
+      type: "lore",
+      name: "Throwaway lore",
+      body: "Will be deleted in the next test step.",
+    });
+    const beforeDelete = await recall(oc, storyId, { type: "lore" });
+    expect(beforeDelete.find((e) => e.name === "Throwaway lore")).toBeDefined();
+
+    const res = await deleteEntity(oc, storyId, "lore", "Throwaway lore");
+    expect(res.type).toBe("lore");
+    expect(res.name).toBe("Throwaway lore");
+    expect(res.memory_id).toBeTruthy();
+
+    const afterDelete = await recall(oc, storyId, { type: "lore" });
+    expect(
+      afterDelete.find((e) => e.name === "Throwaway lore"),
+    ).toBeUndefined();
+  });
+
+  it("deleteEntity throws when no match exists", async () => {
+    await expect(
+      deleteEntity(oc, storyId, "character", "Definitely Not Here"),
+    ).rejects.toThrow(/no character named/i);
   });
 });

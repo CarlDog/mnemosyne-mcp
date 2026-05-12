@@ -82,7 +82,7 @@ v0 surface:
   attaches a verdict (issues + summary) to the response.`;
 
 const server = new McpServer(
-  { name: "mnemosyne-mcp", version: "0.1.0" },
+  { name: "mnemosyne-mcp", version: "0.1.1" },
   { instructions: INSTRUCTIONS },
 );
 

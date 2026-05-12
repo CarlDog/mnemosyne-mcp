@@ -87,12 +87,17 @@ export class OllamaProvider implements LlmProvider {
         throw new Error("Ollama returned no message content");
       }
 
+      // Strip leading whitespace. Some models (notably HammerAI/mythomax-l2)
+      // prefix their responses with a stray space character; passing it
+      // through means scenes get saved as " Text..." which then trips
+      // downstream display + parsing in subtle ways.
+      const trimmed = content.replace(/^\s+/, "");
       log.info("ollama", "generate ok", {
         model,
         ms: Date.now() - start,
-        chars: content.length,
+        chars: trimmed.length,
       });
-      return content;
+      return trimmed;
     } catch (err) {
       log.error("ollama", "generate error", {
         model,
