@@ -2,14 +2,15 @@
 //
 // Flow:
 //   1. Pull context from OC (rules, style, characters, locations, scenes,
-//      lore, worldbuilding) — parallel per-type recalls, ranked by
+//      lore, worldbuilding) — sequential per-type recalls, ranked by
 //      relevance to the user's direction.
 //   2. Assemble the system prompt using v2's block ordering.
 //   3. Call the generator LLM (default: Ollama).
 //   4. Auto-save the result as a scene entity (name = ISO timestamp).
-//   5. Return the beat text plus its memory id.
-//
-// Validation pass arrives in a follow-up commit (Phase C-2).
+//   5. If validate=true, run an LLM second pass against rules / style /
+//      characters / locations and attach the verdict to the response.
+//      Save-first: the beat is persisted regardless of validation
+//      outcome; failures land in the response, not as exceptions.
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
@@ -18,6 +19,8 @@ import type { LlmProvider } from "../llm.js";
 import { buildSystemPrompt, gatherContext, MODES } from "../prompt.js";
 import { saveEntity } from "../entities.js";
 import { requireCurrentStoryId } from "../config.js";
+import { validateContent, type ValidationReport } from "../validator.js";
+import { log } from "../log.js";
 import { asText, withLogging } from "./helpers.js";
 
 const DEFAULT_MODE: (typeof MODES)[number] = "director";
@@ -26,13 +29,14 @@ export function registerContinueTool(
   server: McpServer,
   oc: OcClient,
   generator: LlmProvider,
+  validator: LlmProvider,
 ): void {
   server.registerTool(
     "mnemo_continue",
     {
       title: "Continue the Story",
       description:
-        "Generate the next beat of the active story. Pulls context from OpenChronicle (rules, style, characters, locations, recent scenes, lore, worldbuilding) using v2's load-bearing block ordering, calls the generator LLM, and auto-saves the result as a scene entity. Default mode is 'director' (LLM performs all characters and narrates).",
+        "Generate the next beat of the active story. Pulls context from OpenChronicle (rules, style, characters, locations, recent scenes, lore, worldbuilding) using v2's load-bearing block ordering, calls the generator LLM, and auto-saves the result as a scene entity. Default mode is 'director' (LLM performs all characters and narrates). With validate=true, runs an LLM second pass against rules / style / characters / locations and returns a verdict alongside the beat. The beat is saved regardless of validation outcome.",
       inputSchema: {
         direction: z
           .string()
@@ -65,6 +69,12 @@ export function registerContinueTool(
           .describe(
             "Override OLLAMA_GENERATOR_MODEL for this call. Useful for trying different models on the same context.",
           ),
+        validate: z
+          .boolean()
+          .optional()
+          .describe(
+            "Run an LLM validation pass after generation. Returns a verdict (issues + summary) alongside the beat. The beat is always saved first; validation results are advisory.",
+          ),
       },
     },
     withLogging(
@@ -75,6 +85,7 @@ export function registerContinueTool(
         max_tokens?: number;
         temperature?: number;
         model?: string;
+        validate?: boolean;
       }) => {
         const storyId = await requireCurrentStoryId();
         const mode = args.mode ?? DEFAULT_MODE;
@@ -97,6 +108,19 @@ export function registerContinueTool(
           body: beatText,
         });
 
+        let validation: ValidationReport | undefined;
+        let validationError: string | undefined;
+        if (args.validate) {
+          try {
+            validation = await validateContent(validator, context, beatText);
+          } catch (err) {
+            validationError = (err as Error).message;
+            log.warn("mnemo_continue", "validation pass failed", {
+              msg: validationError,
+            });
+          }
+        }
+
         return asText({
           beat_name: beatName,
           beat_text: beatText,
@@ -111,6 +135,10 @@ export function registerContinueTool(
             lore: context.lore.length,
             worldbuilding: context.worldbuilding.length,
           },
+          ...(validation !== undefined && { validation }),
+          ...(validationError !== undefined && {
+            validation_error: validationError,
+          }),
         });
       },
     ),

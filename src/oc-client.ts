@@ -42,8 +42,13 @@ export interface OcMemorySearchOptions {
   topK?: number;
 }
 
-const MAX_RATE_LIMIT_RETRIES = 2;
-const RATE_LIMIT_BACKOFF_MS = 1000;
+// OC v3's rate limit is 120 RPM per client IP (configurable via
+// OC_API_RATE_LIMIT_RPM on the OC side). Burst usage from legitimate
+// flows like gatherContext + a test suite running back-to-back saturates
+// the window. Exponential backoff: 1s, 2s, 4s, 8s, 16s (~31s total
+// max). The window itself is 60s, so 31s of backoff usually clears it.
+const MAX_RATE_LIMIT_RETRIES = 5;
+const RATE_LIMIT_BASE_BACKOFF_MS = 1000;
 
 // FastMCP wraps list-returning tools as { result: [...] } in their text
 // content payload, while dict-returning tools land unwrapped. Strip the
@@ -70,7 +75,7 @@ export class OcClient {
 
   constructor(private readonly url: URL) {
     this.client = new Client(
-      { name: "mnemosyne-mcp", version: "0.0.1" },
+      { name: "mnemosyne-mcp", version: "0.1.0" },
       { capabilities: {} },
     );
   }
@@ -122,13 +127,9 @@ export class OcClient {
       return unwrapResult<T>(JSON.parse(textBlock.text));
     } catch (err) {
       const msg = (err as Error).message;
-      // OC v3 has a per-window rate limiter that legitimate burst usage
-      // (e.g., gatherContext's 7 sequential reads, or several tests running
-      // back-to-back) can trip. Linear backoff: 1s, then 2s. Total worst
-      // case: ~3s of waiting before giving up.
       if (retriesLeft > 0 && /rate limit/i.test(msg)) {
         const attempt = MAX_RATE_LIMIT_RETRIES - retriesLeft + 1;
-        const delayMs = attempt * RATE_LIMIT_BACKOFF_MS;
+        const delayMs = RATE_LIMIT_BASE_BACKOFF_MS * 2 ** (attempt - 1);
         log.warn("oc-client", "rate limited; backing off", {
           tool: name,
           attempt,
