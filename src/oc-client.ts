@@ -75,7 +75,7 @@ export class OcClient {
 
   constructor(private readonly url: URL) {
     this.client = new Client(
-      { name: "mnemosyne-mcp", version: "0.1.0" },
+      { name: "mnemosyne-mcp", version: "0.1.1" },
       { capabilities: {} },
     );
   }
@@ -191,5 +191,9 @@ export class OcClient {
 
   async memoryPin(memoryId: string, pinned = true): Promise<void> {
     await this.callTool("memory_pin", { memory_id: memoryId, pinned });
+  }
+
+  async memoryDelete(memoryId: string): Promise<void> {
+    await this.callTool("memory_delete", { memory_id: memoryId });
   }
 }

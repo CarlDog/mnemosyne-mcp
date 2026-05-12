@@ -4,7 +4,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
-import { ENTITY_TYPES, recall, saveEntity } from "../entities.js";
+import { deleteEntity, ENTITY_TYPES, recall, saveEntity } from "../entities.js";
 import { requireCurrentStoryId } from "../config.js";
 import { asText, withLogging } from "./helpers.js";
 
@@ -59,6 +59,30 @@ export function registerEntityTools(server: McpServer, oc: OcClient): void {
           extraTags: args.extra_tags,
         });
         return asText(result);
+      },
+    ),
+  );
+
+  server.registerTool(
+    "mnemo_delete_entity",
+    {
+      title: "Delete Story Entity",
+      description:
+        "Delete an entity from the active story by (type, name). Throws if no entity matches. Useful for removing scenes that came out wrong before they pollute the context for the next mnemo_continue, or for retiring obsolete characters/locations/lore.",
+      inputSchema: {
+        type: z.enum(ENTITY_TYPES).describe(ENTITY_TYPE_DESCRIPTIONS),
+        name: z
+          .string()
+          .min(1)
+          .describe("Entity name. Same lookup rule as save_entity."),
+      },
+    },
+    withLogging(
+      "mnemo_delete_entity",
+      async (args: { type: (typeof ENTITY_TYPES)[number]; name: string }) => {
+        const storyId = await requireCurrentStoryId();
+        const result = await deleteEntity(oc, storyId, args.type, args.name);
+        return asText({ ...result, deleted: true });
       },
     ),
   );
