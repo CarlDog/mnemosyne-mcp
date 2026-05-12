@@ -37,3 +37,9 @@ venv/
 
 # Test output
 coverage/
+
+# Project-scoped Claude Code MCP config — bakes in absolute paths +
+# personal infrastructure URLs (NAS endpoint, etc.). Each developer
+# runs Claude Code from their own clone with their own OC instance,
+# so this is intentionally per-machine.
+.mcp.json
