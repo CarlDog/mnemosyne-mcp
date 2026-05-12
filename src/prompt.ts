@@ -1,0 +1,115 @@
+// System prompt assembly for mnemo_continue.
+//
+// LOAD-BEARING block ordering (do not reorder without a deliberate change):
+//   1. Mode directive (participant / director / audience)
+//   2. RULES — pinned rule entities
+//   3. STYLE — style guide entities
+//   4. CHARACTERS — character entities
+//   5. LOCATIONS — location entities
+//   6. RECENT SCENES — scene entities (relevance-ranked, not strict recency
+//      yet — see STATUS.md "Known Gaps" — OC's memory_search has no
+//      order_by parameter)
+//   7. LORE — lore entities
+//   8. WORLDBUILDING — worldbuilding entities
+//
+// Reference: docs/V2_RETROSPECTIVE.md §2.3. The v2 storytelling plugin
+// arrived at this order empirically through Phase 3's conversation mode
+// build-out; degrading gracefully when a story has sparse context (e.g.,
+// no characters defined yet) was the design driver.
+//
+// Empty blocks are omitted entirely so the prompt doesn't show "=== STYLE
+// ===" with nothing under it.
+
+import type { OcClient } from "./oc-client.js";
+import type { EntityType } from "./entities.js";
+import { recall } from "./entities.js";
+
+export const MODES = ["participant", "director", "audience"] as const;
+export type Mode = (typeof MODES)[number];
+
+const MODE_DIRECTIVES: Record<Mode, string> = {
+  participant:
+    "You are a character in this story. The user will tell you which character they are playing. Stay in character and respond naturally as their scene partner — perform other characters in the scene as supporting cast, but your primary voice is theirs.",
+  director:
+    "You are a scene director. The user will describe a scene setup or give direction. You perform ALL characters in the scene — give each their own voice, mannerisms, and dialogue. Narrate actions, describe the environment, and advance the scene based on the user's direction.",
+  audience:
+    "You are a narrator telling a story. The user is your audience. Write vivid, immersive narrative prose. Perform all characters with distinct voices. Advance the plot naturally. The user may offer light guidance but is primarily here to enjoy the story.",
+};
+
+// Per-type pull caps. Rules and style are typically small and important —
+// pull all (OC's pinned-always-surface bias gives us all pinned rules
+// regardless of these limits, but the cap matters for non-pinned). Other
+// types are capped to keep the system prompt from blowing up.
+const TYPE_LIMITS: Record<EntityType, number> = {
+  rule: 50,
+  style: 50,
+  character: 20,
+  location: 10,
+  scene: 5,
+  lore: 10,
+  worldbuilding: 10,
+};
+
+export interface ContextBundle {
+  rules: string[];
+  style: string[];
+  characters: string[];
+  locations: string[];
+  scenes: string[];
+  lore: string[];
+  worldbuilding: string[];
+}
+
+async function pullByType(
+  oc: OcClient,
+  storyId: string,
+  type: EntityType,
+  query: string,
+): Promise<string[]> {
+  const entities = await recall(oc, storyId, {
+    query,
+    type,
+    limit: TYPE_LIMITS[type],
+  });
+  return entities.map((e) => `${e.name}\n${e.body}`);
+}
+
+export async function gatherContext(
+  oc: OcClient,
+  storyId: string,
+  query: string,
+): Promise<ContextBundle> {
+  // Sequential per-type pulls. Parallel (Promise.all over 7 calls) trips
+  // OC v3's rate limiter under burst load — same gap that bit Phase A's
+  // listStories. The latency cost (~7 round trips × OC RTT) is dwarfed
+  // by LLM generation in the next step, so the simpler sequential form
+  // is the right v0 trade. Revisit if/when OC raises the rate-limit
+  // ceiling or exposes a bulk-search endpoint.
+  const rules = await pullByType(oc, storyId, "rule", query);
+  const style = await pullByType(oc, storyId, "style", query);
+  const characters = await pullByType(oc, storyId, "character", query);
+  const locations = await pullByType(oc, storyId, "location", query);
+  const scenes = await pullByType(oc, storyId, "scene", query);
+  const lore = await pullByType(oc, storyId, "lore", query);
+  const worldbuilding = await pullByType(oc, storyId, "worldbuilding", query);
+  return { rules, style, characters, locations, scenes, lore, worldbuilding };
+}
+
+function block(header: string, entries: string[]): string | null {
+  if (entries.length === 0) return null;
+  return `=== ${header} ===\n${entries.join("\n\n")}`;
+}
+
+export function buildSystemPrompt(mode: Mode, context: ContextBundle): string {
+  const parts: (string | null)[] = [
+    MODE_DIRECTIVES[mode],
+    block("RULES", context.rules),
+    block("STYLE", context.style),
+    block("CHARACTERS", context.characters),
+    block("LOCATIONS", context.locations),
+    block("RECENT SCENES", context.scenes),
+    block("LORE", context.lore),
+    block("WORLDBUILDING", context.worldbuilding),
+  ];
+  return parts.filter((p): p is string => p !== null).join("\n\n");
+}

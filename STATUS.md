@@ -1,13 +1,14 @@
 # Status
 
-**Last updated:** 2026-05-11 (Phase B landed; Phase C next)
+**Last updated:** 2026-05-11 (Phase C-1 landed; Phase C-2 next — adds validation pass)
 
 ## Phase
 
-**v0 build, Phase B complete.** Story management + entity management
-surfaces live and tested against real OC (15/15 tests pass). Next:
-Phase C (Ollama provider + `mnemo_continue` with v2 prompt block
-ordering preserved).
+**v0 build, Phase C-1 complete.** Generator LLM (Ollama), prompt
+assembler with v2 block ordering, and `mnemo_continue` (auto-save,
+no validation yet) live and end-to-end tested against real OC + real
+Ollama. 22/22 tests pass. Next: Phase C-2 (validation pass + tag
+v0.1.0).
 
 ## Done
 
@@ -18,6 +19,33 @@ ordering preserved).
   pre-commit hooks (gitleaks + PII + author identity), `.gitattributes`.
   Initial commit `4e573ed`. Public repo at
   https://github.com/CarlDog/mnemosyne-mcp.
+- **Phase C-1 shipped** — generator + prompt + continue:
+  - `src/llm.ts` — `LlmProvider` interface (one method, `generate`) and
+    `OllamaProvider` implementation. Plain `fetch` to `/api/chat`, no
+    SDK dep. 5-minute timeout via `AbortController`. Per-call `model`
+    override.
+  - `src/prompt.ts` — `gatherContext` pulls per-type entity lists from
+    OC (sequential to avoid rate-limit bursts) and `buildSystemPrompt`
+    assembles them with v2's load-bearing block ordering (mode → rules
+    → style → characters → locations → recent scenes → lore →
+    worldbuilding). Empty blocks omitted entirely. Per-type caps
+    documented in code.
+  - `src/tools/continue.ts` — `mnemo_continue(direction, mode?,
+    max_tokens?, temperature?, model?)` ties it all together: gather
+    context, assemble prompt, call generator, auto-save the result as
+    a scene entity (name = ISO timestamp), return beat + memory_id +
+    context summary.
+  - `OcClient` extended with linear-backoff retry on rate-limit errors
+    (1s, 2s — handles OC v3's per-window limiter when bursting).
+  - `vitest.config.ts` — 30s test timeout, sequential file execution
+    (tests share one OC).
+  - `tests/prompt.test.ts` — 4 pure tests for block assembly and order.
+  - `tests/continue.test.ts` — 3 integration tests: gather context,
+    build prompt, full end-to-end generation against real Ollama.
+  - `.env.example` documents `OLLAMA_GENERATOR_MODEL` (recommended
+    starting points: HammerAI/mythomax-l2:latest, nous-hermes2-mixtral)
+    and `OLLAMA_URL`.
+
 - **Phase B shipped** — entity management:
   - `src/entities.ts` — `EntityType` enum (`character | location | rule |
     style | scene | lore | worldbuilding`), content format
@@ -120,9 +148,12 @@ ordering preserved).
   `story_use` tools.
 - **Phase B — Entities** ✅ shipped — `save_entity` + `recall` with
   overwrite-by-(type,name) and client-side hard-cap slicing.
-- **Phase C — Generation** (next): Ollama provider, prompt assembly with
-  v2 block ordering documented in code, `mnemo_continue` (auto-save +
-  optional validation pass). Tests: end-to-end story turn. Commit.
+- **Phase C-1 — Continue (no validation)** ✅ shipped — Ollama provider,
+  prompt assembly with v2 block ordering, `mnemo_continue` with
+  auto-save. End-to-end test passing against real Ollama.
+- **Phase C-2 — Validation pass** (next): add `validate=true` parameter
+  to `mnemo_continue` that runs an LLM second-pass check against pinned
+  rules. Throw on JSON parse error (beat is already saved, recoverable).
   Tag `v0.1.0` on the way out.
 
 ## Open Decisions
@@ -134,4 +165,14 @@ ordering preserved).
 
 - No CI yet. Add when v0 lands and there's a stable surface to gate.
 - No Dockerfile yet (deferred per scaffolding decision).
-- `.env.example` lands with Phase A (first env vars).
+- **Recent scenes ordering** — `gatherContext` pulls scenes via
+  `memory_search` ranked by relevance to the user's direction, not
+  strict recency. OC's `memory_search` exposes no `order_by` parameter
+  and `memory_list` isn't project-scoped. Workable for v0; revisit if
+  recency becomes a noticeable problem.
+- **OC rate limit** — OC v3's per-window rate limiter trips on
+  legitimate burst usage (e.g., the 7 sequential reads in
+  `gatherContext`, or several test files in a row). The OC client now
+  retries with linear backoff (1s, 2s), which masks it in practice. A
+  raised ceiling or a bulk-search endpoint on OC's side would be the
+  cleaner fix.

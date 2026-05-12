@@ -42,6 +42,9 @@ export interface OcMemorySearchOptions {
   topK?: number;
 }
 
+const MAX_RATE_LIMIT_RETRIES = 2;
+const RATE_LIMIT_BACKOFF_MS = 1000;
+
 // FastMCP wraps list-returning tools as { result: [...] } in their text
 // content payload, while dict-returning tools land unwrapped. Strip the
 // single-key "result" wrapper transparently so callers see the natural type.
@@ -89,6 +92,7 @@ export class OcClient {
   private async callTool<T>(
     name: string,
     args: Record<string, unknown>,
+    retriesLeft = MAX_RATE_LIMIT_RETRIES,
   ): Promise<T> {
     const start = Date.now();
     try {
@@ -117,10 +121,26 @@ export class OcClient {
       }
       return unwrapResult<T>(JSON.parse(textBlock.text));
     } catch (err) {
+      const msg = (err as Error).message;
+      // OC v3 has a per-window rate limiter that legitimate burst usage
+      // (e.g., gatherContext's 7 sequential reads, or several tests running
+      // back-to-back) can trip. Linear backoff: 1s, then 2s. Total worst
+      // case: ~3s of waiting before giving up.
+      if (retriesLeft > 0 && /rate limit/i.test(msg)) {
+        const attempt = MAX_RATE_LIMIT_RETRIES - retriesLeft + 1;
+        const delayMs = attempt * RATE_LIMIT_BACKOFF_MS;
+        log.warn("oc-client", "rate limited; backing off", {
+          tool: name,
+          attempt,
+          delay_ms: delayMs,
+        });
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        return this.callTool(name, args, retriesLeft - 1);
+      }
       log.error("oc-client", "tool error", {
         tool: name,
         ms: Date.now() - start,
-        msg: (err as Error).message,
+        msg,
       });
       throw err;
     }
