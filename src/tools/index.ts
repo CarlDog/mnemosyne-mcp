@@ -6,6 +6,7 @@ import type { LlmProvider } from "../llm.js";
 import { registerContinueTool } from "./continue.js";
 import { registerEntityTools } from "./entities.js";
 import { registerStoryTools } from "./stories.js";
+import { registerValidateTool } from "./validate.js";
 
 export function registerTools(
   server: McpServer,
@@ -16,4 +17,5 @@ export function registerTools(
   registerStoryTools(server, oc);
   registerEntityTools(server, oc);
   registerContinueTool(server, oc, generator, validator);
+  registerValidateTool(server, oc, validator);
 }

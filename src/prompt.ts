@@ -100,9 +100,22 @@ function block(header: string, entries: string[]): string | null {
   return `=== ${header} ===\n${entries.join("\n\n")}`;
 }
 
+// Inserted between the mode directive and the constraint blocks when the
+// story has rules or style entries. The mode directives use action verbs
+// ("Narrate actions, describe the environment...") that the LLM tends to
+// read as priming for present-tense narrative prose. Without this
+// statement, even instruction-tuned models like nous-hermes2-mixtral
+// follow both the mode and the rules awkwardly — picking up the mode's
+// implicit conventions as a default and the rules as overlay. Stating
+// the precedence explicitly fixes that.
+const RULE_PRECEDENCE_STATEMENT =
+  "The RULES and STYLE blocks below are absolute. Follow them exactly. They override any narration conventions implied by the mode directive above (tense, voice, point of view, register).";
+
 export function buildSystemPrompt(mode: Mode, context: ContextBundle): string {
+  const hasConstraints = context.rules.length > 0 || context.style.length > 0;
   const parts: (string | null)[] = [
     MODE_DIRECTIVES[mode],
+    hasConstraints ? RULE_PRECEDENCE_STATEMENT : null,
     block("RULES", context.rules),
     block("STYLE", context.style),
     block("CHARACTERS", context.characters),
