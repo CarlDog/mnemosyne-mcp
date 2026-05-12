@@ -247,7 +247,16 @@ Dovecoast smoke test against `nous-hermes2-mixtral` + `phi4:14b`:
 These are not yet planned; they're the natural follow-ups when v0 gets
 real use and pressure points emerge:
 
-- **Ollama warmup + extended keep-alive (v0.1.2 candidate).** First
+- **`stages` timing field in `mnemo_continue` response (v0.1.3 candidate).**
+  Per-phase elapsed time so the host LLM can report timings without
+  greasing the user into the log file. Phases: `gather_ms`,
+  `generate_ms`, `save_ms`, `validate_ms`. Surfaced 2026-05-11 when a
+  v0.1.2 test exceeded Claude Desktop's ~4-minute MCP tool timeout
+  even though Mnemosyne completed in 5:24 — generator took 2:23,
+  validator took 2:57. With per-phase timing in the response, the
+  user (and the host LLM) can see immediately which phase dominated
+  without diffing log timestamps.
+- **Ollama warmup + extended keep-alive (v0.1.3 candidate).** First
   `mnemo_continue` after Ollama idle pays a cold start while the model
   reloads into VRAM (Ollama unloads after default 5min idle). Two-part
   fix, both server-side; no client background process needed (that
