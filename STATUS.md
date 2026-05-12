@@ -1,6 +1,6 @@
 # Status
 
-**Last updated:** 2026-05-11 (v0.1.2 — validator + prompt-precedence fixes from v0.1.1 testing)
+**Last updated:** 2026-05-11 (v0.1.2 dogfooded; few-shot-vs-rule finding queued as v0.1.3 candidate)
 
 ## Phase
 
@@ -247,6 +247,34 @@ Dovecoast smoke test against `nous-hermes2-mixtral` + `phi4:14b`:
 These are not yet planned; they're the natural follow-ups when v0 gets
 real use and pressure points emerge:
 
+- **Few-shot prime in RECENT SCENES overrides rule-precedence statement (v0.1.3 candidate).**
+  Surfaced 2026-05-11 by Dovecoast smoke test against the v0.1.2
+  patch. The rule-precedence statement renders correctly in the
+  prompt between the mode directive and the RULES block, but the
+  RECENT SCENES block below it dumps 4 prior present-tense scenes as
+  a de-facto few-shot prime. Models pattern-match the few-shot over
+  the explicit rule. Confirmed model-agnostic: both `mistral-nemo:12b`
+  and `phi4:14b` produced entirely present-tense output on a story
+  whose only rule says "third-person past tense from Aria's POV
+  only." Possible fixes, in increasing implementation cost:
+  1. **Re-order blocks so RULES comes after RECENT SCENES** (recency
+     bias usually favors the last block — rules become "most recent").
+     Departure from v2's load-bearing ordering and would need a smoke
+     test, but cheap to try.
+  2. **Insert a re-anchoring statement after RECENT SCENES** —
+     e.g. "Prior scenes above may not conform to the RULES; apply
+     the RULES regardless." Cheaper than re-ordering; doesn't disturb
+     existing block order.
+  3. **Validator-gated inclusion** — only include scenes that passed
+     a tense/POV validator pass. Free at write-time (mnemo_continue's
+     validate=true) but needs a backfill for pre-validator scenes.
+  4. **Manual rewrite of the bootstrap scenes** — one-time cleanup.
+     Works but doesn't scale to other stories.
+  Validator side of v0.1.2 *did* land: both axes (tense + perspective)
+  caught reliably across 3 runs on the same content, severity flips
+  run-to-run but the axes themselves are stable. One violation per
+  axis, not exhaustive — possibly fine for an LLM-judgement pass but
+  worth noting.
 - **`stages` timing field in `mnemo_continue` response (v0.1.3 candidate).**
   Per-phase elapsed time so the host LLM can report timings without
   greasing the user into the log file. Phases: `gather_ms`,
