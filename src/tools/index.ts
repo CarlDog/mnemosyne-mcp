@@ -11,8 +11,9 @@ export function registerTools(
   server: McpServer,
   oc: OcClient,
   generator: LlmProvider,
+  validator: LlmProvider,
 ): void {
   registerStoryTools(server, oc);
   registerEntityTools(server, oc);
-  registerContinueTool(server, oc, generator);
+  registerContinueTool(server, oc, generator, validator);
 }
