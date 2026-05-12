@@ -34,17 +34,23 @@ export interface ValidationReport {
 const VALIDATOR_TEMPERATURE = 0.2;
 const VALIDATOR_MAX_TOKENS = 1024;
 
-// Quote-and-match prompt. The earlier (v0.1.0) prompt let the LLM "evaluate"
-// abstractly, which produced plausible-sounding but fabricated objections
-// (e.g., reporting "she" as a first-person pronoun violation). Forcing the
-// model to quote the specific violating text from the new content makes
-// hallucinated issues much harder — if it can't find a quote, the violation
-// can't go in the array.
+// Two-step prompt: enumerate constraints, then check each independently.
+//
+// The v0.1.0 prompt let the LLM "evaluate" abstractly, which produced
+// fabricated objections (reporting "she" as first-person, etc.). v0.1.1
+// added quote-and-match. v0.1.2 fixes the next failure mode: a single
+// rule entry often states multiple distinct constraints (e.g., "third-
+// person past tense from Aria's perspective" = three constraints), and
+// the validator was catching the most prominent one and stopping.
+// Forcing explicit enumeration in step 1 then a per-constraint walk in
+// step 2 makes the validator check each axis independently.
 const SYSTEM_PROMPT = `You are a story consistency checker.
 
-For EACH RULE in the established context, walk through the new content and find specific text fragments that violate that rule. Quote the violating text directly — copy it from the new content character-for-character, do not paraphrase.
+STEP 1 (enumerate constraints): Read the established context. For the rules and style sections specifically, identify each distinct CONSTRAINT. A single rule entry often states several constraints — for example, "third-person past tense from Aria's perspective" contains three distinct constraints: (a) third-person, (b) past tense, (c) Aria's perspective only. Enumerate every constraint independently. Do not collapse them.
 
-A rule has been violated only if you can quote the specific words from the new content that break it. If you cannot find a direct quote, do NOT report a violation. Do not invent or generalize.
+STEP 2 (per-constraint walk): For EACH constraint enumerated in step 1, walk through the new content and find specific text fragments that violate that constraint. Quote the violating text directly — copy it character-for-character from the new content, do not paraphrase.
+
+A constraint has been violated only if you can quote the specific words from the new content that break it. If you cannot find a direct quote, do NOT report a violation. Do not invent or generalize.
 
 Same logic applies for established characters and locations: if the new content describes them in a way that contradicts what the established context says, quote the contradicting text.
 
@@ -53,9 +59,9 @@ Return ONLY valid JSON in this shape:
   "issues": [
     {
       "severity": "error" | "warning" | "info",
-      "rule": "<name or first line of the violated rule (or character/location name)>",
+      "rule": "<the specific constraint violated, paraphrased from the rule text>",
       "violating_text": "<exact quote from the new content>",
-      "explanation": "<one sentence: why this quote violates that rule>"
+      "explanation": "<one sentence: why this quote violates that constraint>"
     }
   ],
   "summary": "<one-sentence overall assessment>"
