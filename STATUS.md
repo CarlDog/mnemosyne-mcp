@@ -180,6 +180,24 @@ pass against real OC + real Ollama. Tagged on the way out.
 These are not yet planned; they're the natural follow-ups when v0 gets
 real use and pressure points emerge:
 
+- **Ollama warmup + extended keep-alive (v0.1.1 candidate).** First
+  `mnemo_continue` after Ollama idle pays a cold start while the model
+  reloads into VRAM (Ollama unloads after default 5min idle). Two-part
+  fix, both server-side; no client background process needed (that
+  would duplicate what Ollama already exposes):
+  1. Add `keep_alive` to the OllamaProvider request body. Default
+     `"30m"`, env-overridable via `OLLAMA_KEEP_ALIVE`. Each
+     `mnemo_continue` refreshes the timer, so active sessions never
+     evict. `OLLAMA_KEEP_ALIVE=-1` pins the model permanently for
+     users who want zero cold start (trade-off: 7-26GB VRAM held).
+  2. Add a `warmup()` method on `OllamaProvider` that sends a 4-token
+     generation to force model load. Call `void generator.warmup()`
+     and `void validator.warmup()` (when they differ) after MCP init,
+     fire-and-forget. Doesn't block server startup; happens in
+     parallel with Claude Desktop's own init work.
+  Skipped intentionally: a client-side heartbeat process. Pure
+  duplication of `keep_alive`'s server-side timer; adds complexity
+  without benefit.
 - **Web UI.** Per ARCHITECTURE.md §1+§4, the standalone web frontend
   is the bypass for Claude Desktop's content-policy refusals on
   uncensored content. Daily-driver SFW use through Claude Desktop
