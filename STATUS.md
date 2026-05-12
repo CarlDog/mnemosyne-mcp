@@ -1,14 +1,13 @@
 # Status
 
-**Last updated:** 2026-05-11 (Phase C-1 landed; Phase C-2 next — adds validation pass)
+**Last updated:** 2026-05-11 (v0.1.0 — feature-complete v0)
 
 ## Phase
 
-**v0 build, Phase C-1 complete.** Generator LLM (Ollama), prompt
-assembler with v2 block ordering, and `mnemo_continue` (auto-save,
-no validation yet) live and end-to-end tested against real OC + real
-Ollama. 22/22 tests pass. Next: Phase C-2 (validation pass + tag
-v0.1.0).
+**v0.1.0 shipped.** All five v0 tools live: `mnemo_story_list`,
+`mnemo_story_use`, `mnemo_save_entity`, `mnemo_recall`,
+`mnemo_continue` (with optional LLM validation pass). 28/28 tests
+pass against real OC + real Ollama. Tagged on the way out.
 
 ## Done
 
@@ -19,6 +18,31 @@ v0.1.0).
   pre-commit hooks (gitleaks + PII + author identity), `.gitattributes`.
   Initial commit `4e573ed`. Public repo at
   https://github.com/CarlDog/mnemosyne-mcp.
+- **Phase C-2 shipped** — validation pass:
+  - `src/validator.ts` — `validateContent` builds a constraints block
+    (RULES + STYLE + CHARACTERS + LOCATIONS), prompts the validator LLM
+    to return a structured verdict (`{issues: [...], summary: ...}`),
+    and parses the response. `parseValidatorJson` strips markdown code
+    fences (```json ... ``` or bare ``` ... ```) — a pattern v2 had
+    duplicated across four validators per the retro; factored once
+    here.
+  - `mnemo_continue` gains `validate?: boolean`. When true, runs the
+    validation pass after the beat is saved. Save-first: validation
+    failures (LLM returned unparseable JSON) land as a
+    `validation_error` field in the response, never as a thrown
+    exception. The beat is persisted regardless.
+  - `OLLAMA_VALIDATOR_MODEL` env var (defaults to
+    `OLLAMA_GENERATOR_MODEL`). A smaller / faster model is fine here —
+    the validator just needs to return structured JSON.
+  - OC client retry bumped to 5 attempts with exponential backoff
+    (1s/2s/4s/8s/16s) to better handle OC v3's 120 RPM per-IP limit
+    under burst load.
+  - `tests/validator.test.ts` — 5 pure tests for the JSON parser
+    (plain JSON, ```json fences, bare ``` fences, whitespace,
+    unparseable input) + 1 integration test (validateContent end-to-end
+    against real Ollama).
+  - Tagged `v0.1.0` on the way out.
+
 - **Phase C-1 shipped** — generator + prompt + continue:
   - `src/llm.ts` — `LlmProvider` interface (one method, `generate`) and
     `OllamaProvider` implementation. Plain `fetch` to `/api/chat`, no
@@ -148,13 +172,30 @@ v0.1.0).
   `story_use` tools.
 - **Phase B — Entities** ✅ shipped — `save_entity` + `recall` with
   overwrite-by-(type,name) and client-side hard-cap slicing.
-- **Phase C-1 — Continue (no validation)** ✅ shipped — Ollama provider,
-  prompt assembly with v2 block ordering, `mnemo_continue` with
-  auto-save. End-to-end test passing against real Ollama.
-- **Phase C-2 — Validation pass** (next): add `validate=true` parameter
-  to `mnemo_continue` that runs an LLM second-pass check against pinned
-  rules. Throw on JSON parse error (beat is already saved, recoverable).
-  Tag `v0.1.0` on the way out.
+- **Phase C-1 — Continue (no validation)** ✅ shipped.
+- **Phase C-2 — Validation pass** ✅ shipped. Tagged `v0.1.0`.
+
+## What's next (post-v0)
+
+These are not yet planned; they're the natural follow-ups when v0 gets
+real use and pressure points emerge:
+
+- **Web UI.** Per ARCHITECTURE.md §1+§4, the standalone web frontend
+  is the bypass for Claude Desktop's content-policy refusals on
+  uncensored content. Daily-driver SFW use through Claude Desktop
+  works now via the MCP; NSFW use requires either a non-Anthropic MCP
+  host (Cline, LM Studio, etc.) or the web UI.
+- **Botify provider** — second LLM provider, validates the
+  `LlmProvider` interface holds.
+- **Anthropic provider** — for SFW work where Claude is appropriate.
+- **Recent-scenes-by-recency** — see Known Gaps; needs OC API
+  improvement or client-side workaround.
+- **Game mechanics** (StatBlock, dice, HP, inventory) — v2 Phase 4
+  territory; deferred to ARCHITECTURE.md §8 unless a real session
+  demands them.
+- **Import / export tooling** — `mnemo_export_story`,
+  `mnemo_import_story`, `mnemo_seed_from_template`. Planned in
+  ARCHITECTURE.md §2; defer until there's a portability use case.
 
 ## Open Decisions
 
@@ -170,9 +211,12 @@ v0.1.0).
   strict recency. OC's `memory_search` exposes no `order_by` parameter
   and `memory_list` isn't project-scoped. Workable for v0; revisit if
   recency becomes a noticeable problem.
-- **OC rate limit** — OC v3's per-window rate limiter trips on
-  legitimate burst usage (e.g., the 7 sequential reads in
-  `gatherContext`, or several test files in a row). The OC client now
-  retries with linear backoff (1s, 2s), which masks it in practice. A
-  raised ceiling or a bulk-search endpoint on OC's side would be the
-  cleaner fix.
+- **OC rate limit (120 RPM per IP)** — OC v3's `RateLimitMiddleware`
+  defaults to 120 requests/minute per client (configurable via
+  `OC_API_RATE_LIMIT_RPM`). Bursts from `gatherContext` (7 sequential
+  reads per `mnemo_continue`) plus a full integration test run can
+  saturate the window. The OC client retries with exponential backoff
+  (1s/2s/4s/8s/16s) which masks the issue most of the time, but the
+  test suite is occasionally flaky under back-to-back runs. For
+  reliable test runs, bump `OC_API_RATE_LIMIT_RPM` on the OC stack
+  (e.g., 600) or wait ~60s between runs.
