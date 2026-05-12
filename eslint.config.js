@@ -4,7 +4,7 @@ import prettierConfig from "eslint-config-prettier";
 
 export default [
   {
-    ignores: ["dist/**", ".serena/**", "node_modules/**"],
+    ignores: ["dist/**", ".serena/**", "node_modules/**", "scripts/**"],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
