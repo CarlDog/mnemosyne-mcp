@@ -43,3 +43,12 @@ coverage/
 # runs Claude Code from their own clone with their own OC instance,
 # so this is intentionally per-machine.
 .mcp.json
+
+# Per-developer tool / session state (Claude Code agent state,
+# Serena MCP project memories). Tool-specific, not portable.
+.claude/
+.serena/
+
+# Scratch directory for ad-hoc test content (e.g. dump-validation.mjs
+# input files). Transient by convention.
+tmp/
