@@ -1,5 +1,10 @@
 # mnemosyne-mcp
 
+<!-- fleet-confidence -->
+![code confidence](https://img.shields.io/badge/code_confidence-fair-orange) <sub>· `claude-opus-4-8[1m]` · 2026-07-07 · [details](https://github.com/CarlDog/mnemosyne-mcp/issues/1)</sub>
+<!-- /fleet-confidence -->
+
+
 MCP server for long-form storytelling on top of OpenChronicle memory.
 
 Mnemosyne owns narrative logic; OpenChronicle (OC) owns persistent memory.
