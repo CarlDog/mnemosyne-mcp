@@ -22,6 +22,7 @@ import type { LlmProvider } from "../llm.js";
 import { gatherContext } from "../prompt.js";
 import { validateContent } from "../validator.js";
 import { requireCurrentStoryId } from "../config.js";
+import { log } from "../log.js";
 import { asText, withLogging } from "./helpers.js";
 
 export function registerValidateTool(
@@ -51,8 +52,17 @@ export function registerValidateTool(
       // characters / locations; the rest of the bundle is harmlessly
       // ignored by validateContent.
       const context = await gatherContext(oc, storyId, args.content);
-      const report = await validateContent(validator, context, args.content);
-      return asText(report);
+      // Guard the validator pass: a validator-LLM failure or non-JSON
+      // output degrades to a structured error instead of a raw MCP tool
+      // error — symmetric with mnemo_continue's validation_error field.
+      try {
+        const report = await validateContent(validator, context, args.content);
+        return asText(report);
+      } catch (err) {
+        const msg = (err as Error).message;
+        log.warn("mnemo_validate", "validation pass failed", { msg });
+        return asText({ validation_error: msg });
+      }
     }),
   );
 }
