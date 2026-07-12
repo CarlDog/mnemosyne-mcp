@@ -41,6 +41,17 @@ export type EntityType = (typeof ENTITY_TYPES)[number];
 const BASE_TAGS = ["mnemosyne", "story"] as const;
 const DEFAULT_RECALL_LIMIT = 10;
 const MAX_RECALL_LIMIT = 100;
+// Overwrite-by-(type,name) dedup is bounded by this search window: OC has
+// no exact-header lookup, so findExistingEntity does a memory_search on
+// the name (topK below, AND-filtered on the type tag) and scans results
+// for the `[Type] Name` header prefix. If a story accumulates more than
+// this many same-type entities AND the search ranks the exact-name match
+// below the cutoff, saveEntity will miss the existing memory and create a
+// duplicate instead of updating. In practice the name-as-query ranking
+// surfaces exact matches near the top, so this window is generous for the
+// per-type volumes v0 targets (see TYPE_LIMITS in prompt.ts). Revisit if
+// OC grows an exact-match/content-prefix lookup or stories exceed ~50
+// entities of one type.
 const SAVE_DEDUPE_SEARCH_TOPK = 50;
 
 function titleCase(type: EntityType): string {
