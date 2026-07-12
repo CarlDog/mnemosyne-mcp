@@ -15,6 +15,7 @@
 
 import type { LlmProvider } from "./llm.js";
 import type { ContextBundle } from "./prompt.js";
+import { neutralizeSectionDelimiters } from "./prompt.js";
 
 export interface ValidationIssue {
   severity: "error" | "warning" | "info";
@@ -70,18 +71,22 @@ Return ONLY valid JSON in this shape:
 If no violations are found, return {"issues": [], "summary": "..."}. Use "error" for clear contradictions, "warning" for borderline cases, "info" for minor stylistic notes.`;
 
 function constraintsBlock(context: ContextBundle): string {
+  // Entity bodies are neutralized so an embedded `=== ... ===` line can't
+  // spoof a section boundary and inject instructions into the validator.
+  const join = (entries: string[]) =>
+    entries.map(neutralizeSectionDelimiters).join("\n\n");
   const sections: string[] = [];
   if (context.rules.length) {
-    sections.push(`=== RULES ===\n${context.rules.join("\n\n")}`);
+    sections.push(`=== RULES ===\n${join(context.rules)}`);
   }
   if (context.style.length) {
-    sections.push(`=== STYLE ===\n${context.style.join("\n\n")}`);
+    sections.push(`=== STYLE ===\n${join(context.style)}`);
   }
   if (context.characters.length) {
-    sections.push(`=== CHARACTERS ===\n${context.characters.join("\n\n")}`);
+    sections.push(`=== CHARACTERS ===\n${join(context.characters)}`);
   }
   if (context.locations.length) {
-    sections.push(`=== LOCATIONS ===\n${context.locations.join("\n\n")}`);
+    sections.push(`=== LOCATIONS ===\n${join(context.locations)}`);
   }
   return sections.join("\n\n");
 }

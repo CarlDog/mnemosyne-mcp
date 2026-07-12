@@ -95,9 +95,28 @@ export async function gatherContext(
   return { rules, style, characters, locations, scenes, lore, worldbuilding };
 }
 
+/**
+ * Neutralize lines inside entity content that would collide with the
+ * `=== HEADER ===` section delimiters used by buildSystemPrompt and the
+ * validator's constraints block. Without this, an entity body containing
+ * its own `=== RULES ===` line can spoof a section boundary and inject
+ * instructions (e.g., steer the validator). Any line that looks like a
+ * delimiter has its `=` runs replaced with `-`, which preserves the text's
+ * visual shape while breaking the collision.
+ */
+export function neutralizeSectionDelimiters(text: string): string {
+  return text
+    .split("\n")
+    .map((line) =>
+      /^\s*={3,}.*={3,}\s*$/.test(line) ? line.replace(/=/g, "-") : line,
+    )
+    .join("\n");
+}
+
 function block(header: string, entries: string[]): string | null {
   if (entries.length === 0) return null;
-  return `=== ${header} ===\n${entries.join("\n\n")}`;
+  const safe = entries.map(neutralizeSectionDelimiters);
+  return `=== ${header} ===\n${safe.join("\n\n")}`;
 }
 
 // Inserted between the mode directive and the constraint blocks when the
