@@ -101,12 +101,25 @@ export function registerContinueTool(
           model: args.model,
         });
 
+        // Guard the save: the beat is an expensive LLM generation, and a
+        // transient OC write failure must not discard it. On save error,
+        // still return the beat text with a save_error field so the user
+        // can retry the persist (e.g., via mnemo_save_entity) without
+        // regenerating.
         const beatName = `Scene ${new Date().toISOString()}`;
-        const saved = await saveEntity(oc, storyId, {
-          type: "scene",
-          name: beatName,
-          body: beatText,
-        });
+        let memoryId: string | undefined;
+        let saveError: string | undefined;
+        try {
+          const saved = await saveEntity(oc, storyId, {
+            type: "scene",
+            name: beatName,
+            body: beatText,
+          });
+          memoryId = saved.memory_id;
+        } catch (err) {
+          saveError = (err as Error).message;
+          log.warn("mnemo_continue", "scene save failed", { msg: saveError });
+        }
 
         let validation: ValidationReport | undefined;
         let validationError: string | undefined;
@@ -124,7 +137,8 @@ export function registerContinueTool(
         return asText({
           beat_name: beatName,
           beat_text: beatText,
-          memory_id: saved.memory_id,
+          ...(memoryId !== undefined && { memory_id: memoryId }),
+          ...(saveError !== undefined && { save_error: saveError }),
           mode,
           context_summary: {
             rules: context.rules.length,
