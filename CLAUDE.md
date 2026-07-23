@@ -75,7 +75,7 @@ Key architectural decisions (see ARCHITECTURE.md for full reasoning):
 npm install            # install deps
 npm run build          # tsc → dist/
 npm run dev            # tsx src/index.ts
-npm run typecheck      # tsc --noEmit
+npm run typecheck      # tsc -p tsconfig.typecheck.json (src + tests)
 npm run lint           # eslint .
 npm run format         # prettier --write .
 npm test               # vitest run
