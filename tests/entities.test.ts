@@ -10,6 +10,7 @@ import {
   recall,
   saveEntity,
 } from "../src/entities.js";
+import { teardownStory, testStoryName } from "./helpers.js";
 
 describe("entities — pure", () => {
   it("parseEntityContent round-trips a well-formed entity", () => {
@@ -41,7 +42,6 @@ describe("entities — pure", () => {
 });
 
 const OC_URL = process.env.OC_URL;
-const TEST_STORY_PREFIX = "mnemosyne-test-";
 
 const suite = OC_URL ? describe : describe.skip;
 
@@ -52,15 +52,12 @@ suite("Phase B — entities (real OC)", () => {
   beforeAll(async () => {
     oc = new OcClient(new URL(OC_URL!));
     await oc.connect();
-    const story = await createStory(
-      oc,
-      `${TEST_STORY_PREFIX}entities-${Date.now()}`,
-    );
+    const story = await createStory(oc, testStoryName("entities"));
     storyId = story.id;
   });
 
   afterAll(async () => {
-    await oc.close();
+    await teardownStory(oc, storyId);
   });
 
   it("creates a new character (default unpinned)", async () => {

@@ -4,7 +4,9 @@
 // Surfaces only the OC tools Mnemosyne actually uses. We add wrappers as
 // new phases need them — three similar lines is better than a premature
 // abstraction. Phase A: project_create, project_list, memory_save,
-// memory_search. Phase B adds: memory_update, memory_pin.
+// memory_search. Phase B adds: memory_update, memory_pin. project_delete
+// exists for the integration suite's teardown (no product tool deletes a
+// story — that stays a deliberate OC-side action).
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
@@ -26,6 +28,15 @@ export interface OcMemory {
   created_at: string;
   updated_at?: string;
   source?: string;
+}
+
+// The confirmed shape of project_delete's response ({status:"ok", ...}).
+// See the `confirm` note on OcClient.projectDelete for why the preview
+// shape ({status:"preview", memory_count}) never reaches a caller here.
+export interface OcProjectDeleteResult {
+  status: string;
+  name?: string;
+  deleted_memories?: number;
 }
 
 export interface OcMemorySaveOptions {
@@ -160,6 +171,22 @@ export class OcClient {
     return this.callTool<OcProject>("project_create", args);
   }
 
+  // Hard delete — the project and every memory in it. No soft-delete, no
+  // recovery path on the OC side.
+  //
+  // OC's delete tools take a `confirm` flag defaulting to false, which
+  // returns a preview instead of deleting. That two-step is a guard for a
+  // human at a prompt; a programmatic caller that reached this method has
+  // already decided. So `confirm: true` is passed here rather than exposed
+  // as a parameter no caller would ever set to false. (Omitting it is what
+  // silently no-op'd memoryDelete below.)
+  async projectDelete(projectId: string): Promise<OcProjectDeleteResult> {
+    return this.callTool<OcProjectDeleteResult>("project_delete", {
+      project_id: projectId,
+      confirm: true,
+    });
+  }
+
   async memorySave(opts: OcMemorySaveOptions): Promise<OcMemory> {
     const args: Record<string, unknown> = {
       content: opts.content,
@@ -193,7 +220,13 @@ export class OcClient {
     await this.callTool("memory_pin", { memory_id: memoryId, pinned });
   }
 
+  // `confirm: true` for the same reason as projectDelete. Without it OC
+  // returns a preview and keeps the memory, which made mnemo_delete_entity
+  // report success while deleting nothing.
   async memoryDelete(memoryId: string): Promise<void> {
-    await this.callTool("memory_delete", { memory_id: memoryId });
+    await this.callTool("memory_delete", {
+      memory_id: memoryId,
+      confirm: true,
+    });
   }
 }
