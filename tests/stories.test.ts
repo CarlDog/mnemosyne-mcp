@@ -1,10 +1,10 @@
 // Phase A integration smoke test against a real OpenChronicle instance.
 // Skipped unless OC_URL is set in the environment.
 //
-// Each run creates a uniquely-named test story (project + marker memory).
-// OC v3 has no project_delete tool, so test projects accumulate; their
-// names are prefixed `mnemosyne-test-<timestamp>` so they're identifiable
-// and can be manually cleaned up via the OC UI / CLI if desired.
+// Each run creates a uniquely-named test story (project + marker memory)
+// and deletes it again in `afterAll` via OC's `project_delete`. The
+// `mnemosyne-test-` name prefix keeps any story that survives a failed
+// teardown identifiable on the OC side.
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { OcClient } from "../src/oc-client.js";
@@ -14,9 +14,9 @@ import {
   findStoryByName,
   listStories,
 } from "../src/stories.js";
+import { teardownStory, testStoryName } from "./helpers.js";
 
 const OC_URL = process.env.OC_URL;
-const TEST_STORY_PREFIX = "mnemosyne-test-";
 
 const suite = OC_URL ? describe : describe.skip;
 
@@ -28,11 +28,11 @@ suite("Phase A — story management (real OC)", () => {
   beforeAll(async () => {
     oc = new OcClient(new URL(OC_URL!));
     await oc.connect();
-    testName = `${TEST_STORY_PREFIX}${Date.now()}`;
+    testName = testStoryName();
   });
 
   afterAll(async () => {
-    await oc.close();
+    await teardownStory(oc, storyId);
   });
 
   it("creates a story (project + marker memory)", async () => {

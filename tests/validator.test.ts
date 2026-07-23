@@ -7,6 +7,7 @@ import { createStory } from "../src/stories.js";
 import { saveEntity } from "../src/entities.js";
 import { gatherContext } from "../src/prompt.js";
 import { parseValidatorJson, validateContent } from "../src/validator.js";
+import { teardownStory, testStoryName } from "./helpers.js";
 
 describe("validator — pure", () => {
   it("parses plain JSON", () => {
@@ -42,7 +43,6 @@ const OC_URL = process.env.OC_URL;
 const OLLAMA_URL = process.env.OLLAMA_URL ?? "http://localhost:11434";
 const OLLAMA_MODEL = process.env.OLLAMA_GENERATOR_MODEL;
 
-const TEST_STORY_PREFIX = "mnemosyne-test-";
 const suite = OC_URL && OLLAMA_MODEL ? describe : describe.skip;
 
 suite("Phase C-2 — validation (real OC + real Ollama)", () => {
@@ -57,10 +57,7 @@ suite("Phase C-2 — validation (real OC + real Ollama)", () => {
       url: OLLAMA_URL,
       defaultModel: OLLAMA_MODEL!,
     });
-    const story = await createStory(
-      oc,
-      `${TEST_STORY_PREFIX}validate-${Date.now()}`,
-    );
+    const story = await createStory(oc, testStoryName("validate"));
     storyId = story.id;
 
     await saveEntity(oc, storyId, {
@@ -76,7 +73,7 @@ suite("Phase C-2 — validation (real OC + real Ollama)", () => {
   }, 60_000);
 
   afterAll(async () => {
-    await oc.close();
+    await teardownStory(oc, storyId);
   });
 
   it(
