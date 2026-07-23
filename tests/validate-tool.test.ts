@@ -8,12 +8,12 @@ import { createStory } from "../src/stories.js";
 import { saveEntity } from "../src/entities.js";
 import { gatherContext } from "../src/prompt.js";
 import { validateContent } from "../src/validator.js";
+import { teardownStory, testStoryName } from "./helpers.js";
 
 const OC_URL = process.env.OC_URL;
 const OLLAMA_URL = process.env.OLLAMA_URL ?? "http://localhost:11434";
 const OLLAMA_MODEL = process.env.OLLAMA_GENERATOR_MODEL;
 
-const TEST_STORY_PREFIX = "mnemosyne-test-";
 const suite = OC_URL && OLLAMA_MODEL ? describe : describe.skip;
 
 suite("v0.1.2 — mnemo_validate (standalone validation)", () => {
@@ -28,10 +28,7 @@ suite("v0.1.2 — mnemo_validate (standalone validation)", () => {
       url: OLLAMA_URL,
       defaultModel: OLLAMA_MODEL!,
     });
-    const story = await createStory(
-      oc,
-      `${TEST_STORY_PREFIX}validate-standalone-${Date.now()}`,
-    );
+    const story = await createStory(oc, testStoryName("validate-standalone"));
     storyId = story.id;
 
     // Compound rule with multiple constraints — the v0.1.1 dogfood case.
@@ -43,7 +40,7 @@ suite("v0.1.2 — mnemo_validate (standalone validation)", () => {
   }, 60_000);
 
   afterAll(async () => {
-    await oc.close();
+    await teardownStory(oc, storyId);
   });
 
   it(

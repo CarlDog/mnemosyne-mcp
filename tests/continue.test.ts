@@ -10,12 +10,12 @@ import { OllamaProvider } from "../src/llm.js";
 import { createStory } from "../src/stories.js";
 import { saveEntity, recall } from "../src/entities.js";
 import { buildSystemPrompt, gatherContext } from "../src/prompt.js";
+import { teardownStory, testStoryName } from "./helpers.js";
 
 const OC_URL = process.env.OC_URL;
 const OLLAMA_URL = process.env.OLLAMA_URL ?? "http://localhost:11434";
 const OLLAMA_MODEL = process.env.OLLAMA_GENERATOR_MODEL;
 
-const TEST_STORY_PREFIX = "mnemosyne-test-";
 const suite = OC_URL && OLLAMA_MODEL ? describe : describe.skip;
 
 suite("Phase C-1 — continue (real OC + real Ollama)", () => {
@@ -30,10 +30,7 @@ suite("Phase C-1 — continue (real OC + real Ollama)", () => {
       url: OLLAMA_URL,
       defaultModel: OLLAMA_MODEL!,
     });
-    const story = await createStory(
-      oc,
-      `${TEST_STORY_PREFIX}continue-${Date.now()}`,
-    );
+    const story = await createStory(oc, testStoryName("continue"));
     storyId = story.id;
 
     // Seed minimal context so the prompt has something to ground in.
@@ -55,7 +52,7 @@ suite("Phase C-1 — continue (real OC + real Ollama)", () => {
   }, 60_000);
 
   afterAll(async () => {
-    await oc.close();
+    await teardownStory(oc, storyId);
   });
 
   it("gathers context from the active story", async () => {

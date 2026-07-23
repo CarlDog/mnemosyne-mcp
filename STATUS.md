@@ -1,6 +1,6 @@
 # Status
 
-**Last updated:** 2026-05-11 (v0.1.2 dogfooded; v0.1.3 plan locked — validator-gated scene inclusion)
+**Last updated:** 2026-07-23 (integration-test teardown; `memory_delete` confirm fix)
 
 ## Phase
 
@@ -25,9 +25,48 @@ Dovecoast smoke test against `nous-hermes2-mixtral` + `phi4:14b`:
    it?" cleanly. Plus `scripts/dump-validation.mjs` companion for
    command-line A/B work.
 
-34/34 tests pass.
+37/37 tests pass.
+
+Since v0.1.2 shipped, two maintenance items landed against OC's newer
+delete surface — see the first two entries under Done.
 
 ## Done
+
+- **OC delete surface: `project_delete` wrapper + `memory_delete` confirm
+  fix** (2026-07-23). OC's delete tools use a preview/confirm two-step —
+  called without `confirm`, they return `{status:"preview", ...}` and
+  change nothing; with `confirm=true` they hard-delete (no soft-delete,
+  no recovery).
+  - **Bug fixed:** `OcClient.memoryDelete` never passed `confirm`, so it
+    had silently degraded to a preview when OC added the guard.
+    `mnemo_delete_entity` was reporting success while deleting nothing,
+    and `tests/entities.test.ts`'s "recall no longer returns it"
+    assertion was failing on `main`. Both delete wrappers now pass
+    `confirm: true` internally — a programmatic caller that reached the
+    method has already decided, so it isn't exposed as a parameter no
+    caller would set to false.
+  - `OcClient.projectDelete(projectId)` added for test teardown (next
+    entry). No product tool deletes a story; that stays a deliberate
+    OC-side action.
+
+- **Integration-test teardown — test projects no longer leak**
+  (2026-07-23). Each env-gated suite created an OC project per run and
+  never removed it; 46 stale `mnemosyne-test-*` projects holding 127
+  memories had accumulated and were manually deleted on 2026-07-23.
+  Now that OC exposes `project_delete`, the suite cleans up after itself:
+  - `tests/helpers.ts` — shared test helper. `testStoryName(label?)`
+    lifts the `TEST_STORY_PREFIX` constant that was duplicated across
+    five test files, and `teardownStory(oc, storyId)` deletes the
+    project then closes the client.
+  - Teardown never fails the suite: delete and close errors are logged,
+    not thrown, so a cleanup failure can't mask the real error or turn a
+    passing run red. Tolerates an undefined `storyId` for a suite that
+    died before creating its story (vitest still runs `afterAll`).
+  - Wired into all five project-creating files: `stories`, `entities`,
+    `continue`, `validate-tool`, `validator`.
+  - Verified: 37/37 against real OC + real Ollama with every suite
+    active, and `project_list` shows no `mnemosyne-test-*` projects
+    afterward.
 
 - Architecture lockdown — see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - v2 retrospective mined and documented — see
@@ -157,7 +196,8 @@ Dovecoast smoke test against `nous-hermes2-mixtral` + `phi4:14b`:
   MCP tool / API surface to `docs/V3_PLAN.md` "Post-cutover follow-ups"
   with a recommended shape (hard-delete + `confirm:bool` flag, matching
   `memory_delete`'s no-soft-delete posture). OC commit `34b3a5b2`,
-  pushed.
+  pushed. **Shipped on the OC side and consumed here 2026-07-23** — it's
+  what made test teardown possible.
 
 - **Phase A shipped** — story management:
   - `src/oc-client.ts` — MCP client wrapper around OpenChronicle's HTTP
@@ -177,9 +217,9 @@ Dovecoast smoke test against `nous-hermes2-mixtral` + `phi4:14b`:
   - `src/index.ts` — env validation (OC_URL required), OC client init at
     startup (fail-fast if unreachable), tool registration.
   - `tests/stories.test.ts` — integration smoke test (real OC,
-    env-gated). 5 tests, 1.7s. Test stories use `mnemosyne-test-`
-    prefix; OC has no `project_delete` so they accumulate but are
-    identifiable.
+    env-gated). 5 tests, 1.7s. Test stories use the `mnemosyne-test-`
+    prefix. (They accumulated until 2026-07-23, when OC gained
+    `project_delete` and the suite got teardown — see the top of Done.)
   - `.env.example` documenting `OC_URL`, `MNEMOSYNE_CONFIG_DIR`,
     `LOG_LEVEL`.
 
