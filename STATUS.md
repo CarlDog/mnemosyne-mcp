@@ -1,6 +1,6 @@
 # Status
 
-**Last updated:** 2026-07-23 (integration-test teardown; `memory_delete` confirm fix)
+**Last updated:** 2026-07-23 (integration-test teardown; `memory_delete` confirm fix; lint/typecheck coverage)
 
 ## Phase
 
@@ -31,6 +31,22 @@ Since v0.1.2 shipped, two maintenance items landed against OC's newer
 delete surface — see the first two entries under Done.
 
 ## Done
+
+- **Lint and typecheck actually cover the repo** (2026-07-23). Two gaps
+  surfaced while verifying the teardown work above:
+  - `npm run lint` failed out of the box on anyone's machine that had
+    scratch files in the gitignored `tmp/` dir — eslint's ignore list
+    covered `dist/`, `.serena/`, `scripts/` but not `tmp/`. Added.
+  - `npm run typecheck` never looked at `tests/`. `tsconfig.json` is the
+    build config (`include: src/**/*` with a matching `rootDir`, so
+    `dist/` mirrors `src/`), and vitest only transpiles — so a type
+    error in a test file surfaced at runtime or not at all. New
+    `tsconfig.typecheck.json` extends the build config with
+    `noEmit` + `rootDir: "."` and widens `include` to src + tests +
+    `vitest.config.ts`; `npm run typecheck` now runs against it.
+    `npm run build` still uses the narrow config, so `dist/` is
+    unchanged. Verified by planting a deliberate type error in a test
+    file and watching it fail.
 
 - **OC delete surface: `project_delete` wrapper + `memory_delete` confirm
   fix** (2026-07-23). OC's delete tools use a preview/confirm two-step —

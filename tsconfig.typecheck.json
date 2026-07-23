@@ -1,0 +1,16 @@
+// Typecheck-only config: same compiler options as the build, widened to
+// cover everything the build deliberately leaves out.
+//
+// tsconfig.json is the *build* config — `include: src/**/*` with a matching
+// rootDir, so `dist/` mirrors `src/`. Adding tests there would emit them
+// into dist and break rootDir. But vitest only transpiles, it never
+// typechecks, so without this config a type error in tests/ surfaced at
+// runtime (or not at all) rather than from `npm run typecheck`.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "."
+  },
+  "include": ["src/**/*", "tests/**/*", "vitest.config.ts"]
+}
