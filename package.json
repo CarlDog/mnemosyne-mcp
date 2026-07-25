@@ -1,6 +1,7 @@
 {
   "name": "mnemosyne-mcp",
   "version": "0.1.2",
+  "license": "MIT",
   "description": "MCP server for long-form storytelling on top of OpenChronicle memory",
   "type": "module",
   "bin": {
