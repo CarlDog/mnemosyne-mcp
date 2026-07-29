@@ -239,6 +239,14 @@ delete surface — see the first two entries under Done.
   - `.env.example` documenting `OC_URL`, `MNEMOSYNE_CONFIG_DIR`,
     `LOG_LEVEL`.
 
+- **Dev-chain eslint 10 + SDK 1.30 audit sweep (2026-07-29).** eslint
+  ^10.8.0, @eslint/js ^10.0.1, eslint-config-prettier ^10.1.8;
+  @modelcontextprotocol/sdk ^1.30.0 with @hono/node-server 2.0.12
+  (GHSA-frvp-7c67-39w9). npm audit 0, was 5 high + 2 moderate. No
+  eslint-10 code changes needed. Lockfile via pinned npm 10.9.8.
+  Verified: lint, typecheck, tests, format:check. Runtime majors stay
+  deferred per the closed npm-major PR.
+
 ## v0 Contract (locked)
 
 ### Tools (5)
