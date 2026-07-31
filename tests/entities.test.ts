@@ -1,13 +1,14 @@
 // Phase B integration test against real OpenChronicle.
 // Pure unit tests run unconditionally; integration tests skip without OC_URL.
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import { OcClient } from "../src/oc-client.js";
 import { createStory } from "../src/stories.js";
 import {
   deleteEntity,
   parseEntityContent,
   recall,
+  retagValidation,
   saveEntity,
 } from "../src/entities.js";
 import { teardownStory, testStoryName } from "./helpers.js";
@@ -38,6 +39,39 @@ describe("entities — pure", () => {
     ).toBeNull();
     expect(parseEntityContent("Random text with no header")).toBeNull();
     expect(parseEntityContent("[BadType] Name\n\nbody")).toBeNull();
+  });
+});
+
+describe("entities — retagValidation (pure)", () => {
+  it("strips the stale validation tag, preserves base tags in order, and appends the new verdict — exact array match (full-replace tag correctness)", async () => {
+    const memoryUpdate = vi.fn().mockResolvedValue({
+      id: "mem-1",
+      content: "",
+      project_id: "story-1",
+      tags: [],
+      pinned: false,
+      created_at: "2026-01-01T00:00:00Z",
+    });
+    const oc = { memoryUpdate } as unknown as OcClient;
+
+    const result = await retagValidation(
+      oc,
+      "mem-1",
+      ["mnemosyne", "story", "scene", "validation:clean"],
+      "errors",
+    );
+
+    expect(result).toEqual([
+      "mnemosyne",
+      "story",
+      "scene",
+      "validation:errors",
+    ]);
+    expect(memoryUpdate).toHaveBeenCalledTimes(1);
+    expect(memoryUpdate).toHaveBeenCalledWith({
+      memoryId: "mem-1",
+      tags: ["mnemosyne", "story", "scene", "validation:errors"],
+    });
   });
 });
 
