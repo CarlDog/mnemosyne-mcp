@@ -150,6 +150,7 @@ export interface SaveEntityResult {
   memory_id: string;
   created: boolean;
   pinned: boolean;
+  tags: string[];
 }
 
 export async function saveEntity(
@@ -177,6 +178,7 @@ export async function saveEntity(
       memory_id: updated.id,
       created: false,
       pinned: finalPinned,
+      tags,
     };
   }
 
@@ -192,7 +194,28 @@ export async function saveEntity(
     memory_id: saved.id,
     created: true,
     pinned,
+    tags,
   };
+}
+
+// The only place that should ever construct a validation-tag update. OC's
+// memory_update replaces the "tags" array wholesale (confirmed from the
+// OpenChronicle server source: "New tags (replaces existing)") — so this
+// always echoes the complete current tag list plus the new validation tag,
+// never just the tag being added. Omitting the base tags would silently
+// break mnemo_recall's AND-tag filter for that memory forever. Exported so
+// mnemo_revalidate_scenes (later step) can reuse it instead of duplicating
+// the retag logic.
+export async function retagValidation(
+  oc: OcClient,
+  memoryId: string,
+  currentTags: string[],
+  verdict: "clean" | "errors",
+): Promise<string[]> {
+  const withoutValidation = currentTags.filter((t) => !/^validation:/.test(t));
+  const newTags = [...withoutValidation, `validation:${verdict}`];
+  await oc.memoryUpdate({ memoryId, tags: newTags });
+  return newTags;
 }
 
 export interface RecallArgs {

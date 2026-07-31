@@ -17,9 +17,13 @@ import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
 import type { LlmProvider } from "../llm.js";
 import { buildSystemPrompt, gatherContext, MODES } from "../prompt.js";
-import { saveEntity } from "../entities.js";
+import { saveEntity, retagValidation } from "../entities.js";
 import { requireCurrentStoryId } from "../config.js";
-import { validateContent, type ValidationReport } from "../validator.js";
+import {
+  validateContent,
+  classifyVerdict,
+  type ValidationReport,
+} from "../validator.js";
 import { log } from "../log.js";
 import { asText, withLogging } from "./helpers.js";
 
@@ -108,6 +112,7 @@ export function registerContinueTool(
         // regenerating.
         const beatName = `Scene ${new Date().toISOString()}`;
         let memoryId: string | undefined;
+        let savedTags: string[] | undefined;
         let saveError: string | undefined;
         try {
           const saved = await saveEntity(oc, storyId, {
@@ -116,6 +121,7 @@ export function registerContinueTool(
             body: beatText,
           });
           memoryId = saved.memory_id;
+          savedTags = saved.tags;
         } catch (err) {
           saveError = (err as Error).message;
           log.warn("mnemo_continue", "scene save failed", { msg: saveError });
@@ -130,6 +136,31 @@ export function registerContinueTool(
             validationError = (err as Error).message;
             log.warn("mnemo_continue", "validation pass failed", {
               msg: validationError,
+            });
+          }
+        }
+
+        // Tag the saved scene with its validation verdict (v0.1.3
+        // validator-gated inclusion — see STATUS.md). Only when both the
+        // save succeeded and a verdict was actually produced: no memoryId
+        // means nothing to tag, no validation means no verdict to classify
+        // (validate=false, or the validator pass itself failed). Best-effort
+        // metadata — must never fail the tool call for an already-saved beat.
+        if (
+          memoryId !== undefined &&
+          savedTags !== undefined &&
+          validation !== undefined
+        ) {
+          try {
+            await retagValidation(
+              oc,
+              memoryId,
+              savedTags,
+              classifyVerdict(validation),
+            );
+          } catch (err) {
+            log.warn("mnemo_continue", "validation retag failed", {
+              msg: (err as Error).message,
             });
           }
         }
