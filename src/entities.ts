@@ -40,7 +40,11 @@ export type EntityType = (typeof ENTITY_TYPES)[number];
 
 const BASE_TAGS = ["mnemosyne", "story"] as const;
 const DEFAULT_RECALL_LIMIT = 10;
-const MAX_RECALL_LIMIT = 100;
+// Exported so mnemo_revalidate_scenes (v0.1.3 step 3) can request "every
+// scene in the story" without duplicating this ceiling as a second magic
+// number -- recall() itself clamps any caller-supplied limit to this value
+// regardless, so this is also the single source of truth for that clamp.
+export const MAX_RECALL_LIMIT = 100;
 // Overwrite-by-(type,name) dedup is bounded by this search window: OC has
 // no exact-header lookup, so findExistingEntity does a memory_search on
 // the name (topK below, AND-filtered on the type tag) and scans results
