@@ -50,6 +50,17 @@ const TYPE_LIMITS: Record<EntityType, number> = {
   worldbuilding: 10,
 };
 
+// Wider candidate pool for scenes than TYPE_LIMITS.scene. OC's
+// memory_search tags filter is AND-only (no OR, no exclusion), so
+// gatherContext cannot ask OC server-side for "validation:clean or
+// untagged, but never validation:errors" -- the exclusion has to happen
+// client-side in pullFilteredScenes below, over a pool wider than the
+// final cap so there are still enough candidates left after
+// validation:errors scenes are dropped. Same "search wider than the final
+// cap" shape as entities.ts's SAVE_DEDUPE_SEARCH_TOPK -- see that
+// comment for the precedent.
+const SCENE_POOL_SIZE = 20;
+
 export interface ContextBundle {
   rules: string[];
   style: string[];
@@ -74,6 +85,44 @@ async function pullByType(
   return entities.map((e) => `${e.name}\n${e.body}`);
 }
 
+// Recall scene candidates over SCENE_POOL_SIZE (wider than TYPE_LIMITS.scene)
+// and filter by validation verdict client-side, since OC's memory_search
+// has no server-side tag exclusion. validation:clean scenes are preferred;
+// untagged scenes (saved before v0.1.3's validation tagging existed, or
+// saved with validate=false) fill remaining slots; validation:errors
+// scenes are hard-excluded -- never selected, regardless of pool size.
+// Relative relevance-ranked order within each bucket is preserved (no
+// re-sort) -- only exported for direct unit testing of the bucketing
+// logic (prompt.test.ts's existing convention is to only import exported
+// symbols, never reach into unexported internals like pullByType).
+export async function pullFilteredScenes(
+  oc: OcClient,
+  storyId: string,
+  query: string,
+): Promise<string[]> {
+  const pool = await recall(oc, storyId, {
+    query,
+    type: "scene",
+    limit: SCENE_POOL_SIZE,
+  });
+  const clean = pool.filter((e) => e.tags.includes("validation:clean"));
+  const untagged = pool.filter(
+    (e) =>
+      !e.tags.includes("validation:clean") &&
+      !e.tags.includes("validation:errors"),
+  );
+  // validation:errors scenes are hard-excluded -- never selected, regardless
+  // of pool size.
+  //
+  // An empty result here is the intended behavior when all scenes are
+  // tagged validation:errors -- RECENT SCENES is omitted from the prompt
+  // entirely (block() returns null for an empty array) rather than
+  // including rule-violating few-shots.
+  return [...clean, ...untagged]
+    .slice(0, TYPE_LIMITS.scene)
+    .map((e) => `${e.name}\n${e.body}`);
+}
+
 export async function gatherContext(
   oc: OcClient,
   storyId: string,
@@ -89,7 +138,7 @@ export async function gatherContext(
   const style = await pullByType(oc, storyId, "style", query);
   const characters = await pullByType(oc, storyId, "character", query);
   const locations = await pullByType(oc, storyId, "location", query);
-  const scenes = await pullByType(oc, storyId, "scene", query);
+  const scenes = await pullFilteredScenes(oc, storyId, query);
   const lore = await pullByType(oc, storyId, "lore", query);
   const worldbuilding = await pullByType(oc, storyId, "worldbuilding", query);
   return { rules, style, characters, locations, scenes, lore, worldbuilding };
