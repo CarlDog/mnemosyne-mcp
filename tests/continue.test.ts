@@ -8,8 +8,9 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { OcClient } from "../src/oc-client.js";
 import { OllamaProvider } from "../src/llm.js";
 import { createStory } from "../src/stories.js";
-import { saveEntity, recall } from "../src/entities.js";
+import { saveEntity, recall, retagValidation } from "../src/entities.js";
 import { buildSystemPrompt, gatherContext } from "../src/prompt.js";
+import { validateContent, classifyVerdict } from "../src/validator.js";
 import { teardownStory, testStoryName } from "./helpers.js";
 
 const OC_URL = process.env.OC_URL;
@@ -22,11 +23,19 @@ suite("Phase C-1 — continue (real OC + real Ollama)", () => {
   let oc: OcClient;
   let storyId: string;
   let generator: OllamaProvider;
+  let validator: OllamaProvider;
 
   beforeAll(async () => {
     oc = new OcClient(new URL(OC_URL!));
     await oc.connect();
     generator = new OllamaProvider({
+      url: OLLAMA_URL,
+      defaultModel: OLLAMA_MODEL!,
+    });
+    // Same model as the generator, matching this repo's test convention
+    // (see validate-tool.test.ts) of reusing OLLAMA_GENERATOR_MODEL for
+    // the validator in tests rather than requiring a second env var.
+    validator = new OllamaProvider({
       url: OLLAMA_URL,
       defaultModel: OLLAMA_MODEL!,
     });
@@ -104,5 +113,77 @@ suite("Phase C-1 — continue (real OC + real Ollama)", () => {
       expect(scenes.find((s) => s.name === beatName)).toBeDefined();
     },
     5 * 60 * 1000, // generation can be slow
+  );
+
+  // v0.1.3 step 4: validator-gated scene inclusion tagging, exercised via
+  // the underlying functions (gatherContext / generator.generate /
+  // saveEntity / validateContent / retagValidation) rather than the
+  // mnemo_continue MCP tool wrapper, matching this file's existing style.
+  it(
+    "tags a validated beat with its verdict while preserving base tags",
+    async () => {
+      const direction =
+        "Aria steps out onto the dock at dawn, Holt nowhere in sight.";
+      const context = await gatherContext(oc, storyId, direction);
+      const beatText = await generator.generate({
+        systemPrompt: buildSystemPrompt("director", context),
+        userMessage: direction,
+        maxTokens: 256,
+      });
+
+      const beatName = `Scene ${new Date().toISOString()}`;
+      const saved = await saveEntity(oc, storyId, {
+        type: "scene",
+        name: beatName,
+        body: beatText,
+      });
+
+      // Same tagging step mnemo_continue performs after a validate=true save.
+      const report = await validateContent(validator, context, beatText);
+      const verdict = classifyVerdict(report);
+      await retagValidation(oc, saved.memory_id, saved.tags, verdict);
+
+      const scenes = await recall(oc, storyId, { type: "scene" });
+      const found = scenes.find((s) => s.name === beatName);
+      expect(found).toBeDefined();
+      expect(found!.tags).toEqual(
+        expect.arrayContaining(["mnemosyne", "story", "scene"]),
+      );
+      expect(
+        found!.tags.includes("validation:clean") ||
+          found!.tags.includes("validation:errors"),
+      ).toBe(true);
+    },
+    5 * 60 * 1000,
+  );
+
+  it(
+    "does not add a validation tag when validation is skipped",
+    async () => {
+      const direction = "Aria lights a lantern against the coming fog.";
+      const context = await gatherContext(oc, storyId, direction);
+      const beatText = await generator.generate({
+        systemPrompt: buildSystemPrompt("director", context),
+        userMessage: direction,
+        maxTokens: 256,
+      });
+
+      const beatName = `Scene ${new Date().toISOString()}`;
+      const saved = await saveEntity(oc, storyId, {
+        type: "scene",
+        name: beatName,
+        body: beatText,
+      });
+      expect(saved.created).toBe(true);
+      // No validateContent / retagValidation call here -- mirrors
+      // mnemo_continue with validate=false (or validate omitted), which
+      // never tags the scene.
+
+      const scenes = await recall(oc, storyId, { type: "scene" });
+      const found = scenes.find((s) => s.name === beatName);
+      expect(found).toBeDefined();
+      expect(found!.tags.some((t) => t.startsWith("validation:"))).toBe(false);
+    },
+    5 * 60 * 1000,
   );
 });
