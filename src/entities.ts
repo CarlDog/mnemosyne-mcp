@@ -167,10 +167,25 @@ export async function saveEntity(
   const existing = await findExistingEntity(oc, storyId, args.type, args.name);
 
   if (existing) {
+    // Preserve an existing validation:* tag across an overwrite. `tags`
+    // above is rebuilt from scratch (base + type + extraTags) with no
+    // knowledge of out-of-band tags like validation:clean/validation:errors
+    // (added by retagValidation, not by saveEntity) -- without this,
+    // re-saving a scene via mnemo_save_entity would silently drop its
+    // validation verdict, since OC's memory_update replaces tags wholesale.
+    // Only the validation tag is carried forward; extraTags replace-on-
+    // update semantics are otherwise unchanged.
+    const preservedValidationTag = existing.tags.find((t) =>
+      /^validation:/.test(t),
+    );
+    const finalTags =
+      preservedValidationTag && !tags.some((t) => /^validation:/.test(t))
+        ? [...tags, preservedValidationTag]
+        : tags;
     const updated = await oc.memoryUpdate({
       memoryId: existing.id,
       content,
-      tags,
+      tags: finalTags,
     });
     let finalPinned = existing.pinned;
     if (args.pinned !== undefined && existing.pinned !== args.pinned) {
@@ -182,7 +197,7 @@ export async function saveEntity(
       memory_id: updated.id,
       created: false,
       pinned: finalPinned,
-      tags,
+      tags: finalTags,
     };
   }
 

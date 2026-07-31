@@ -75,6 +75,85 @@ describe("entities — retagValidation (pure)", () => {
   });
 });
 
+describe("entities — saveEntity preserves validation tag on overwrite (pure)", () => {
+  it("carries an existing validation:* tag forward when overwriting via saveEntity, since memory_update replaces tags wholesale", async () => {
+    const existingContent = "[Scene] Scene 2026-01-01T00:00:00Z\n\nOld body.";
+    const memorySearch = vi.fn().mockResolvedValue([
+      {
+        id: "mem-scene-1",
+        content: existingContent,
+        project_id: "story-1",
+        tags: ["mnemosyne", "story", "scene", "validation:clean"],
+        pinned: false,
+        created_at: "2026-01-01T00:00:00Z",
+      },
+    ]);
+    const memoryUpdate = vi.fn().mockResolvedValue({
+      id: "mem-scene-1",
+      content: "",
+      project_id: "story-1",
+      tags: [],
+      pinned: false,
+      created_at: "2026-01-01T00:00:00Z",
+    });
+    const oc = { memorySearch, memoryUpdate } as unknown as OcClient;
+
+    const result = await saveEntity(oc, "story-1", {
+      type: "scene",
+      name: "Scene 2026-01-01T00:00:00Z",
+      body: "Hand-edited body.",
+    });
+
+    expect(memoryUpdate).toHaveBeenCalledWith({
+      memoryId: "mem-scene-1",
+      content: "[Scene] Scene 2026-01-01T00:00:00Z\n\nHand-edited body.",
+      tags: ["mnemosyne", "story", "scene", "validation:clean"],
+    });
+    expect(result.tags).toEqual([
+      "mnemosyne",
+      "story",
+      "scene",
+      "validation:clean",
+    ]);
+  });
+
+  it("does not fabricate a validation tag when the existing memory has none", async () => {
+    const existingContent = "[Character] Aria Voss\n\nOld body.";
+    const memorySearch = vi.fn().mockResolvedValue([
+      {
+        id: "mem-char-1",
+        content: existingContent,
+        project_id: "story-1",
+        tags: ["mnemosyne", "story", "character"],
+        pinned: false,
+        created_at: "2026-01-01T00:00:00Z",
+      },
+    ]);
+    const memoryUpdate = vi.fn().mockResolvedValue({
+      id: "mem-char-1",
+      content: "",
+      project_id: "story-1",
+      tags: [],
+      pinned: false,
+      created_at: "2026-01-01T00:00:00Z",
+    });
+    const oc = { memorySearch, memoryUpdate } as unknown as OcClient;
+
+    const result = await saveEntity(oc, "story-1", {
+      type: "character",
+      name: "Aria Voss",
+      body: "Updated body.",
+    });
+
+    expect(memoryUpdate).toHaveBeenCalledWith({
+      memoryId: "mem-char-1",
+      content: "[Character] Aria Voss\n\nUpdated body.",
+      tags: ["mnemosyne", "story", "character"],
+    });
+    expect(result.tags).toEqual(["mnemosyne", "story", "character"]);
+  });
+});
+
 const OC_URL = process.env.OC_URL;
 
 const suite = OC_URL ? describe : describe.skip;
