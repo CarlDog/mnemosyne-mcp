@@ -71,7 +71,7 @@ export function registerContinueTool(
           .string()
           .optional()
           .describe(
-            "Override OLLAMA_GENERATOR_MODEL for this call. Useful for trying different models on the same context.",
+            "Override the generator's default target for this call: an Ollama model tag (GENERATOR_PROVIDER=ollama), or a Kindroid ai_id / registered name (GENERATOR_PROVIDER=kindroid). Useful for trying different models/kins on the same context.",
           ),
         validate: z
           .boolean()

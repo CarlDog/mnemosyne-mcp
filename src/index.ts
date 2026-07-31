@@ -3,7 +3,9 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { log } from "./log.js";
 import { OcClient } from "./oc-client.js";
-import { OllamaProvider } from "./llm.js";
+import { OllamaProvider, type LlmProvider } from "./llm.js";
+import { KindroidClient } from "./kindroid-client.js";
+import { KindroidProvider } from "./kindroid-provider.js";
 import { registerTools } from "./tools/index.js";
 
 const OC_URL = process.env.OC_URL;
@@ -12,12 +14,15 @@ if (!OC_URL) {
   process.exit(1);
 }
 
-const OLLAMA_GENERATOR_MODEL = process.env.OLLAMA_GENERATOR_MODEL;
-if (!OLLAMA_GENERATOR_MODEL) {
-  log.error(
-    "startup",
-    "OLLAMA_GENERATOR_MODEL environment variable is required",
-  );
+// Unset means "ollama" -- the only backend v0 shipped with, so this is a
+// zero-behavior-change default for every existing deployment.
+const GENERATOR_PROVIDER =
+  (process.env.GENERATOR_PROVIDER?.trim().toLowerCase() || "ollama") as
+    "ollama" | "kindroid";
+if (GENERATOR_PROVIDER !== "ollama" && GENERATOR_PROVIDER !== "kindroid") {
+  log.error("startup", "GENERATOR_PROVIDER must be 'ollama' or 'kindroid'", {
+    value: process.env.GENERATOR_PROVIDER,
+  });
   process.exit(1);
 }
 
@@ -45,21 +50,95 @@ try {
   process.exit(1);
 }
 
-const OLLAMA_VALIDATOR_MODEL =
-  process.env.OLLAMA_VALIDATOR_MODEL ?? OLLAMA_GENERATOR_MODEL;
+// The validator pass always runs on Ollama regardless of GENERATOR_PROVIDER
+// -- a companion-chat model is a poor fit for "return JSON matching this
+// schema". When the generator is Ollama too, OLLAMA_VALIDATOR_MODEL falls
+// back to OLLAMA_GENERATOR_MODEL as before; when the generator is Kindroid,
+// there is no generator model to fall back to, so OLLAMA_VALIDATOR_MODEL
+// becomes required instead.
+let generator: LlmProvider;
+let ollamaValidatorModel: string;
 
-const generator = new OllamaProvider({
-  url: OLLAMA_URL,
-  defaultModel: OLLAMA_GENERATOR_MODEL,
-});
+if (GENERATOR_PROVIDER === "kindroid") {
+  const KINDROID_MCP_URL = process.env.KINDROID_MCP_URL;
+  if (!KINDROID_MCP_URL) {
+    log.error(
+      "startup",
+      "KINDROID_MCP_URL environment variable is required when GENERATOR_PROVIDER=kindroid",
+    );
+    process.exit(1);
+  }
+  const KINDROID_STORYTELLING_KIN = process.env.KINDROID_STORYTELLING_KIN;
+  if (!KINDROID_STORYTELLING_KIN) {
+    log.error(
+      "startup",
+      "KINDROID_STORYTELLING_KIN environment variable is required when GENERATOR_PROVIDER=kindroid",
+    );
+    process.exit(1);
+  }
+  const validatorModel = process.env.OLLAMA_VALIDATOR_MODEL;
+  if (!validatorModel) {
+    log.error(
+      "startup",
+      "OLLAMA_VALIDATOR_MODEL environment variable is required when GENERATOR_PROVIDER=kindroid " +
+        "(there is no OLLAMA_GENERATOR_MODEL to fall back to -- the validator always runs on Ollama)",
+    );
+    process.exit(1);
+  }
+  ollamaValidatorModel = validatorModel;
+
+  let kindroidUrl: URL;
+  try {
+    kindroidUrl = new URL(KINDROID_MCP_URL);
+  } catch (err) {
+    log.error("startup", "KINDROID_MCP_URL is not a valid URL", {
+      value: KINDROID_MCP_URL,
+      msg: (err as Error).message,
+    });
+    process.exit(1);
+  }
+
+  const kindroidClient = new KindroidClient(
+    kindroidUrl,
+    process.env.KINDROID_MCP_AUTH_TOKEN,
+  );
+  generator = new KindroidProvider(kindroidClient, {
+    aiId: KINDROID_STORYTELLING_KIN,
+  });
+  log.info("startup", "kindroid generator configured", {
+    url: KINDROID_MCP_URL,
+    kin: KINDROID_STORYTELLING_KIN,
+    auth: process.env.KINDROID_MCP_AUTH_TOKEN ? "bearer" : "none",
+  });
+} else {
+  const OLLAMA_GENERATOR_MODEL = process.env.OLLAMA_GENERATOR_MODEL;
+  if (!OLLAMA_GENERATOR_MODEL) {
+    log.error(
+      "startup",
+      "OLLAMA_GENERATOR_MODEL environment variable is required",
+    );
+    process.exit(1);
+  }
+  ollamaValidatorModel =
+    process.env.OLLAMA_VALIDATOR_MODEL ?? OLLAMA_GENERATOR_MODEL;
+
+  generator = new OllamaProvider({
+    url: OLLAMA_URL,
+    defaultModel: OLLAMA_GENERATOR_MODEL,
+  });
+  log.info("startup", "ollama generator configured", {
+    url: OLLAMA_URL,
+    generator_model: OLLAMA_GENERATOR_MODEL,
+  });
+}
+
 const validator = new OllamaProvider({
   url: OLLAMA_URL,
-  defaultModel: OLLAMA_VALIDATOR_MODEL,
+  defaultModel: ollamaValidatorModel,
 });
-log.info("startup", "ollama configured", {
+log.info("startup", "ollama validator configured", {
   url: OLLAMA_URL,
-  generator_model: OLLAMA_GENERATOR_MODEL,
-  validator_model: OLLAMA_VALIDATOR_MODEL,
+  validator_model: ollamaValidatorModel,
 });
 
 const INSTRUCTIONS = `MCP server for long-form storytelling on top of OpenChronicle (OC) memory.

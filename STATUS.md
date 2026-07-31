@@ -1,8 +1,26 @@
 # Status
 
-**Last updated:** 2026-07-23 (integration-test teardown; `memory_delete` confirm fix; lint/typecheck coverage)
+**Last updated:** 2026-07-31 (Phase 6 — Kindroid generator bridge, code-complete pending live verification)
 
 ## Phase
+
+**Phase 6 (Kindroid bridge) built, not yet live-verified.** `GENERATOR_PROVIDER=kindroid`
+routes story generation through a new `KindroidProvider`, which connects to
+kindroid-mcp (now deployed as a Streamable HTTP MCP server on the NAS) as an
+MCP client — mirroring `OcClient`'s existing pattern rather than the
+originally-planned plain fetch, since kindroid-mcp didn't have HTTP
+transport when that plan was written. Generator only; the validator role
+always stays on Ollama. The Kindroid path deliberately does NOT re-inject
+OC-assembled context (rules/style/characters/etc.) into every message —
+the dedicated storytelling kin's own persona/memory on Kindroid's servers
+carries continuity instead (`gatherContext`/`buildSystemPrompt` still run
+for the optional validator pass, just unused by `KindroidProvider` itself).
+
+**Not yet done:** no dedicated storytelling kin has been designated, so
+`tests/kindroid-provider.test.ts` (env-gated, real integration) hasn't
+actually run against the live service. Typecheck/lint/test/format are all
+clean; the untested surface is specifically the real `kindroid_send_message`
+round-trip.
 
 **v0.1.2 shipped.** Three more patches from the v0.1.1 dogfooding
 session, all targeting the rule-following gaps surfaced by the
@@ -31,6 +49,25 @@ Since v0.1.2 shipped, two maintenance items landed against OC's newer
 delete surface — see the first two entries under Done.
 
 ## Done
+
+- **Phase 6 — Kindroid generator bridge, code-complete** (2026-07-31).
+  `src/kindroid-client.ts` (MCP client wrapper for kindroid-mcp, mirroring
+  `oc-client.ts`) + `src/kindroid-provider.ts` (`KindroidProvider implements
+  LlmProvider`, generator-only). `GENERATOR_PROVIDER` env var in
+  `src/index.ts` selects `ollama` (default, zero behavior change) or
+  `kindroid` (requires `KINDROID_MCP_URL`, `KINDROID_STORYTELLING_KIN`, and
+  makes `OLLAMA_VALIDATOR_MODEL` required instead of defaulting from
+  `OLLAMA_GENERATOR_MODEL`, since the validator always runs on Ollama and
+  there's no generator model to fall back to in Kindroid mode). Plan
+  changed from the original "plain-fetch send-message" note (written when
+  kindroid-mcp was stdio-only) to an MCP-client connection now that
+  kindroid-mcp runs Streamable HTTP — gets kindroid-mcp's rate
+  limiting/retry/name-registry for free. `tests/kindroid-provider.test.ts`
+  added, env-gated on `KINDROID_MCP_URL`/`KINDROID_STORYTELLING_KIN` like
+  the existing OC/Ollama integration tests — unlike those, it hits a real
+  paid third-party service, so it only runs when both are explicitly set.
+  **Not yet live-verified** — no dedicated storytelling kin exists yet to
+  test against.
 
 - **Lint and typecheck actually cover the repo** (2026-07-23). Two gaps
   surfaced while verifying the teardown work above:
@@ -305,6 +342,10 @@ delete surface — see the first two entries under Done.
   overwrite-by-(type,name) and client-side hard-cap slicing.
 - **Phase C-1 — Continue (no validation)** ✅ shipped.
 - **Phase C-2 — Validation pass** ✅ shipped. Tagged `v0.1.0`.
+- **Phase 6 — Kindroid generator bridge** ⏳ code-complete, not yet live-verified —
+  `GENERATOR_PROVIDER=kindroid`, `KindroidProvider`, `KindroidClient`. Needs
+  a dedicated storytelling kin designated before the real integration test
+  can run.
 
 ## What's next (post-v0)
 

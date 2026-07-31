@@ -22,12 +22,17 @@ diagnostic from the Dovecoast smoke test).
 
 ## Layout
 
-- `src/index.ts` — MCP server entry, env validation, tool registration.
+- `src/index.ts` — MCP server entry, env validation, `GENERATOR_PROVIDER`
+  selection, tool registration.
 - `src/oc-client.ts` — Streamable HTTP MCP client wrapper for OC.
+- `src/kindroid-client.ts` — Streamable HTTP MCP client wrapper for
+  kindroid-mcp (same shape as `oc-client.ts`).
 - `src/config.ts` — local config (current story pointer, OS-appropriate
   config dir).
 - `src/stories.ts`, `src/entities.ts`, `src/prompt.ts`, `src/validator.ts`,
   `src/llm.ts` — domain logic.
+- `src/kindroid-provider.ts` — `KindroidProvider implements LlmProvider`;
+  generator-only (validator always stays on Ollama).
 - `src/tools/*.ts` — tool registrations (one file per tool surface).
 - `src/log.ts` — structured stderr logger.
 - `tests/` — vitest, real OC + real Ollama (env-gated).
@@ -66,8 +71,18 @@ Key architectural decisions (see ARCHITECTURE.md for full reasoning):
   prompt, calls a (potentially cheaper) validator LLM, surfaces flagged
   issues to the user. No auto-regeneration. No deterministic checker
   (that was a v2 anti-pattern).
-- **Provider-pluggable from day one.** Ollama, Botify MCP, Anthropic.
-  Per-role (`generator_provider`, `validator_provider`).
+- **Provider-pluggable from day one.** Ollama, Kindroid (Phase 6, via
+  kindroid-mcp as an MCP client), Botify MCP, Anthropic. Per-role
+  (`generator_provider`, `validator_provider`) — in practice today the
+  validator role always stays on Ollama regardless of `GENERATOR_PROVIDER`,
+  since a companion-chat model is a poor fit for structured-JSON output.
+- **Kindroid generator leans on the kin's own memory, not OC context.**
+  `KindroidProvider.generate()` deliberately ignores `systemPrompt` (the
+  OC-assembled rules/style/characters/etc.) — the dedicated storytelling
+  kin's own persona/memory on Kindroid's servers carries continuity
+  instead. `gatherContext`/`buildSystemPrompt` in `continue.ts` still run
+  unconditionally because the optional validator pass needs the context
+  regardless of which generator produced the beat.
 
 ## Common Commands
 
