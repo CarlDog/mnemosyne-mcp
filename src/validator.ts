@@ -32,6 +32,13 @@ export interface ValidationReport {
   summary: string;
 }
 
+// Single source of truth for the clean/errors split used to tag saved scenes
+// (v0.1.3 validator-gated inclusion — see STATUS.md). "clean" allows warnings
+// through; any error tips it to "errors".
+export function classifyVerdict(report: ValidationReport): "clean" | "errors" {
+  return report.issues.some((i) => i.severity === "error") ? "errors" : "clean";
+}
+
 const VALIDATOR_TEMPERATURE = 0.2;
 const VALIDATOR_MAX_TOKENS = 1024;
 
