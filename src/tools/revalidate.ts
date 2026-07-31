@@ -17,6 +17,11 @@
 // comment on why parallel pulls trip OC v3's rate limiter). One scene's
 // failure (validator threw on bad JSON, an LLM error, etc.) is caught and
 // recorded, not allowed to abort the whole walk.
+//
+// Capped at MAX_RECALL_LIMIT (100) scenes -- recall() has no pagination,
+// so a story with more than 100 scenes will have the excess silently left
+// unvisited. `scenes_checked` reports the count actually walked, not
+// necessarily the story's true total.
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { OcClient } from "../oc-client.js";
@@ -49,6 +54,11 @@ export interface RevalidateResult {
  * One scene's failure (gatherContext, validateContent, or the retag write
  * throwing) is caught, logged, and recorded in `failures`; it does not
  * abort the walk over the remaining scenes.
+ *
+ * Capped at MAX_RECALL_LIMIT (100) scenes -- recall() has no pagination. A
+ * story with more scenes than that will have the excess silently
+ * unvisited; `scenes_checked` reflects what was actually walked, not
+ * necessarily the story's true scene count.
  */
 export async function revalidateScenes(
   oc: OcClient,
@@ -105,7 +115,7 @@ export function registerRevalidateTool(
     {
       title: "Revalidate All Scenes",
       description:
-        "One-shot bulk validation pass over every scene in the active story. Re-runs the validator against each scene's own gathered context and retags it with a fresh validation:clean or validation:errors verdict. Fixes the bootstrap problem for scenes saved before v0.1.3's validator-gated scene inclusion existed (untagged scenes). No arguments -- walks all scenes in the active story. A single scene's validation failure is recorded in the response's failures list, not raised as an error, so one bad scene doesn't abort the walk.",
+        "One-shot bulk validation pass over every scene in the active story. Re-runs the validator against each scene's own gathered context and retags it with a fresh validation:clean or validation:errors verdict. Fixes the bootstrap problem for scenes saved before v0.1.3's validator-gated scene inclusion existed (untagged scenes). No arguments -- walks all scenes in the active story, capped at 100 scenes per run (recall has no pagination); scenes_checked reflects what was actually walked. A single scene's validation failure is recorded in the response's failures list, not raised as an error, so one bad scene doesn't abort the walk.",
       inputSchema: {},
     },
     withLogging("mnemo_revalidate_scenes", async () => {
