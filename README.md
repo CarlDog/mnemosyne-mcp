@@ -17,10 +17,16 @@ mother of the Muses — the force by which memory becomes story.
 
 ## Status
 
-**v0.1.2 shipped** — seven tools (`mnemo_story_list`, `mnemo_story_use`,
+**v0.1.3 shipped** — eight tools (`mnemo_story_list`, `mnemo_story_use`,
 `mnemo_save_entity`, `mnemo_recall`, `mnemo_delete_entity`,
-`mnemo_continue`, `mnemo_validate`). v0.1.3 in design — see
-[STATUS.md](STATUS.md). Related docs:
+`mnemo_continue`, `mnemo_validate`, `mnemo_revalidate_scenes`).
+`mnemo_continue(validate=true)` now tags scenes with their validation
+verdict, and the RECENT SCENES prompt block filters on it — the fix for
+the few-shot-vs-rule diagnostic where present-tense example scenes drowned
+out an explicit past-tense rule. A Phase 6 Kindroid-generator bridge
+(second `LlmProvider` backend, opt-in via `GENERATOR_PROVIDER=kindroid`)
+is also code-complete but not yet live-verified — see
+[STATUS.md](STATUS.md) for details. Related docs:
 
 - [STATUS.md](STATUS.md) — single source of truth: current phase,
   what's done, what's next
