@@ -1,6 +1,6 @@
 # Status
 
-**Last updated:** 2026-07-31 (Phase 6 — Kindroid generator bridge, code-complete pending live verification)
+**Last updated:** 2026-08-02 (v0.1.3 shipped — validator-gated scene inclusion; Phase 6 Kindroid bridge still code-complete, pending live verification)
 
 ## Phase
 
@@ -21,6 +21,18 @@ for the optional validator pass, just unused by `KindroidProvider` itself).
 actually run against the live service. Typecheck/lint/test/format are all
 clean; the untested surface is specifically the real `kindroid_send_message`
 round-trip.
+
+**v0.1.3 shipped** (2026-07-31, a few hours before the Phase 6 work
+above landed the same day). Validator-gated scene inclusion — the real
+fix for the few-shot-vs-rule diagnostic surfaced 2026-05-11: present-
+tense few-shot scenes in RECENT SCENES were drowning out an explicit
+past-tense RULE, and no amount of prompt-position shuffling fixed it —
+the few-shot content itself had to change. `mnemo_continue(validate=true)`
+now tags scenes `validation:clean`/`validation:errors`; `gatherContext`
+prefers clean, falls back to untagged, hard-excludes errors; a new
+`mnemo_revalidate_scenes` tool retroactively tags pre-v0.1.3 content.
+See "Done" below for the full four-step writeup, the OC full-replace-tags
+correctness trap it surfaced, and the review-fix follow-up.
 
 **v0.1.2 shipped.** Three more patches from the v0.1.1 dogfooding
 session, all targeting the rule-following gaps surfaced by the
@@ -43,10 +55,11 @@ Dovecoast smoke test against `nous-hermes2-mixtral` + `phi4:14b`:
    it?" cleanly. Plus `scripts/dump-validation.mjs` companion for
    command-line A/B work.
 
-37/37 tests pass.
+37/37 tests passed at the time.
 
-Since v0.1.2 shipped, two maintenance items landed against OC's newer
-delete surface — see the first two entries under Done.
+Current count: 26 passing, 25 integration tests skipping cleanly
+without `OC_URL`/`OLLAMA_GENERATOR_MODEL`/`KINDROID_MCP_URL` configured
+(51 total). See Done below for everything that's landed since.
 
 ## Done
 
@@ -68,6 +81,79 @@ delete surface — see the first two entries under Done.
   paid third-party service, so it only runs when both are explicitly set.
   **Not yet live-verified** — no dedicated storytelling kin exists yet to
   test against.
+
+- **v0.1.3 shipped — validator-gated scene inclusion** (2026-07-31).
+  The real fix for the few-shot-vs-rule diagnostic from 2026-05-11:
+  present-tense few-shot scenes in RECENT SCENES were drowning out an
+  explicit past-tense RULE, and prompt-position shuffling couldn't fix
+  it — the few-shot content itself had to change. Four steps, each its
+  own commit:
+  1. **Tag at save** (`0fd9a3c`). `mnemo_continue(validate=true)` tags
+     the saved scene `validation:clean` (0 errors) or
+     `validation:errors` (1+ errors) once the verdict is known — no tag
+     when `validate` is false, the save failed, or the validator itself
+     failed. `src/entities.ts` gained `retagValidation(oc, memoryId,
+     currentTags, verdict)`, the sole place a validation tag is
+     constructed, and `SaveEntityResult` now returns the entity's
+     actual current `tags`. `src/validator.ts` gained
+     `classifyVerdict(report)` as the single source of truth for the
+     clean/errors split.
+  2. **Filter on recall** (`bd4729b`). `gatherContext`'s RECENT SCENES
+     pull (`pullFilteredScenes` in `src/prompt.ts`) pulls a
+     `SCENE_POOL_SIZE=20` candidate pool — OC's `memory_search` tags
+     filter is AND-only with no exclusion, so the clean/untagged/errors
+     split has to happen client-side over a pool wider than the final
+     cap, same pattern as `SAVE_DEDUPE_SEARCH_TOPK` — prefers
+     `validation:clean`, falls back to untagged, hard-excludes
+     `validation:errors`, and returns `[]` if nothing survives, which
+     is the intended behavior: the diagnostic proved the generator
+     follows the rule cleanly with an empty RECENT SCENES block.
+  3. **`mnemo_revalidate_scenes`** (`9c0a1f6`). New no-arg tool backed
+     by an exported `revalidateScenes(oc, validator, storyId)` — pure,
+     testable, no MCP dependency. Walks every scene sequentially
+     (matching this codebase's OC rate-limit convention), re-validates
+     each against fresh context, and retags. Capped at
+     `MAX_RECALL_LIMIT` (100 scenes) — documented as a known limit
+     rather than silently truncating. One scene's failure is caught and
+     recorded in the response's `failures` list, not allowed to abort
+     the walk.
+  4. **Tests** (`92c0d99`). Pure coverage for the scene-filter bucketing
+     (prefer-clean, fallback-to-untagged, hard-exclude-errors, empty
+     result, cap respected) and `retagValidation`'s exact tag-array
+     output; integration coverage in `continue.test.ts` (tag-on-validate
+     vs. no-tag-when-skipped) and a new `tests/revalidate.test.ts`.
+
+  **Correctness trap found and closed during implementation:** OC's
+  `memory_update` replaces the `tags` array wholesale, not a merge
+  (confirmed against the OpenChronicle server source). Every tag update
+  in this feature echoes the complete current tag list through
+  `retagValidation` rather than ever writing a bare validation tag —
+  omitting the base tags would have silently broken `mnemo_recall`'s
+  AND-tag filter for that memory forever.
+
+  **Review follow-up** (`cf4ed3f`, same day). An adversarial review pass
+  after implementation found `mnemo_save_entity`'s own
+  overwrite-by-(type,name) path had the identical full-replace exposure
+  one level up: re-saving a scene (e.g. hand-editing it) would silently
+  drop its `validation:*` tag, since that path rebuilt tags from scratch
+  with no knowledge of the out-of-band validation tag. `saveEntity`'s
+  update branch now carries an existing `validation:*` tag forward
+  unless the caller is setting one explicitly. Also documented (not
+  fixed — accepted as a known limit) the previously-undocumented
+  `mnemo_revalidate_scenes` 100-scene cap. Two smaller findings were
+  deliberately deferred: no test exercises `mnemo_continue`'s tool
+  handler directly (only the underlying primitives, tested in
+  isolation), and `revalidateScenes`' per-scene failure-continuation
+  branch has no test forcing the failure path.
+
+  **Trade-offs accepted going in**, unchanged from the original plan:
+  cached verdicts go stale on rule edits (no auto-invalidation — re-run
+  `mnemo_revalidate_scenes` after editing rules); users who never
+  validate get no anchor benefit (same failure mode as before v0.1.3);
+  an all-excluded scene pool loses narrative continuity context until
+  the first clean scene re-anchors it. `mnemo_continue`'s `validate`
+  default is unchanged (`false`) — still opt-in until `keep_alive`
+  lands and validator latency drops (see "What's next").
 
 - **Lint and typecheck actually cover the repo** (2026-07-23). Two gaps
   surfaced while verifying the teardown work above:
@@ -352,64 +438,7 @@ delete surface — see the first two entries under Done.
 These are not yet planned; they're the natural follow-ups when v0 gets
 real use and pressure points emerge:
 
-- **Validator-gated scene inclusion (v0.1.3 plan, in design).**
-  Real fix for the few-shot-vs-rule issue surfaced 2026-05-11. Two
-  prompt-structural prototypes were tried and both failed against
-  `mistral-nemo:12b` on Dovecoast:
-  - **Re-anchor statement at end of system prompt** ("REMINDER: apply
-    the RULES even when RECENT SCENES demonstrate a different style")
-    — generated output still entirely present-tense; one draw also
-    regressed to script-format prose.
-  - **Reorder so RULES + STYLE move to end** (recency-bias slot, with
-    the precedence statement repositioned to call out both mode and
-    prior scenes as overridden primers) — also still entirely
-    present-tense.
-
-  **Diagnostic that pinned the cause:** strip `RECENT SCENES`
-  entirely from the v0.1.2 prompt, leave everything else unchanged
-  → `mistral-nemo:12b` produces fully past-tense, Aria-POV prose.
-  The rule was always reachable; the present-tense few-shots were
-  drowning it out. Prompt-position shuffling can't fix this; the
-  few-shot content itself has to change.
-
-  **v0.1.3 plan — validator-gated inclusion:**
-  1. **Tag scenes with their validation verdict at save time.**
-     When `mnemo_continue(validate=true)` validates the new beat, tag
-     the saved scene memory with one of:
-     - `validation:clean` — verdict has 0 errors (warnings OK)
-     - `validation:errors` — verdict has 1+ errors
-     - (no tag) — validate was false; verdict not run
-  2. **Recall filters scenes by verdict tag.** In `gatherContext`'s
-     scene pull: prefer `validation:clean`, accept untagged as a
-     fallback, hard-exclude `validation:errors`. If all scenes
-     would be excluded, return [] — the diagnostic proves the
-     generator follows the rule cleanly with no few-shots.
-  3. **New tool: `mnemo_revalidate_scenes`.** No args; walks all
-     scenes in the active story, runs the validator against each,
-     updates the tag. One-shot per story; fixes the bootstrap
-     problem for pre-v0.1.3 content. Expensive (N × validator
-     latency) so the user opts in.
-  4. **`mnemo_continue` default unchanged** — `validate=false` for
-     now. Users who want auto-gating must pass `validate=true`. Once
-     `keep_alive` lands (separate v0.1.3 candidate), validator
-     latency drops enough to consider flipping the default.
-
-  **Validator side of v0.1.2 *did* land** — both axes (tense +
-  perspective) caught reliably across 3 runs on the same content,
-  severity flips run-to-run but the axes themselves are stable.
-  One violation per axis, not exhaustive — fine for an LLM judgment
-  pass.
-
-  **Trade-offs known going in:**
-  - Cached verdicts go stale on rule edits. v0.1.3 won't auto-invalidate;
-    user re-runs `mnemo_revalidate_scenes` after editing rules. Could
-    add auto-invalidation in v0.1.4 if it becomes a pain point.
-  - Users who never validate get no anchor benefit. Acceptable: their
-    failure mode is the same as today.
-  - When all scenes are excluded, the LLM loses narrative continuity
-    context. Mitigated organically: the first clean scene becomes
-    the anchor for everything after.
-- **`stages` timing field in `mnemo_continue` response (v0.1.3 candidate).**
+- **`stages` timing field in `mnemo_continue` response (v0.1.4 candidate).**
   Per-phase elapsed time so the host LLM can report timings without
   greasing the user into the log file. Phases: `gather_ms`,
   `generate_ms`, `save_ms`, `validate_ms`. Surfaced 2026-05-11 when a
@@ -418,7 +447,7 @@ real use and pressure points emerge:
   validator took 2:57. With per-phase timing in the response, the
   user (and the host LLM) can see immediately which phase dominated
   without diffing log timestamps.
-- **Ollama warmup + extended keep-alive (v0.1.3 candidate).** First
+- **Ollama warmup + extended keep-alive (v0.1.4 candidate).** First
   `mnemo_continue` after Ollama idle pays a cold start while the model
   reloads into VRAM (Ollama unloads after default 5min idle). Two-part
   fix, both server-side; no client background process needed (that

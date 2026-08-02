@@ -9,9 +9,11 @@ into this file, MEMORY.md, or Serena memories — reference STATUS.md.
 
 ## Current Sprint
 
-See [STATUS.md](STATUS.md). Current: v0.1.2 shipped, v0.1.3 plan locked
-(validator-gated scene inclusion — fix for the few-shot-vs-rule
-diagnostic from the Dovecoast smoke test).
+See [STATUS.md](STATUS.md). Current: v0.1.3 shipped (validator-gated
+scene inclusion — fix for the few-shot-vs-rule diagnostic from the
+Dovecoast smoke test). Phase 6 (Kindroid generator bridge) is
+code-complete but not yet live-verified — no dedicated storytelling kin
+designated yet.
 
 ## Stack
 
