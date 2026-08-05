@@ -229,7 +229,11 @@ real use:
   trees) — text chat first
 - Auto-regeneration on validation failure
 - Voice or audio interfaces
-- Image generation tied to scenes
+- Image generation tied to scenes — still out of scope, not reopened by
+  this note; the candidate integration shape (atlascloud-mcp, a
+  Streamable HTTP MCP server for Atlas Cloud's image/video/audio/LLM
+  models) is recorded in STATUS.md "What's next (post-v0)" for when
+  this line item is actually revisited
 - Inter-story memory bleed (cross-project recall)
 
 ---
