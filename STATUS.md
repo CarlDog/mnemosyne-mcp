@@ -1,6 +1,6 @@
 # Status
 
-**Last updated:** 2026-08-02 (v0.1.3 shipped — validator-gated scene inclusion; Phase 6 Kindroid bridge still code-complete, pending live verification)
+**Last updated:** 2026-08-05 (v0.1.3 shipped — validator-gated scene inclusion; Phase 6 Kindroid bridge still code-complete, pending live verification; atlascloud-mcp registered locally in `.mcp.json` + illustration-integration scope recorded in "What's next" — no code changes)
 
 ## Phase
 
@@ -481,6 +481,25 @@ real use and pressure points emerge:
 - **Import / export tooling** — `mnemo_export_story`,
   `mnemo_import_story`, `mnemo_seed_from_template`. Planned in
   ARCHITECTURE.md §2; defer until there's a portability use case.
+- **Atlas Cloud illustration integration (scope recorded 2026-08-05, not
+  started).** ARCHITECTURE.md §8 still lists "image generation tied to
+  scenes" as out of scope for v0 — this entry only captures the shape
+  for when that's revisited, mirroring the existing
+  `src/kindroid-client.ts` pattern: a new `src/atlascloud-client.ts`
+  Streamable HTTP MCP client against
+  [atlascloud-mcp](https://github.com/CarlDog/atlascloud-mcp) (deployed
+  `http://carldog-nas:3010/mcp`; a fork of Atlas Cloud's official MCP
+  server adding Docker/Portainer deployment — 400+ image/video/audio/LLM
+  models), config'd via `ATLASCLOUD_MCP_URL` + `ATLASCLOUD_MCP_AUTH_TOKEN`
+  (same shape as `KINDROID_MCP_URL`/`KINDROID_MCP_AUTH_TOKEN`). Candidate
+  surface: a new `mnemo_illustrate_scene` tool, or an optional step in
+  `mnemo_continue`/`mnemo_save_entity` that calls atlascloud's
+  `atlas_generate_image`/`atlas_quick_generate` against a scene's prose
+  and attaches the resulting image URL to the saved entity. In the
+  meantime, atlascloud-mcp is already registered in this repo's
+  `.mcp.json` (2026-08-05, gitignored — carries a real bearer token), so
+  an interactive Claude session working in this repo can call its tools
+  ad hoc today without any of the server-side work above.
 
 ## Open Decisions
 
