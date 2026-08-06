@@ -34,7 +34,9 @@ designated yet.
 - `src/stories.ts`, `src/entities.ts`, `src/prompt.ts`, `src/validator.ts`,
   `src/llm.ts` — domain logic.
 - `src/kindroid-provider.ts` — `KindroidProvider implements LlmProvider`;
-  generator-only (validator always stays on Ollama).
+  generator-only (validator always stays on Ollama). Exports
+  `buildKindroidMessage()` (pure, unit-tested) — the keyphrase-matching
+  logic that folds matched story entities into the outgoing message.
 - `src/tools/*.ts` — tool registrations (one file per tool surface).
 - `src/log.ts` — structured stderr logger.
 - `tests/` — vitest, real OC + real Ollama (env-gated).
@@ -78,13 +80,25 @@ Key architectural decisions (see ARCHITECTURE.md for full reasoning):
   (`generator_provider`, `validator_provider`) — in practice today the
   validator role always stays on Ollama regardless of `GENERATOR_PROVIDER`,
   since a companion-chat model is a poor fit for structured-JSON output.
-- **Kindroid generator leans on the kin's own memory, not OC context.**
-  `KindroidProvider.generate()` deliberately ignores `systemPrompt` (the
-  OC-assembled rules/style/characters/etc.) — the dedicated storytelling
-  kin's own persona/memory on Kindroid's servers carries continuity
-  instead. `gatherContext`/`buildSystemPrompt` in `continue.ts` still run
-  unconditionally because the optional validator pass needs the context
-  regardless of which generator produced the beat.
+- **Kindroid generator: keyphrase-gated context, not the full assembled
+  prompt.** `KindroidProvider.generate()` ignores `systemPrompt`/
+  `temperature`/`maxTokens` (no Kindroid equivalent) but does NOT ignore
+  `context` — `buildKindroidMessage()` scans the direction for a
+  character/location/lore/worldbuilding entity NAME mention and folds in
+  only the matching entries, plus the already-relevance-filtered recent
+  scenes (always included, never keyphrase-gated). This mirrors Kindroid's
+  own "Journal" feature (keyphrase-triggered lorebook entries), which isn't
+  exposed by the public API — so mnemosyne reimplements the same mechanic
+  client-side, populated from the story's existing OC entities (no new
+  storage, no import step). Rules/style are never surfaced this way — the
+  dedicated storytelling kin's own persona carries tone/voice, not
+  mnemosyne's prescriptive constraints. `gatherContext`/`buildSystemPrompt`
+  in `continue.ts` still run unconditionally regardless of generator,
+  because the optional validator pass needs the full context either way.
+  Trade-off accepted: since Kindroid has no side-channel for context, a
+  match becomes a visible prefix in the actual message sent (and thus in
+  your own chat history) — there's no way to inject it invisibly the way
+  Kindroid's native Journal recall does.
 
 ## Common Commands
 

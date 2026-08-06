@@ -4,6 +4,7 @@
 // Don't pre-build it.
 
 import { log } from "./log.js";
+import type { ContextBundle } from "./prompt.js";
 
 export interface LlmGenerateOptions {
   systemPrompt: string;
@@ -12,6 +13,12 @@ export interface LlmGenerateOptions {
   maxTokens?: number;
   /** Override the provider's default model for this call. */
   model?: string;
+  /** The same gatherContext() result systemPrompt was built from, in
+   * structured form. OllamaProvider ignores this (systemPrompt already has
+   * everything it needs) -- it exists for KindroidProvider, which has no
+   * system-prompt channel and instead does its own keyphrase-based
+   * selection over these entities. */
+  context?: ContextBundle;
 }
 
 export interface LlmProvider {
