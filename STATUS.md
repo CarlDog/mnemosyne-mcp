@@ -1,10 +1,10 @@
 # Status
 
-**Last updated:** 2026-08-05 (Phase 6 revised — keyphrase-gated story context for the Kindroid generator; v0.1.3 shipped — validator-gated scene inclusion; atlascloud-mcp registered locally in `.mcp.json` + illustration-integration scope recorded in "What's next" — no code changes)
+**Last updated:** 2026-08-05 (Phase 6 live-verified against a dedicated test kin — no code changes; earlier same day: Phase 6 revised — keyphrase-gated story context for the Kindroid generator; v0.1.3 shipped — validator-gated scene inclusion; atlascloud-mcp registered locally in `.mcp.json` + illustration-integration scope recorded in "What's next")
 
 ## Phase
 
-**Phase 6 (Kindroid bridge) built, not yet live-verified.** `GENERATOR_PROVIDER=kindroid`
+**Phase 6 (Kindroid bridge) built and live-verified.** `GENERATOR_PROVIDER=kindroid`
 routes story generation through a new `KindroidProvider`, which connects to
 kindroid-mcp (now deployed as a Streamable HTTP MCP server on the NAS) as an
 MCP client — mirroring `OcClient`'s existing pattern rather than the
@@ -30,11 +30,17 @@ needs the full context either way. 7 new pure unit tests for
 `buildKindroidMessage` (keyphrase matching, word-boundary precision, scene
 inclusion, rules/style exclusion) — see `tests/kindroid-provider.test.ts`.
 
-**Not yet done:** no dedicated storytelling kin has been designated, so
-`tests/kindroid-provider.test.ts` (env-gated, real integration) hasn't
-actually run against the live service. Typecheck/lint/test/format are all
-clean; the untested surface is specifically the real `kindroid_send_message`
-round-trip.
+**Live-verified (2026-08-05).** A dedicated test kin was designated;
+`tests/kindroid-provider.test.ts`'s env-gated real-integration suite ran
+against the live NAS deployment (all 11 tests pass, including the 3 real
+`kindroid_send_message` round-trips and the `opts.model` override path).
+Confirmed end-to-end: `KINDROID_MCP_URL`/`KINDROID_MCP_AUTH_TOKEN`/
+`KINDROID_STORYTELLING_KIN` wiring, the MCP-client connection, and a real
+reply coming back ignoring `systemPrompt`/`temperature`/`maxTokens` as
+designed. Not yet exercised in this pass: an actual `mnemo_continue` call
+with `GENERATOR_PROVIDER=kindroid` and a non-empty `ContextBundle` (the
+keyphrase-injection path itself is covered by the 8 pure unit tests, not
+by a live round-trip with real OC-sourced context).
 
 **v0.1.3 shipped** (2026-07-31, a few hours before the Phase 6 work
 above landed the same day). Validator-gated scene inclusion — the real
@@ -93,8 +99,8 @@ without `OC_URL`/`OLLAMA_GENERATOR_MODEL`/`KINDROID_MCP_URL` configured
   added, env-gated on `KINDROID_MCP_URL`/`KINDROID_STORYTELLING_KIN` like
   the existing OC/Ollama integration tests — unlike those, it hits a real
   paid third-party service, so it only runs when both are explicitly set.
-  **Not yet live-verified** — no dedicated storytelling kin exists yet to
-  test against.
+  **Live-verified 2026-08-05** against a dedicated test kin — all 11 tests
+  pass, including the 3 real `kindroid_send_message` round-trips.
 
 - **v0.1.3 shipped — validator-gated scene inclusion** (2026-07-31).
   The real fix for the few-shot-vs-rule diagnostic from 2026-05-11:
@@ -442,10 +448,9 @@ without `OC_URL`/`OLLAMA_GENERATOR_MODEL`/`KINDROID_MCP_URL` configured
   overwrite-by-(type,name) and client-side hard-cap slicing.
 - **Phase C-1 — Continue (no validation)** ✅ shipped.
 - **Phase C-2 — Validation pass** ✅ shipped. Tagged `v0.1.0`.
-- **Phase 6 — Kindroid generator bridge** ⏳ code-complete, not yet live-verified —
-  `GENERATOR_PROVIDER=kindroid`, `KindroidProvider`, `KindroidClient`. Needs
-  a dedicated storytelling kin designated before the real integration test
-  can run.
+- **Phase 6 — Kindroid generator bridge** ✅ shipped and live-verified (2026-08-05) —
+  `GENERATOR_PROVIDER=kindroid`, `KindroidProvider`, `KindroidClient`, against
+  a dedicated test kin.
 
 ## What's next (post-v0)
 

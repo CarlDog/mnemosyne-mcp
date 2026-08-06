@@ -25,8 +25,8 @@ verdict, and the RECENT SCENES prompt block filters on it — the fix for
 the few-shot-vs-rule diagnostic where present-tense example scenes drowned
 out an explicit past-tense rule. A Phase 6 Kindroid-generator bridge
 (second `LlmProvider` backend, opt-in via `GENERATOR_PROVIDER=kindroid`)
-is also code-complete but not yet live-verified — see
-[STATUS.md](STATUS.md) for details. Related docs:
+is also shipped and live-verified — see [STATUS.md](STATUS.md) for
+details. Related docs:
 
 - [STATUS.md](STATUS.md) — single source of truth: current phase,
   what's done, what's next

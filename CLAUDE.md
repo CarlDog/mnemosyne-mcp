@@ -11,9 +11,8 @@ into this file, MEMORY.md, or Serena memories — reference STATUS.md.
 
 See [STATUS.md](STATUS.md). Current: v0.1.3 shipped (validator-gated
 scene inclusion — fix for the few-shot-vs-rule diagnostic from the
-Dovecoast smoke test). Phase 6 (Kindroid generator bridge) is
-code-complete but not yet live-verified — no dedicated storytelling kin
-designated yet.
+Dovecoast smoke test). Phase 6 (Kindroid generator bridge) is shipped
+and live-verified against a dedicated test kin.
 
 ## Stack
 
