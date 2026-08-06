@@ -1,6 +1,6 @@
 # Status
 
-**Last updated:** 2026-08-05 (v0.1.3 shipped — validator-gated scene inclusion; Phase 6 Kindroid bridge still code-complete, pending live verification; atlascloud-mcp registered locally in `.mcp.json` + illustration-integration scope recorded in "What's next" — no code changes)
+**Last updated:** 2026-08-05 (Phase 6 revised — keyphrase-gated story context for the Kindroid generator; v0.1.3 shipped — validator-gated scene inclusion; atlascloud-mcp registered locally in `.mcp.json` + illustration-integration scope recorded in "What's next" — no code changes)
 
 ## Phase
 
@@ -10,11 +10,25 @@ kindroid-mcp (now deployed as a Streamable HTTP MCP server on the NAS) as an
 MCP client — mirroring `OcClient`'s existing pattern rather than the
 originally-planned plain fetch, since kindroid-mcp didn't have HTTP
 transport when that plan was written. Generator only; the validator role
-always stays on Ollama. The Kindroid path deliberately does NOT re-inject
-OC-assembled context (rules/style/characters/etc.) into every message —
-the dedicated storytelling kin's own persona/memory on Kindroid's servers
-carries continuity instead (`gatherContext`/`buildSystemPrompt` still run
-for the optional validator pass, just unused by `KindroidProvider` itself).
+always stays on Ollama.
+
+**Revised same day:** the Kindroid path no longer ignores story context
+outright. `buildKindroidMessage()` scans the direction for a
+character/location/lore/worldbuilding entity NAME mention and folds in only
+the matching entries, plus the already-relevance-filtered recent scenes
+(always included). This mirrors Kindroid's own keyphrase-triggered "Journal"
+feature — confirmed app-only, not reachable via the public API — reimplemented
+client-side and populated from the story's existing OC entities (no new
+storage, no import step: `mnemo_save_entity` already is the data source).
+Rules/style are never surfaced this way; the kin's own persona still carries
+tone/voice. Trade-off accepted: a match becomes a visible prefix in the
+actual message sent (and thus in your chat history), since Kindroid has no
+side channel to inject context invisibly the way its native Journal recall
+does. `gatherContext`/`buildSystemPrompt` still run unconditionally in
+`continue.ts` regardless of generator, since the optional validator pass
+needs the full context either way. 7 new pure unit tests for
+`buildKindroidMessage` (keyphrase matching, word-boundary precision, scene
+inclusion, rules/style exclusion) — see `tests/kindroid-provider.test.ts`.
 
 **Not yet done:** no dedicated storytelling kin has been designated, so
 `tests/kindroid-provider.test.ts` (env-gated, real integration) hasn't

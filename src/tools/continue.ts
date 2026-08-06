@@ -103,6 +103,7 @@ export function registerContinueTool(
           temperature: args.temperature,
           maxTokens: args.max_tokens,
           model: args.model,
+          context,
         });
 
         // Guard the save: the beat is an expensive LLM generation, and a

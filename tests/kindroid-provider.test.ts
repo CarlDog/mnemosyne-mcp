@@ -13,7 +13,122 @@
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { KindroidClient } from "../src/kindroid-client.js";
-import { KindroidProvider } from "../src/kindroid-provider.js";
+import {
+  KindroidProvider,
+  buildKindroidMessage,
+} from "../src/kindroid-provider.js";
+import type { ContextBundle } from "../src/prompt.js";
+
+const EMPTY_CONTEXT: ContextBundle = {
+  rules: [],
+  style: [],
+  characters: [],
+  locations: [],
+  scenes: [],
+  lore: [],
+  worldbuilding: [],
+};
+
+describe("buildKindroidMessage (pure)", () => {
+  it("returns the message unchanged when context is undefined", () => {
+    expect(buildKindroidMessage("hello there")).toBe("hello there");
+  });
+
+  it("returns the message unchanged when nothing matches and there are no scenes", () => {
+    const context: ContextBundle = {
+      ...EMPTY_CONTEXT,
+      characters: ["Aria Voss\nA weathered cartographer."],
+    };
+    expect(buildKindroidMessage("what should I do next?", context)).toBe(
+      "what should I do next?",
+    );
+  });
+
+  it("folds in a character match, case-insensitively", () => {
+    const context: ContextBundle = {
+      ...EMPTY_CONTEXT,
+      characters: ["Aria Voss\nA weathered cartographer with one ear."],
+    };
+    const result = buildKindroidMessage(
+      "go find aria voss at the docks",
+      context,
+    );
+    expect(result).toContain(
+      "Aria Voss: A weathered cartographer with one ear.",
+    );
+    expect(result).toContain("go find aria voss at the docks");
+    expect(result.endsWith("go find aria voss at the docks")).toBe(true);
+  });
+
+  it("uses word boundaries, not bare substring matching", () => {
+    const context: ContextBundle = {
+      ...EMPTY_CONTEXT,
+      locations: ["Aria\nA small moon colony."],
+    };
+    // "Arial" contains "Aria" as a substring but is not a mention of it.
+    const result = buildKindroidMessage("set the font to Arial", context);
+    expect(result).toBe("set the font to Arial");
+  });
+
+  it("matches a name whose own edge character is non-word (regression: \\b fails here)", () => {
+    const context: ContextBundle = {
+      ...EMPTY_CONTEXT,
+      characters: ["Prof. Whitfield Jr.\nA retired linguist."],
+    };
+    const result = buildKindroidMessage(
+      "I saw Prof. Whitfield Jr. yesterday at the market.",
+      context,
+    );
+    expect(result).toContain("Prof. Whitfield Jr.: A retired linguist.");
+  });
+
+  it("matches across characters/locations/lore/worldbuilding and preserves entry order", () => {
+    const context: ContextBundle = {
+      ...EMPTY_CONTEXT,
+      characters: ["Aria Voss\nA cartographer."],
+      locations: ["The Dovecoast Tavern\nA fog-choked harbor inn."],
+      lore: ["The Sundering\nAn ancient cataclysm."],
+      worldbuilding: ["Magic System\nMagic is drawn from tides."],
+    };
+    const result = buildKindroidMessage(
+      "Aria Voss meets me at The Dovecoast Tavern to discuss The Sundering and the Magic System.",
+      context,
+    );
+    const ariaIdx = result.indexOf("Aria Voss:");
+    const tavernIdx = result.indexOf("The Dovecoast Tavern:");
+    const sunderingIdx = result.indexOf("The Sundering:");
+    const magicIdx = result.indexOf("Magic System:");
+    expect(
+      [ariaIdx, tavernIdx, sunderingIdx, magicIdx].every((i) => i >= 0),
+    ).toBe(true);
+    expect(ariaIdx).toBeLessThan(tavernIdx);
+    expect(tavernIdx).toBeLessThan(sunderingIdx);
+    expect(sunderingIdx).toBeLessThan(magicIdx);
+  });
+
+  it("always includes recent scenes, unconditionally (not keyphrase-gated)", () => {
+    const context: ContextBundle = {
+      ...EMPTY_CONTEXT,
+      scenes: ["Scene 2026-07-17T21:04:11.318Z\nThe tavern door creaks open."],
+    };
+    const result = buildKindroidMessage("continue the scene", context);
+    expect(result).toContain("Recent scenes:");
+    expect(result).toContain("The tavern door creaks open.");
+    // The scene's timestamp-based name is an internal identifier, not
+    // meaningful content -- it should not appear in the injected block.
+    expect(result).not.toContain("Scene 2026-07-17T21:04:11.318Z");
+  });
+
+  it("never surfaces rules or style, even when name-mentioned", () => {
+    const context: ContextBundle = {
+      ...EMPTY_CONTEXT,
+      rules: ["Tone\nRestrained, melancholic prose."],
+      style: ["Tone\nThird-limited POV."],
+    };
+    const result = buildKindroidMessage("keep the Tone consistent", context);
+    expect(result).toBe("keep the Tone consistent");
+  });
+});
 
 const KINDROID_MCP_URL = process.env.KINDROID_MCP_URL;
 const KINDROID_STORYTELLING_KIN = process.env.KINDROID_STORYTELLING_KIN;
