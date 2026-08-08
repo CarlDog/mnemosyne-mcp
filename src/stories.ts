@@ -2,11 +2,11 @@
 // pinned marker memory of the form:
 //   [Mnemosyne Story] <name>
 //   Created: <iso-datetime>
-//   Schema: 2
-//   Kindroid-Kin: <ai_id-or-registered-name>   (optional)
-// with tags ["mnemosyne", "story-marker"]. The Kindroid-Kin line is new in
-// schema 2 and always optional -- schema-1 markers (no such line) still
-// parse fine, just with kindroid_kin left unset.
+//   Schema: 3
+//   Kindroid-Target: ai:<id>        (optional; or "group:<id>")
+// with tags ["mnemosyne", "story-marker"]. Schema-1 markers (no kin line at
+// all) and schema-2 markers (legacy "Kindroid-Kin: <id>" line, always an AI
+// target) both still parse fine -- see parseMarker's legacy fallback.
 //
 // Discovery uses a single cross-project memory_search filtered by the marker
 // tags (AND logic), so listStories is one round trip regardless of how many
@@ -16,47 +16,86 @@ import { type OcClient, type OcMemory } from "./oc-client.js";
 
 export const STORY_MARKER_TAGS = ["mnemosyne", "story-marker"];
 export const STORY_MARKER_QUERY = "Mnemosyne Story";
-export const STORY_MARKER_SCHEMA = 2;
+export const STORY_MARKER_SCHEMA = 3;
 const MAX_STORIES_PER_LIST = 1000;
-const KINDROID_KIN_PREFIX = "Kindroid-Kin: ";
+const KINDROID_TARGET_PREFIX = "Kindroid-Target: ";
+// Schema 2, read-only compat: a bare kin line always meant an AI target.
+const LEGACY_KINDROID_KIN_PREFIX = "Kindroid-Kin: ";
+
+export type KindroidTargetType = "ai" | "group";
+
+export interface KindroidTarget {
+  type: KindroidTargetType;
+  /** ai_id/group_id, or a kindroid-mcp registered name (resolved server-side). */
+  id: string;
+}
 
 export interface MnemoStory {
   id: string; // OC project id
   name: string;
   created_at: string;
   marker_memory_id: string; // OC memory id, needed to update the marker in place
-  /** This story's dedicated Kindroid kin (ai_id or kindroid-mcp registered
-   * name), if bound. See setStoryKin(). */
-  kindroid_kin?: string;
+  /** This story's dedicated Kindroid target (a single AI or a group chat),
+   * if bound. See setKindroidTarget(). */
+  kindroid_target?: KindroidTarget;
 }
 
 function buildMarkerContent(
   name: string,
   createdAt: string,
-  kindroidKin?: string,
+  kindroidTarget?: KindroidTarget,
 ): string {
   const lines = [
     `[Mnemosyne Story] ${name}`,
     `Created: ${createdAt}`,
     `Schema: ${STORY_MARKER_SCHEMA}`,
   ];
-  if (kindroidKin) lines.push(`${KINDROID_KIN_PREFIX}${kindroidKin}`);
+  if (kindroidTarget) {
+    lines.push(
+      `${KINDROID_TARGET_PREFIX}${kindroidTarget.type}:${kindroidTarget.id}`,
+    );
+  }
   return lines.join("\n");
+}
+
+function parseKindroidTargetValue(value: string): KindroidTarget | undefined {
+  const sep = value.indexOf(":");
+  if (sep === -1) return undefined;
+  const type = value.slice(0, sep);
+  const id = value.slice(sep + 1).trim();
+  if (id && (type === "ai" || type === "group")) return { type, id };
+  return undefined;
 }
 
 function parseMarker(
   memory: OcMemory,
-): { name: string; created: string; kindroidKin?: string } | null {
+): { name: string; created: string; kindroidTarget?: KindroidTarget } | null {
   const lines = memory.content.split("\n");
   const nameMatch = lines[0]?.match(/^\[Mnemosyne Story\] (.+)$/);
   const createdMatch = lines[1]?.match(/^Created: (\S+)$/);
   if (!nameMatch?.[1] || !createdMatch?.[1]) return null;
-  const kinLine = lines.find((line) => line.startsWith(KINDROID_KIN_PREFIX));
-  const kindroidKin = kinLine?.slice(KINDROID_KIN_PREFIX.length).trim();
+
+  const targetLine = lines.find((line) =>
+    line.startsWith(KINDROID_TARGET_PREFIX),
+  );
+  let kindroidTarget = targetLine
+    ? parseKindroidTargetValue(targetLine.slice(KINDROID_TARGET_PREFIX.length))
+    : undefined;
+
+  if (!kindroidTarget) {
+    const legacyLine = lines.find((line) =>
+      line.startsWith(LEGACY_KINDROID_KIN_PREFIX),
+    );
+    const legacyId = legacyLine
+      ?.slice(LEGACY_KINDROID_KIN_PREFIX.length)
+      .trim();
+    if (legacyId) kindroidTarget = { type: "ai", id: legacyId };
+  }
+
   return {
     name: nameMatch[1],
     created: createdMatch[1],
-    ...(kindroidKin && { kindroidKin }),
+    ...(kindroidTarget && { kindroidTarget }),
   };
 }
 
@@ -68,8 +107,30 @@ function markerToStory(marker: OcMemory): MnemoStory | null {
     name: parsed.name,
     created_at: parsed.created,
     marker_memory_id: marker.id,
-    ...(parsed.kindroidKin && { kindroid_kin: parsed.kindroidKin }),
+    ...(parsed.kindroidTarget && { kindroid_target: parsed.kindroidTarget }),
   };
+}
+
+/**
+ * Validates and combines mutually-exclusive kin/group_id call params into a
+ * single KindroidTarget. Throws when both are truthy -- a target is either
+ * one AI or one group chat, never both. Shared by mnemo_story_use (a
+ * persistent binding, where the caller separately tracks the null-vs-
+ * undefined "clear vs leave unchanged" distinction) and mnemo_continue (a
+ * one-shot per-call override, where there's no such distinction).
+ */
+export function combineKindroidTarget(
+  kin: string | null | undefined,
+  groupId: string | null | undefined,
+): KindroidTarget | undefined {
+  if (kin && groupId) {
+    throw new Error(
+      "Pass at most one of kindroid_kin / kindroid_group_id -- a target is either a single AI or a group, not both.",
+    );
+  }
+  if (kin) return { type: "ai", id: kin };
+  if (groupId) return { type: "group", id: groupId };
+  return undefined;
 }
 
 export async function listStories(oc: OcClient): Promise<MnemoStory[]> {
@@ -116,12 +177,12 @@ export async function findStory(
 export async function createStory(
   oc: OcClient,
   name: string,
-  kindroidKin?: string,
+  kindroidTarget?: KindroidTarget,
 ): Promise<MnemoStory> {
   const project = await oc.projectCreate(name);
   const createdAt = new Date().toISOString();
   const marker = await oc.memorySave({
-    content: buildMarkerContent(name, createdAt, kindroidKin),
+    content: buildMarkerContent(name, createdAt, kindroidTarget),
     projectId: project.id,
     tags: STORY_MARKER_TAGS,
     pinned: true,
@@ -131,24 +192,28 @@ export async function createStory(
     name,
     created_at: createdAt,
     marker_memory_id: marker.id,
-    ...(kindroidKin && { kindroid_kin: kindroidKin }),
+    ...(kindroidTarget && { kindroid_target: kindroidTarget }),
   };
 }
 
 /**
- * Binds this story to a dedicated Kindroid kin (or clears the binding, when
- * kindroidKin is undefined) by rewriting the marker memory's content in
- * place -- name and created_at are preserved verbatim, only the
- * Kindroid-Kin line changes. Used by mnemo_continue (via
- * resolveKindroidKin()) so a story can default to a specific kin without an
- * explicit per-call override every time.
+ * Binds this story to a dedicated Kindroid target -- a single AI or a group
+ * chat -- (or clears the binding, when kindroidTarget is undefined) by
+ * rewriting the marker memory's content in place: name and created_at are
+ * preserved verbatim, only the Kindroid-Target line changes. Used by
+ * mnemo_continue (via resolveKindroidTarget()) so a story can default to a
+ * specific target without an explicit per-call override every time.
  */
-export async function setStoryKin(
+export async function setKindroidTarget(
   oc: OcClient,
   story: MnemoStory,
-  kindroidKin: string | undefined,
+  kindroidTarget: KindroidTarget | undefined,
 ): Promise<MnemoStory> {
-  const content = buildMarkerContent(story.name, story.created_at, kindroidKin);
+  const content = buildMarkerContent(
+    story.name,
+    story.created_at,
+    kindroidTarget,
+  );
   await oc.memoryUpdate({ memoryId: story.marker_memory_id, content });
-  return { ...story, kindroid_kin: kindroidKin };
+  return { ...story, kindroid_target: kindroidTarget };
 }

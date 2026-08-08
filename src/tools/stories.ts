@@ -6,22 +6,26 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
 import {
+  combineKindroidTarget,
   createStory,
   findStory,
   listStories,
-  setStoryKin,
+  setKindroidTarget,
   type MnemoStory,
 } from "../stories.js";
 import { getCurrentStoryId, setCurrentStoryId } from "../config.js";
 import { asText, withLogging } from "./helpers.js";
 
 // Explicit field whitelist rather than spreading MnemoStory -- keeps
-// internal plumbing (marker_memory_id) out of tool responses.
+// internal plumbing (marker_memory_id) out of tool responses. kindroid_kin
+// / kindroid_group_id mirror the input params' shape rather than exposing
+// the internal kindroid_target: {type, id} representation.
 interface AnnotatedStory {
   id: string;
   name: string;
   created_at: string;
   kindroid_kin?: string;
+  kindroid_group_id?: string;
   current: boolean;
 }
 
@@ -33,7 +37,12 @@ function toAnnotated(
     id: story.id,
     name: story.name,
     created_at: story.created_at,
-    ...(story.kindroid_kin && { kindroid_kin: story.kindroid_kin }),
+    ...(story.kindroid_target?.type === "ai" && {
+      kindroid_kin: story.kindroid_target.id,
+    }),
+    ...(story.kindroid_target?.type === "group" && {
+      kindroid_group_id: story.kindroid_target.id,
+    }),
     current: story.id === currentId,
   };
 }
@@ -76,7 +85,14 @@ export function registerStoryTools(server: McpServer, oc: OcClient): void {
           .nullable()
           .optional()
           .describe(
-            "Bind this story to a specific Kindroid kin (a raw ai_id or a kindroid-mcp registered name), used by mnemo_continue when GENERATOR_PROVIDER=kindroid and no per-call model override is given. Pass null to clear a previously-set binding (falls back to the server-wide KINDROID_STORYTELLING_KIN default). Omit to leave any existing binding unchanged.",
+            "Bind this story to a specific Kindroid AI (a raw ai_id or a kindroid-mcp registered name) for single-AI generation, used by mnemo_continue when GENERATOR_PROVIDER=kindroid and no per-call override is given. Mutually exclusive with kindroid_group_id. Pass null to clear a previously-set binding (falls back to the server-wide default). Omit to leave any existing binding unchanged.",
+          ),
+        kindroid_group_id: z
+          .string()
+          .nullable()
+          .optional()
+          .describe(
+            "Bind this story to a specific Kindroid group chat (a raw group_id or a kindroid-mcp registered name) instead of a single AI -- mnemo_continue then drives the group's turn loop and returns each AI's reply as part of the beat. Mutually exclusive with kindroid_kin. Pass null to clear. Omit to leave unchanged.",
           ),
       },
     },
@@ -86,8 +102,19 @@ export function registerStoryTools(server: McpServer, oc: OcClient): void {
         name_or_id: string;
         create_if_missing?: boolean;
         kindroid_kin?: string | null;
+        kindroid_group_id?: string | null;
       }) => {
         const { name_or_id, create_if_missing } = args;
+
+        // Throws on a genuine kindroid_kin + kindroid_group_id conflict.
+        const requestedTarget = combineKindroidTarget(
+          args.kindroid_kin,
+          args.kindroid_group_id,
+        );
+        const targetChangeRequested =
+          args.kindroid_kin !== undefined ||
+          args.kindroid_group_id !== undefined;
+
         let story = await findStory(oc, name_or_id);
         if (!story) {
           if (!create_if_missing) {
@@ -108,20 +135,21 @@ export function registerStoryTools(server: McpServer, oc: OcClient): void {
               isError: true,
             };
           }
-          story = await createStory(
-            oc,
-            name_or_id,
-            args.kindroid_kin ?? undefined,
-          );
-        } else if (args.kindroid_kin !== undefined) {
-          story = await setStoryKin(oc, story, args.kindroid_kin ?? undefined);
+          story = await createStory(oc, name_or_id, requestedTarget);
+        } else if (targetChangeRequested) {
+          story = await setKindroidTarget(oc, story, requestedTarget);
         }
         await setCurrentStoryId(story.id);
         return asText({
           id: story.id,
           name: story.name,
           created_at: story.created_at,
-          ...(story.kindroid_kin && { kindroid_kin: story.kindroid_kin }),
+          ...(story.kindroid_target?.type === "ai" && {
+            kindroid_kin: story.kindroid_target.id,
+          }),
+          ...(story.kindroid_target?.type === "group" && {
+            kindroid_group_id: story.kindroid_target.id,
+          }),
           current: true,
         });
       },

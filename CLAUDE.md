@@ -98,20 +98,44 @@ Key architectural decisions (see ARCHITECTURE.md for full reasoning):
   match becomes a visible prefix in the actual message sent (and thus in
   your own chat history) — there's no way to inject it invisibly the way
   Kindroid's native Journal recall does.
-- **Per-story kin binding, OC-canonical.** A story can bind its own
-  dedicated Kindroid kin via `mnemo_story_use`'s `kindroid_kin` param
-  (`null` clears it), stored as an optional `Kindroid-Kin:` line on the
-  story's marker memory (`stories.ts`, schema 2 — schema-1 markers without
-  the line still parse fine). This follows the existing "OC is canonical
-  for story state" rule rather than mnemosyne's local `config.json`, since
-  a kin id is portable story data, not machine-local operational state.
-  `mnemo_continue` resolves the effective target via
-  `resolveKindroidKin()`: an explicit per-call `model` always wins, then
-  the active story's bound kin (only relevant when the generator actually
-  is Kindroid), then `KindroidProvider`'s own `KINDROID_STORYTELLING_KIN`
-  default. The story-marker lookup is skipped entirely unless both
-  conditions hold, so an Ollama-generated story pays no extra OC round
-  trip for a field it'll never use.
+- **Per-story Kindroid target (AI or group), OC-canonical.** A story can
+  bind its own dedicated Kindroid target — a single AI, or a group chat —
+  via `mnemo_story_use`'s `kindroid_kin` / `kindroid_group_id` params
+  (mutually exclusive; `null` clears), stored as `KindroidTarget {type: "ai"
+  | "group", id}` on the story's marker memory (`stories.ts`, schema 3 —
+  schema-1 markers with no kin line and schema-2 markers with the legacy
+  bare `Kindroid-Kin:` line, always an AI target, both still parse fine).
+  This follows the existing "OC is canonical for story state" rule rather
+  than mnemosyne's local `config.json`, since a target id is portable story
+  data, not machine-local operational state. `mnemo_continue` resolves the
+  effective target via `resolveKindroidTarget()`: an explicit per-call
+  `kindroid_kin`/`kindroid_group_id` on that call always wins, then the
+  active story's bound target (only relevant when the generator actually is
+  Kindroid), then `KindroidProvider`'s own configured `defaultTarget`
+  (`KINDROID_STORYTELLING_KIN` or `KINDROID_STORYTELLING_GROUP`). The
+  story-marker lookup is skipped entirely unless both conditions hold, so
+  an Ollama-generated story pays no extra OC round trip for a field it'll
+  never use. `model` stays Ollama-only (an Ollama model tag) — it no
+  longer doubles as a Kindroid override, since a Kindroid target needs a
+  type (ai vs group), not just a bare id.
+- **Group targets drive kindroid-mcp's turn loop, not a single reply.**
+  `KindroidProvider.generate()` against a group target calls
+  `KindroidClient.advanceGroup()` (→ kindroid-mcp's `kindroid_advance_group`
+  tool) with `allowUser: false` forced — mnemosyne is generating a story
+  beat, not waiting on a live human's real-time turn in the chat, so
+  letting the loop hand the turn back to "the user" would just produce zero
+  AI replies for a caller with no way to take that turn. `maxTurns`
+  defaults to 4 (matching kindroid-mcp's own default; not yet configurable
+  — a cheap follow-up if needed). The turn loop's replies are joined into a
+  single beat string by `formatGroupReplies()` — one `"Name: message"` line
+  per speaker, in generation order — since a "beat" against a group
+  naturally involves a few characters exchanging lines, and `LlmProvider`'s
+  contract stays a single string regardless of target type. **Not yet
+  live-verified** — no real Kindroid group chat was available to test
+  against (only a single-AI test kin); the OC-side marker storage/parsing
+  for group targets IS live-verified (`tests/stories.test.ts`), but
+  `advanceGroup()`'s actual kindroid-mcp round-trip is only typecheck/
+  lint-clean, not exercised against a live group.
 
 ## Common Commands
 

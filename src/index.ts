@@ -6,6 +6,7 @@ import { OcClient } from "./oc-client.js";
 import { OllamaProvider, type LlmProvider } from "./llm.js";
 import { KindroidClient } from "./kindroid-client.js";
 import { KindroidProvider } from "./kindroid-provider.js";
+import type { KindroidTarget } from "./stories.js";
 import { registerTools } from "./tools/index.js";
 
 const OC_URL = process.env.OC_URL;
@@ -69,13 +70,24 @@ if (GENERATOR_PROVIDER === "kindroid") {
     process.exit(1);
   }
   const KINDROID_STORYTELLING_KIN = process.env.KINDROID_STORYTELLING_KIN;
-  if (!KINDROID_STORYTELLING_KIN) {
+  const KINDROID_STORYTELLING_GROUP = process.env.KINDROID_STORYTELLING_GROUP;
+  if (KINDROID_STORYTELLING_KIN && KINDROID_STORYTELLING_GROUP) {
     log.error(
       "startup",
-      "KINDROID_STORYTELLING_KIN environment variable is required when GENERATOR_PROVIDER=kindroid",
+      "set at most one of KINDROID_STORYTELLING_KIN / KINDROID_STORYTELLING_GROUP -- the default target is either a single AI or a group, not both",
     );
     process.exit(1);
   }
+  if (!KINDROID_STORYTELLING_KIN && !KINDROID_STORYTELLING_GROUP) {
+    log.error(
+      "startup",
+      "KINDROID_STORYTELLING_KIN or KINDROID_STORYTELLING_GROUP is required when GENERATOR_PROVIDER=kindroid",
+    );
+    process.exit(1);
+  }
+  const defaultTarget: KindroidTarget = KINDROID_STORYTELLING_KIN
+    ? { type: "ai", id: KINDROID_STORYTELLING_KIN }
+    : { type: "group", id: KINDROID_STORYTELLING_GROUP! };
   const validatorModel = process.env.OLLAMA_VALIDATOR_MODEL;
   if (!validatorModel) {
     log.error(
@@ -102,12 +114,11 @@ if (GENERATOR_PROVIDER === "kindroid") {
     kindroidUrl,
     process.env.KINDROID_MCP_AUTH_TOKEN,
   );
-  generator = new KindroidProvider(kindroidClient, {
-    aiId: KINDROID_STORYTELLING_KIN,
-  });
+  generator = new KindroidProvider(kindroidClient, { defaultTarget });
   log.info("startup", "kindroid generator configured", {
     url: KINDROID_MCP_URL,
-    kin: KINDROID_STORYTELLING_KIN,
+    target_type: defaultTarget.type,
+    target_id: defaultTarget.id,
     auth: process.env.KINDROID_MCP_AUTH_TOKEN ? "bearer" : "none",
   });
 } else {
@@ -148,16 +159,21 @@ OC projects are not visible through this MCP.
 
 v0 surface:
 - mnemo_story_list — list Mnemosyne stories
-- mnemo_story_use(name_or_id, create_if_missing?) — set active story
+- mnemo_story_use(name_or_id, create_if_missing?, kindroid_kin?,
+  kindroid_group_id?) — set active story. kindroid_kin/kindroid_group_id
+  (mutually exclusive) optionally bind this story to a specific Kindroid
+  AI or group chat (GENERATOR_PROVIDER=kindroid only); null clears.
 - mnemo_save_entity(type, name, content, pinned?, extra_tags?) — write a
   character/location/rule/style/scene/lore/worldbuilding entry to the
   active story. Overwrites by (type, name).
 - mnemo_recall(query?, type?, limit?) — semantic recall over the active
   story's entities.
 - mnemo_continue(direction, mode?, max_tokens?, temperature?, model?,
-  validate?) — pull context from OC, generate the next beat via the
-  generator LLM, auto-save the result as a scene entity. Mode defaults
-  to 'director'. With validate=true, runs an LLM second pass and
+  kindroid_kin?, kindroid_group_id?, validate?) — pull context from OC,
+  generate the next beat via the generator LLM, auto-save the result as a
+  scene entity. Mode defaults to 'director'. model overrides the Ollama
+  model tag; kindroid_kin/kindroid_group_id override the Kindroid target
+  for this call only. With validate=true, runs an LLM second pass and
   attaches a verdict (issues + summary) to the response.
 - mnemo_validate(content) — standalone validation pass over arbitrary
   content (hand-written prose, previously-saved beats being re-audited).

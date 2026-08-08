@@ -12,5 +12,13 @@
     "noEmit": true,
     "rootDir": "."
   },
+  // Override, not extend: tsconfig.json's own exclude has "**/*.test.ts"
+  // (kept out of the dist build), and tsconfig inheritance means an
+  // unoverridden exclude still applies even though every test file is
+  // explicitly listed in this config's own `include` below -- exclude wins
+  // over include. Left inherited, this defeated the whole point of this
+  // file: every *.test.ts was silently skipped, so a type error in a test
+  // surfaced at runtime (or not at all) instead of from `npm run typecheck`.
+  "exclude": ["node_modules", "dist"],
   "include": ["src/**/*", "tests/**/*", "vitest.config.ts"]
 }
