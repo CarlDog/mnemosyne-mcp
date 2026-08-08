@@ -1,6 +1,6 @@
 # Status
 
-**Last updated:** 2026-08-05 (Phase 6 live-verified against a dedicated test kin — no code changes; earlier same day: Phase 6 revised — keyphrase-gated story context for the Kindroid generator; v0.1.3 shipped — validator-gated scene inclusion; atlascloud-mcp registered locally in `.mcp.json` + illustration-integration scope recorded in "What's next")
+**Last updated:** 2026-08-06 (Atlas Cloud illustration integration design notes added — `docs/ILLUSTRATION_INTEGRATION.md`, proposal only, no code changes; earlier: Phase 6 live-verified against a dedicated test kin; Phase 6 revised — keyphrase-gated story context for the Kindroid generator; v0.1.3 shipped — validator-gated scene inclusion; atlascloud-mcp registered locally in `.mcp.json` + illustration-integration scope recorded in "What's next")
 
 ## Phase
 
@@ -500,25 +500,24 @@ real use and pressure points emerge:
 - **Import / export tooling** — `mnemo_export_story`,
   `mnemo_import_story`, `mnemo_seed_from_template`. Planned in
   ARCHITECTURE.md §2; defer until there's a portability use case.
-- **Atlas Cloud illustration integration (scope recorded 2026-08-05, not
-  started).** ARCHITECTURE.md §8 still lists "image generation tied to
-  scenes" as out of scope for v0 — this entry only captures the shape
-  for when that's revisited, mirroring the existing
-  `src/kindroid-client.ts` pattern: a new `src/atlascloud-client.ts`
-  Streamable HTTP MCP client against
+- **Atlas Cloud illustration integration (scope recorded 2026-08-05,
+  design notes added 2026-08-06 — proposal only, not started, not
+  scheduled).** ARCHITECTURE.md §8 still lists "image generation tied to
+  scenes" as out of scope for v0 — this entry doesn't reopen that. Full
+  design thinking (character reference images, durable-storage question,
+  async/timeout handling, entity-schema options, candidate tool surface,
+  loose-vs-tight coupling) lives in
+  [docs/ILLUSTRATION_INTEGRATION.md](docs/ILLUSTRATION_INTEGRATION.md) —
+  update that file, not this bullet, when the design itself changes.
+  Shape in brief: mirrors the existing `src/kindroid-client.ts` pattern
+  (a new `src/atlascloud-client.ts` Streamable HTTP MCP client,
+  `ATLASCLOUD_MCP_URL` + `ATLASCLOUD_MCP_AUTH_TOKEN` config) against
   [atlascloud-mcp](https://github.com/CarlDog/atlascloud-mcp) (deployed
-  `http://carldog-nas:3010/mcp`; a fork of Atlas Cloud's official MCP
-  server adding Docker/Portainer deployment — 400+ image/video/audio/LLM
-  models), config'd via `ATLASCLOUD_MCP_URL` + `ATLASCLOUD_MCP_AUTH_TOKEN`
-  (same shape as `KINDROID_MCP_URL`/`KINDROID_MCP_AUTH_TOKEN`). Candidate
-  surface: a new `mnemo_illustrate_scene` tool, or an optional step in
-  `mnemo_continue`/`mnemo_save_entity` that calls atlascloud's
-  `atlas_generate_image`/`atlas_quick_generate` against a scene's prose
-  and attaches the resulting image URL to the saved entity. In the
-  meantime, atlascloud-mcp is already registered in this repo's
-  `.mcp.json` (2026-08-05, gitignored — carries a real bearer token), so
-  an interactive Claude session working in this repo can call its tools
-  ad hoc today without any of the server-side work above.
+  `http://carldog-nas:3010/mcp`). In the meantime, atlascloud-mcp is
+  already registered in this repo's `.mcp.json` (2026-08-05, gitignored —
+  carries a real bearer token), so an interactive Claude session working
+  in this repo can call its tools ad hoc today without any of the
+  server-side work described in the design doc.
 
 ## Open Decisions
 
