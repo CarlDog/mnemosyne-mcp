@@ -16,6 +16,7 @@ import { KindroidClient } from "../src/kindroid-client.js";
 import {
   KindroidProvider,
   buildKindroidMessage,
+  resolveKindroidKin,
 } from "../src/kindroid-provider.js";
 import type { ContextBundle } from "../src/prompt.js";
 
@@ -127,6 +128,39 @@ describe("buildKindroidMessage (pure)", () => {
     };
     const result = buildKindroidMessage("keep the Tone consistent", context);
     expect(result).toBe("keep the Tone consistent");
+  });
+});
+
+describe("resolveKindroidKin (pure)", () => {
+  it("an explicit per-call override always wins", () => {
+    expect(resolveKindroidKin("explicit-kin", "kindroid", "story-kin")).toBe(
+      "explicit-kin",
+    );
+    expect(resolveKindroidKin("explicit-kin", "kindroid", undefined)).toBe(
+      "explicit-kin",
+    );
+    // Even for a non-Kindroid generator -- explicit always wins regardless
+    // of provider (mirrors mnemo_continue's existing model override).
+    expect(resolveKindroidKin("llama3", "ollama", "story-kin")).toBe("llama3");
+  });
+
+  it("falls back to the story-bound kin when the generator is kindroid", () => {
+    expect(resolveKindroidKin(undefined, "kindroid", "story-kin")).toBe(
+      "story-kin",
+    );
+  });
+
+  it("ignores a story-bound kin for any non-kindroid generator", () => {
+    expect(
+      resolveKindroidKin(undefined, "ollama", "story-kin"),
+    ).toBeUndefined();
+  });
+
+  it("returns undefined when nothing applies, falling through to the provider default", () => {
+    expect(
+      resolveKindroidKin(undefined, "kindroid", undefined),
+    ).toBeUndefined();
+    expect(resolveKindroidKin(undefined, "ollama", undefined)).toBeUndefined();
   });
 });
 

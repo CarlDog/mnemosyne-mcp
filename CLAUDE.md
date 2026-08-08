@@ -98,6 +98,20 @@ Key architectural decisions (see ARCHITECTURE.md for full reasoning):
   match becomes a visible prefix in the actual message sent (and thus in
   your own chat history) — there's no way to inject it invisibly the way
   Kindroid's native Journal recall does.
+- **Per-story kin binding, OC-canonical.** A story can bind its own
+  dedicated Kindroid kin via `mnemo_story_use`'s `kindroid_kin` param
+  (`null` clears it), stored as an optional `Kindroid-Kin:` line on the
+  story's marker memory (`stories.ts`, schema 2 — schema-1 markers without
+  the line still parse fine). This follows the existing "OC is canonical
+  for story state" rule rather than mnemosyne's local `config.json`, since
+  a kin id is portable story data, not machine-local operational state.
+  `mnemo_continue` resolves the effective target via
+  `resolveKindroidKin()`: an explicit per-call `model` always wins, then
+  the active story's bound kin (only relevant when the generator actually
+  is Kindroid), then `KindroidProvider`'s own `KINDROID_STORYTELLING_KIN`
+  default. The story-marker lookup is skipped entirely unless both
+  conditions hold, so an Ollama-generated story pays no extra OC round
+  trip for a field it'll never use.
 
 ## Common Commands
 

@@ -120,6 +120,25 @@ export function buildKindroidMessage(
   return `${lines.join("\n")}\n\n${userMessage}`;
 }
 
+/**
+ * Resolves which kin mnemo_continue should target for a given call: an
+ * explicit per-call override always wins; otherwise the active story's own
+ * bound kin applies (see stories.ts's setStoryKin) -- but only when the
+ * generator actually is Kindroid, since a story-bound kin id is meaningless
+ * to any other provider and must never leak into e.g. an Ollama model tag.
+ * Returns undefined when neither applies, which falls through to
+ * KindroidProvider's own KINDROID_STORYTELLING_KIN default. Pure so it's
+ * unit-testable without a live story or provider.
+ */
+export function resolveKindroidKin(
+  explicitModel: string | undefined,
+  generatorName: string,
+  storyKin: string | undefined,
+): string | undefined {
+  if (explicitModel !== undefined) return explicitModel;
+  return generatorName === "kindroid" ? storyKin : undefined;
+}
+
 export class KindroidProvider implements LlmProvider {
   readonly name = "kindroid";
 

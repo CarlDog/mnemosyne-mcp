@@ -19,6 +19,8 @@ import type { LlmProvider } from "../llm.js";
 import { buildSystemPrompt, gatherContext, MODES } from "../prompt.js";
 import { saveEntity, retagValidation } from "../entities.js";
 import { requireCurrentStoryId } from "../config.js";
+import { findStory } from "../stories.js";
+import { resolveKindroidKin } from "../kindroid-provider.js";
 import {
   validateContent,
   classifyVerdict,
@@ -71,7 +73,7 @@ export function registerContinueTool(
           .string()
           .optional()
           .describe(
-            "Override the generator's default target for this call: an Ollama model tag (GENERATOR_PROVIDER=ollama), or a Kindroid ai_id / registered name (GENERATOR_PROVIDER=kindroid). Useful for trying different models/kins on the same context.",
+            "Override the generator's default target for this call: an Ollama model tag (GENERATOR_PROVIDER=ollama), or a Kindroid ai_id / registered name (GENERATOR_PROVIDER=kindroid). Useful for trying different models/kins on the same context. Precedence when GENERATOR_PROVIDER=kindroid: this override, then the active story's own bound kin (see mnemo_story_use's kindroid_kin param), then the server-wide KINDROID_STORYTELLING_KIN default.",
           ),
         validate: z
           .boolean()
@@ -97,12 +99,22 @@ export function registerContinueTool(
         const context = await gatherContext(oc, storyId, args.direction);
         const systemPrompt = buildSystemPrompt(mode, context);
 
+        // Only fetch the story marker (an extra OC round trip) when it
+        // could actually matter: no explicit override, and a story-bound
+        // kin is meaningless to any generator but Kindroid.
+        let storyKin: string | undefined;
+        if (args.model === undefined && generator.name === "kindroid") {
+          const story = await findStory(oc, storyId);
+          storyKin = story?.kindroid_kin;
+        }
+        const model = resolveKindroidKin(args.model, generator.name, storyKin);
+
         const beatText = await generator.generate({
           systemPrompt,
           userMessage: args.direction,
           temperature: args.temperature,
           maxTokens: args.max_tokens,
-          model: args.model,
+          model,
           context,
         });
 
