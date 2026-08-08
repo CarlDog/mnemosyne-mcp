@@ -19,8 +19,12 @@ import type { LlmProvider } from "../llm.js";
 import { buildSystemPrompt, gatherContext, MODES } from "../prompt.js";
 import { saveEntity, retagValidation } from "../entities.js";
 import { requireCurrentStoryId } from "../config.js";
-import { findStory } from "../stories.js";
-import { resolveKindroidKin } from "../kindroid-provider.js";
+import {
+  combineKindroidTarget,
+  findStory,
+  type KindroidTarget,
+} from "../stories.js";
+import { resolveKindroidTarget } from "../kindroid-provider.js";
 import {
   validateContent,
   classifyVerdict,
@@ -73,7 +77,19 @@ export function registerContinueTool(
           .string()
           .optional()
           .describe(
-            "Override the generator's default target for this call: an Ollama model tag (GENERATOR_PROVIDER=ollama), or a Kindroid ai_id / registered name (GENERATOR_PROVIDER=kindroid). Useful for trying different models/kins on the same context. Precedence when GENERATOR_PROVIDER=kindroid: this override, then the active story's own bound kin (see mnemo_story_use's kindroid_kin param), then the server-wide KINDROID_STORYTELLING_KIN default.",
+            "Override the Ollama model tag for this call (GENERATOR_PROVIDER=ollama only). For a Kindroid per-call override, use kindroid_kin / kindroid_group_id instead.",
+          ),
+        kindroid_kin: z
+          .string()
+          .optional()
+          .describe(
+            "Kindroid per-call override (GENERATOR_PROVIDER=kindroid only): target this specific AI (a raw ai_id or a kindroid-mcp registered name) for this call only. Mutually exclusive with kindroid_group_id. Precedence: this override, then the active story's own bound target (see mnemo_story_use's kindroid_kin/kindroid_group_id params), then the server-wide KINDROID_STORYTELLING_KIN/KINDROID_STORYTELLING_GROUP default.",
+          ),
+        kindroid_group_id: z
+          .string()
+          .optional()
+          .describe(
+            "Kindroid per-call override (GENERATOR_PROVIDER=kindroid only): target this specific group chat (a raw group_id or a kindroid-mcp registered name) for this call only -- drives the group's turn loop and returns each AI's reply as part of the beat. Mutually exclusive with kindroid_kin. Same precedence as kindroid_kin.",
           ),
         validate: z
           .boolean()
@@ -91,6 +107,8 @@ export function registerContinueTool(
         max_tokens?: number;
         temperature?: number;
         model?: string;
+        kindroid_kin?: string;
+        kindroid_group_id?: string;
         validate?: boolean;
       }) => {
         const storyId = await requireCurrentStoryId();
@@ -99,23 +117,34 @@ export function registerContinueTool(
         const context = await gatherContext(oc, storyId, args.direction);
         const systemPrompt = buildSystemPrompt(mode, context);
 
+        // Throws on a genuine kindroid_kin + kindroid_group_id conflict.
+        const explicitTarget = combineKindroidTarget(
+          args.kindroid_kin,
+          args.kindroid_group_id,
+        );
+
         // Only fetch the story marker (an extra OC round trip) when it
         // could actually matter: no explicit override, and a story-bound
-        // kin is meaningless to any generator but Kindroid.
-        let storyKin: string | undefined;
-        if (args.model === undefined && generator.name === "kindroid") {
+        // target is meaningless to any generator but Kindroid.
+        let storyTarget: KindroidTarget | undefined;
+        if (explicitTarget === undefined && generator.name === "kindroid") {
           const story = await findStory(oc, storyId);
-          storyKin = story?.kindroid_kin;
+          storyTarget = story?.kindroid_target;
         }
-        const model = resolveKindroidKin(args.model, generator.name, storyKin);
+        const kindroidTarget = resolveKindroidTarget(
+          explicitTarget,
+          generator.name,
+          storyTarget,
+        );
 
         const beatText = await generator.generate({
           systemPrompt,
           userMessage: args.direction,
           temperature: args.temperature,
           maxTokens: args.max_tokens,
-          model,
+          model: args.model,
           context,
+          kindroidTarget,
         });
 
         // Guard the save: the beat is an expensive LLM generation, and a

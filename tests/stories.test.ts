@@ -9,13 +9,42 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { OcClient } from "../src/oc-client.js";
 import {
+  combineKindroidTarget,
   createStory,
   findStory,
   findStoryByName,
   listStories,
-  setStoryKin,
+  setKindroidTarget,
+  STORY_MARKER_TAGS,
 } from "../src/stories.js";
 import { teardownStory, testStoryName } from "./helpers.js";
+
+describe("combineKindroidTarget (pure)", () => {
+  it("returns undefined when neither is given", () => {
+    expect(combineKindroidTarget(undefined, undefined)).toBeUndefined();
+    expect(combineKindroidTarget(null, null)).toBeUndefined();
+  });
+
+  it("builds an ai target from kin alone", () => {
+    expect(combineKindroidTarget("kin-1", undefined)).toEqual({
+      type: "ai",
+      id: "kin-1",
+    });
+  });
+
+  it("builds a group target from group_id alone", () => {
+    expect(combineKindroidTarget(undefined, "group-1")).toEqual({
+      type: "group",
+      id: "group-1",
+    });
+  });
+
+  it("throws when both kin and group_id are given", () => {
+    expect(() => combineKindroidTarget("kin-1", "group-1")).toThrow(
+      /at most one/i,
+    );
+  });
+});
 
 const OC_URL = process.env.OC_URL;
 
@@ -66,36 +95,89 @@ suite("Phase A — story management (real OC)", () => {
     expect(story).toBeNull();
   });
 
-  it("creates a story with a kin bound at creation time", async () => {
+  it("creates a story with an ai target bound at creation time", async () => {
     const kinStoryName = testStoryName("kin-create");
-    const story = await createStory(oc, kinStoryName, "test-ai-id-123");
-    expect(story.kindroid_kin).toBe("test-ai-id-123");
+    const story = await createStory(oc, kinStoryName, {
+      type: "ai",
+      id: "test-ai-id-123",
+    });
+    expect(story.kindroid_target).toEqual({
+      type: "ai",
+      id: "test-ai-id-123",
+    });
     expect(story.marker_memory_id).toBeTruthy();
     // Direct cleanup -- teardownStory() also closes the shared OC
     // connection, which the remaining tests in this suite still need.
     await oc.projectDelete(story.id);
   });
 
-  it("binds, rebinds, and clears a kin on an existing story via setStoryKin", async () => {
+  it("creates a story with a group target bound at creation time", async () => {
+    const groupStoryName = testStoryName("group-create");
+    const story = await createStory(oc, groupStoryName, {
+      type: "group",
+      id: "test-group-id-456",
+    });
+    expect(story.kindroid_target).toEqual({
+      type: "group",
+      id: "test-group-id-456",
+    });
+    await oc.projectDelete(story.id);
+  });
+
+  it("binds, rebinds (ai to group), and clears a target via setKindroidTarget", async () => {
     expect(storyId).toBeTruthy();
     const before = await findStory(oc, storyId!);
-    expect(before?.kindroid_kin).toBeUndefined();
+    expect(before?.kindroid_target).toBeUndefined();
 
-    const bound = await setStoryKin(oc, before!, "bound-kin-456");
-    expect(bound.kindroid_kin).toBe("bound-kin-456");
+    const bound = await setKindroidTarget(oc, before!, {
+      type: "ai",
+      id: "bound-kin-456",
+    });
+    expect(bound.kindroid_target).toEqual({ type: "ai", id: "bound-kin-456" });
     // The marker rewrite must preserve name and created_at verbatim.
     expect(bound.name).toBe(before!.name);
     expect(bound.created_at).toBe(before!.created_at);
-    expect((await findStory(oc, storyId!))?.kindroid_kin).toBe("bound-kin-456");
+    expect((await findStory(oc, storyId!))?.kindroid_target).toEqual({
+      type: "ai",
+      id: "bound-kin-456",
+    });
 
-    const rebound = await setStoryKin(oc, bound, "different-kin-789");
-    expect(rebound.kindroid_kin).toBe("different-kin-789");
-    expect((await findStory(oc, storyId!))?.kindroid_kin).toBe(
-      "different-kin-789",
-    );
+    const rebound = await setKindroidTarget(oc, bound, {
+      type: "group",
+      id: "different-group-789",
+    });
+    expect(rebound.kindroid_target).toEqual({
+      type: "group",
+      id: "different-group-789",
+    });
+    expect((await findStory(oc, storyId!))?.kindroid_target).toEqual({
+      type: "group",
+      id: "different-group-789",
+    });
 
-    const cleared = await setStoryKin(oc, rebound, undefined);
-    expect(cleared.kindroid_kin).toBeUndefined();
-    expect((await findStory(oc, storyId!))?.kindroid_kin).toBeUndefined();
+    const cleared = await setKindroidTarget(oc, rebound, undefined);
+    expect(cleared.kindroid_target).toBeUndefined();
+    expect((await findStory(oc, storyId!))?.kindroid_target).toBeUndefined();
+  });
+
+  it("reads a legacy schema-2 'Kindroid-Kin:' line as an ai target (backward compat)", async () => {
+    const legacyStoryName = testStoryName("legacy-schema2");
+    const project = await oc.projectCreate(legacyStoryName);
+    await oc.memorySave({
+      content: [
+        `[Mnemosyne Story] ${legacyStoryName}`,
+        `Created: ${new Date().toISOString()}`,
+        `Schema: 2`,
+        `Kindroid-Kin: legacy-ai-id`,
+      ].join("\n"),
+      projectId: project.id,
+      tags: STORY_MARKER_TAGS,
+      pinned: true,
+    });
+
+    const story = await findStory(oc, project.id);
+    expect(story?.kindroid_target).toEqual({ type: "ai", id: "legacy-ai-id" });
+
+    await oc.projectDelete(project.id);
   });
 });

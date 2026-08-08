@@ -5,13 +5,16 @@
 
 import { log } from "./log.js";
 import type { ContextBundle } from "./prompt.js";
+import type { KindroidTarget } from "./stories.js";
 
 export interface LlmGenerateOptions {
   systemPrompt: string;
   userMessage: string;
   temperature?: number;
   maxTokens?: number;
-  /** Override the provider's default model for this call. */
+  /** Override the provider's default model for this call. Ollama-specific
+   * (an Ollama model tag) -- Kindroid's per-call override is kindroidTarget
+   * below, since a Kindroid target needs a type (ai vs group), not just an id. */
   model?: string;
   /** The same gatherContext() result systemPrompt was built from, in
    * structured form. OllamaProvider ignores this (systemPrompt already has
@@ -19,6 +22,10 @@ export interface LlmGenerateOptions {
    * system-prompt channel and instead does its own keyphrase-based
    * selection over these entities. */
   context?: ContextBundle;
+  /** Kindroid-specific per-call target override (a single AI or a group
+   * chat), taking precedence over the provider's configured/story-bound
+   * default. OllamaProvider ignores this. */
+  kindroidTarget?: KindroidTarget;
 }
 
 export interface LlmProvider {

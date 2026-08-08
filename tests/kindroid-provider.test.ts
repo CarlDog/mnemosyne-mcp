@@ -12,13 +12,18 @@
 // additional gate is added on top.
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { KindroidClient } from "../src/kindroid-client.js";
+import {
+  KindroidClient,
+  type KindroidGroupReply,
+} from "../src/kindroid-client.js";
 import {
   KindroidProvider,
   buildKindroidMessage,
-  resolveKindroidKin,
+  resolveKindroidTarget,
+  formatGroupReplies,
 } from "../src/kindroid-provider.js";
 import type { ContextBundle } from "../src/prompt.js";
+import type { KindroidTarget } from "../src/stories.js";
 
 const EMPTY_CONTEXT: ContextBundle = {
   rules: [],
@@ -131,36 +136,87 @@ describe("buildKindroidMessage (pure)", () => {
   });
 });
 
-describe("resolveKindroidKin (pure)", () => {
+const AI_TARGET: KindroidTarget = { type: "ai", id: "explicit-kin" };
+const GROUP_TARGET: KindroidTarget = { type: "group", id: "story-group" };
+const STORY_AI_TARGET: KindroidTarget = { type: "ai", id: "story-kin" };
+
+describe("resolveKindroidTarget (pure)", () => {
   it("an explicit per-call override always wins", () => {
-    expect(resolveKindroidKin("explicit-kin", "kindroid", "story-kin")).toBe(
-      "explicit-kin",
+    expect(resolveKindroidTarget(AI_TARGET, "kindroid", STORY_AI_TARGET)).toBe(
+      AI_TARGET,
     );
-    expect(resolveKindroidKin("explicit-kin", "kindroid", undefined)).toBe(
-      "explicit-kin",
+    expect(resolveKindroidTarget(AI_TARGET, "kindroid", undefined)).toBe(
+      AI_TARGET,
     );
     // Even for a non-Kindroid generator -- explicit always wins regardless
-    // of provider (mirrors mnemo_continue's existing model override).
-    expect(resolveKindroidKin("llama3", "ollama", "story-kin")).toBe("llama3");
-  });
-
-  it("falls back to the story-bound kin when the generator is kindroid", () => {
-    expect(resolveKindroidKin(undefined, "kindroid", "story-kin")).toBe(
-      "story-kin",
+    // of provider, same as it did before groups existed.
+    expect(resolveKindroidTarget(AI_TARGET, "ollama", STORY_AI_TARGET)).toBe(
+      AI_TARGET,
     );
   });
 
-  it("ignores a story-bound kin for any non-kindroid generator", () => {
+  it("falls back to the story-bound target when the generator is kindroid", () => {
+    expect(resolveKindroidTarget(undefined, "kindroid", STORY_AI_TARGET)).toBe(
+      STORY_AI_TARGET,
+    );
+    expect(resolveKindroidTarget(undefined, "kindroid", GROUP_TARGET)).toBe(
+      GROUP_TARGET,
+    );
+  });
+
+  it("ignores a story-bound target for any non-kindroid generator", () => {
     expect(
-      resolveKindroidKin(undefined, "ollama", "story-kin"),
+      resolveKindroidTarget(undefined, "ollama", STORY_AI_TARGET),
     ).toBeUndefined();
   });
 
   it("returns undefined when nothing applies, falling through to the provider default", () => {
     expect(
-      resolveKindroidKin(undefined, "kindroid", undefined),
+      resolveKindroidTarget(undefined, "kindroid", undefined),
     ).toBeUndefined();
-    expect(resolveKindroidKin(undefined, "ollama", undefined)).toBeUndefined();
+    expect(
+      resolveKindroidTarget(undefined, "ollama", undefined),
+    ).toBeUndefined();
+  });
+});
+
+describe("formatGroupReplies (pure)", () => {
+  it("formats a single reply as 'Name: message'", () => {
+    const replies: KindroidGroupReply[] = [
+      {
+        sender: "ai",
+        message: "The tavern door creaks open.",
+        display_name: "Aria Voss",
+      },
+    ];
+    expect(formatGroupReplies(replies)).toBe(
+      "Aria Voss: The tavern door creaks open.",
+    );
+  });
+
+  it("joins multiple replies with a blank line, preserving order", () => {
+    const replies: KindroidGroupReply[] = [
+      {
+        sender: "ai",
+        message: "I don't trust him.",
+        display_name: "Aria Voss",
+      },
+      { sender: "ai", message: "Nor should you.", display_name: "Holt" },
+    ];
+    const result = formatGroupReplies(replies);
+    expect(result).toBe(
+      "Aria Voss: I don't trust him.\n\nHolt: Nor should you.",
+    );
+    expect(result.indexOf("Aria Voss")).toBeLessThan(result.indexOf("Holt"));
+  });
+
+  it("falls back to sender when display_name is absent", () => {
+    const replies: KindroidGroupReply[] = [{ sender: "ai", message: "Hello." }];
+    expect(formatGroupReplies(replies)).toBe("ai: Hello.");
+  });
+
+  it("returns an empty string for no replies", () => {
+    expect(formatGroupReplies([])).toBe("");
   });
 });
 
@@ -180,7 +236,7 @@ suite("Phase 6 — KindroidProvider (real kindroid-mcp)", () => {
       process.env.KINDROID_MCP_AUTH_TOKEN,
     );
     provider = new KindroidProvider(client, {
-      aiId: KINDROID_STORYTELLING_KIN!,
+      defaultTarget: { type: "ai", id: KINDROID_STORYTELLING_KIN! },
     });
   });
 
@@ -204,7 +260,7 @@ suite("Phase 6 — KindroidProvider (real kindroid-mcp)", () => {
     expect(reply.length).toBeGreaterThan(0);
   });
 
-  it("opts.model overrides the configured kin for a single call", async () => {
+  it("kindroidTarget overrides the configured default for a single call", async () => {
     // Overriding with the SAME kin id is still a real, valid exercise of the
     // override path (a second real kin isn't assumed to exist in every
     // environment) -- it confirms the override plumbing reaches
@@ -213,7 +269,7 @@ suite("Phase 6 — KindroidProvider (real kindroid-mcp)", () => {
       systemPrompt: "",
       userMessage:
         "Second automated integration-test message: acknowledge briefly.",
-      model: KINDROID_STORYTELLING_KIN,
+      kindroidTarget: { type: "ai", id: KINDROID_STORYTELLING_KIN! },
     });
     expect(reply.length).toBeGreaterThan(0);
   });

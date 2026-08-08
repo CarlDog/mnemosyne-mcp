@@ -3,33 +3,42 @@
 // companion-chat model is a poor fit for "return JSON matching this
 // schema").
 //
+// Targets either a single AI (kindroid_send_message) or a group chat
+// (kindroid_advance_group's turn loop) -- see KindroidTarget in stories.ts.
 // Unlike OllamaProvider, Kindroid has no system-prompt, temperature, or
-// max_tokens concept: kindroid_send_message is a stateful chat tied to one
-// AI's own persona/memory on Kindroid's servers, not a stateless completion
-// call -- so those three are still ignored here. But the kin's own memory
-// doesn't know story-specific facts (characters, locations, lore,
-// worldbuilding), and Kindroid's own equivalent feature for that
-// (keyphrase-triggered "Journal" entries) isn't exposed by the public API at
-// all. So this provider does the same thing Kindroid's Journal would: scan
-// the direction for an entity NAME mention and fold in only the matching
-// entries, plus the already-relevance-filtered recent scenes -- never the
-// full assembled context (that's still a poor fit for a chat companion, and
-// most of it would go unused per call anyway).
+// max_tokens concept: both are stateful chats tied to Kindroid-server-side
+// persona/memory, not a stateless completion call -- so those three are
+// still ignored here. But that persona/memory doesn't know story-specific
+// facts (characters, locations, lore, worldbuilding), and Kindroid's own
+// equivalent feature for that (keyphrase-triggered "Journal" entries) isn't
+// exposed by the public API at all. So this provider does the same thing
+// Kindroid's Journal would: scan the direction for an entity NAME mention
+// and fold in only the matching entries, plus the already-relevance-filtered
+// recent scenes -- never the full assembled context (that's still a poor
+// fit for a chat companion, and most of it would go unused per call
+// anyway). Applies identically to both target types -- what changes per
+// target is only which underlying kindroid-mcp call sends the message.
 //
 // The only channel available is the message text itself (Kindroid has no
 // separate context channel), so a match becomes a visible prefix block in
-// what's sent -- and thus in your own chat history. Confirmed acceptable
-// trade-off (operator, 2026-08-01).
+// what's sent -- and thus in the AI's (or group's) own chat history.
+// Confirmed acceptable trade-off (operator, 2026-08-01).
 
-import type { KindroidClient } from "./kindroid-client.js";
+import type { KindroidClient, KindroidGroupReply } from "./kindroid-client.js";
 import type { LlmGenerateOptions, LlmProvider } from "./llm.js";
 import type { ContextBundle } from "./prompt.js";
+import type { KindroidTarget } from "./stories.js";
 
 export interface KindroidProviderConfig {
-  /** The dedicated storytelling kin: a raw ai_id or a kindroid-mcp
-   * registered friendly name (resolved server-side). */
-  aiId: string;
+  /** The dedicated storytelling target (a single AI or a group chat) used
+   * when no story-bound or per-call override applies. */
+  defaultTarget: KindroidTarget;
 }
+
+// Matches kindroid-mcp's own kindroid_advance_group default -- a "beat"
+// against a group naturally involves a few characters exchanging lines,
+// not just one. Not yet configurable; a cheap follow-up if that's needed.
+const DEFAULT_GROUP_MAX_TURNS = 4;
 
 interface ParsedEntry {
   name: string;
@@ -121,22 +130,35 @@ export function buildKindroidMessage(
 }
 
 /**
- * Resolves which kin mnemo_continue should target for a given call: an
- * explicit per-call override always wins; otherwise the active story's own
- * bound kin applies (see stories.ts's setStoryKin) -- but only when the
- * generator actually is Kindroid, since a story-bound kin id is meaningless
- * to any other provider and must never leak into e.g. an Ollama model tag.
- * Returns undefined when neither applies, which falls through to
- * KindroidProvider's own KINDROID_STORYTELLING_KIN default. Pure so it's
- * unit-testable without a live story or provider.
+ * Resolves which target mnemo_continue should generate against for a given
+ * call: an explicit per-call override (kindroid_kin / kindroid_group_id on
+ * the call itself) always wins; otherwise the active story's own bound
+ * target applies (see stories.ts's setKindroidTarget) -- but only when the
+ * generator actually is Kindroid, since a story-bound target is meaningless
+ * to any other provider. Returns undefined when neither applies, which
+ * falls through to KindroidProvider's own configured defaultTarget. Pure so
+ * it's unit-testable without a live story or provider.
  */
-export function resolveKindroidKin(
-  explicitModel: string | undefined,
+export function resolveKindroidTarget(
+  explicitTarget: KindroidTarget | undefined,
   generatorName: string,
-  storyKin: string | undefined,
-): string | undefined {
-  if (explicitModel !== undefined) return explicitModel;
-  return generatorName === "kindroid" ? storyKin : undefined;
+  storyTarget: KindroidTarget | undefined,
+): KindroidTarget | undefined {
+  if (explicitTarget !== undefined) return explicitTarget;
+  return generatorName === "kindroid" ? storyTarget : undefined;
+}
+
+/**
+ * Formats a group's turn-loop replies into a single beat: one line per
+ * speaker, "Name: message", in the order Kindroid generated them --
+ * multiple characters exchanging lines within one story beat is the whole
+ * point of targeting a group rather than a single AI. Pure so it's
+ * unit-testable without a live client.
+ */
+export function formatGroupReplies(replies: KindroidGroupReply[]): string {
+  return replies
+    .map((reply) => `${reply.display_name ?? reply.sender}: ${reply.message}`)
+    .join("\n\n");
 }
 
 export class KindroidProvider implements LlmProvider {
@@ -148,10 +170,26 @@ export class KindroidProvider implements LlmProvider {
   ) {}
 
   async generate(opts: LlmGenerateOptions): Promise<string> {
-    // opts.model repurposes as a per-call kin override, mirroring how it
-    // overrides OllamaProvider's defaultModel.
-    const aiId = opts.model ?? this.config.aiId;
+    const target = opts.kindroidTarget ?? this.config.defaultTarget;
     const message = buildKindroidMessage(opts.userMessage, opts.context);
-    return this.client.sendMessage(aiId, message);
+
+    if (target.type === "group") {
+      // allowUser forced false: mnemosyne is generating a story beat, not
+      // waiting on a live human's real-time turn in the group -- letting
+      // the loop hand the turn back to "the user" would just mean zero AI
+      // replies for a caller with no way to take that turn.
+      const result = await this.client.advanceGroup(target.id, message, {
+        maxTurns: DEFAULT_GROUP_MAX_TURNS,
+        allowUser: false,
+      });
+      if (result.replies.length === 0) {
+        throw new Error(
+          `Kindroid group ${target.id} produced no AI replies for this beat.`,
+        );
+      }
+      return formatGroupReplies(result.replies);
+    }
+
+    return this.client.sendMessage(target.id, message);
   }
 }

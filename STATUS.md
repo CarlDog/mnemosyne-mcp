@@ -1,6 +1,6 @@
 # Status
 
-**Last updated:** 2026-08-06 (per-story Kindroid kin binding — `mnemo_story_use`'s new `kindroid_kin` param, resolved via `resolveKindroidKin()` in `mnemo_continue`; earlier same day: Atlas Cloud illustration integration design notes added — `docs/ILLUSTRATION_INTEGRATION.md`, proposal only, no code changes; earlier: Phase 6 live-verified against a dedicated test kin; Phase 6 revised — keyphrase-gated story context for the Kindroid generator; v0.1.3 shipped — validator-gated scene inclusion; atlascloud-mcp registered locally in `.mcp.json` + illustration-integration scope recorded in "What's next")
+**Last updated:** 2026-08-08 (per-story Kindroid target binding extended to groups — `mnemo_story_use`/`mnemo_continue` gain `kindroid_kin`/`kindroid_group_id`, resolved via `resolveKindroidTarget()`; a tsconfig bug that silently skipped typechecking every test file was found and fixed in passing; earlier same day: found and committed uncommitted Atlas Cloud illustration integration design notes from a prior session — `docs/ILLUSTRATION_INTEGRATION.md`, proposal only, no code changes; earlier (2026-08-05): Phase 6 live-verified against a dedicated test kin; Phase 6 revised — keyphrase-gated story context for the Kindroid generator; v0.1.3 shipped — validator-gated scene inclusion; atlascloud-mcp registered locally in `.mcp.json` + illustration-integration scope recorded in "What's next")
 
 ## Phase
 
@@ -42,28 +42,48 @@ with `GENERATOR_PROVIDER=kindroid` and a non-empty `ContextBundle` (the
 keyphrase-injection path itself is covered by the 8 pure unit tests, not
 by a live round-trip with real OC-sourced context).
 
-**Per-story Kindroid kin binding (2026-08-06).** `KINDROID_STORYTELLING_KIN`
-was a single, server-wide default with no way to point different stories at
-different kins short of passing `model` on every `mnemo_continue` call.
-`mnemo_story_use` now accepts an optional `kindroid_kin` (raw ai_id or
-kindroid-mcp registered name; `null` clears it), stored as an optional
-`Kindroid-Kin:` line on the story's marker memory (`stories.ts` bumped to
-marker schema 2 — schema-1 markers without the line still parse fine, no
-migration needed). Follows the existing "OC is canonical for story state"
-rule rather than mnemosyne's local `config.json`, since a kin id is
-portable story data. `mnemo_continue` resolves the effective target via
-the new `resolveKindroidKin()` (explicit `model` override wins, then the
-active story's bound kin — only relevant when the generator actually is
-Kindroid — then the `KINDROID_STORYTELLING_KIN` default); the story-marker
-lookup itself is skipped entirely for any non-Kindroid generator, so
-Ollama-generated stories pay no extra OC round trip. Group-chat (`group_id`)
-targeting was considered and deliberately deferred — Kindroid's groupchat
-API is turn-based (`get-turn` + `ai_response`), which doesn't drop into
-`KindroidProvider.generate()`'s single-message shape without its own
-design pass. 4 new pure tests for `resolveKindroidKin`, 2 new real-OC
-integration tests for the marker round-trip (create-with-kin, bind/rebind/
-clear via `setStoryKin`) — see `tests/kindroid-provider.test.ts` /
-`tests/stories.test.ts`.
+**Per-story Kindroid target binding: AI or group (2026-08-08).**
+`KINDROID_STORYTELLING_KIN` was a single, server-wide AI default with no
+way to point different stories at different targets short of passing
+`model` on every `mnemo_continue` call, and no way to target a group chat
+at all. `mnemo_story_use` now accepts `kindroid_kin` / `kindroid_group_id`
+(mutually exclusive; `null` clears), stored as `KindroidTarget {type: "ai"
+| "group", id}` on the story's marker memory (`stories.ts` bumped to
+marker schema 3 — schema-1 markers with no kin line, and schema-2 markers
+with the legacy bare `Kindroid-Kin:` line, always an AI target, both still
+parse fine; no migration needed). Follows "OC is canonical for story
+state" rather than mnemosyne's local `config.json`, since a target id is
+portable story data. `mnemo_continue` gained matching per-call
+`kindroid_kin` / `kindroid_group_id` params and resolves the effective
+target via `resolveKindroidTarget()`: the per-call override wins, then the
+active story's bound target (only relevant when the generator actually is
+Kindroid), then `KindroidProvider`'s configured `defaultTarget`
+(`KINDROID_STORYTELLING_KIN` or the new `KINDROID_STORYTELLING_GROUP`,
+mutually exclusive at startup). `model` is now Ollama-only — it no longer
+doubles as a Kindroid override, since a Kindroid target needs a type (ai
+vs group), not just a bare id. Against a group, `KindroidProvider.generate()`
+drives kindroid-mcp's turn loop via the new `KindroidClient.advanceGroup()`
+(`allowUser: false` forced — mnemosyne is generating a beat, not waiting on
+a live human's real turn; `maxTurns` defaults to 4, matching kindroid-mcp's
+own default) and joins the replies into one beat via `formatGroupReplies()`
+(`Name: message` per line, in generation order). **Not yet live-verified
+against a real group** — only a single-AI test kin was available this
+session; the OC-side marker storage/parsing for group targets IS
+live-verified. 8 new pure tests (`resolveKindroidTarget`,
+`formatGroupReplies`, `combineKindroidTarget`), 4 new real-OC integration
+tests for the marker round-trip (ai-at-creation, group-at-creation,
+bind/rebind-ai-to-group/clear, legacy schema-2 compat) — see
+`tests/kindroid-provider.test.ts` / `tests/stories.test.ts`.
+
+**Also fixed in passing:** `tsconfig.typecheck.json` extended
+`tsconfig.json` without overriding its inherited `exclude: ["**/*.test.ts"]`
+— exclude wins over include, so despite the file's own stated purpose
+("typecheck tests too"), every `*.test.ts` was silently skipped by `npm run
+typecheck` the whole time. Found while investigating why a stale rename
+(`setStoryKin`) in `tests/stories.test.ts` wasn't flagged; fixed by
+overriding `exclude` to just `["node_modules", "dist"]` in the typecheck
+config. Real errors surfaced immediately once fixed (confirming the bug was
+live) and were corrected as part of this same change.
 
 **v0.1.3 shipped** (2026-07-31, a few hours before the Phase 6 work
 above landed the same day). Validator-gated scene inclusion — the real
