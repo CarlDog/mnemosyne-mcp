@@ -9,13 +9,33 @@ import {
   createStory,
   findStory,
   listStories,
+  setStoryKin,
   type MnemoStory,
 } from "../stories.js";
 import { getCurrentStoryId, setCurrentStoryId } from "../config.js";
 import { asText, withLogging } from "./helpers.js";
 
-interface AnnotatedStory extends MnemoStory {
+// Explicit field whitelist rather than spreading MnemoStory -- keeps
+// internal plumbing (marker_memory_id) out of tool responses.
+interface AnnotatedStory {
+  id: string;
+  name: string;
+  created_at: string;
+  kindroid_kin?: string;
   current: boolean;
+}
+
+function toAnnotated(
+  story: MnemoStory,
+  currentId: string | undefined,
+): AnnotatedStory {
+  return {
+    id: story.id,
+    name: story.name,
+    created_at: story.created_at,
+    ...(story.kindroid_kin && { kindroid_kin: story.kindroid_kin }),
+    current: story.id === currentId,
+  };
 }
 
 export function registerStoryTools(server: McpServer, oc: OcClient): void {
@@ -32,10 +52,7 @@ export function registerStoryTools(server: McpServer, oc: OcClient): void {
         listStories(oc),
         getCurrentStoryId(),
       ]);
-      const annotated: AnnotatedStory[] = stories.map((s) => ({
-        ...s,
-        current: s.id === currentId,
-      }));
+      const annotated = stories.map((s) => toAnnotated(s, currentId));
       return asText({ stories: annotated, count: annotated.length });
     }),
   );
@@ -54,11 +71,22 @@ export function registerStoryTools(server: McpServer, oc: OcClient): void {
           .describe(
             "If true and no existing story matches, create a new one. Default false.",
           ),
+        kindroid_kin: z
+          .string()
+          .nullable()
+          .optional()
+          .describe(
+            "Bind this story to a specific Kindroid kin (a raw ai_id or a kindroid-mcp registered name), used by mnemo_continue when GENERATOR_PROVIDER=kindroid and no per-call model override is given. Pass null to clear a previously-set binding (falls back to the server-wide KINDROID_STORYTELLING_KIN default). Omit to leave any existing binding unchanged.",
+          ),
       },
     },
     withLogging(
       "mnemo_story_use",
-      async (args: { name_or_id: string; create_if_missing?: boolean }) => {
+      async (args: {
+        name_or_id: string;
+        create_if_missing?: boolean;
+        kindroid_kin?: string | null;
+      }) => {
         const { name_or_id, create_if_missing } = args;
         let story = await findStory(oc, name_or_id);
         if (!story) {
@@ -80,13 +108,20 @@ export function registerStoryTools(server: McpServer, oc: OcClient): void {
               isError: true,
             };
           }
-          story = await createStory(oc, name_or_id);
+          story = await createStory(
+            oc,
+            name_or_id,
+            args.kindroid_kin ?? undefined,
+          );
+        } else if (args.kindroid_kin !== undefined) {
+          story = await setStoryKin(oc, story, args.kindroid_kin ?? undefined);
         }
         await setCurrentStoryId(story.id);
         return asText({
           id: story.id,
           name: story.name,
           created_at: story.created_at,
+          ...(story.kindroid_kin && { kindroid_kin: story.kindroid_kin }),
           current: true,
         });
       },

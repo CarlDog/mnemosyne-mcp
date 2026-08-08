@@ -13,6 +13,7 @@ import {
   findStory,
   findStoryByName,
   listStories,
+  setStoryKin,
 } from "../src/stories.js";
 import { teardownStory, testStoryName } from "./helpers.js";
 
@@ -63,5 +64,38 @@ suite("Phase A — story management (real OC)", () => {
   it("returns null for a missing story", async () => {
     const story = await findStoryByName(oc, "no-such-story-zzz");
     expect(story).toBeNull();
+  });
+
+  it("creates a story with a kin bound at creation time", async () => {
+    const kinStoryName = testStoryName("kin-create");
+    const story = await createStory(oc, kinStoryName, "test-ai-id-123");
+    expect(story.kindroid_kin).toBe("test-ai-id-123");
+    expect(story.marker_memory_id).toBeTruthy();
+    // Direct cleanup -- teardownStory() also closes the shared OC
+    // connection, which the remaining tests in this suite still need.
+    await oc.projectDelete(story.id);
+  });
+
+  it("binds, rebinds, and clears a kin on an existing story via setStoryKin", async () => {
+    expect(storyId).toBeTruthy();
+    const before = await findStory(oc, storyId!);
+    expect(before?.kindroid_kin).toBeUndefined();
+
+    const bound = await setStoryKin(oc, before!, "bound-kin-456");
+    expect(bound.kindroid_kin).toBe("bound-kin-456");
+    // The marker rewrite must preserve name and created_at verbatim.
+    expect(bound.name).toBe(before!.name);
+    expect(bound.created_at).toBe(before!.created_at);
+    expect((await findStory(oc, storyId!))?.kindroid_kin).toBe("bound-kin-456");
+
+    const rebound = await setStoryKin(oc, bound, "different-kin-789");
+    expect(rebound.kindroid_kin).toBe("different-kin-789");
+    expect((await findStory(oc, storyId!))?.kindroid_kin).toBe(
+      "different-kin-789",
+    );
+
+    const cleared = await setStoryKin(oc, rebound, undefined);
+    expect(cleared.kindroid_kin).toBeUndefined();
+    expect((await findStory(oc, storyId!))?.kindroid_kin).toBeUndefined();
   });
 });

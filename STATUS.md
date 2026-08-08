@@ -1,6 +1,6 @@
 # Status
 
-**Last updated:** 2026-08-06 (Atlas Cloud illustration integration design notes added — `docs/ILLUSTRATION_INTEGRATION.md`, proposal only, no code changes; earlier: Phase 6 live-verified against a dedicated test kin; Phase 6 revised — keyphrase-gated story context for the Kindroid generator; v0.1.3 shipped — validator-gated scene inclusion; atlascloud-mcp registered locally in `.mcp.json` + illustration-integration scope recorded in "What's next")
+**Last updated:** 2026-08-06 (per-story Kindroid kin binding — `mnemo_story_use`'s new `kindroid_kin` param, resolved via `resolveKindroidKin()` in `mnemo_continue`; earlier same day: Atlas Cloud illustration integration design notes added — `docs/ILLUSTRATION_INTEGRATION.md`, proposal only, no code changes; earlier: Phase 6 live-verified against a dedicated test kin; Phase 6 revised — keyphrase-gated story context for the Kindroid generator; v0.1.3 shipped — validator-gated scene inclusion; atlascloud-mcp registered locally in `.mcp.json` + illustration-integration scope recorded in "What's next")
 
 ## Phase
 
@@ -41,6 +41,29 @@ designed. Not yet exercised in this pass: an actual `mnemo_continue` call
 with `GENERATOR_PROVIDER=kindroid` and a non-empty `ContextBundle` (the
 keyphrase-injection path itself is covered by the 8 pure unit tests, not
 by a live round-trip with real OC-sourced context).
+
+**Per-story Kindroid kin binding (2026-08-06).** `KINDROID_STORYTELLING_KIN`
+was a single, server-wide default with no way to point different stories at
+different kins short of passing `model` on every `mnemo_continue` call.
+`mnemo_story_use` now accepts an optional `kindroid_kin` (raw ai_id or
+kindroid-mcp registered name; `null` clears it), stored as an optional
+`Kindroid-Kin:` line on the story's marker memory (`stories.ts` bumped to
+marker schema 2 — schema-1 markers without the line still parse fine, no
+migration needed). Follows the existing "OC is canonical for story state"
+rule rather than mnemosyne's local `config.json`, since a kin id is
+portable story data. `mnemo_continue` resolves the effective target via
+the new `resolveKindroidKin()` (explicit `model` override wins, then the
+active story's bound kin — only relevant when the generator actually is
+Kindroid — then the `KINDROID_STORYTELLING_KIN` default); the story-marker
+lookup itself is skipped entirely for any non-Kindroid generator, so
+Ollama-generated stories pay no extra OC round trip. Group-chat (`group_id`)
+targeting was considered and deliberately deferred — Kindroid's groupchat
+API is turn-based (`get-turn` + `ai_response`), which doesn't drop into
+`KindroidProvider.generate()`'s single-message shape without its own
+design pass. 4 new pure tests for `resolveKindroidKin`, 2 new real-OC
+integration tests for the marker round-trip (create-with-kin, bind/rebind/
+clear via `setStoryKin`) — see `tests/kindroid-provider.test.ts` /
+`tests/stories.test.ts`.
 
 **v0.1.3 shipped** (2026-07-31, a few hours before the Phase 6 work
 above landed the same day). Validator-gated scene inclusion — the real
