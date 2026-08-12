@@ -66,10 +66,10 @@ drives kindroid-mcp's turn loop via the new `KindroidClient.advanceGroup()`
 (`allowUser: false` forced — mnemosyne is generating a beat, not waiting on
 a live human's real turn; `maxTurns` defaults to 4, matching kindroid-mcp's
 own default) and joins the replies into one beat via `formatGroupReplies()`
-(`Name: message` per line, in generation order). **Not yet live-verified
-against a real group** — only a single-AI test kin was available this
-session; the OC-side marker storage/parsing for group targets IS
-live-verified. 8 new pure tests (`resolveKindroidTarget`,
+(`Name: message` per line, in generation order). **Live-verified
+2026-08-12** against a real group (a subscriber group tied to a live
+Twitch stream) — see the dated Done entry below for the full
+walkthrough. 8 new pure tests (`resolveKindroidTarget`,
 `formatGroupReplies`, `combineKindroidTarget`), 4 new real-OC integration
 tests for the marker round-trip (ai-at-creation, group-at-creation,
 bind/rebind-ai-to-group/clear, legacy schema-2 compat) — see
@@ -156,10 +156,24 @@ without `OC_URL`/`OLLAMA_GENERATOR_MODEL`/`KINDROID_MCP_URL` configured
   `combineKindroidTarget`) plus 4 new real-OC integration tests for the
   marker round-trip (ai-at-creation, group-at-creation,
   bind/rebind-ai-to-group/clear, legacy schema-2 compat) — see
-  `tests/kindroid-provider.test.ts` / `tests/stories.test.ts`. **Not yet
-  live-verified against a real group chat** — only a single-AI test kin
-  was available this session; the OC-side marker storage/parsing for
-  group targets IS live-verified.
+  `tests/kindroid-provider.test.ts` / `tests/stories.test.ts`.
+
+  **Group path live-verified 2026-08-12** against a real subscriber
+  group tied to a live Twitch stream. A throwaway story ("Kimmy's Night
+  Shift") was bound to the group via `setKindroidTarget`, seeded with a
+  character/location/rule/style, and a real direction was run through
+  the actual `gatherContext` → `buildKindroidMessage` → `advanceGroup`
+  chain. Confirmed end-to-end: keyphrase matching correctly folded in
+  both the character and location entities (the location matched
+  because its name literally appeared in the direction text), rules/
+  style stayed correctly excluded per design, the group returned 4 real
+  AI turns from two distinct kins, and `formatGroupReplies()`'s output
+  was saved back as a scene exactly as `mnemo_continue` would. Done via
+  a new diagnostic script, `scripts/dump-kindroid-group-message.mjs`
+  (same "test fresh `dist/` without restarting the host" pattern as
+  `dump-prompt.mjs` — the live-connected MCP server predates this
+  feature, so its exposed `mnemo_story_use` schema doesn't even accept
+  `kindroid_group_id` yet).
 
   **Also fixed in passing:** `tsconfig.typecheck.json` extended
   `tsconfig.json` without overriding its inherited `exclude:
