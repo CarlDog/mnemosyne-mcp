@@ -8,6 +8,7 @@ import { KindroidClient } from "./kindroid-client.js";
 import { KindroidProvider } from "./kindroid-provider.js";
 import type { KindroidTarget } from "./stories.js";
 import { registerTools } from "./tools/index.js";
+import { MNEMOSYNE_VERSION } from "./version.js";
 
 const OC_URL = process.env.OC_URL;
 if (!OC_URL) {
@@ -194,7 +195,7 @@ v0 surface:
   Same ValidationReport shape as mnemo_continue's validate=true mode.`;
 
 const server = new McpServer(
-  { name: "mnemosyne-mcp", version: "0.1.2" },
+  { name: "mnemosyne-mcp", version: MNEMOSYNE_VERSION },
   { instructions: INSTRUCTIONS },
 );
 

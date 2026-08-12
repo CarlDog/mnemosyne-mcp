@@ -9,6 +9,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { log } from "./log.js";
+import { MNEMOSYNE_VERSION } from "./version.js";
 
 // Minimal shape of a kindroid_advance_group reply -- only the fields
 // formatGroupReplies() in kindroid-provider.ts actually uses. kindroid-mcp's
@@ -37,7 +38,7 @@ export class KindroidClient {
     private readonly authToken?: string,
   ) {
     this.client = new Client(
-      { name: "mnemosyne-mcp", version: "0.1.2" },
+      { name: "mnemosyne-mcp", version: MNEMOSYNE_VERSION },
       { capabilities: {} },
     );
   }

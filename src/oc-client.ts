@@ -11,6 +11,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { log } from "./log.js";
+import { MNEMOSYNE_VERSION } from "./version.js";
 
 export interface OcProject {
   id: string;
@@ -86,7 +87,7 @@ export class OcClient {
 
   constructor(private readonly url: URL) {
     this.client = new Client(
-      { name: "mnemosyne-mcp", version: "0.1.2" },
+      { name: "mnemosyne-mcp", version: MNEMOSYNE_VERSION },
       { capabilities: {} },
     );
   }
