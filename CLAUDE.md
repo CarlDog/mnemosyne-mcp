@@ -12,12 +12,11 @@ into this file, MEMORY.md, or Serena memories — reference STATUS.md.
 See [STATUS.md](STATUS.md). Current: v0.1.3 shipped (validator-gated
 scene inclusion — fix for the few-shot-vs-rule diagnostic from the
 Dovecoast smoke test). Phase 6 (Kindroid generator bridge) is shipped
-and live-verified against a dedicated test kin. Most recently, per-story
-Kindroid target binding (AI or group chat) landed via
+and live-verified against a dedicated test kin. Per-story Kindroid
+target binding (AI or group chat) landed via
 `mnemo_story_use`/`mnemo_continue`, resolved through
-`resolveKindroidTarget()` — the group-chat path is code-complete and
-typecheck/lint-clean but not yet live-verified against a real Kindroid
-group.
+`resolveKindroidTarget()` — both the single-AI and group-chat paths are
+now live-verified (2026-08-12) against real Kindroid targets.
 
 ## Stack
 
@@ -135,12 +134,11 @@ Key architectural decisions (see ARCHITECTURE.md for full reasoning):
   single beat string by `formatGroupReplies()` — one `"Name: message"` line
   per speaker, in generation order — since a "beat" against a group
   naturally involves a few characters exchanging lines, and `LlmProvider`'s
-  contract stays a single string regardless of target type. **Not yet
-  live-verified** — no real Kindroid group chat was available to test
-  against (only a single-AI test kin); the OC-side marker storage/parsing
-  for group targets IS live-verified (`tests/stories.test.ts`), but
-  `advanceGroup()`'s actual kindroid-mcp round-trip is only typecheck/
-  lint-clean, not exercised against a live group.
+  contract stays a single string regardless of target type. **Live-verified
+  2026-08-12** against a real subscriber group tied to a live Twitch
+  stream — see STATUS.md's Done log for the full walkthrough (context
+  gathering, keyphrase matching, the real `advanceGroup` round-trip, and
+  `formatGroupReplies()` all confirmed working end-to-end).
 
 ## Common Commands
 

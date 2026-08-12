@@ -68,6 +68,13 @@ OC_URL=http://your-nas:18000/mcp \
 OC_URL=http://your-nas:18000/mcp \
 OLLAMA_VALIDATOR_MODEL=mistral-nemo:12b \
   node scripts/dump-validation.mjs <story_id> <content_file>
+
+# Bind a story's Kindroid target to a group chat and build the exact
+# message mnemo_continue would send it (context-gathering + keyphrase
+# folding) -- without needing the live-connected MCP server to already
+# know about GENERATOR_PROVIDER=kindroid.
+OC_URL=http://your-nas:18000/mcp \
+  node scripts/dump-kindroid-group-message.mjs <story_id> <group_id> "<user direction>"
 ```
 
 ## License
