@@ -142,6 +142,11 @@ describe("buildKindroidMessage (pure)", () => {
     expect(result).toContain("Talk to each other");
   });
 
+  it("tells the group to @mention who should pick up next", () => {
+    const result = buildKindroidMessage("what happens next?", undefined, true);
+    expect(result).toContain("@mention them by name");
+  });
+
   it("omits the group-conversation nudge when isGroup is false (default), even with context matches", () => {
     const context: ContextBundle = {
       ...EMPTY_CONTEXT,
