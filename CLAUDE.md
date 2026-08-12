@@ -12,7 +12,12 @@ into this file, MEMORY.md, or Serena memories — reference STATUS.md.
 See [STATUS.md](STATUS.md). Current: v0.1.3 shipped (validator-gated
 scene inclusion — fix for the few-shot-vs-rule diagnostic from the
 Dovecoast smoke test). Phase 6 (Kindroid generator bridge) is shipped
-and live-verified against a dedicated test kin.
+and live-verified against a dedicated test kin. Most recently, per-story
+Kindroid target binding (AI or group chat) landed via
+`mnemo_story_use`/`mnemo_continue`, resolved through
+`resolveKindroidTarget()` — the group-chat path is code-complete and
+typecheck/lint-clean but not yet live-verified against a real Kindroid
+group.
 
 ## Stack
 
