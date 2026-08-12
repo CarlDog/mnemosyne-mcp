@@ -2,13 +2,12 @@
 // validateContent path used standalone (no generator pass).
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { OcClient } from "../src/oc-client.js";
+import type { OcClient } from "../src/oc-client.js";
 import { OllamaProvider } from "../src/llm.js";
-import { createStory } from "../src/stories.js";
 import { saveEntity } from "../src/entities.js";
 import { gatherContext } from "../src/prompt.js";
 import { validateContent } from "../src/validator.js";
-import { teardownStory, testStoryName } from "./helpers.js";
+import { setupTestStory, teardownStory } from "./helpers.js";
 
 const OC_URL = process.env.OC_URL;
 const OLLAMA_URL = process.env.OLLAMA_URL ?? "http://localhost:11434";
@@ -22,14 +21,11 @@ suite("v0.1.2 — mnemo_validate (standalone validation)", () => {
   let validator: OllamaProvider;
 
   beforeAll(async () => {
-    oc = new OcClient(new URL(OC_URL!));
-    await oc.connect();
+    ({ oc, storyId } = await setupTestStory(OC_URL!, "validate-standalone"));
     validator = new OllamaProvider({
       url: OLLAMA_URL,
       defaultModel: OLLAMA_MODEL!,
     });
-    const story = await createStory(oc, testStoryName("validate-standalone"));
-    storyId = story.id;
 
     // Compound rule with multiple constraints — the v0.1.1 dogfood case.
     await saveEntity(oc, storyId, {
