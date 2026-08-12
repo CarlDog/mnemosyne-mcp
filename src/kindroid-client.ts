@@ -10,6 +10,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { log } from "./log.js";
 import { MNEMOSYNE_VERSION } from "./version.js";
+import { extractText, extractStructuredOrParsed } from "./mcp-result.js";
 
 // Minimal shape of a kindroid_advance_group reply -- only the fields
 // formatGroupReplies() in kindroid-provider.ts actually uses. kindroid-mcp's
@@ -72,19 +73,12 @@ export class KindroidClient {
         name: "kindroid_send_message",
         arguments: { ai_id: aiId, message },
       });
-      const content = (result.content ?? []) as Array<{
-        type: string;
-        text?: string;
-      }>;
-      const textBlock = content.find((c) => c.type === "text" && c.text);
-      if (!textBlock?.text) {
-        throw new Error("kindroid_send_message returned no text content");
-      }
+      const text = extractText(result, "kindroid_send_message");
       log.debug("kindroid-client", "tool ok", {
         tool: "kindroid_send_message",
         ms: Date.now() - start,
       });
-      return textBlock.text;
+      return text;
     } catch (err) {
       log.error("kindroid-client", "tool error", {
         tool: "kindroid_send_message",
@@ -114,30 +108,16 @@ export class KindroidClient {
         arguments: args,
       });
 
-      // Prefer structuredContent (MCP spec >= 2024-11): raw JSON, not
-      // stringified. Falls back to parsing the text content block.
-      const structured = (result as { structuredContent?: unknown })
-        .structuredContent;
-      let parsed: unknown;
-      if (structured !== undefined) {
-        parsed = structured;
-      } else {
-        const content = (result.content ?? []) as Array<{
-          type: string;
-          text?: string;
-        }>;
-        const textBlock = content.find((c) => c.type === "text" && c.text);
-        if (!textBlock?.text) {
-          throw new Error("kindroid_advance_group returned no content");
-        }
-        parsed = JSON.parse(textBlock.text);
-      }
+      const parsed = extractStructuredOrParsed<AdvanceGroupResult>(
+        result,
+        "kindroid_advance_group",
+      );
 
       log.debug("kindroid-client", "tool ok", {
         tool: "kindroid_advance_group",
         ms: Date.now() - start,
       });
-      return parsed as AdvanceGroupResult;
+      return parsed;
     } catch (err) {
       log.error("kindroid-client", "tool error", {
         tool: "kindroid_advance_group",
