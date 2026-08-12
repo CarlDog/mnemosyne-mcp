@@ -104,6 +104,16 @@ const REFERENCE_TYPES = [
 // gesture at "each other" -- a concrete instruction beats a vague one. Falls
 // back to the generic phrasing when no character was matched (a cold-open
 // direction that doesn't name anyone yet).
+//
+// The @-mention line is not a guess -- confirmed against Kindroid's own
+// groupchats documentation (kindroid.ai/docs/article/groupchats/, checked
+// 2026-08-12): "@Name mentions... lets the mentioned Kindroid speak next...
+// Kindroids can also mention other Kindroids to hand off the baton if you
+// inform them to use @Name mentions". Turn-selection is otherwise an opaque
+// model decision (confirmed by reading kindroid-mcp's own get-turn
+// implementation -- max_turns is never passed to it), so @-mention is the
+// only actual lever a message can pull on who speaks next; naming it
+// explicitly beats hoping the model infers it from "talk to each other."
 function groupConversationNote(matchedCharacterNames: string[]): string {
   const who =
     matchedCharacterNames.length > 0
@@ -113,7 +123,8 @@ function groupConversationNote(matchedCharacterNames: string[]): string {
     `There's more than one of you in this scene${who}. Talk to each ` +
     "other, not just to the situation -- react to what someone else just " +
     "said, agree, disagree, or build on it. Don't wait for a cue to keep " +
-    "going."
+    "going. If you want a specific person to pick up next, @mention them " +
+    "by name."
   );
 }
 
