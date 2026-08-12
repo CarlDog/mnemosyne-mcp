@@ -5,13 +5,12 @@
 // against the storytelling default).
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { OcClient } from "../src/oc-client.js";
+import type { OcClient } from "../src/oc-client.js";
 import { OllamaProvider } from "../src/llm.js";
-import { createStory } from "../src/stories.js";
 import { saveEntity, recall, retagValidation } from "../src/entities.js";
 import { buildSystemPrompt, gatherContext } from "../src/prompt.js";
 import { validateContent, classifyVerdict } from "../src/validator.js";
-import { teardownStory, testStoryName } from "./helpers.js";
+import { setupTestStory, teardownStory } from "./helpers.js";
 
 const OC_URL = process.env.OC_URL;
 const OLLAMA_URL = process.env.OLLAMA_URL ?? "http://localhost:11434";
@@ -26,8 +25,7 @@ suite("Phase C-1 — continue (real OC + real Ollama)", () => {
   let validator: OllamaProvider;
 
   beforeAll(async () => {
-    oc = new OcClient(new URL(OC_URL!));
-    await oc.connect();
+    ({ oc, storyId } = await setupTestStory(OC_URL!, "continue"));
     generator = new OllamaProvider({
       url: OLLAMA_URL,
       defaultModel: OLLAMA_MODEL!,
@@ -39,8 +37,6 @@ suite("Phase C-1 — continue (real OC + real Ollama)", () => {
       url: OLLAMA_URL,
       defaultModel: OLLAMA_MODEL!,
     });
-    const story = await createStory(oc, testStoryName("continue"));
-    storyId = story.id;
 
     // Seed minimal context so the prompt has something to ground in.
     await saveEntity(oc, storyId, {

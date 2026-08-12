@@ -2,8 +2,7 @@
 // Pure unit tests run unconditionally; integration tests skip without OC_URL.
 
 import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
-import { OcClient } from "../src/oc-client.js";
-import { createStory } from "../src/stories.js";
+import type { OcClient } from "../src/oc-client.js";
 import {
   deleteEntity,
   parseEntityContent,
@@ -11,7 +10,7 @@ import {
   retagValidation,
   saveEntity,
 } from "../src/entities.js";
-import { teardownStory, testStoryName } from "./helpers.js";
+import { setupTestStory, teardownStory } from "./helpers.js";
 
 describe("entities — pure", () => {
   it("parseEntityContent round-trips a well-formed entity", () => {
@@ -163,10 +162,7 @@ suite("Phase B — entities (real OC)", () => {
   let storyId: string;
 
   beforeAll(async () => {
-    oc = new OcClient(new URL(OC_URL!));
-    await oc.connect();
-    const story = await createStory(oc, testStoryName("entities"));
-    storyId = story.id;
+    ({ oc, storyId } = await setupTestStory(OC_URL!, "entities"));
   });
 
   afterAll(async () => {

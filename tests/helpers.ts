@@ -6,7 +6,8 @@
 // data, and the reason teardown lives here rather than being copy-pasted
 // five times.
 
-import type { OcClient } from "../src/oc-client.js";
+import { OcClient } from "../src/oc-client.js";
+import { createStory } from "../src/stories.js";
 import { log } from "../src/log.js";
 
 // Shared prefix so any story that does survive a teardown failure is
@@ -17,6 +18,21 @@ const TEST_STORY_PREFIX = "mnemosyne-test-";
 // The label keeps concurrent leftovers attributable to a suite.
 export function testStoryName(label?: string): string {
   return `${TEST_STORY_PREFIX}${label ? `${label}-` : ""}${Date.now()}`;
+}
+
+// Connect to OC and create this suite's throwaway test story, so it's not
+// copy-pasted across every integration file's `beforeAll`. Each suite still
+// owns whatever it does next (constructing its own provider(s), seeding
+// entities) -- this only covers the connect-then-create sequence common to
+// all of them.
+export async function setupTestStory(
+  ocUrl: string,
+  label?: string,
+): Promise<{ oc: OcClient; storyId: string }> {
+  const oc = new OcClient(new URL(ocUrl));
+  await oc.connect();
+  const story = await createStory(oc, testStoryName(label));
+  return { oc, storyId: story.id };
 }
 
 // Delete the suite's test project, then close the OC connection.

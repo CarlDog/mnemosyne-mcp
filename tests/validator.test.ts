@@ -1,13 +1,12 @@
 // Phase C-2: validator pure tests + integration smoke.
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { OcClient } from "../src/oc-client.js";
+import type { OcClient } from "../src/oc-client.js";
 import { OllamaProvider } from "../src/llm.js";
-import { createStory } from "../src/stories.js";
 import { saveEntity } from "../src/entities.js";
 import { gatherContext } from "../src/prompt.js";
 import { parseValidatorJson, validateContent } from "../src/validator.js";
-import { teardownStory, testStoryName } from "./helpers.js";
+import { setupTestStory, teardownStory } from "./helpers.js";
 
 describe("validator — pure", () => {
   it("parses plain JSON", () => {
@@ -51,14 +50,11 @@ suite("Phase C-2 — validation (real OC + real Ollama)", () => {
   let validator: OllamaProvider;
 
   beforeAll(async () => {
-    oc = new OcClient(new URL(OC_URL!));
-    await oc.connect();
+    ({ oc, storyId } = await setupTestStory(OC_URL!, "validate"));
     validator = new OllamaProvider({
       url: OLLAMA_URL,
       defaultModel: OLLAMA_MODEL!,
     });
-    const story = await createStory(oc, testStoryName("validate"));
-    storyId = story.id;
 
     await saveEntity(oc, storyId, {
       type: "rule",
