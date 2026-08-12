@@ -10,11 +10,11 @@ import { promises as fs } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
-export interface MnemoConfig {
+interface MnemoConfig {
   current_story_id?: string;
 }
 
-export function configDir(): string {
+function configDir(): string {
   const override = process.env.MNEMOSYNE_CONFIG_DIR;
   if (override) return override;
   if (process.platform === "win32") {
@@ -26,11 +26,11 @@ export function configDir(): string {
   return join(homedir(), ".config", "mnemosyne-mcp");
 }
 
-export function configPath(): string {
+function configPath(): string {
   return join(configDir(), "config.json");
 }
 
-export async function readConfig(): Promise<MnemoConfig> {
+async function readConfig(): Promise<MnemoConfig> {
   try {
     const text = await fs.readFile(configPath(), "utf8");
     return JSON.parse(text) as MnemoConfig;
@@ -40,7 +40,7 @@ export async function readConfig(): Promise<MnemoConfig> {
   }
 }
 
-export async function writeConfig(config: MnemoConfig): Promise<void> {
+async function writeConfig(config: MnemoConfig): Promise<void> {
   const path = configPath();
   await fs.mkdir(dirname(path), { recursive: true });
   await fs.writeFile(path, JSON.stringify(config, null, 2) + "\n", "utf8");

@@ -3,10 +3,10 @@
 //
 // Surfaces only the OC tools Mnemosyne actually uses. We add wrappers as
 // new phases need them — three similar lines is better than a premature
-// abstraction. Phase A: project_create, project_list, memory_save,
-// memory_search. Phase B adds: memory_update, memory_pin. project_delete
-// exists for the integration suite's teardown (no product tool deletes a
-// story — that stays a deliberate OC-side action).
+// abstraction. Phase A: project_create, memory_save, memory_search.
+// Phase B adds: memory_update, memory_pin. project_delete exists for the
+// integration suite's teardown (no product tool deletes a story — that
+// stays a deliberate OC-side action).
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
@@ -145,10 +145,6 @@ export class OcClient {
       });
       throw err;
     }
-  }
-
-  async projectList(): Promise<OcProject[]> {
-    return this.callTool<OcProject[]>("project_list", {});
   }
 
   async projectCreate(

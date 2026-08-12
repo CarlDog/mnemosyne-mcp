@@ -118,22 +118,13 @@ export function registerStoryTools(server: McpServer, oc: OcClient): void {
         let story = await findStory(oc, name_or_id);
         if (!story) {
           if (!create_if_missing) {
-            return {
-              content: [
-                {
-                  type: "text" as const,
-                  text: JSON.stringify(
-                    {
-                      error: "story_not_found",
-                      message: `No story matches "${name_or_id}". Pass create_if_missing=true to create one.`,
-                    },
-                    null,
-                    2,
-                  ),
-                },
-              ],
-              isError: true,
-            };
+            return asText(
+              {
+                error: "story_not_found",
+                message: `No story matches "${name_or_id}". Pass create_if_missing=true to create one.`,
+              },
+              { isError: true },
+            );
           }
           story = await createStory(oc, name_or_id, requestedTarget);
         } else if (targetChangeRequested) {
