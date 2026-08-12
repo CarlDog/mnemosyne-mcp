@@ -15,8 +15,8 @@
 import { type OcClient, type OcMemory } from "./oc-client.js";
 
 export const STORY_MARKER_TAGS = ["mnemosyne", "story-marker"];
-export const STORY_MARKER_QUERY = "Mnemosyne Story";
-export const STORY_MARKER_SCHEMA = 3;
+const STORY_MARKER_QUERY = "Mnemosyne Story";
+const STORY_MARKER_SCHEMA = 3;
 const MAX_STORIES_PER_LIST = 1000;
 const KINDROID_TARGET_PREFIX = "Kindroid-Target: ";
 // Schema 2, read-only compat: a bare kin line always meant an AI target.

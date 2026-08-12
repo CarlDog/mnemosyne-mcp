@@ -2,8 +2,9 @@
 
 import { log } from "../log.js";
 
-export const asText = (data: unknown) => ({
+export const asText = (data: unknown, opts?: { isError?: boolean }) => ({
   content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
+  ...(opts?.isError && { isError: opts.isError }),
 });
 
 type ToolArgs = Record<string, unknown>;
