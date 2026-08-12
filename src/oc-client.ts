@@ -12,6 +12,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { log } from "./log.js";
 import { MNEMOSYNE_VERSION } from "./version.js";
+import { extractStructuredOrParsed } from "./mcp-result.js";
 
 export interface OcProject {
   id: string;
@@ -119,24 +120,11 @@ export class OcClient {
         ms: Date.now() - start,
       });
 
-      // Prefer structuredContent when present (MCP spec >= 2024-11): it's the
-      // raw JSON value, not stringified, and not subject to FastMCP's text
-      // wrapping convention.
-      const structured = (result as { structuredContent?: unknown })
-        .structuredContent;
-      if (structured !== undefined) {
-        return unwrapResult<T>(structured);
-      }
-
-      const content = (result.content ?? []) as Array<{
-        type: string;
-        text?: string;
-      }>;
-      const textBlock = content.find((c) => c.type === "text" && c.text);
-      if (!textBlock?.text) {
-        throw new Error(`OC tool ${name} returned no text content`);
-      }
-      return unwrapResult<T>(JSON.parse(textBlock.text));
+      // extractStructuredOrParsed handles the "how do I get the raw parsed
+      // value out of the MCP result" step (structuredContent when present,
+      // else parse the text content block). unwrapResult<T> is a separate,
+      // OC-specific step that peels FastMCP's {result:[...]} list-wrapping.
+      return unwrapResult<T>(extractStructuredOrParsed<unknown>(result, name));
     } catch (err) {
       const msg = (err as Error).message;
       if (retriesLeft > 0 && /rate limit/i.test(msg)) {
