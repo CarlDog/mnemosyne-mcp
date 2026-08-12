@@ -1,6 +1,6 @@
 # Status
 
-**Last updated:** 2026-08-08 (per-story Kindroid target binding extended to groups — `mnemo_story_use`/`mnemo_continue` gain `kindroid_kin`/`kindroid_group_id`, resolved via `resolveKindroidTarget()`; a tsconfig bug that silently skipped typechecking every test file was found and fixed in passing; earlier same day: found and committed uncommitted Atlas Cloud illustration integration design notes from a prior session — `docs/ILLUSTRATION_INTEGRATION.md`, proposal only, no code changes; earlier (2026-08-05): Phase 6 live-verified against a dedicated test kin; Phase 6 revised — keyphrase-gated story context for the Kindroid generator; v0.1.3 shipped — validator-gated scene inclusion; atlascloud-mcp registered locally in `.mcp.json` + illustration-integration scope recorded in "What's next")
+**Last updated:** 2026-08-12 (group-chat generator path live-verified against a real subscriber group, which surfaced a same-speaker-repeats problem; fixed via a per-message conversation nudge, then sharpened to point at Kindroid's documented `@Name` turn-handoff mechanism — both live-verified, confirming a clean 4/4 alternating exchange; earlier (2026-08-08): per-story Kindroid target binding extended to groups — `mnemo_story_use`/`mnemo_continue` gain `kindroid_kin`/`kindroid_group_id`, resolved via `resolveKindroidTarget()`; a tsconfig bug that silently skipped typechecking every test file was found and fixed in passing; also 2026-08-08: found and committed uncommitted Atlas Cloud illustration integration design notes from a prior session — `docs/ILLUSTRATION_INTEGRATION.md`, proposal only, no code changes; earlier (2026-08-05): Phase 6 live-verified against a dedicated test kin; Phase 6 revised — keyphrase-gated story context for the Kindroid generator; v0.1.3 shipped — validator-gated scene inclusion; atlascloud-mcp registered locally in `.mcp.json` + illustration-integration scope recorded in "What's next")
 
 ## Phase
 
@@ -120,9 +120,9 @@ Dovecoast smoke test against `nous-hermes2-mixtral` + `phi4:14b`:
 
 37/37 tests passed at the time.
 
-Current count: 56 passing, 29 integration tests skipping cleanly
+Current count: 62 passing, 29 integration tests skipping cleanly
 without `OC_URL`/`OLLAMA_GENERATOR_MODEL`/`KINDROID_MCP_URL` configured
-(85 total). See Done below for everything that's landed since.
+(91 total). See Done below for everything that's landed since.
 
 ## Done
 
@@ -174,6 +174,35 @@ without `OC_URL`/`OLLAMA_GENERATOR_MODEL`/`KINDROID_MCP_URL` configured
   `dump-prompt.mjs` — the live-connected MCP server predates this
   feature, so its exposed `mnemo_story_use` schema doesn't even accept
   `kindroid_group_id` yet).
+
+  **Same-speaker-repeats fixed and live-verified (2026-08-12).** The
+  live verification above actually surfaced a real problem on its first
+  run: one kin took two of four turns in a row, both replying
+  independently to the direction rather than to each other. Cross-repo
+  comparison with `plex-companion`'s `KindroidBackend` (a sibling
+  private repo with its own group-chat "watch party" use case) found it
+  had hit and fixed the identical behavior via a static
+  `groupConversationNote()` appended to every group-target message.
+  Ported the idea and improved on it: mnemosyne already keyphrase-
+  matches which characters a direction names, so the nudge names them
+  specifically instead of gesturing at "each other." `buildKindroidMessage()`
+  gained an `isGroup` parameter; `KindroidProvider.generate()` passes
+  `target.type === "group"`. Live-verified immediately after against the
+  same real subscriber group: alternation improved (Zephyr/Kimmy/Zephyr,
+  no repeats) but wasn't yet a clean round-robin. Reading Kindroid's own
+  groupchats documentation (kindroid.ai/docs/article/groupchats/)
+  surfaced the actual mechanism — `@Name` mentions are the documented,
+  controllable lever for who speaks next in automatic turn mode, and
+  kins will hand the baton to each other the same way if told to. Added
+  a line pointing the nudge at it explicitly ("@mention them by name")
+  rather than leaving it to inference. Live-verified again: a clean 4/4
+  alternating Zephyr/Kimmy/Zephyr/Kimmy exchange, each turn explicitly
+  addressing the other by name. Both beats saved as OC scenes ("Shark vs
+  Kraken Derail", "Kimmy Lands The Jump", tags `kindroid-group-live-test`
+  + `conversation-nudge-v1`/`-v2-atmention`) for before/after comparison.
+  6 new pure tests covering the nudge text, character-naming, the
+  generic fallback, ordering, and the `@mention` line — see
+  `tests/kindroid-provider.test.ts`.
 
   **Also fixed in passing:** `tsconfig.typecheck.json` extended
   `tsconfig.json` without overriding its inherited `exclude:
