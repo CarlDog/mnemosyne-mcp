@@ -120,11 +120,57 @@ Dovecoast smoke test against `nous-hermes2-mixtral` + `phi4:14b`:
 
 37/37 tests passed at the time.
 
-Current count: 26 passing, 25 integration tests skipping cleanly
+Current count: 46 passing, 29 integration tests skipping cleanly
 without `OC_URL`/`OLLAMA_GENERATOR_MODEL`/`KINDROID_MCP_URL` configured
-(51 total). See Done below for everything that's landed since.
+(75 total). See Done below for everything that's landed since.
 
 ## Done
+
+- **Per-story Kindroid target binding: AI or group chat** (2026-08-08).
+  `KINDROID_STORYTELLING_KIN` had been a single, server-wide AI default
+  with no way to point different stories at different targets short of
+  passing `model` on every `mnemo_continue` call, and no way to target a
+  group chat at all. `mnemo_story_use` gained `kindroid_kin` /
+  `kindroid_group_id` params (mutually exclusive; `null` clears), stored
+  as `KindroidTarget {type: "ai" | "group", id}` on the story's marker
+  memory — `stories.ts` bumped to marker schema 3 (schema-1 markers with
+  no kin line, and schema-2 markers with the legacy bare
+  `Kindroid-Kin:` line, always an AI target, both still parse fine; no
+  migration needed). Follows the existing "OC is canonical for story
+  state" rule rather than mnemosyne's local `config.json`, since a
+  target id is portable story data. `mnemo_continue` gained matching
+  per-call `kindroid_kin` / `kindroid_group_id` params and resolves the
+  effective target via the new `resolveKindroidTarget()`: the per-call
+  override wins, then the active story's bound target, then
+  `KindroidProvider`'s configured `defaultTarget`
+  (`KINDROID_STORYTELLING_KIN` or the new `KINDROID_STORYTELLING_GROUP`,
+  mutually exclusive at startup). `model` became Ollama-only — it no
+  longer doubles as a Kindroid override, since a Kindroid target needs a
+  type (ai vs group), not just a bare id. Against a group,
+  `KindroidProvider.generate()` drives kindroid-mcp's turn loop via the
+  new `KindroidClient.advanceGroup()` (`allowUser: false` forced;
+  `maxTurns` defaults to 4, matching kindroid-mcp's own default) and
+  joins the replies into one beat via the new `formatGroupReplies()`
+  (`Name: message` per line, in generation order). 8 new pure tests
+  (`resolveKindroidTarget`, `formatGroupReplies`,
+  `combineKindroidTarget`) plus 4 new real-OC integration tests for the
+  marker round-trip (ai-at-creation, group-at-creation,
+  bind/rebind-ai-to-group/clear, legacy schema-2 compat) — see
+  `tests/kindroid-provider.test.ts` / `tests/stories.test.ts`. **Not yet
+  live-verified against a real group chat** — only a single-AI test kin
+  was available this session; the OC-side marker storage/parsing for
+  group targets IS live-verified.
+
+  **Also fixed in passing:** `tsconfig.typecheck.json` extended
+  `tsconfig.json` without overriding its inherited `exclude:
+  ["**/*.test.ts"]` — exclude wins over include, so despite the file's
+  own stated purpose ("typecheck tests too"), every `*.test.ts` was
+  silently skipped by `npm run typecheck` the whole time. Found while
+  investigating why a stale rename (`setStoryKin`) in
+  `tests/stories.test.ts` wasn't flagged; fixed by overriding `exclude`
+  to just `["node_modules", "dist"]` in the typecheck config. Real
+  errors surfaced immediately once fixed (confirming the bug was live)
+  and were corrected as part of this same change.
 
 - **Phase 6 — Kindroid generator bridge, code-complete** (2026-07-31).
   `src/kindroid-client.ts` (MCP client wrapper for kindroid-mcp, mirroring
