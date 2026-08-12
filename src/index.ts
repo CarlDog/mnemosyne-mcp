@@ -27,7 +27,7 @@ if (GENERATOR_PROVIDER !== "ollama" && GENERATOR_PROVIDER !== "kindroid") {
   process.exit(1);
 }
 
-const OLLAMA_URL = process.env.OLLAMA_URL ?? "http://localhost:11434";
+const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
 
 let ocUrl: URL;
 try {
@@ -35,6 +35,20 @@ try {
 } catch (err) {
   log.error("startup", "OC_URL is not a valid URL", {
     value: OC_URL,
+    msg: (err as Error).message,
+  });
+  process.exit(1);
+}
+
+// OLLAMA_URL is used unconditionally -- by the Ollama generator path when
+// GENERATOR_PROVIDER=ollama, and always by the validator regardless of
+// GENERATOR_PROVIDER -- so validate it at startup rather than gating this
+// check behind the ollama/kindroid branch below.
+try {
+  new URL(OLLAMA_URL);
+} catch (err) {
+  log.error("startup", "OLLAMA_URL is not a valid URL", {
+    value: OLLAMA_URL,
     msg: (err as Error).message,
   });
   process.exit(1);
@@ -131,7 +145,7 @@ if (GENERATOR_PROVIDER === "kindroid") {
     process.exit(1);
   }
   ollamaValidatorModel =
-    process.env.OLLAMA_VALIDATOR_MODEL ?? OLLAMA_GENERATOR_MODEL;
+    process.env.OLLAMA_VALIDATOR_MODEL || OLLAMA_GENERATOR_MODEL;
 
   generator = new OllamaProvider({
     url: OLLAMA_URL,
