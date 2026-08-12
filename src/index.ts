@@ -55,24 +55,27 @@ try {
   process.exit(1);
 }
 
-const oc = new OcClient(ocUrl);
-try {
-  await oc.connect();
-} catch (err) {
-  log.error("startup", "failed to connect to OpenChronicle", {
-    url: OC_URL,
-    msg: (err as Error).message,
-  });
-  process.exit(1);
-}
+// Generator-provider config: every zero-I/O check (env presence, URL format,
+// KIN/GROUP mutual exclusivity) runs here, before the oc.connect() network
+// call below -- so a deployment misconfigured on both OC and Kindroid learns
+// about both problems at once, rather than only the OC one on this run and
+// the Kindroid one on the next. The validated values are carried forward in
+// this discriminated union (and ollamaValidatorModel below) so the
+// object-construction block after oc.connect() -- `new KindroidClient(...)`,
+// `new OllamaProvider(...)`, `new KindroidProvider(...)`, none of which have
+// any validation purpose of their own -- can use them without re-deriving or
+// re-validating anything. oc.connect() itself stays exactly where it was:
+// OC connectivity really is required by every provider.
+type GeneratorConfig =
+  | {
+      provider: "kindroid";
+      url: URL;
+      rawUrl: string;
+      defaultTarget: KindroidTarget;
+    }
+  | { provider: "ollama"; model: string };
 
-// The validator pass always runs on Ollama regardless of GENERATOR_PROVIDER
-// -- a companion-chat model is a poor fit for "return JSON matching this
-// schema". When the generator is Ollama too, OLLAMA_VALIDATOR_MODEL falls
-// back to OLLAMA_GENERATOR_MODEL as before; when the generator is Kindroid,
-// there is no generator model to fall back to, so OLLAMA_VALIDATOR_MODEL
-// becomes required instead.
-let generator: LlmProvider;
+let generatorConfig: GeneratorConfig;
 let ollamaValidatorModel: string;
 
 if (GENERATOR_PROVIDER === "kindroid") {
@@ -125,17 +128,12 @@ if (GENERATOR_PROVIDER === "kindroid") {
     process.exit(1);
   }
 
-  const kindroidClient = new KindroidClient(
-    kindroidUrl,
-    process.env.KINDROID_MCP_AUTH_TOKEN,
-  );
-  generator = new KindroidProvider(kindroidClient, { defaultTarget });
-  log.info("startup", "kindroid generator configured", {
-    url: KINDROID_MCP_URL,
-    target_type: defaultTarget.type,
-    target_id: defaultTarget.id,
-    auth: process.env.KINDROID_MCP_AUTH_TOKEN ? "bearer" : "none",
-  });
+  generatorConfig = {
+    provider: "kindroid",
+    url: kindroidUrl,
+    rawUrl: KINDROID_MCP_URL,
+    defaultTarget,
+  };
 } else {
   const OLLAMA_GENERATOR_MODEL = process.env.OLLAMA_GENERATOR_MODEL;
   if (!OLLAMA_GENERATOR_MODEL) {
@@ -148,13 +146,51 @@ if (GENERATOR_PROVIDER === "kindroid") {
   ollamaValidatorModel =
     process.env.OLLAMA_VALIDATOR_MODEL || OLLAMA_GENERATOR_MODEL;
 
+  generatorConfig = { provider: "ollama", model: OLLAMA_GENERATOR_MODEL };
+}
+
+const oc = new OcClient(ocUrl);
+try {
+  await oc.connect();
+} catch (err) {
+  log.error("startup", "failed to connect to OpenChronicle", {
+    url: OC_URL,
+    msg: (err as Error).message,
+  });
+  process.exit(1);
+}
+
+// The validator pass always runs on Ollama regardless of GENERATOR_PROVIDER
+// -- a companion-chat model is a poor fit for "return JSON matching this
+// schema". When the generator is Ollama too, OLLAMA_VALIDATOR_MODEL falls
+// back to OLLAMA_GENERATOR_MODEL as before; when the generator is Kindroid,
+// there is no generator model to fall back to, so OLLAMA_VALIDATOR_MODEL
+// becomes required instead. (Both already validated above, before the OC
+// connect -- this is object construction only.)
+let generator: LlmProvider;
+
+if (generatorConfig.provider === "kindroid") {
+  const kindroidClient = new KindroidClient(
+    generatorConfig.url,
+    process.env.KINDROID_MCP_AUTH_TOKEN,
+  );
+  generator = new KindroidProvider(kindroidClient, {
+    defaultTarget: generatorConfig.defaultTarget,
+  });
+  log.info("startup", "kindroid generator configured", {
+    url: generatorConfig.rawUrl,
+    target_type: generatorConfig.defaultTarget.type,
+    target_id: generatorConfig.defaultTarget.id,
+    auth: process.env.KINDROID_MCP_AUTH_TOKEN ? "bearer" : "none",
+  });
+} else {
   generator = new OllamaProvider({
     url: OLLAMA_URL,
-    defaultModel: OLLAMA_GENERATOR_MODEL,
+    defaultModel: generatorConfig.model,
   });
   log.info("startup", "ollama generator configured", {
     url: OLLAMA_URL,
-    generator_model: OLLAMA_GENERATOR_MODEL,
+    generator_model: generatorConfig.model,
   });
 }
 
