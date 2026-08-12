@@ -87,46 +87,96 @@ const REFERENCE_TYPES = [
   "worldbuilding",
 ] as const;
 
+// Group chats default to funneling every reaction at the direction/situation
+// rather than at each other -- discovered via cross-repo comparison with
+// plex-companion's KindroidBackend, which found and fixed the identical
+// behavior for its own group-chat "watch party" use case (its
+// groupConversationNote(), src/backends/kindroid.ts). Without an explicit
+// nudge, kins tend to each independently react to the same input rather than
+// building on one another's replies -- live-observed on 2026-08-12 as one
+// kin taking two of four turns in a row against a real group. Appended
+// unconditionally to every group-target message; single-AI targets never
+// see it (there's no "each other" to talk to).
+//
+// mnemosyne can do one better than plex-companion's static version: it
+// already keyphrase-matches which characters the direction actually names
+// (see `matched` below), so the nudge can name them specifically rather than
+// gesture at "each other" -- a concrete instruction beats a vague one. Falls
+// back to the generic phrasing when no character was matched (a cold-open
+// direction that doesn't name anyone yet).
+function groupConversationNote(matchedCharacterNames: string[]): string {
+  const who =
+    matchedCharacterNames.length > 0
+      ? ` -- ${matchedCharacterNames.join(", ")} included`
+      : "";
+  return (
+    `There's more than one of you in this scene${who}. Talk to each ` +
+    "other, not just to the situation -- react to what someone else just " +
+    "said, agree, disagree, or build on it. Don't wait for a cue to keep " +
+    "going."
+  );
+}
+
 /**
  * Builds the message actually sent to Kindroid: the raw direction, prefixed
  * with a story-context block when the direction name-mentions a character/
- * location/lore/worldbuilding entity, or when there are recent scenes.
- * Recent scenes are always included (already relevance-filtered by
- * gatherContext, capped at 5) -- reference entities are keyphrase-gated so
- * an unrelated direction doesn't drag in the whole cast list every call.
- * Pure function (no I/O) so it's unit-testable without a live client.
+ * location/lore/worldbuilding entity, or when there are recent scenes, and
+ * suffixed with a group-conversation nudge when `isGroup` is true (see
+ * groupConversationNote). Recent scenes are always included (already
+ * relevance-filtered by gatherContext, capped at 5) -- reference entities
+ * are keyphrase-gated so an unrelated direction doesn't drag in the whole
+ * cast list every call. Pure function (no I/O) so it's unit-testable without
+ * a live client.
  */
 export function buildKindroidMessage(
   userMessage: string,
   context?: ContextBundle,
+  isGroup = false,
 ): string {
-  if (!context) return userMessage;
+  const matched = context
+    ? REFERENCE_TYPES.flatMap((key) =>
+        parseFlattened(context[key]).filter((entry) =>
+          nameMentioned(userMessage, entry.name),
+        ),
+      )
+    : [];
+  const scenes = context ? parseFlattened(context.scenes) : [];
+  const hasContextBlock = matched.length > 0 || scenes.length > 0;
+  // Characters specifically (not locations/lore/worldbuilding) -- the only
+  // reference type that makes sense to address as "talk to each other" in
+  // groupConversationNote. A second, narrower pass over the same matching
+  // logic rather than tagging types onto `matched`, to avoid restructuring
+  // the already-tested block-building loop below.
+  const matchedCharacterNames = context
+    ? parseFlattened(context.characters)
+        .filter((entry) => nameMentioned(userMessage, entry.name))
+        .map((entry) => entry.name)
+    : [];
 
-  const matched = REFERENCE_TYPES.flatMap((key) =>
-    parseFlattened(context[key]).filter((entry) =>
-      nameMentioned(userMessage, entry.name),
-    ),
-  );
-  const scenes = parseFlattened(context.scenes);
+  if (!hasContextBlock && !isGroup) return userMessage;
 
-  if (matched.length === 0 && scenes.length === 0) return userMessage;
-
-  const lines = [
-    "[Story context -- background knowledge, not something to quote verbatim:",
-  ];
-  for (const entry of matched) {
-    lines.push(`- ${entry.name}: ${entry.body}`);
-  }
-  if (scenes.length > 0) {
-    if (matched.length > 0) lines.push("");
-    lines.push("Recent scenes:");
-    for (const scene of scenes) {
-      lines.push(`- ${scene.body || scene.name}`);
+  const parts: string[] = [];
+  if (hasContextBlock) {
+    const lines = [
+      "[Story context -- background knowledge, not something to quote verbatim:",
+    ];
+    for (const entry of matched) {
+      lines.push(`- ${entry.name}: ${entry.body}`);
     }
+    if (scenes.length > 0) {
+      if (matched.length > 0) lines.push("");
+      lines.push("Recent scenes:");
+      for (const scene of scenes) {
+        lines.push(`- ${scene.body || scene.name}`);
+      }
+    }
+    lines.push("]");
+    parts.push(lines.join("\n"));
   }
-  lines.push("]");
+  parts.push(userMessage);
+  if (isGroup) parts.push(groupConversationNote(matchedCharacterNames));
 
-  return `${lines.join("\n")}\n\n${userMessage}`;
+  return parts.join("\n\n");
 }
 
 /**
@@ -171,7 +221,11 @@ export class KindroidProvider implements LlmProvider {
 
   async generate(opts: LlmGenerateOptions): Promise<string> {
     const target = opts.kindroidTarget ?? this.config.defaultTarget;
-    const message = buildKindroidMessage(opts.userMessage, opts.context);
+    const message = buildKindroidMessage(
+      opts.userMessage,
+      opts.context,
+      target.type === "group",
+    );
 
     if (target.type === "group") {
       // allowUser forced false: mnemosyne is generating a story beat, not

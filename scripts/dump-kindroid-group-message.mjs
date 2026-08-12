@@ -79,7 +79,7 @@ console.log(
   ),
 );
 
-const message = buildKindroidMessage(direction, ctx);
+const message = buildKindroidMessage(direction, ctx, true);
 console.log("\n" + "=".repeat(78));
 console.log("MESSAGE THAT WOULD BE SENT TO KINDROID (advanceGroup)");
 console.log("=".repeat(78));
