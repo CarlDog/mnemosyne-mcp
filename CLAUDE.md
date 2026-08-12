@@ -16,7 +16,11 @@ and live-verified against a dedicated test kin. Per-story Kindroid
 target binding (AI or group chat) landed via
 `mnemo_story_use`/`mnemo_continue`, resolved through
 `resolveKindroidTarget()` — both the single-AI and group-chat paths are
-now live-verified (2026-08-12) against real Kindroid targets.
+now live-verified (2026-08-12) against real Kindroid targets. That
+live verification surfaced a same-speaker-repeats problem in group
+chats, now fixed via a conversation nudge pointing kins at Kindroid's
+documented `@Name` turn-handoff mechanism (2026-08-12) — see
+"Kindroid generator" below and STATUS.md's Done log.
 
 ## Stack
 
@@ -139,6 +143,19 @@ Key architectural decisions (see ARCHITECTURE.md for full reasoning):
   stream — see STATUS.md's Done log for the full walkthrough (context
   gathering, keyphrase matching, the real `advanceGroup` round-trip, and
   `formatGroupReplies()` all confirmed working end-to-end).
+- **Group-target messages get an appended conversation nudge.**
+  `buildKindroidMessage()`'s `isGroup` param (true whenever
+  `target.type === "group"`) appends a `groupConversationNote()` —
+  without it, kins tend to each independently react to the direction
+  rather than to each other (live-observed as one kin taking two of
+  four turns in a row). Names keyphrase-matched characters specifically
+  when the direction mentions them, and its closing line ("@mention them
+  by name") points at Kindroid's own documented turn-handoff mechanism
+  rather than a guessed phrasing — confirmed against
+  kindroid.ai/docs/article/groupchats/, not assumed. Single-AI targets
+  never see it (there's no "each other" to talk to). Live-verified
+  2026-08-12 to produce a clean 4/4 alternating exchange against the
+  same real group — see STATUS.md's Done log.
 
 ## Common Commands
 
