@@ -134,6 +134,65 @@ describe("buildKindroidMessage (pure)", () => {
     const result = buildKindroidMessage("keep the Tone consistent", context);
     expect(result).toBe("keep the Tone consistent");
   });
+
+  it("appends a group-conversation nudge when isGroup is true, even with no context at all", () => {
+    const result = buildKindroidMessage("what happens next?", undefined, true);
+    expect(result).toContain("what happens next?");
+    expect(result).toContain("more than one of you in this scene");
+    expect(result).toContain("Talk to each other");
+  });
+
+  it("omits the group-conversation nudge when isGroup is false (default), even with context matches", () => {
+    const context: ContextBundle = {
+      ...EMPTY_CONTEXT,
+      characters: ["Aria Voss\nA cartographer."],
+    };
+    const result = buildKindroidMessage("find Aria Voss", context);
+    expect(result).not.toContain("more than one of you");
+  });
+
+  it("names matched characters specifically in the group-conversation nudge", () => {
+    const context: ContextBundle = {
+      ...EMPTY_CONTEXT,
+      characters: ["Aria Voss\nA cartographer.", "Holt\nA harbor merchant."],
+    };
+    const result = buildKindroidMessage(
+      "Aria Voss and Holt argue at the docks",
+      context,
+      true,
+    );
+    expect(result).toContain(
+      "more than one of you in this scene -- Aria Voss, Holt included",
+    );
+  });
+
+  it("falls back to the generic group nudge when isGroup is true but no character matched", () => {
+    const context: ContextBundle = {
+      ...EMPTY_CONTEXT,
+      locations: ["The Dovecoast Tavern\nA fog-choked harbor inn."],
+    };
+    const result = buildKindroidMessage(
+      "describe The Dovecoast Tavern at dusk",
+      context,
+      true,
+    );
+    expect(result).toContain("more than one of you in this scene.");
+    expect(result).not.toContain("included");
+  });
+
+  it("orders the group nudge after the context block and the direction", () => {
+    const context: ContextBundle = {
+      ...EMPTY_CONTEXT,
+      characters: ["Aria Voss\nA cartographer."],
+    };
+    const result = buildKindroidMessage("find Aria Voss", context, true);
+    const contextIdx = result.indexOf("[Story context");
+    const directionIdx = result.indexOf("find Aria Voss");
+    const nudgeIdx = result.indexOf("more than one of you");
+    expect(contextIdx).toBeGreaterThanOrEqual(0);
+    expect(contextIdx).toBeLessThan(directionIdx);
+    expect(directionIdx).toBeLessThan(nudgeIdx);
+  });
 });
 
 const AI_TARGET: KindroidTarget = { type: "ai", id: "explicit-kin" };
