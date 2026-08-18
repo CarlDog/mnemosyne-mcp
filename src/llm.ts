@@ -7,6 +7,25 @@ import { log } from "./log.js";
 import type { ContextBundle } from "./prompt.js";
 import type { KindroidTarget } from "./stories.js";
 
+/**
+ * Describe a transport-level failure with its real cause.
+ *
+ * Node's global `fetch()` throws a bare `TypeError: fetch failed` on any
+ * network-level error (DNS, connect, TLS) — the actual reason lives in
+ * `error.cause` and is discarded if nothing reads it, making a live
+ * connectivity fault (e.g. a wrong OLLAMA_URL) undiagnosable from the tool's
+ * error output alone (fleet standard MCP-F08). Must be folded into the
+ * thrown Error's message itself: downstream error handling here only ever
+ * reads `.message`, so `.cause` would otherwise be discarded again.
+ */
+export function describeTransportError(err: unknown): string {
+  const base = err instanceof Error ? err.message : String(err);
+  const cause = err instanceof Error ? err.cause : undefined;
+  const causeMsg =
+    cause instanceof Error ? cause.message : cause ? String(cause) : "";
+  return causeMsg ? `${base}: ${causeMsg}` : base;
+}
+
 export interface LlmGenerateOptions {
   systemPrompt: string;
   userMessage: string;
@@ -113,12 +132,15 @@ export class OllamaProvider implements LlmProvider {
       });
       return trimmed;
     } catch (err) {
+      const message = describeTransportError(err);
       log.error("ollama", "generate error", {
         model,
         ms: Date.now() - start,
-        msg: (err as Error).message,
+        msg: message,
       });
-      throw err;
+      throw err instanceof Error && message !== err.message
+        ? new Error(message, { cause: err })
+        : err;
     } finally {
       clearTimeout(timeout);
     }
