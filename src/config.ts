@@ -30,6 +30,13 @@ function configPath(): string {
   return join(configDir(), "config.json");
 }
 
+/** Default destination directory for mnemo_export_story documents.
+ * Lives beside config.json so exports survive independent of any repo
+ * checkout and follow the same MNEMOSYNE_CONFIG_DIR override. */
+export function exportsDir(): string {
+  return join(configDir(), "exports");
+}
+
 async function readConfig(): Promise<MnemoConfig> {
   try {
     const text = await fs.readFile(configPath(), "utf8");

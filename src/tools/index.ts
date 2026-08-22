@@ -5,6 +5,7 @@ import type { OcClient } from "../oc-client.js";
 import type { LlmProvider } from "../llm.js";
 import { registerContinueTool } from "./continue.js";
 import { registerEntityTools } from "./entities.js";
+import { registerExportTool } from "./export.js";
 import { registerStoryTools } from "./stories.js";
 import { registerValidateTool } from "./validate.js";
 import { registerRevalidateTool } from "./revalidate.js";
@@ -17,6 +18,7 @@ export function registerTools(
 ): void {
   registerStoryTools(server, oc);
   registerEntityTools(server, oc);
+  registerExportTool(server, oc);
   registerContinueTool(server, oc, generator, validator);
   registerValidateTool(server, oc, validator);
   registerRevalidateTool(server, oc, validator);

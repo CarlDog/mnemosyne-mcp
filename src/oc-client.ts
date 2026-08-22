@@ -4,7 +4,9 @@
 // Surfaces only the OC tools Mnemosyne actually uses. We add wrappers as
 // new phases need them — three similar lines is better than a premature
 // abstraction. Phase A: project_create, memory_save, memory_search.
-// Phase B adds: memory_update, memory_pin. project_delete exists for the
+// Phase B adds: memory_update, memory_pin. memory_list arrived with
+// mnemo_export_story (complete-enumeration semantics that memory_search's
+// ranked window can't provide). project_delete exists for the
 // integration suite's teardown (no product tool deletes a story — that
 // stays a deliberate OC-side action).
 
@@ -188,6 +190,18 @@ export class OcClient {
     if (opts.tags) args.tags = opts.tags;
     if (opts.topK !== undefined) args.top_k = opts.topK;
     return this.callTool<OcMemory[]>("memory_search", args);
+  }
+
+  // Complete project enumeration, unlike memorySearch's ranked window.
+  // OC's memory_list treats an omitted limit as "no limit" and project_id
+  // as a strict filter (its own docs: "Use project_id rather than a limit
+  // when you want completeness") — which is the export contract: a story
+  // export that silently truncated at a search cap would be quiet data
+  // loss.
+  async memoryList(opts: { projectId: string }): Promise<OcMemory[]> {
+    return this.callTool<OcMemory[]>("memory_list", {
+      project_id: opts.projectId,
+    });
   }
 
   async memoryUpdate(opts: {

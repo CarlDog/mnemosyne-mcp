@@ -70,12 +70,21 @@ Serialize a story's full OC project to a versioned JSON document.
 - Pulls the marker via the existing story lookup and **all** project
   memories via OC's `memory_list` (strict `project_id` scope, no limit —
   not `memory_search`, whose 100-result window would silently truncate).
-- Parses each memory through the existing entity parser; the story marker
-  and any unparseable memories are excluded from `entities` but **counted
-  in the response manifest** — nothing silently drops.
-- Writes the document to a file (default under the config dir's
-  `exports/`, overridable via `out_path`) and returns the path plus a
-  per-type manifest. The document is not echoed into the tool response:
+- Parses each memory through the existing entity parser. The story marker
+  is excluded **by its memory ID** — never by its tag, since `extra_tags`
+  lets a legitimate, parseable entity carry the marker's tag, and a tag
+  filter would silently omit it from the one enumeration whose contract
+  is completeness. (The marker's information already appears as the
+  document's `story` block.) Any other unparseable memory is excluded
+  from `entities` but **listed in the response manifest** — nothing
+  silently drops.
+- Writes the document to a file (default
+  `<config dir>/exports/<story-slug>-<utc-timestamp>.json` — timestamped
+  to the second so back-to-back exports of one story never silently
+  overwrite an earlier backup; a relative `out_path` is resolved to
+  absolute, since a stdio server's cwd is unpredictable and the
+  manifest's path is the document's only retrieval handle) and returns
+  the path plus a per-type manifest. The document is not echoed into the tool response:
   export content needs no host judgment, so routing a 100-scene story
   through host context is pure waste. (File-write is a deliberate
   stdio-era contract; revisit retrieval when HTTP transport exists.)

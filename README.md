@@ -17,9 +17,10 @@ mother of the Muses — the force by which memory becomes story.
 
 ## Status
 
-**v0.1.3 shipped** — eight tools (`mnemo_story_list`, `mnemo_story_use`,
+**v0.1.3 shipped** — nine tools (`mnemo_story_list`, `mnemo_story_use`,
 `mnemo_save_entity`, `mnemo_recall`, `mnemo_delete_entity`,
-`mnemo_continue`, `mnemo_validate`, `mnemo_revalidate_scenes`).
+`mnemo_continue`, `mnemo_validate`, `mnemo_revalidate_scenes`,
+`mnemo_export_story`).
 `mnemo_continue(validate=true)` now tags scenes with their validation
 verdict, and the RECENT SCENES prompt block filters on it — the fix for
 the few-shot-vs-rule diagnostic where present-tense example scenes drowned

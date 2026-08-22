@@ -1,12 +1,14 @@
 # Status
 
-**Last updated:** 2026-08-21 (import/export design ratified — see
-[docs/IMPORT_EXPORT_DESIGN.md](docs/IMPORT_EXPORT_DESIGN.md) and the
-"What's next" entry; derived from a three-source research pass — the
-operator's original ChatGPT project folders, OC v1's archived template
-system, OC v2's import pipeline — plus a two-reviewer second-opinion
-pass; `mnemo_export_story` build starting); earlier (2026-08-18): Ollama
-transport-error messages now surface
+**Last updated:** 2026-08-21 (`mnemo_export_story` shipped and
+live-verified against real OC — versioned JSON export per
+[docs/IMPORT_EXPORT_DESIGN.md](docs/IMPORT_EXPORT_DESIGN.md), the
+interchange schema everything else in the import/export family builds
+on; earlier same day: that design ratified — derived from a three-source
+research pass (the operator's original ChatGPT project folders, OC v1's
+archived template system, OC v2's import pipeline) plus a two-reviewer
+second-opinion pass; next up: `mnemo_import_story`); earlier
+(2026-08-18): Ollama transport-error messages now surface
 their real cause — `OllamaProvider.generate()`'s catch built its message
 from `err.message` only, which on a real `fetch()` failure is Node's generic
 `TypeError: fetch failed`, discarding the actual DNS/connection/TLS reason
@@ -133,11 +135,45 @@ Dovecoast smoke test against `nous-hermes2-mixtral` + `phi4:14b`:
 
 37/37 tests passed at the time.
 
-Current count: 65 passing, 29 integration tests skipping cleanly
+Current count: 72 passing, 31 integration tests skipping cleanly
 without `OC_URL`/`OLLAMA_GENERATOR_MODEL`/`KINDROID_MCP_URL` configured
-(94 total). See Done below for everything that's landed since.
+(103 total). See Done below for everything that's landed since.
 
 ## Done
+
+- **`mnemo_export_story` shipped — the import/export family's first
+  tool** (2026-08-21). Serializes a story's full OC project to a
+  versioned JSON document (`mnemosyne_export: 1`) per
+  [docs/IMPORT_EXPORT_DESIGN.md](docs/IMPORT_EXPORT_DESIGN.md): every
+  entity with tags (validation state), pin state, and per-entity
+  `created_at` (OC's `memory_save` supports backdating, so a future
+  import can restore timestamps), plus the story's `kindroid_target`
+  when bound (operator decision — portable across machines, not across
+  Kindroid accounts). Enumeration uses a new `OcClient.memoryList`
+  (OC's `memory_list`, strict project scope, no limit) rather than
+  `memory_search`'s 100-result ranked window — an export that silently
+  truncated would be quiet data loss — via a new
+  `entities.listAllEntities` that excludes the story marker **by its
+  memory ID** (not its tag — `extra_tags` lets a legitimate entity carry
+  `story-marker`, and a tag filter would silently omit it; caught by the
+  pre-commit adversarial review) and surfaces any other unparseable
+  memory ids in the manifest's `skipped_memory_ids` instead of dropping
+  them. The document is written to a file (default
+  `<config dir>/exports/<slug>-<utc-timestamp>.json`, timestamped to the
+  second so back-to-back exports never overwrite an earlier backup;
+  relative `out_path` resolved to absolute since a stdio server's cwd is
+  unpredictable; new `exportsDir()` in `config.ts`) and only a manifest
+  returns through the tool — no reason to route a 100-scene story
+  through host context. 7 pure tests (document assembly, envelope +
+  literal schema-version pins so a casual version bump fails a test,
+  filename slugging/collision behavior) + 2 real-OC integration tests
+  (complete enumeration incl. a marker-tagged-entity regression;
+  file-write round-trip asserting the manifest matches the file,
+  kindroid_target survives, validation tags and timestamps preserved) —
+  live-verified against real OC same day.
+  Also fixed in passing: the server's `instructions` blob had drifted —
+  `mnemo_delete_entity` and `mnemo_revalidate_scenes` were never added
+  to its tool list; both are listed now, alongside the new export tool.
 
 - **Per-story Kindroid target binding: AI or group chat** (2026-08-08).
   `KINDROID_STORYTELLING_KIN` had been a single, server-wide AI default
@@ -650,11 +686,11 @@ real use and pressure points emerge:
   decision: classification happens caller-side in the host conversation;
   the server is a typed batch writer that never guesses. Build order:
   `mnemo_export_story` (versioned JSON interchange schema — the riskiest
-  commitment, so it goes first), then `mnemo_import_story` (curated
-  `entities[]` mode + deterministic export-doc round-trip mode), then a
-  mapping playbook + seed templates as docs. `mnemo_seed_from_template`
-  is retired as a planned tool — seeding is a host conversation plus one
-  import call.
+  commitment, so it went first; **shipped 2026-08-21**, see Done), then
+  `mnemo_import_story` (curated `entities[]` mode + deterministic
+  export-doc round-trip mode — **next up**), then a mapping playbook +
+  seed templates as docs. `mnemo_seed_from_template` is retired as a
+  planned tool — seeding is a host conversation plus one import call.
 - **Atlas Cloud illustration integration (scope recorded 2026-08-05,
   design notes added 2026-08-06 — proposal only, not started, not
   scheduled).** ARCHITECTURE.md §8 still lists "image generation tied to
