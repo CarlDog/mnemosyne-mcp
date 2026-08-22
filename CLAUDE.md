@@ -20,7 +20,12 @@ now live-verified (2026-08-12) against real Kindroid targets. That
 live verification surfaced a same-speaker-repeats problem in group
 chats, now fixed via a conversation nudge pointing kins at Kindroid's
 documented `@Name` turn-handoff mechanism (2026-08-12) — see
-"Kindroid generator" below and STATUS.md's Done log.
+"Kindroid generator" below and STATUS.md's Done log. Latest: the
+import/export design was ratified (2026-08-21, see
+docs/IMPORT_EXPORT_DESIGN.md — classification happens caller-side in
+the host conversation; the server is a typed batch writer) and
+`mnemo_export_story` shipped the same day; `mnemo_import_story` is
+next.
 
 ## Stack
 
@@ -39,7 +44,7 @@ documented `@Name` turn-handoff mechanism (2026-08-12) — see
 - `src/config.ts` — local config (current story pointer, OS-appropriate
   config dir).
 - `src/stories.ts`, `src/entities.ts`, `src/prompt.ts`, `src/validator.ts`,
-  `src/llm.ts` — domain logic.
+  `src/llm.ts`, `src/export.ts` — domain logic.
 - `src/kindroid-provider.ts` — `KindroidProvider implements LlmProvider`;
   generator-only (validator always stays on Ollama). Exports
   `buildKindroidMessage()` (pure, unit-tested) — the keyphrase-matching

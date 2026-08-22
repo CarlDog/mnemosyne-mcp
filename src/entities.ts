@@ -292,3 +292,39 @@ export async function recall(
     .filter((e): e is RecalledEntity => e !== null)
     .slice(0, limit);
 }
+
+export interface ListAllEntitiesResult {
+  entities: RecalledEntity[];
+  /** Memory ids present in the project that are neither the story marker
+   * nor parseable entities. Surfaced (not silently dropped) so an export
+   * caller can report exactly what a document does NOT contain. */
+  skipped_memory_ids: string[];
+}
+
+// Complete enumeration for mnemo_export_story — recall()'s search window
+// (MAX_RECALL_LIMIT) is a ranking cap, not a completeness contract, and an
+// export that silently truncated would be quiet data loss. Uses
+// memoryList (no limit, strict project scope). The story marker is
+// excluded by its memory ID — not by its "story-marker" tag — because
+// save_entity accepts arbitrary extra_tags, so a legitimate, parseable
+// entity could carry that tag and a tag filter would silently omit it
+// from the one enumeration whose contract is completeness. Excluding by
+// identity keeps the skipped list an honest "unexpected non-entities"
+// signal (a normal story yields []; a hand-made duplicate marker in OC
+// fails the parse and lands in skipped, visibly).
+export async function listAllEntities(
+  oc: OcClient,
+  storyId: string,
+  markerMemoryId: string,
+): Promise<ListAllEntitiesResult> {
+  const memories = await oc.memoryList({ projectId: storyId });
+  const entities: RecalledEntity[] = [];
+  const skipped: string[] = [];
+  for (const memory of memories) {
+    if (memory.id === markerMemoryId) continue;
+    const recalled = memoryToRecalled(memory);
+    if (recalled) entities.push(recalled);
+    else skipped.push(memory.id);
+  }
+  return { entities, skipped_memory_ids: skipped };
+}

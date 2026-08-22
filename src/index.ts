@@ -219,6 +219,8 @@ v0 surface:
   active story. Overwrites by (type, name).
 - mnemo_recall(query?, type?, limit?) — semantic recall over the active
   story's entities.
+- mnemo_delete_entity(type, name) — delete one entity from the active
+  story by (type, name).
 - mnemo_continue(direction, mode?, max_tokens?, temperature?, model?,
   kindroid_kin?, kindroid_group_id?, validate?) — pull context from OC,
   generate the next beat via the generator LLM, auto-save the result as a
@@ -228,7 +230,13 @@ v0 surface:
   attaches a verdict (issues + summary) to the response.
 - mnemo_validate(content) — standalone validation pass over arbitrary
   content (hand-written prose, previously-saved beats being re-audited).
-  Same ValidationReport shape as mnemo_continue's validate=true mode.`;
+  Same ValidationReport shape as mnemo_continue's validate=true mode.
+- mnemo_revalidate_scenes() — re-run the validator over every scene in
+  the active story and retag validation:clean/errors.
+- mnemo_export_story(name_or_id?, out_path?) — serialize a story (every
+  entity + its Kindroid binding, if any) to a versioned JSON document on
+  disk. Defaults to the active story. Returns a manifest (path, per-type
+  counts, skipped ids); the document itself lives in the file.`;
 
 const server = new McpServer(
   { name: "mnemosyne-mcp", version: MNEMOSYNE_VERSION },
