@@ -50,8 +50,21 @@ sessions applying the playbook, not development work.
   `src/llm.ts`, `src/export.ts`, `src/import.ts` — domain logic.
 - `src/kindroid-provider.ts` — `KindroidProvider implements LlmProvider`;
   generator-only (validator always stays on Ollama). Exports
-  `buildKindroidMessage()` (pure, unit-tested) — the keyphrase-matching
-  logic that folds matched story entities into the outgoing message.
+  `buildKindroidMessage()` (pure, unit-tested) — a wrapper over the
+  shared companion-message builder that adds the group @-mention nudge.
+- `src/companion-message.ts` — the shared keyphrase-gated context
+  builder both companion-chat providers (Kindroid, Botify) fold story
+  entities through. Extracted so the word-boundary matching and
+  scene-inclusion rules can't drift between consumers.
+- `src/botify-client.ts` / `src/botify-provider.ts` — Botify generator
+  (MCP client to botify-mcp, same shape as the Kindroid pair; target is
+  a chat UUID via `BOTIFY_STORYTELLING_CHAT`).
+- `src/llm-http.ts` — shared POST/timeout/transport-error scaffolding
+  for the direct-API cloud providers.
+- `src/anthropic-provider.ts`, `src/gemini-provider.ts`,
+  `src/openai-compat-provider.ts` — direct HTTP cloud generators (no
+  SDKs). The OpenAI-compatible class serves both `openai` and
+  `atlascloud` (and any compatible host via `OPENAI_BASE_URL`).
 - `src/tools/*.ts` — tool registrations (one file per tool surface).
 - `src/log.ts` — structured stderr logger.
 - `tests/` — vitest, real OC + real Ollama (env-gated).
@@ -90,11 +103,21 @@ Key architectural decisions (see ARCHITECTURE.md for full reasoning):
   prompt, calls a (potentially cheaper) validator LLM, surfaces flagged
   issues to the user. No auto-regeneration. No deterministic checker
   (that was a v2 anti-pattern).
-- **Provider-pluggable from day one.** Ollama, Kindroid (Phase 6, via
-  kindroid-mcp as an MCP client), Botify MCP, Anthropic. Per-role
-  (`generator_provider`, `validator_provider`) — in practice today the
-  validator role always stays on Ollama regardless of `GENERATOR_PROVIDER`,
-  since a companion-chat model is a poor fit for structured-JSON output.
+- **Provider-pluggable from day one.** Seven generators behind
+  `GENERATOR_PROVIDER` (2026-08-21): `ollama` (default), the
+  companion-chat pair `kindroid`/`botify` (MCP clients to their sibling
+  servers; message-text-only channel, keyphrase-gated context via
+  `companion-message.ts`), and the direct-API cloud four
+  `anthropic`/`openai`/`gemini`/`atlascloud` (system-prompt + per-call
+  model fidelity; temperature/token caps pass through only when set,
+  since several current-gen models reject the fields outright; the
+  OpenAI-compatible pair share one class; Atlas goes direct because
+  atlascloud-mcp's `atlas_chat` returns unscrapeable markdown). The
+  validator role always stays on Ollama regardless of
+  `GENERATOR_PROVIDER` — a companion-chat model is a poor fit for
+  structured-JSON output, and keeping validation local means it's free —
+  so `OLLAMA_VALIDATOR_MODEL` is required for every non-ollama
+  generator.
 - **Kindroid generator: keyphrase-gated context, not the full assembled
   prompt.** `KindroidProvider.generate()` ignores `systemPrompt`/
   `temperature`/`maxTokens` (no Kindroid equivalent) but does NOT ignore

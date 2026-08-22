@@ -6,6 +6,11 @@ import { OcClient } from "./oc-client.js";
 import { OllamaProvider, type LlmProvider } from "./llm.js";
 import { KindroidClient } from "./kindroid-client.js";
 import { KindroidProvider } from "./kindroid-provider.js";
+import { BotifyClient } from "./botify-client.js";
+import { BotifyProvider } from "./botify-provider.js";
+import { AnthropicProvider } from "./anthropic-provider.js";
+import { GeminiProvider } from "./gemini-provider.js";
+import { OpenAICompatProvider } from "./openai-compat-provider.js";
 import type { KindroidTarget } from "./stories.js";
 import { registerTools } from "./tools/index.js";
 import { MNEMOSYNE_VERSION } from "./version.js";
@@ -18,13 +23,26 @@ if (!OC_URL) {
 
 // Unset means "ollama" -- the only backend v0 shipped with, so this is a
 // zero-behavior-change default for every existing deployment.
+const GENERATOR_PROVIDERS = [
+  "ollama",
+  "kindroid",
+  "botify",
+  "anthropic",
+  "openai",
+  "gemini",
+  "atlascloud",
+] as const;
+type GeneratorProviderName = (typeof GENERATOR_PROVIDERS)[number];
+
 const GENERATOR_PROVIDER =
-  (process.env.GENERATOR_PROVIDER?.trim().toLowerCase() || "ollama") as
-    "ollama" | "kindroid";
-if (GENERATOR_PROVIDER !== "ollama" && GENERATOR_PROVIDER !== "kindroid") {
-  log.error("startup", "GENERATOR_PROVIDER must be 'ollama' or 'kindroid'", {
-    value: process.env.GENERATOR_PROVIDER,
-  });
+  (process.env.GENERATOR_PROVIDER?.trim().toLowerCase() ||
+    "ollama") as GeneratorProviderName;
+if (!GENERATOR_PROVIDERS.includes(GENERATOR_PROVIDER)) {
+  log.error(
+    "startup",
+    `GENERATOR_PROVIDER must be one of: ${GENERATOR_PROVIDERS.join(", ")}`,
+    { value: process.env.GENERATOR_PROVIDER },
+  );
   process.exit(1);
 }
 
@@ -66,6 +84,8 @@ try {
 // any validation purpose of their own -- can use them without re-deriving or
 // re-validating anything. oc.connect() itself stays exactly where it was:
 // OC connectivity really is required by every provider.
+type CloudProviderName = "anthropic" | "openai" | "gemini" | "atlascloud";
+
 type GeneratorConfig =
   | {
       provider: "kindroid";
@@ -73,10 +93,37 @@ type GeneratorConfig =
       rawUrl: string;
       defaultTarget: KindroidTarget;
     }
+  | { provider: "botify"; url: URL; rawUrl: string; chatId: string }
+  | {
+      provider: CloudProviderName;
+      apiKey: string;
+      model: string;
+      /** Only meaningful for the OpenAI-compatible pair (openai /
+       * atlascloud); anthropic and gemini have fixed hosts. */
+      baseUrl: string;
+    }
   | { provider: "ollama"; model: string };
 
 let generatorConfig: GeneratorConfig;
 let ollamaValidatorModel: string;
+
+// The validator pass always runs on Ollama regardless of the generator (a
+// companion-chat model can't do structured JSON, and keeping the validator
+// local means every cloud generator still validates for free) -- so every
+// non-ollama generator needs OLLAMA_VALIDATOR_MODEL set explicitly: there
+// is no OLLAMA_GENERATOR_MODEL to fall back to.
+function requireValidatorModel(provider: string): string {
+  const validatorModel = process.env.OLLAMA_VALIDATOR_MODEL;
+  if (!validatorModel) {
+    log.error(
+      "startup",
+      `OLLAMA_VALIDATOR_MODEL environment variable is required when GENERATOR_PROVIDER=${provider} ` +
+        "(there is no OLLAMA_GENERATOR_MODEL to fall back to -- the validator always runs on Ollama)",
+    );
+    process.exit(1);
+  }
+  return validatorModel;
+}
 
 if (GENERATOR_PROVIDER === "kindroid") {
   const KINDROID_MCP_URL = process.env.KINDROID_MCP_URL;
@@ -106,16 +153,7 @@ if (GENERATOR_PROVIDER === "kindroid") {
   const defaultTarget: KindroidTarget = KINDROID_STORYTELLING_KIN
     ? { type: "ai", id: KINDROID_STORYTELLING_KIN }
     : { type: "group", id: KINDROID_STORYTELLING_GROUP! };
-  const validatorModel = process.env.OLLAMA_VALIDATOR_MODEL;
-  if (!validatorModel) {
-    log.error(
-      "startup",
-      "OLLAMA_VALIDATOR_MODEL environment variable is required when GENERATOR_PROVIDER=kindroid " +
-        "(there is no OLLAMA_GENERATOR_MODEL to fall back to -- the validator always runs on Ollama)",
-    );
-    process.exit(1);
-  }
-  ollamaValidatorModel = validatorModel;
+  ollamaValidatorModel = requireValidatorModel("kindroid");
 
   let kindroidUrl: URL;
   try {
@@ -133,6 +171,120 @@ if (GENERATOR_PROVIDER === "kindroid") {
     url: kindroidUrl,
     rawUrl: KINDROID_MCP_URL,
     defaultTarget,
+  };
+} else if (GENERATOR_PROVIDER === "botify") {
+  const BOTIFY_MCP_URL = process.env.BOTIFY_MCP_URL;
+  if (!BOTIFY_MCP_URL) {
+    log.error(
+      "startup",
+      "BOTIFY_MCP_URL environment variable is required when GENERATOR_PROVIDER=botify",
+    );
+    process.exit(1);
+  }
+  const BOTIFY_STORYTELLING_CHAT = process.env.BOTIFY_STORYTELLING_CHAT;
+  if (!BOTIFY_STORYTELLING_CHAT) {
+    log.error(
+      "startup",
+      "BOTIFY_STORYTELLING_CHAT environment variable is required when GENERATOR_PROVIDER=botify " +
+        "(a Botify chat UUID -- an existing chat thread with the storytelling bot, from botify-mcp's list_chats)",
+    );
+    process.exit(1);
+  }
+  ollamaValidatorModel = requireValidatorModel("botify");
+
+  let botifyUrl: URL;
+  try {
+    botifyUrl = new URL(BOTIFY_MCP_URL);
+  } catch (err) {
+    log.error("startup", "BOTIFY_MCP_URL is not a valid URL", {
+      value: BOTIFY_MCP_URL,
+      msg: (err as Error).message,
+    });
+    process.exit(1);
+  }
+
+  generatorConfig = {
+    provider: "botify",
+    url: botifyUrl,
+    rawUrl: BOTIFY_MCP_URL,
+    chatId: BOTIFY_STORYTELLING_CHAT,
+  };
+} else if (GENERATOR_PROVIDER !== "ollama") {
+  // The four direct-API cloud providers share one validation shape: an
+  // API key + an explicit model (no baked-in model default -- model names
+  // age fast, and requiring the choice matches OLLAMA_GENERATOR_MODEL's
+  // posture), plus a base URL for the OpenAI-compatible pair. Each env
+  // var is read literally (not via a lookup table) so the .env.example
+  // schema-drift test can see every reference.
+  ollamaValidatorModel = requireValidatorModel(GENERATOR_PROVIDER);
+
+  let apiKey: string | undefined;
+  let model: string | undefined;
+  let baseUrl = "";
+  let keyVar = "";
+  let modelVar = "";
+  switch (GENERATOR_PROVIDER) {
+    case "anthropic":
+      apiKey = process.env.ANTHROPIC_API_KEY;
+      model = process.env.ANTHROPIC_MODEL;
+      keyVar = "ANTHROPIC_API_KEY";
+      modelVar = "ANTHROPIC_MODEL";
+      break;
+    case "openai":
+      apiKey = process.env.OPENAI_API_KEY;
+      model = process.env.OPENAI_MODEL;
+      baseUrl = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
+      keyVar = "OPENAI_API_KEY";
+      modelVar = "OPENAI_MODEL";
+      break;
+    case "gemini":
+      apiKey = process.env.GEMINI_API_KEY;
+      model = process.env.GEMINI_MODEL;
+      keyVar = "GEMINI_API_KEY";
+      modelVar = "GEMINI_MODEL";
+      break;
+    case "atlascloud":
+      apiKey = process.env.ATLASCLOUD_API_KEY;
+      model = process.env.ATLASCLOUD_MODEL;
+      baseUrl =
+        process.env.ATLASCLOUD_BASE_URL || "https://api.atlascloud.ai/v1";
+      keyVar = "ATLASCLOUD_API_KEY";
+      modelVar = "ATLASCLOUD_MODEL";
+      break;
+  }
+  if (!apiKey) {
+    log.error(
+      "startup",
+      `${keyVar} environment variable is required when GENERATOR_PROVIDER=${GENERATOR_PROVIDER}`,
+    );
+    process.exit(1);
+  }
+  if (!model) {
+    log.error(
+      "startup",
+      `${modelVar} environment variable is required when GENERATOR_PROVIDER=${GENERATOR_PROVIDER} ` +
+        "(no baked-in default -- model names age fast; pick one explicitly)",
+    );
+    process.exit(1);
+  }
+  if (baseUrl) {
+    try {
+      new URL(baseUrl);
+    } catch (err) {
+      log.error("startup", "provider base URL is not a valid URL", {
+        provider: GENERATOR_PROVIDER,
+        value: baseUrl,
+        msg: (err as Error).message,
+      });
+      process.exit(1);
+    }
+  }
+
+  generatorConfig = {
+    provider: GENERATOR_PROVIDER,
+    apiKey,
+    model,
+    baseUrl,
   };
 } else {
   const OLLAMA_GENERATOR_MODEL = process.env.OLLAMA_GENERATOR_MODEL;
@@ -163,10 +315,10 @@ try {
 // The validator pass always runs on Ollama regardless of GENERATOR_PROVIDER
 // -- a companion-chat model is a poor fit for "return JSON matching this
 // schema". When the generator is Ollama too, OLLAMA_VALIDATOR_MODEL falls
-// back to OLLAMA_GENERATOR_MODEL as before; when the generator is Kindroid,
-// there is no generator model to fall back to, so OLLAMA_VALIDATOR_MODEL
-// becomes required instead. (Both already validated above, before the OC
-// connect -- this is object construction only.)
+// back to OLLAMA_GENERATOR_MODEL as before; for any non-Ollama generator
+// there is no Ollama generator model to fall back to, so
+// OLLAMA_VALIDATOR_MODEL becomes required instead. (All already validated
+// above, before the OC connect -- this is object construction only.)
 let generator: LlmProvider;
 
 if (generatorConfig.provider === "kindroid") {
@@ -182,6 +334,49 @@ if (generatorConfig.provider === "kindroid") {
     target_type: generatorConfig.defaultTarget.type,
     target_id: generatorConfig.defaultTarget.id,
     auth: process.env.KINDROID_MCP_AUTH_TOKEN ? "bearer" : "none",
+  });
+} else if (generatorConfig.provider === "botify") {
+  const botifyClient = new BotifyClient(
+    generatorConfig.url,
+    process.env.BOTIFY_MCP_AUTH_TOKEN,
+  );
+  generator = new BotifyProvider(botifyClient, {
+    defaultChatId: generatorConfig.chatId,
+  });
+  log.info("startup", "botify generator configured", {
+    url: generatorConfig.rawUrl,
+    chat_id: generatorConfig.chatId,
+    auth: process.env.BOTIFY_MCP_AUTH_TOKEN ? "bearer" : "none",
+  });
+} else if (generatorConfig.provider === "anthropic") {
+  generator = new AnthropicProvider({
+    apiKey: generatorConfig.apiKey,
+    defaultModel: generatorConfig.model,
+  });
+  log.info("startup", "anthropic generator configured", {
+    generator_model: generatorConfig.model,
+  });
+} else if (generatorConfig.provider === "gemini") {
+  generator = new GeminiProvider({
+    apiKey: generatorConfig.apiKey,
+    defaultModel: generatorConfig.model,
+  });
+  log.info("startup", "gemini generator configured", {
+    generator_model: generatorConfig.model,
+  });
+} else if (
+  generatorConfig.provider === "openai" ||
+  generatorConfig.provider === "atlascloud"
+) {
+  generator = new OpenAICompatProvider({
+    name: generatorConfig.provider,
+    baseUrl: generatorConfig.baseUrl,
+    apiKey: generatorConfig.apiKey,
+    defaultModel: generatorConfig.model,
+  });
+  log.info("startup", `${generatorConfig.provider} generator configured`, {
+    base_url: generatorConfig.baseUrl,
+    generator_model: generatorConfig.model,
   });
 } else {
   generator = new OllamaProvider({
@@ -224,10 +419,12 @@ v0 surface:
 - mnemo_continue(direction, mode?, max_tokens?, temperature?, model?,
   kindroid_kin?, kindroid_group_id?, validate?) — pull context from OC,
   generate the next beat via the generator LLM, auto-save the result as a
-  scene entity. Mode defaults to 'director'. model overrides the Ollama
-  model tag; kindroid_kin/kindroid_group_id override the Kindroid target
-  for this call only. With validate=true, runs an LLM second pass and
-  attaches a verdict (issues + summary) to the response.
+  scene entity. Mode defaults to 'director'. model overrides the
+  generator's default model for this call (honored by every direct-LLM
+  provider -- ollama, anthropic, openai, gemini, atlascloud; ignored by
+  kindroid/botify); kindroid_kin/kindroid_group_id override the Kindroid
+  target for this call only. With validate=true, runs an LLM second pass
+  and attaches a verdict (issues + summary) to the response.
 - mnemo_validate(content) — standalone validation pass over arbitrary
   content (hand-written prose, previously-saved beats being re-audited).
   Same ValidationReport shape as mnemo_continue's validate=true mode.
