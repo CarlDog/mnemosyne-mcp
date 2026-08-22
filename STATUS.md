@@ -1,6 +1,12 @@
 # Status
 
-**Last updated:** 2026-08-18 (Ollama transport-error messages now surface
+**Last updated:** 2026-08-21 (import/export design ratified — see
+[docs/IMPORT_EXPORT_DESIGN.md](docs/IMPORT_EXPORT_DESIGN.md) and the
+"What's next" entry; derived from a three-source research pass — the
+operator's original ChatGPT project folders, OC v1's archived template
+system, OC v2's import pipeline — plus a two-reviewer second-opinion
+pass; `mnemo_export_story` build starting); earlier (2026-08-18): Ollama
+transport-error messages now surface
 their real cause — `OllamaProvider.generate()`'s catch built its message
 from `err.message` only, which on a real `fetch()` failure is Node's generic
 `TypeError: fetch failed`, discarding the actual DNS/connection/TLS reason
@@ -636,9 +642,19 @@ real use and pressure points emerge:
 - **Game mechanics** (StatBlock, dice, HP, inventory) — v2 Phase 4
   territory; deferred to ARCHITECTURE.md §8 unless a real session
   demands them.
-- **Import / export tooling** — `mnemo_export_story`,
-  `mnemo_import_story`, `mnemo_seed_from_template`. Planned in
-  ARCHITECTURE.md §2; defer until there's a portability use case.
+- **Import / export tooling — design ratified 2026-08-21, build
+  underway.** The portability use case arrived: importing the operator's
+  original ChatGPT storytelling projects (the OpenChronicle template
+  system's ancestors). Full design record in
+  [docs/IMPORT_EXPORT_DESIGN.md](IMPORT_EXPORT_DESIGN.md) — core
+  decision: classification happens caller-side in the host conversation;
+  the server is a typed batch writer that never guesses. Build order:
+  `mnemo_export_story` (versioned JSON interchange schema — the riskiest
+  commitment, so it goes first), then `mnemo_import_story` (curated
+  `entities[]` mode + deterministic export-doc round-trip mode), then a
+  mapping playbook + seed templates as docs. `mnemo_seed_from_template`
+  is retired as a planned tool — seeding is a host conversation plus one
+  import call.
 - **Atlas Cloud illustration integration (scope recorded 2026-08-05,
   design notes added 2026-08-06 — proposal only, not started, not
   scheduled).** ARCHITECTURE.md §8 still lists "image generation tied to
