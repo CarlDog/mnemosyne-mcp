@@ -21,12 +21,14 @@ live verification surfaced a same-speaker-repeats problem in group
 chats, now fixed via a conversation nudge pointing kins at Kindroid's
 documented `@Name` turn-handoff mechanism (2026-08-12) — see
 "Kindroid generator" below and STATUS.md's Done log. Latest: the
-import/export design was ratified (2026-08-21, see
-docs/IMPORT_EXPORT_DESIGN.md — classification happens caller-side in
-the host conversation; the server is a typed batch writer) and both
-`mnemo_export_story` and `mnemo_import_story` shipped the same day,
-round-trip live-verified. Next: the mapping playbook + seed templates
-as docs, then the curated ChatGPT-project imports.
+import/export family is complete (2026-08-21) — design ratified
+(docs/IMPORT_EXPORT_DESIGN.md: classification happens caller-side in
+the host conversation; the server is a typed batch writer), both
+`mnemo_export_story` and `mnemo_import_story` shipped and round-trip
+live-verified, and the mapping playbook + seed templates shipped as
+docs (docs/IMPORT_PLAYBOOK.md, docs/SEED_TEMPLATES.md). Next: the
+curated imports of the four original ChatGPT projects — interactive
+sessions applying the playbook, not development work.
 
 ## Stack
 

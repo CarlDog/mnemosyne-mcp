@@ -1,9 +1,14 @@
 # Status
 
-**Last updated:** 2026-08-21 (`mnemo_import_story` shipped and
-live-verified — the export→import round-trip restores a story into a
-fresh OC project with pin state, validation tags, and backdated
-timestamps all intact; earlier same day: `mnemo_export_story` shipped
+**Last updated:** 2026-08-21 (import/export family complete: the
+mapping playbook + seed templates shipped as docs —
+[docs/IMPORT_PLAYBOOK.md](docs/IMPORT_PLAYBOOK.md) /
+[docs/SEED_TEMPLATES.md](docs/SEED_TEMPLATES.md) — closing the design's
+third build phase; all that remains is the actual curated imports of
+the four ChatGPT projects; earlier same day: `mnemo_import_story`
+shipped and live-verified — the export→import round-trip restores a
+story into a fresh OC project with pin state, validation tags, and
+backdated timestamps all intact; and `mnemo_export_story` shipped
 and live-verified against real OC — versioned JSON export per
 [docs/IMPORT_EXPORT_DESIGN.md](docs/IMPORT_EXPORT_DESIGN.md), the
 interchange schema everything else in the import/export family builds
@@ -144,6 +149,33 @@ without `OC_URL`/`OLLAMA_GENERATOR_MODEL`/`KINDROID_MCP_URL` configured
 (120 total). See Done below for everything that's landed since.
 
 ## Done
+
+- **Mapping playbook + seed templates shipped as docs — the
+  import/export family's third and final build phase** (2026-08-21,
+  same day as both tools).
+  [docs/IMPORT_PLAYBOOK.md](docs/IMPORT_PLAYBOOK.md) carries the
+  classification rules the host LLM applies when importing legacy
+  material: folder names lie — classify by content (with the real
+  observed failures as examples: BattleChasers' region configs are
+  worldbuilding wearing a location label, Chaos Saga's stray misfiled
+  draft, GhostHunters' concatenated instructions file); composite files
+  split into one entity per concern; the full source→type mapping table
+  incl. the lore-vs-worldbuilding distinction; the do-not-import list
+  (canon tracking directives, group-chat log configs, raw transcripts,
+  host plumbing); scene caution — finished logs only, backdated via
+  `created_at`; verbatim-content hygiene.
+  [docs/SEED_TEMPLATES.md](docs/SEED_TEMPLATES.md) adapts OC v1's four
+  seed-shaped schemas to mnemosyne's prose-entity model: a story
+  kickoff checklist (POV/tense rule mandatory — the Dovecoast lesson),
+  the character-profile shape that survived four real projects (incl.
+  the "core wound" field and inline per-relationship subsections), a
+  style-guide skeleton with named addressable clauses, one-constraint-
+  per-entity pinned rules, and a worked four-entity minimal seed.
+  `{{PLACEHOLDER}}` means fill-or-drop; required floors deliberately
+  minimal (elaborate specs decay unfilled — the spec-vs-practice gap
+  measured in the source corpus). No code changes — per the ratified
+  design, seeding is a conversation plus one `mnemo_import_story` call,
+  and there is deliberately no seed tool.
 
 - **`mnemo_import_story` shipped — the typed batch writer** (2026-08-21,
   same day as export). Two mutually exclusive input modes feed one
@@ -746,8 +778,14 @@ real use and pressure points emerge:
   commitment, so it went first; **shipped 2026-08-21**, see Done), then
   `mnemo_import_story` (curated `entities[]` mode + deterministic
   export-doc round-trip mode — **also shipped 2026-08-21**, see Done),
-  then a mapping playbook + seed templates as docs (**next up**),
-  followed by the actual curated imports of the four ChatGPT projects.
+  then the mapping playbook + seed templates as docs (**also shipped
+  2026-08-21** —
+  [docs/IMPORT_PLAYBOOK.md](docs/IMPORT_PLAYBOOK.md) /
+  [docs/SEED_TEMPLATES.md](docs/SEED_TEMPLATES.md), see Done). **All
+  that remains: the actual curated imports of the four ChatGPT projects**
+  (Chaos Saga, GhostHunters, BattleChasers, Wonderland) — interactive
+  sessions applying the playbook, not development work. Note the live
+  MCP host must be restarted to pick up the new tools (stale-dist).
   `mnemo_seed_from_template` is retired as a planned tool — seeding is a
   host conversation plus one import call.
 - **Atlas Cloud illustration integration (scope recorded 2026-08-05,
