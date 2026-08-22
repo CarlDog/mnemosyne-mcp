@@ -3,6 +3,48 @@
 import { describe, it, expect } from "vitest";
 import { extractText, extractStructuredOrParsed } from "../src/mcp-result.js";
 
+describe("mcp-result — isError handling (both helpers)", () => {
+  // The MCP SDK reports tool-handler failures as a NORMAL result with
+  // isError: true and the message as a plain-text block — Client.callTool
+  // does not throw. Without these checks, extractText hands error prose
+  // back as if it were the reply, and extractStructuredOrParsed turns
+  // "Error: chat not found" into an unrelated JSON SyntaxError.
+  it("extractText throws the error text instead of returning it as a reply", () => {
+    const result = {
+      isError: true,
+      content: [{ type: "text", text: "Error: chat not found" }],
+    };
+    expect(() => extractText(result, "send_message")).toThrow(
+      "send_message failed: Error: chat not found",
+    );
+  });
+
+  it("extractStructuredOrParsed throws the error text, not a JSON SyntaxError — even when structuredContent is present", () => {
+    const plain = {
+      isError: true,
+      content: [{ type: "text", text: "Error: chat not found" }],
+    };
+    expect(() => extractStructuredOrParsed(plain, "send_message")).toThrow(
+      /send_message failed: Error: chat not found/,
+    );
+
+    const withStructured = {
+      isError: true,
+      structuredContent: { anything: true },
+      content: [{ type: "text", text: "upstream 500" }],
+    };
+    expect(() =>
+      extractStructuredOrParsed(withStructured, "some_tool"),
+    ).toThrow(/some_tool failed: upstream 500/);
+  });
+
+  it("an isError result with no text block still throws, with a placeholder detail", () => {
+    expect(() => extractText({ isError: true }, "some_tool")).toThrow(
+      /some_tool failed: \(no error detail returned\)/,
+    );
+  });
+});
+
 describe("mcp-result — extractText", () => {
   it("returns the text of the first text content block", () => {
     const result = {

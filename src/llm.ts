@@ -31,9 +31,12 @@ export interface LlmGenerateOptions {
   userMessage: string;
   temperature?: number;
   maxTokens?: number;
-  /** Override the provider's default model for this call. Ollama-specific
-   * (an Ollama model tag) -- Kindroid's per-call override is kindroidTarget
-   * below, since a Kindroid target needs a type (ai vs group), not just an id. */
+  /** Override the provider's default model for this call. Honored by every
+   * direct-LLM provider (ollama, anthropic, openai, gemini, atlascloud --
+   * each interprets it as its own model id/tag); ignored by the
+   * companion-chat providers (kindroid, botify), which have no per-call
+   * model concept -- Kindroid's per-call override is kindroidTarget below,
+   * since a Kindroid target needs a type (ai vs group), not just an id. */
   model?: string;
   /** The same gatherContext() result systemPrompt was built from, in
    * structured form. OllamaProvider ignores this (systemPrompt already has

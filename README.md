@@ -24,10 +24,15 @@ mother of the Muses — the force by which memory becomes story.
 `mnemo_continue(validate=true)` now tags scenes with their validation
 verdict, and the RECENT SCENES prompt block filters on it — the fix for
 the few-shot-vs-rule diagnostic where present-tense example scenes drowned
-out an explicit past-tense rule. A Phase 6 Kindroid-generator bridge
-(second `LlmProvider` backend, opt-in via `GENERATOR_PROVIDER=kindroid`)
-is also shipped and live-verified — see [STATUS.md](STATUS.md) for
-details. Related docs:
+out an explicit past-tense rule. **Seven generator backends** sit behind
+`GENERATOR_PROVIDER`: `ollama` (default), the companion-chat pair
+`kindroid` + `botify` (via their sibling MCP servers, both with
+keyphrase-gated story-context folding), and the direct-API cloud four —
+`anthropic`, `openai` (any OpenAI-compatible host via
+`OPENAI_BASE_URL`), `gemini`, `atlascloud` (sampling knobs pass through
+only when set — each API's own defaults apply). The validator pass
+always runs on Ollama. See [STATUS.md](STATUS.md) for details and
+live-verification status per provider. Related docs:
 
 - [STATUS.md](STATUS.md) — single source of truth: current phase,
   what's done, what's next

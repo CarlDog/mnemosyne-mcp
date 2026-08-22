@@ -1,6 +1,21 @@
 # Status
 
-**Last updated:** 2026-08-21 (import/export family complete: the
+**Last updated:** 2026-08-21 (late same day: **five new generator
+providers** — `botify` (MCP client to botify-mcp, the companion-chat
+pattern shared with Kindroid via a new extracted
+`companion-message.ts` builder), plus direct-API `anthropic`, `openai`,
+`gemini`, and `atlascloud` (the OpenAI-compatible pair share one class;
+`OPENAI_BASE_URL` makes any compatible host work; Atlas goes direct
+rather than through atlascloud-mcp because its `atlas_chat` returns
+markdown a machine caller can't safely parse). Cloud providers honor
+the system-prompt + per-call model surface, with temperature/token caps
+passed through only when set (several current-gen models — Claude Opus
+4.7+, OpenAI's reasoning series — reject the fields outright, a
+pre-commit adversarial-review catch); the validator stays on Ollama for
+all, so `OLLAMA_VALIDATOR_MODEL` is now required for every non-ollama
+generator. Live-verification is env-gated
+per provider key — wire-format contracts are documented-shape until
+keys are set. Earlier: import/export family complete: the
 mapping playbook + seed templates shipped as docs —
 [docs/IMPORT_PLAYBOOK.md](docs/IMPORT_PLAYBOOK.md) /
 [docs/SEED_TEMPLATES.md](docs/SEED_TEMPLATES.md) — closing the design's
@@ -144,11 +159,81 @@ Dovecoast smoke test against `nous-hermes2-mixtral` + `phi4:14b`:
 
 37/37 tests passed at the time.
 
-Current count: 85 passing, 35 integration tests skipping cleanly
-without `OC_URL`/`OLLAMA_GENERATOR_MODEL`/`KINDROID_MCP_URL` configured
-(120 total). See Done below for everything that's landed since.
+Current count: 103 passing, 40 integration tests skipping cleanly
+without `OC_URL`/`OLLAMA_GENERATOR_MODEL`/`KINDROID_MCP_URL`/cloud
+provider keys configured (143 total). See Done below for everything
+that's landed since.
 
 ## Done
+
+- **Five new generator providers: botify, anthropic, openai, gemini,
+  atlascloud** (2026-08-21, late same day). `GENERATOR_PROVIDER` now
+  selects among seven backends. The shape per family:
+  - **Botify** (`botify`) — "just like Kindroid": an MCP client to the
+    deployed botify-mcp (`src/botify-client.ts`, mirroring
+    `kindroid-client.ts` incl. bearer auth), driving a stateful
+    character chat via its `send_message` tool; the target is a Botify
+    chat UUID (`BOTIFY_STORYTELLING_CHAT`, server-wide default — a
+    per-story binding would be a marker-schema bump, deliberately
+    deferred until real use asks). The keyphrase-gated context folding
+    is shared with Kindroid via a new `src/companion-message.ts`
+    (extracted first as its own behavior-preserving commit, since the
+    word-boundary matching and scene-inclusion rules are correctness
+    contracts that must not drift between the two consumers).
+    `extractBotReply` distinguishes "reply generated" / "message landed
+    but inference failed — do NOT blindly retry, it would double-post" /
+    "botify-mcp has no BOTIFY_APP_TOKEN configured" (shapes verified
+    against botify-mcp's source).
+  - **Anthropic / OpenAI / Gemini / Atlas Cloud** — direct HTTP, no
+    SDKs (the Ollama convention). One `OpenAICompatProvider` class
+    serves both `openai` and `atlascloud` (base URLs differ;
+    `OPENAI_BASE_URL` override means any compatible host — Groq,
+    Together, local vLLM — works without new code; Atlas's base
+    verified from atlascloud-mcp's own constants). Atlas deliberately
+    does NOT route through the deployed atlascloud-mcp: its
+    `atlas_chat` tool returns a human-markdown envelope a machine
+    caller can't safely scrape (filed as dogfooding feedback). All
+    four honor systemPrompt + per-call `model` directly, with
+    temperature/token caps **passed through only when set** — the
+    pre-commit adversarial review caught that always-sending
+    `temperature` would 400 on every current-gen Claude model (Opus
+    4.7+ removed sampling controls), and the omit-by-default posture
+    also covers OpenAI's reasoning models (which reject both fields)
+    and Gemini 2.5's thinking-token budget in one stroke. The deferred
+    "interface strain" concern shrank rather than grew, since these
+    are what the interface was designed for; `model` is now documented
+    as honored by every direct-LLM provider (the `mnemo_continue`
+    schema + server instructions previously said Ollama-only — also a
+    review catch, since that's the LLM-facing channel). Gemini's API key travels
+    in the `x-goog-api-key` header, never the query string (secrets
+    don't belong in URLs); its safety-block responses surface
+    `promptFeedback.blockReason` distinctly from empty output. Shared
+    HTTP scaffolding (timeout, HTTP-status detail, MCP-F08 transport-
+    cause description) lives in `src/llm-http.ts` (three consumers —
+    clears the extraction bar; Ollama keeps its own working copy).
+  - **Wiring**: all zero-I/O env validation runs before `oc.connect()`
+    (the batch-8 structure), each cloud provider requires an explicit
+    model id (no baked-in defaults — model names age fast), and
+    `OLLAMA_VALIDATOR_MODEL` is required for every non-ollama generator
+    (the validator always stays on Ollama). Every new env var is
+    documented in `.env.example` (the schema-drift test enforces the
+    match). 13 new pure tests (request-body builders + response parsers
+    per provider, fixtures matching each documented contract — the
+    OpenAI-compat one additionally matching atlascloud-mcp's own
+    captured `ChatCompletionResponse` type; Botify reply extraction;
+    a companion-message ↔ buildKindroidMessage equivalence check) + 5
+    env-gated live suites that skip until the operator sets the
+    relevant key — setting a key is the opt-in, and live verification
+    happens per provider as keys arrive. Two more review catches
+    hardened the MCP-client path for everyone: `extractBotReply`
+    distinguishes "inference ran but produced no text" (bot_message
+    null — don't blame the app token) from "inference never attempted",
+    and the shared `mcp-result.ts` helpers now throw an `isError`
+    result's actual message instead of returning error prose as a reply
+    (or JSON-parsing it into an unrelated SyntaxError) — a pre-existing
+    gap in the Kindroid path that the Botify addition doubled. Cloud
+    extractors also strip leading whitespace (the documented Ollama
+    stray-space lesson, applied before it recurred).
 
 - **Mapping playbook + seed templates shipped as docs — the
   import/export family's third and final build phase** (2026-08-21,
@@ -759,9 +844,12 @@ real use and pressure points emerge:
   uncensored content. Daily-driver SFW use through Claude Desktop
   works now via the MCP; NSFW use requires either a non-Anthropic MCP
   host (Cline, LM Studio, etc.) or the web UI.
-- **Botify provider** — second LLM provider, validates the
-  `LlmProvider` interface holds.
-- **Anthropic provider** — for SFW work where Claude is appropriate.
+- ~~**Botify provider**~~ / ~~**Anthropic provider**~~ — **shipped
+  2026-08-21** along with OpenAI, Gemini, and Atlas Cloud; see the Done
+  log. Seven generators now sit behind `GENERATOR_PROVIDER`; the
+  validator stays on Ollama for all of them (a `VALIDATOR_PROVIDER`
+  selection for the JSON-capable cloud providers is the natural cheap
+  follow-up if local validation ever becomes the bottleneck).
 - **Recent-scenes-by-recency** — see Known Gaps; needs OC API
   improvement or client-side workaround.
 - **Game mechanics** (StatBlock, dice, HP, inventory) — v2 Phase 4

@@ -66,18 +66,32 @@ export function registerContinueTool(
           .min(1)
           .max(8192)
           .optional()
-          .describe("Cap on generation length. Default 2048."),
+          .describe(
+            "Cap on generation length. Ollama defaults to 2048 when unset; " +
+              "cloud providers pass this through only when set (their own " +
+              "defaults apply otherwise -- note the newest OpenAI reasoning " +
+              "models reject the field outright). Ignored by kindroid/botify.",
+          ),
         temperature: z
           .number()
           .min(0)
           .max(2)
           .optional()
-          .describe("Sampling temperature. Default 0.8."),
+          .describe(
+            "Sampling temperature. Ollama defaults to 0.8 when unset; cloud " +
+              "providers pass this through only when set, and ranges/support " +
+              "vary by provider (Anthropic accepts 0-1 and current-gen Claude " +
+              "models reject the field entirely). Ignored by kindroid/botify.",
+          ),
         model: z
           .string()
           .optional()
           .describe(
-            "Override the Ollama model tag for this call (GENERATOR_PROVIDER=ollama only). For a Kindroid per-call override, use kindroid_kin / kindroid_group_id instead.",
+            "Override the generator's default model for this call. Honored by " +
+              "every direct-LLM provider (ollama, anthropic, openai, gemini, " +
+              "atlascloud -- each interprets it as its own model id/tag); " +
+              "ignored by kindroid/botify. For a Kindroid per-call override, " +
+              "use kindroid_kin / kindroid_group_id instead.",
           ),
         kindroid_kin: z
           .string()
