@@ -143,15 +143,36 @@ A typed batch writer. Two input modes, one machinery:
   validating generated prose, not to parsing a format mnemosyne itself
   writes.
 
-Shared behavior: validate every record against the entity-type enum before
-any write; save through the existing `saveEntity` path (which already
-handles overwrite-by-(type,name) and the OC full-replace-tags trap);
-`dry_run` previews the full per-entity plan without writing;
-`on_conflict: "skip" | "overwrite" | "error"` (default `error` — nothing
-is silently clobbered) governs collisions with existing entities; the
-response is a per-entity manifest (`created | overwritten | skipped |
-rejected`, with reasons). Writes are sequential (OC rate-limit
-convention); the response notes when a large batch was slow.
+Shared behavior (semantics finalized at implementation, 2026-08-21):
+validate every record against the entity-type enum before any write; save
+through the existing `saveEntity` path (which already handles the OC
+full-replace-tags trap), threading the preflight's resolved existence —
+including each existing entity's `memory_id` — into every write:
+overwrites go **update-by-id** and creates skip the dedupe search
+entirely, because `saveEntity`'s own bounded search
+(`SAVE_DEDUPE_SEARCH_TOPK`) can miss in exactly the bulk regime import
+creates, and a miss on the overwrite path would mint a silent duplicate
+that makes the story's next export permanently un-importable; `dry_run`
+previews the
+full per-entity plan without writing; `on_conflict: "skip" | "overwrite"
+| "error"` (default `error` — nothing is silently clobbered) governs
+collisions with existing entities. Preflight is **all-or-nothing**: one
+complete `listAllEntities` enumeration detects conflicts and in-batch
+duplicates up front, and any duplicate — or any conflict under `error` —
+aborts the whole batch with nothing written, the manifest still
+reporting every record's would-be status (a half-imported story is worse
+than a rejected call). Under `skip`/`overwrite`, a mid-batch write
+failure is recorded per-record and never aborts the walk (the
+`revalidateScenes` convention). Records may carry `created_at`, which
+backdates on create via OC's own `memory_save` support — round-trip
+timestamp restoration, protecting RECENT SCENES recency from re-imported
+legacy scenes. A file's embedded `kindroid_target` is reported in the
+manifest but **never applied** — binding a story to an account's targets
+is an explicit `mnemo_story_use` decision, not an import side effect.
+The entities-vs-file mutual exclusivity is enforced in the handler, not
+the schema (MCP `inputSchema` silently drops object-level refinements).
+Writes are sequential (OC rate-limit convention); the response carries
+`duration_ms`.
 
 ### Mapping playbook + seed templates (build third — docs, not code)
 

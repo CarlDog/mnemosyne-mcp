@@ -19,9 +19,13 @@ export function registerEntityTools(server: McpServer, oc: OcClient): void {
         "Save a story-domain entity (character, location, rule, style guide, scene, lore, or worldbuilding) to the active story. If an entity with the same type+name already exists, it is updated in place; otherwise a new memory is created. Rules default to pinned; everything else defaults to unpinned. Pin state can be overridden via the `pinned` parameter.",
       inputSchema: {
         type: z.enum(ENTITY_TYPES).describe(ENTITY_TYPE_DESCRIPTIONS),
+        // No line breaks: the name lives on the [Type] Name header line,
+        // and a name containing \n produces a memory the entity parser
+        // can never match again — invisible to recall and export.
         name: z
           .string()
           .min(1)
+          .regex(/^[^\r\n]+$/, "Entity names cannot contain line breaks.")
           .describe("Entity name (used for type+name dedupe on save)."),
         content: z
           .string()

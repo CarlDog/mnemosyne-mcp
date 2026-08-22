@@ -48,6 +48,11 @@ export interface OcMemorySaveOptions {
   projectId: string;
   tags?: string[];
   pinned?: boolean;
+  /** ISO datetime to backdate the memory (OC supports this natively —
+   * "created_at: ISO datetime to backdate (e.g. for git-onboard
+   * imports)"). Used by mnemo_import_story to restore original entity
+   * timestamps on round-trip. */
+  createdAt?: string;
 }
 
 export interface OcMemorySearchOptions {
@@ -181,6 +186,7 @@ export class OcClient {
     };
     if (opts.tags) args.tags = opts.tags;
     if (opts.pinned !== undefined) args.pinned = opts.pinned;
+    if (opts.createdAt) args.created_at = opts.createdAt;
     return this.callTool<OcMemory>("memory_save", args);
   }
 
