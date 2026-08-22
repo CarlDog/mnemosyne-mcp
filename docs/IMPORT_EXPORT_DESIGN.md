@@ -176,24 +176,21 @@ Writes are sequential (OC rate-limit convention); the response carries
 
 ### Mapping playbook + seed templates (build third — docs, not code)
 
-- **Playbook** (`docs/IMPORT_PLAYBOOK.md`, to be written): the hard-won
-  classification rules for the host LLM. Folder names lie — classify by
-  content. Project Instructions files split four ways (style /
-  worldbuilding / character stubs / rules). Canon Tracking Directives are
-  process, not content — their problem is moot under OC; don't import.
-  Raw chat transcripts: don't import. v2 mapping: `instructions` → `rule`,
-  `style-guide` → `style`; `lore` had no v2 counterpart and needs its own
-  judgment call. Per-relationship subsections stay inside `character`.
-  Emit content verbatim — no paraphrase.
-- **Seed templates**: the four v1 schemas that were actually seed-shaped
-  (meta, character, style guide, instructions — the ones with
-  required-field floors), carrying forward v1's
-  `{"_optional": true, "value": "{{PLACEHOLDER}}"}` convention and the
-  recurring character-profile shape (identity → physical → psychology →
-  backstory/core-wound → relationships-per-character → secrets), plus
-  named, addressable rule clauses ("Aftershock Clause") as the pattern
-  for `rule` entities. Keep required floors minimal — the research showed
-  elaborate specs decay unfilled.
+**Shipped 2026-08-21.** The operational copies are the authoritative
+ones — this section records only what they are and why:
+
+- **[IMPORT_PLAYBOOK.md](IMPORT_PLAYBOOK.md)**: the hard-won
+  classification rules for the host LLM — folder names lie, composite
+  files split, the type-mapping table, the do-not-import list (canon
+  tracking directives, raw transcripts, host plumbing), scene caution +
+  backdating, verbatim-content hygiene.
+- **[SEED_TEMPLATES.md](SEED_TEMPLATES.md)**: the four v1 seed-shaped
+  schemas (kickoff/meta, character, style guide, rules) adapted to
+  mnemosyne's prose-entity model, carrying forward v1's
+  `{{PLACEHOLDER}}` fill-or-drop convention, the recurring
+  character-profile shape, and named addressable clauses — with
+  deliberately minimal required floors (the research showed elaborate
+  specs decay unfilled).
 
 Seeding a new story is a conversation, not a tool: the host interviews
 the user against a template, then `mnemo_story_use(create_if_missing)` +

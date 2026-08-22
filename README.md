@@ -36,6 +36,16 @@ details. Related docs:
 - [docs/V2_RETROSPECTIVE.md](docs/V2_RETROSPECTIVE.md) — schemas, prompt
   templates, and lessons mined from the v2 OC storytelling plugin
   (preserved for informational value; not being ported)
+- [docs/IMPORT_EXPORT_DESIGN.md](docs/IMPORT_EXPORT_DESIGN.md) — the
+  ratified import/export design (`mnemo_export_story` /
+  `mnemo_import_story`, versioned interchange schema, caller-side
+  classification)
+- [docs/IMPORT_PLAYBOOK.md](docs/IMPORT_PLAYBOOK.md) — classification
+  rules for importing legacy story material (the host LLM classifies,
+  the human approves, the tool writes)
+- [docs/SEED_TEMPLATES.md](docs/SEED_TEMPLATES.md) — fill-in skeletons
+  for seeding a new story (character, style guide, rules) via one
+  import call
 
 ## Stack
 
