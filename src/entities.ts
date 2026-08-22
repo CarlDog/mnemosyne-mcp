@@ -125,6 +125,12 @@ function defaultPinned(type: EntityType): boolean {
   return type === "rule";
 }
 
+function toKnownExisting(memory: OcMemory | null): KnownExistingEntity | null {
+  return memory
+    ? { memoryId: memory.id, tags: memory.tags, pinned: memory.pinned }
+    : null;
+}
+
 async function findExistingEntity(
   oc: OcClient,
   storyId: string,
@@ -141,12 +147,34 @@ async function findExistingEntity(
   return matches.find((m) => m.content.startsWith(headerPrefix)) ?? null;
 }
 
+/** A caller-resolved answer to "does this (type, name) already exist" —
+ * see SaveEntityArgs.existing. */
+export interface KnownExistingEntity {
+  memoryId: string;
+  tags: string[];
+  pinned: boolean;
+}
+
 export interface SaveEntityArgs {
   type: EntityType;
   name: string;
   body: string;
   pinned?: boolean;
   extraTags?: string[];
+  /** Backdate the memory on CREATE (mnemo_import_story's round-trip
+   * timestamp restoration). Ignored on update — an existing memory keeps
+   * its original creation time, which is the honest one. */
+  createdAt?: string;
+  /** Skip the bounded dedupe search when the caller has already resolved
+   * existence from a COMPLETE enumeration (mnemo_import_story's
+   * preflight). Pass the existing entity to update it by id, or null to
+   * assert "definitely absent — create". The search's
+   * SAVE_DEDUPE_SEARCH_TOPK window can miss in bulk regimes (a
+   * 100-scene story whose auto-named scenes share most search tokens),
+   * and a miss on the overwrite path would mint a silent duplicate —
+   * the exact failure a complete preflight exists to prevent. Undefined
+   * = search as before (the interactive mnemo_save_entity path). */
+  existing?: KnownExistingEntity | null;
 }
 
 export interface SaveEntityResult {
@@ -164,7 +192,12 @@ export async function saveEntity(
 ): Promise<SaveEntityResult> {
   const content = formatEntityContent(args.type, args.name, args.body);
   const tags = buildTags(args.type, args.extraTags);
-  const existing = await findExistingEntity(oc, storyId, args.type, args.name);
+  const existing: KnownExistingEntity | null =
+    args.existing !== undefined
+      ? args.existing
+      : toKnownExisting(
+          await findExistingEntity(oc, storyId, args.type, args.name),
+        );
 
   if (existing) {
     // Preserve an existing validation:* tag across an overwrite. `tags`
@@ -183,13 +216,13 @@ export async function saveEntity(
         ? [...tags, preservedValidationTag]
         : tags;
     const updated = await oc.memoryUpdate({
-      memoryId: existing.id,
+      memoryId: existing.memoryId,
       content,
       tags: finalTags,
     });
     let finalPinned = existing.pinned;
     if (args.pinned !== undefined && existing.pinned !== args.pinned) {
-      await oc.memoryPin(existing.id, args.pinned);
+      await oc.memoryPin(existing.memoryId, args.pinned);
       finalPinned = args.pinned;
     }
     return {
@@ -207,6 +240,7 @@ export async function saveEntity(
     projectId: storyId,
     tags,
     pinned,
+    createdAt: args.createdAt,
   });
   return {
     entity: { type: args.type, name: args.name, body: args.body },

@@ -236,7 +236,12 @@ v0 surface:
 - mnemo_export_story(name_or_id?, out_path?) — serialize a story (every
   entity + its Kindroid binding, if any) to a versioned JSON document on
   disk. Defaults to the active story. Returns a manifest (path, per-type
-  counts, skipped ids); the document itself lives in the file.`;
+  counts, skipped ids); the document itself lives in the file.
+- mnemo_import_story(entities? | file_path?, dry_run?, on_conflict?) —
+  batch-write already-classified entities into the active story, or
+  restore a mnemosyne export document. The caller classifies; this tool
+  validates and writes. Conflicts abort the batch by default
+  (on_conflict=error); dry_run previews the plan without writing.`;
 
 const server = new McpServer(
   { name: "mnemosyne-mcp", version: MNEMOSYNE_VERSION },

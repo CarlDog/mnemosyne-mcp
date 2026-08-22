@@ -1,14 +1,18 @@
 # Status
 
-**Last updated:** 2026-08-21 (`mnemo_export_story` shipped and
-live-verified against real OC — versioned JSON export per
+**Last updated:** 2026-08-21 (`mnemo_import_story` shipped and
+live-verified — the export→import round-trip restores a story into a
+fresh OC project with pin state, validation tags, and backdated
+timestamps all intact; earlier same day: `mnemo_export_story` shipped
+and live-verified against real OC — versioned JSON export per
 [docs/IMPORT_EXPORT_DESIGN.md](docs/IMPORT_EXPORT_DESIGN.md), the
 interchange schema everything else in the import/export family builds
-on; earlier same day: that design ratified — derived from a three-source
-research pass (the operator's original ChatGPT project folders, OC v1's
-archived template system, OC v2's import pipeline) plus a two-reviewer
-second-opinion pass; next up: `mnemo_import_story`); earlier
-(2026-08-18): Ollama transport-error messages now surface
+on; and that design ratified — derived from a three-source research
+pass (the operator's original ChatGPT project folders, OC v1's archived
+template system, OC v2's import pipeline) plus a two-reviewer
+second-opinion pass; next up: the mapping playbook + seed templates as
+docs, then the curated ChatGPT-project imports); earlier (2026-08-18):
+Ollama transport-error messages now surface
 their real cause — `OllamaProvider.generate()`'s catch built its message
 from `err.message` only, which on a real `fetch()` failure is Node's generic
 `TypeError: fetch failed`, discarding the actual DNS/connection/TLS reason
@@ -135,11 +139,64 @@ Dovecoast smoke test against `nous-hermes2-mixtral` + `phi4:14b`:
 
 37/37 tests passed at the time.
 
-Current count: 72 passing, 31 integration tests skipping cleanly
+Current count: 85 passing, 35 integration tests skipping cleanly
 without `OC_URL`/`OLLAMA_GENERATOR_MODEL`/`KINDROID_MCP_URL` configured
-(103 total). See Done below for everything that's landed since.
+(120 total). See Done below for everything that's landed since.
 
 ## Done
+
+- **`mnemo_import_story` shipped — the typed batch writer** (2026-08-21,
+  same day as export). Two mutually exclusive input modes feed one
+  machinery: `entities[]` (caller-classified records — the curated path;
+  the tool validates and writes, never classifies) and `file_path` (a
+  `mnemosyne_export: 1` document, deterministically deserialized — the
+  round-trip path; unknown versions refused with a version-specific
+  message). Safety semantics: preflight via one complete
+  `listAllEntities` enumeration; any in-batch duplicate, or any conflict
+  under the default `on_conflict=error`, aborts the whole batch with
+  nothing written (the manifest still reports every record's would-be
+  status); `skip`/`overwrite` proceed, with mid-batch write failures
+  recorded per-record and never aborting the walk (the
+  `revalidateScenes` convention); `dry_run` returns the same plan
+  verbatim with `total_written: 0`. Writes go through the canonical
+  `saveEntity` path, which re-checks existence itself — a preflight set
+  gone stale mid-batch degrades to an accurate `overwritten` status,
+  never a duplicate. `created_at` backdating threads through a new
+  optional field on `saveEntity`/`OcClient.memorySave` (create path
+  only), restoring original timestamps on round-trip — confirmed
+  honored by real OC, which protects RECENT SCENES recency from
+  re-imported legacy scenes. A file's embedded `kindroid_target` is
+  reported in the manifest but never applied — binding is an explicit
+  `mnemo_story_use` decision. The entities-vs-file mutual exclusivity
+  is enforced in the handler (MCP inputSchema silently drops
+  object-level zod refinements — the fleet mcp-server-authoring trap).
+  A pre-commit adversarial review hardened four things: (1) writes now
+  thread the preflight's resolved existence (memory_id included) into
+  `saveEntity` via a new `existing` arg — overwrites go update-by-id and
+  creates skip the dedupe search, because `saveEntity`'s bounded
+  `SAVE_DEDUPE_SEARCH_TOPK` search can miss in exactly the bulk regime
+  import creates, and a miss on the overwrite path would mint a silent
+  duplicate that makes the story's next export permanently
+  un-importable (it also halves OC round-trips per record); (2)
+  `created_at` is statically validated (`z.datetime`, accepting both JS
+  toISOString and Python isoformat) and content length is checked
+  against OC's 100k cap at preflight, so statically-knowable failures
+  abort before any write instead of breaking the all-or-nothing promise
+  mid-batch; (3) entity names reject line breaks in both the shared
+  import schema and `mnemo_save_entity` (a `\n` in a name creates a
+  memory the entity parser can never match again — permanently
+  invisible to recall, export, and import's own preflight); (4) the
+  record schema is a single shared object reused by both the tool
+  inputSchema and the file validator, so the two modes can't drift.
+  13 pure tests (preflight planning incl. in-batch-duplicate,
+  content-cap, and same-name-different-type cases; document parsing
+  incl. the version gate, failing-path naming, created_at acceptance of
+  both round-trip formats, and the newline-name rejection;
+  tampered-file refusal) + 4 real-OC integration tests (full-fidelity
+  round-trip into a second story — pin state, validation tags,
+  backdated timestamps all intact; dry_run writes nothing; conflict
+  abort leaves even the clean records unwritten; skip/overwrite
+  behave) — live-verified same day.
 
 - **`mnemo_export_story` shipped — the import/export family's first
   tool** (2026-08-21). Serializes a story's full OC project to a
@@ -688,9 +745,11 @@ real use and pressure points emerge:
   `mnemo_export_story` (versioned JSON interchange schema — the riskiest
   commitment, so it went first; **shipped 2026-08-21**, see Done), then
   `mnemo_import_story` (curated `entities[]` mode + deterministic
-  export-doc round-trip mode — **next up**), then a mapping playbook +
-  seed templates as docs. `mnemo_seed_from_template` is retired as a
-  planned tool — seeding is a host conversation plus one import call.
+  export-doc round-trip mode — **also shipped 2026-08-21**, see Done),
+  then a mapping playbook + seed templates as docs (**next up**),
+  followed by the actual curated imports of the four ChatGPT projects.
+  `mnemo_seed_from_template` is retired as a planned tool — seeding is a
+  host conversation plus one import call.
 - **Atlas Cloud illustration integration (scope recorded 2026-08-05,
   design notes added 2026-08-06 — proposal only, not started, not
   scheduled).** ARCHITECTURE.md §8 still lists "image generation tied to

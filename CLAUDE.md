@@ -23,9 +23,10 @@ documented `@Name` turn-handoff mechanism (2026-08-12) — see
 "Kindroid generator" below and STATUS.md's Done log. Latest: the
 import/export design was ratified (2026-08-21, see
 docs/IMPORT_EXPORT_DESIGN.md — classification happens caller-side in
-the host conversation; the server is a typed batch writer) and
-`mnemo_export_story` shipped the same day; `mnemo_import_story` is
-next.
+the host conversation; the server is a typed batch writer) and both
+`mnemo_export_story` and `mnemo_import_story` shipped the same day,
+round-trip live-verified. Next: the mapping playbook + seed templates
+as docs, then the curated ChatGPT-project imports.
 
 ## Stack
 
@@ -44,7 +45,7 @@ next.
 - `src/config.ts` — local config (current story pointer, OS-appropriate
   config dir).
 - `src/stories.ts`, `src/entities.ts`, `src/prompt.ts`, `src/validator.ts`,
-  `src/llm.ts`, `src/export.ts` — domain logic.
+  `src/llm.ts`, `src/export.ts`, `src/import.ts` — domain logic.
 - `src/kindroid-provider.ts` — `KindroidProvider implements LlmProvider`;
   generator-only (validator always stays on Ollama). Exports
   `buildKindroidMessage()` (pure, unit-tested) — the keyphrase-matching
