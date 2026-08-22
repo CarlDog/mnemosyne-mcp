@@ -127,9 +127,9 @@ Dovecoast smoke test against `nous-hermes2-mixtral` + `phi4:14b`:
 
 37/37 tests passed at the time.
 
-Current count: 62 passing, 29 integration tests skipping cleanly
+Current count: 65 passing, 29 integration tests skipping cleanly
 without `OC_URL`/`OLLAMA_GENERATOR_MODEL`/`KINDROID_MCP_URL` configured
-(91 total). See Done below for everything that's landed since.
+(94 total). See Done below for everything that's landed since.
 
 ## Done
 
