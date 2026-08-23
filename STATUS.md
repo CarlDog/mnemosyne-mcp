@@ -993,6 +993,14 @@ real use and pressure points emerge:
   validator stays on Ollama for all of them (a `VALIDATOR_PROVIDER`
   selection for the JSON-capable cloud providers is the natural cheap
   follow-up if local validation ever becomes the bottleneck).
+- **Per-call story selector on `mnemo_continue`.** Today it operates on
+  the *active* story, and that pointer is machine-local config mutated
+  globally by `mnemo_story_use`. Fine for an interactive session; wrong
+  for a programmatic caller, which must not stomp the pointer a
+  concurrent Claude session is using. Surfaced 2026-08-23 while designing
+  the plex-companion passthrough (docs/WEBUI_NOTES.md §7) — the only new
+  API that integration needs on our side. Not urgent until a
+  non-interactive caller actually exists.
 - **Recent-scenes-by-recency** — see Known Gaps; needs OC API
   improvement or client-side workaround.
 - **Game mechanics** (StatBlock, dice, HP, inventory) — v2 Phase 4
