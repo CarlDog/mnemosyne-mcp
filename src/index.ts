@@ -1,6 +1,9 @@
 #!/usr/bin/env node
+import express from "express";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { mountMcpHttp } from "./shared/http-transport.js";
+import { loadHttpConfig, type HttpConfig } from "./http-config.js";
 import { log } from "./log.js";
 import { OcClient } from "./oc-client.js";
 import { OllamaProvider, type LlmProvider } from "./llm.js";
@@ -371,6 +374,14 @@ if (GENERATOR_PROVIDER === "kindroid") {
   generatorConfig = { provider: "ollama", model: OLLAMA_GENERATOR_MODEL };
 }
 
+let httpConfig: HttpConfig;
+try {
+  httpConfig = loadHttpConfig();
+} catch (err) {
+  log.error("startup", (err as Error).message);
+  process.exit(1);
+}
+
 const oc = new OcClient(ocUrl);
 try {
   await oc.connect();
@@ -489,43 +500,96 @@ v0 surface:
   kindroid_group_id?) — set active story. kindroid_kin/kindroid_group_id
   (mutually exclusive) optionally bind this story to a specific Kindroid
   AI or group chat (GENERATOR_PROVIDER=kindroid only); null clears.
-- mnemo_save_entity(type, name, content, pinned?, extra_tags?) — write a
-  character/location/rule/style/scene/lore/worldbuilding entry to the
-  active story. Overwrites by (type, name).
-- mnemo_recall(query?, type?, limit?) — semantic recall over the active
-  story's entities.
-- mnemo_delete_entity(type, name) — delete one entity from the active
-  story by (type, name).
+- Every tool below that operates on "the active story" also accepts an
+  optional story? (name or OC project UUID) that overrides the active
+  story for that one call only, without touching the mnemo_story_use
+  pointer — the same convention mnemo_export_story already used.
+- mnemo_save_entity(type, name, content, pinned?, extra_tags?, story?) —
+  write a character/location/rule/style/scene/lore/worldbuilding entry to
+  the active story. Overwrites by (type, name).
+- mnemo_recall(query?, type?, limit?, story?) — semantic recall over the
+  active story's entities.
+- mnemo_delete_entity(type, name, story?) — delete one entity from the
+  active story by (type, name).
 - mnemo_continue(direction, mode?, max_tokens?, temperature?, model?,
-  kindroid_kin?, kindroid_group_id?, validate?) — pull context from OC,
-  generate the next beat via the generator LLM, auto-save the result as a
-  scene entity. Mode defaults to 'director'. model overrides the
-  generator's default model for this call (honored by every direct-LLM
-  provider -- ollama, anthropic, openai, gemini, atlascloud; ignored by
-  kindroid/botify); kindroid_kin/kindroid_group_id override the Kindroid
-  target for this call only. With validate=true, runs an LLM second pass
-  and attaches a verdict (issues + summary) to the response.
-- mnemo_validate(content) — standalone validation pass over arbitrary
-  content (hand-written prose, previously-saved beats being re-audited).
-  Same ValidationReport shape as mnemo_continue's validate=true mode.
-- mnemo_revalidate_scenes() — re-run the validator over every scene in
-  the active story and retag validation:clean/errors.
+  kindroid_kin?, kindroid_group_id?, validate?, story?) — pull context
+  from OC, generate the next beat via the generator LLM, auto-save the
+  result as a scene entity. Mode defaults to 'director'. model overrides
+  the generator's default model for this call (honored by every
+  direct-LLM provider -- ollama, anthropic, openai, gemini, atlascloud;
+  ignored by kindroid/botify); kindroid_kin/kindroid_group_id override
+  the Kindroid target for this call only. With validate=true, runs an
+  LLM second pass and attaches a verdict (issues + summary) to the
+  response.
+- mnemo_validate(content, story?) — standalone validation pass over
+  arbitrary content (hand-written prose, previously-saved beats being
+  re-audited). Same ValidationReport shape as mnemo_continue's
+  validate=true mode.
+- mnemo_revalidate_scenes(story?) — re-run the validator over every scene
+  in the active story and retag validation:clean/errors.
 - mnemo_export_story(name_or_id?, out_path?) — serialize a story (every
   entity + its Kindroid binding, if any) to a versioned JSON document on
   disk. Defaults to the active story. Returns a manifest (path, per-type
   counts, skipped ids); the document itself lives in the file.
-- mnemo_import_story(entities? | file_path?, dry_run?, on_conflict?) —
-  batch-write already-classified entities into the active story, or
-  restore a mnemosyne export document. The caller classifies; this tool
-  validates and writes. Conflicts abort the batch by default
+- mnemo_import_story(entities? | file_path?, dry_run?, on_conflict?,
+  story?) — batch-write already-classified entities into the active
+  story, or restore a mnemosyne export document. The caller classifies;
+  this tool validates and writes. Conflicts abort the batch by default
   (on_conflict=error); dry_run previews the plan without writing.`;
 
-const server = new McpServer(
-  { name: "mnemosyne-mcp", version: MNEMOSYNE_VERSION },
-  { instructions: INSTRUCTIONS },
-);
+/** Builds a NEW McpServer with every tool registered. Must be a factory, not
+ * a shared instance -- the HTTP transport needs a fresh server per session;
+ * a shared one breaks after the first (works fine under stdio, so light
+ * testing never catches it). oc/generator/validator stay startup singletons,
+ * shared across every session -- only the McpServer + its tool
+ * registrations are per-session. */
+function makeServer(): McpServer {
+  const server = new McpServer(
+    { name: "mnemosyne-mcp", version: MNEMOSYNE_VERSION },
+    { instructions: INSTRUCTIONS },
+  );
+  registerTools(server, oc, generator, validator);
+  return server;
+}
 
-registerTools(server, oc, generator, validator);
+if (httpConfig.port === undefined) {
+  const server = makeServer();
+  await server.connect(new StdioServerTransport());
+  log.info("server", "mnemosyne-mcp ready", { transport: "stdio" });
+} else {
+  const app = express();
+  app.use(express.json());
+  app.get("/health", (_req, res) => {
+    res.json({ status: "ok", version: MNEMOSYNE_VERSION });
+  });
 
-await server.connect(new StdioServerTransport());
-log.info("server", "mnemosyne-mcp ready", { transport: "stdio" });
+  const mcp = mountMcpHttp(app, "/mcp", {
+    createServer: makeServer,
+    authToken: httpConfig.authToken,
+    allowedHosts: httpConfig.allowedHosts,
+    sessionIdleMs: httpConfig.sessionIdleMs,
+  });
+
+  const httpServer = app.listen(httpConfig.port, httpConfig.bindHost, () => {
+    log.info("server", "mnemosyne-mcp ready", {
+      transport: "http",
+      bind: `${httpConfig.bindHost}:${httpConfig.port}`,
+      auth: httpConfig.authToken ? "bearer" : "none",
+      allowed_hosts: httpConfig.allowedHosts?.join(",") ?? "any",
+    });
+    if (!httpConfig.authToken) {
+      log.warn(
+        "server",
+        "MCP_AUTH_TOKEN is unset -- the HTTP endpoint accepts unauthenticated requests",
+      );
+    }
+  });
+
+  const shutdown = async (signal: string): Promise<void> => {
+    log.info("server", "shutting down", { signal });
+    await mcp.dispose();
+    httpServer.close(() => process.exit(0));
+  };
+  process.on("SIGTERM", () => void shutdown("SIGTERM"));
+  process.on("SIGINT", () => void shutdown("SIGINT"));
+}

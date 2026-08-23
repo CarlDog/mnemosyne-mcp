@@ -13,6 +13,7 @@
 // OC projects exist. This avoids both N+1 latency and OC's rate limiter.
 
 import { type OcClient, type OcMemory } from "./oc-client.js";
+import { requireCurrentStoryId } from "./config.js";
 
 export const STORY_MARKER_TAGS = ["mnemosyne", "story-marker"];
 const STORY_MARKER_QUERY = "Mnemosyne Story";
@@ -172,6 +173,32 @@ export async function findStory(
     return markerToStory(marker);
   }
   return findStoryByName(oc, nameOrId);
+}
+
+/**
+ * Resolve the story id a call should operate on: an explicit per-call
+ * override (name or OC project UUID, same rule as mnemo_story_use) when
+ * given, otherwise the active-story pointer. The fallback path makes NO
+ * OcClient call -- reading the local pointer is pure file I/O -- so every
+ * existing caller relying on it (every stdio/Claude-Desktop session today)
+ * pays zero new OC round trips and is behaviorally unchanged. An explicit
+ * override deliberately has no lifetime of its own (unlike a session-scoped
+ * "active story" would): the caller supplies it fresh on every call, so a
+ * future web UI just tracks which story is open in its own client state and
+ * passes it through -- nothing here can go stale or get silently evicted.
+ */
+export async function resolveStoryId(
+  oc: OcClient,
+  explicit: string | undefined,
+): Promise<string> {
+  if (explicit === undefined) return requireCurrentStoryId();
+  const story = await findStory(oc, explicit);
+  if (!story) {
+    throw new Error(
+      `No story matches "${explicit}". Use mnemo_story_list to see what exists.`,
+    );
+  }
+  return story.id;
 }
 
 export async function createStory(

@@ -11,21 +11,36 @@ into this file, MEMORY.md, or Serena memories — reference STATUS.md.
 
 See [STATUS.md](STATUS.md). The curated-import campaign is complete
 (2026-08-23) — five live stories, ~369 entities, all four original
-ChatGPT projects plus a new fifth story (Shadowflame). Latest:
+ChatGPT projects plus a new fifth story (Shadowflame). Latest: **slice 0
+shipped** — the prerequisite a pre-build review of
+[docs/WEBUI_NOTES.md](docs/WEBUI_NOTES.md) found blocking every planned
+web-UI build slice. `resolveStoryId()` (`src/stories.ts`) generalizes
+`mnemo_export_story`'s existing bypass pattern to all 9 story-touching
+tools — an optional per-call `story` override, deliberately not
+session-scoped server state (a future web UI just passes it explicitly
+on every call; the fallback path is proven zero-OC-calls, so every
+existing stdio caller is unaffected). `src/shared/http-transport.ts` is
+a byte-verbatim copy of kindroid-mcp's fleet-canonical `mountMcpHttp()`
+(fresh `McpServer` per session, idle eviction, Host/Origin allowlist,
+bearer auth), wired into `src/index.ts` via a `makeServer()` factory
+that mode-switches on `MCP_PORT` (unset = stdio, unchanged). Verified
+end-to-end against the real compiled server — a real MCP initialize
+handshake in HTTP mode, `/health`, and a confirmed byte-for-byte
+unchanged stdio boot — not just unit tests. 193 tests passing with
+`OC_URL` set (up from 144), including a new `http-integration.test.ts`
+proving two concurrent sessions don't collide and the story override
+bypasses the pointer over the actual wire. Docker deployment for the new
+HTTP mode and the actual web UI (slice 1+) are explicitly next, not yet
+started. Earlier the same day: the WEBUI_NOTES.md review itself (a
+paired senior-sde feasibility review and senior-ui-ux-designer critique)
+found the doc's build order had no slice 0 at all, plus several
+sections needing reality-checks and design fixes. And earlier still:
 outgoing companion-chat messages now carry a provenance header
 (`[Mnemosyne — automated scene direction, not Carl typing]`, new
-`MNEMO_USER_NAME` env var) so an automated `mnemo_continue` direction
-never reads as the operator typing in Kindroid/Botify's own chat
-history — wording researched against Kindroid/AI Dungeon docs and
-community convention, not guessed; plex-companion's own equivalent
-header needed zero changes, it was the reference implementation.
-Paired with a `prompt.ts` change stating the asterisk-for-action /
-plain-dialogue convention in every mode directive, so the five
-direct-LLM providers' generated output stays visually consistent with
-the wider companion-chat convention. See STATUS.md's Done log for the
-full writeup. Not yet done: a live Botify probe of the same convention
-(the research found no reachable Botify docs/community to confirm
-against).
+`MNEMO_USER_NAME` env var), live-verified against a real Botify bot,
+paired with a `prompt.ts` change stating the asterisk-for-action /
+plain-dialogue convention in every mode directive. See STATUS.md's Done
+log for all three full writeups.
 
 ## Stack
 
@@ -37,14 +52,26 @@ against).
 ## Layout
 
 - `src/index.ts` — MCP server entry, env validation, `GENERATOR_PROVIDER`
-  selection, tool registration.
+  selection, tool registration. `makeServer()` factory + a stdio/HTTP
+  mode switch on `MCP_PORT` (unset = stdio).
+- `src/http-config.ts` — HTTP transport env config (`MCP_PORT`,
+  `MCP_BIND_HOST`, `MCP_ALLOWED_HOSTS`, `MCP_AUTH_TOKEN`,
+  `MCP_SESSION_IDLE_MS`).
+- `src/shared/http-transport.ts` — `mountMcpHttp()`: fleet-canonical
+  Streamable HTTP transport (fresh `McpServer` per session, idle-session
+  eviction, Host/Origin allowlist, bearer auth) — a byte-verbatim copy
+  of kindroid-mcp's own `src/shared/http-transport.ts`.
 - `src/oc-client.ts` — Streamable HTTP MCP client wrapper for OC.
 - `src/kindroid-client.ts` — Streamable HTTP MCP client wrapper for
   kindroid-mcp (same shape as `oc-client.ts`).
 - `src/config.ts` — local config (current story pointer; repo-local
   `data/` dir, gitignored, `MNEMO_DATA_DIR` override — Docker-mountable
   as persistent storage; legacy OS-config-dir location auto-migrates).
-- `src/stories.ts`, `src/entities.ts`, `src/prompt.ts`, `src/validator.ts`,
+- `src/stories.ts` — story marker logic, plus `resolveStoryId(oc,
+  explicit?)`: the per-call `story` override every story-touching tool
+  accepts, falling back to the active-story pointer (pure file I/O, no
+  OC call) when omitted.
+- `src/entities.ts`, `src/prompt.ts`, `src/validator.ts`,
   `src/llm.ts`, `src/export.ts`, `src/import.ts` — domain logic.
 - `src/kindroid-provider.ts` — `KindroidProvider implements LlmProvider`;
   generator-only (validator always stays on Ollama). Exports
@@ -103,6 +130,26 @@ Key architectural decisions (see ARCHITECTURE.md for full reasoning):
   style, lore — all live as OC memories with structured tags. Local
   config holds operational state only (current story pointer, turn
   scratchpad).
+- **A story is chosen per call, not per connection.** Every story-touching
+  tool accepts an optional `story` (name or OC project UUID) that
+  overrides the active-story pointer for that one call — `resolveStoryId()`
+  in `stories.ts`, generalizing the pattern `mnemo_export_story` always
+  used. Deliberately not session-scoped server state: the HTTP transport
+  (below) evicts idle sessions, which would silently drop a session-bound
+  "active story" mid-use, so a caller that cares (a future web UI) just
+  passes `story` explicitly on every call instead. Omitting it falls back
+  to the pointer with zero OC calls, so every existing stdio caller is
+  unaffected.
+- **Two transports, one process.** `MCP_PORT` unset (every current
+  deployment) runs stdio, unchanged. Set, it runs Streamable HTTP via
+  `shared/http-transport.ts` — a byte-verbatim copy of kindroid-mcp's
+  fleet-canonical module, chosen over a bespoke implementation because it
+  already closes every hardening gap a fleet survey found scattered
+  across other servers (fresh `McpServer` per session via a `createServer`
+  factory, idle-session eviction, Host/Origin allowlist against DNS
+  rebinding, bearer auth). `oc`/`generator`/`validator` stay singletons
+  shared across every HTTP session; only the `McpServer` instance and its
+  tool registrations are rebuilt per session.
 - **Validation is an LLM second pass.** Mnemosyne pulls relevant rules
   + entities from OC, builds a "check this against these constraints"
   prompt, calls a (potentially cheaper) validator LLM, surfaces flagged

@@ -6,14 +6,27 @@
 // `mnemosyne-test-` name prefix keeps any story that survives a failed
 // teardown identifiable on the OC side.
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  afterEach,
+} from "vitest";
+import { promises as fs } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { OcClient } from "../src/oc-client.js";
+import { setCurrentStoryId } from "../src/config.js";
 import {
   combineKindroidTarget,
   createStory,
   findStory,
   findStoryByName,
   listStories,
+  resolveStoryId,
   setKindroidTarget,
   STORY_MARKER_TAGS,
 } from "../src/stories.js";
@@ -42,6 +55,62 @@ describe("combineKindroidTarget (pure)", () => {
   it("throws when both kin and group_id are given", () => {
     expect(() => combineKindroidTarget("kin-1", "group-1")).toThrow(
       /at most one/i,
+    );
+  });
+});
+
+// Poisoned OcClient: any method call throws. Used to prove the pointer
+// fallback path is pure file I/O with zero OC round trips -- the strongest
+// available evidence that omitting `story` is a true no-op for every
+// existing stdio/Claude-Desktop caller.
+const poisonedOc = new Proxy(
+  {},
+  {
+    get(_target, prop) {
+      return () => {
+        throw new Error(`OcClient.${String(prop)} must not be called`);
+      };
+    },
+  },
+) as unknown as OcClient;
+
+describe("resolveStoryId (pure)", () => {
+  let dataDir: string;
+  let legacyDir: string;
+  const savedEnv: Record<string, string | undefined> = {};
+
+  beforeEach(async () => {
+    savedEnv.MNEMO_DATA_DIR = process.env.MNEMO_DATA_DIR;
+    savedEnv.MNEMOSYNE_CONFIG_DIR = process.env.MNEMOSYNE_CONFIG_DIR;
+    dataDir = await fs.mkdtemp(join(tmpdir(), "mnemo-resolve-"));
+    // Also isolate the legacy OS-config-dir path -- otherwise readConfig()
+    // auto-migrates whatever real config.json exists there (a real feature,
+    // see config.ts), silently populating this "fresh" temp dir with a
+    // leftover current_story_id from the actual local environment.
+    legacyDir = await fs.mkdtemp(join(tmpdir(), "mnemo-resolve-legacy-"));
+    process.env.MNEMO_DATA_DIR = dataDir;
+    process.env.MNEMOSYNE_CONFIG_DIR = legacyDir;
+  });
+
+  afterEach(async () => {
+    for (const [key, value] of Object.entries(savedEnv)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    await fs.rm(dataDir, { recursive: true, force: true });
+    await fs.rm(legacyDir, { recursive: true, force: true });
+  });
+
+  it("falls back to the active-story pointer with zero OC calls", async () => {
+    await setCurrentStoryId("pointer-story-id");
+    await expect(resolveStoryId(poisonedOc, undefined)).resolves.toBe(
+      "pointer-story-id",
+    );
+  });
+
+  it("throws the same 'no active story' error as before when unset", async () => {
+    await expect(resolveStoryId(poisonedOc, undefined)).rejects.toThrow(
+      /no active story/i,
     );
   });
 });
@@ -93,6 +162,40 @@ suite("Phase A — story management (real OC)", () => {
   it("returns null for a missing story", async () => {
     const story = await findStoryByName(oc, "no-such-story-zzz");
     expect(story).toBeNull();
+  });
+
+  it("resolveStoryId: explicit override bypasses the active-story pointer", async () => {
+    expect(storyId).toBeTruthy();
+    const otherName = testStoryName("resolve-other");
+    const other = await createStory(oc, otherName);
+    // setCurrentStoryId writes the real local config.json -- isolate it (and
+    // the legacy OS-config-dir path, to skip its auto-migration entirely) to
+    // temp dirs so this test never touches the developer's actual
+    // active-story pointer.
+    const savedMnemoDataDir = process.env.MNEMO_DATA_DIR;
+    const savedLegacyDir = process.env.MNEMOSYNE_CONFIG_DIR;
+    const tempDataDir = await fs.mkdtemp(join(tmpdir(), "mnemo-resolve-oc-"));
+    const tempLegacyDir = await fs.mkdtemp(
+      join(tmpdir(), "mnemo-resolve-oc-legacy-"),
+    );
+    process.env.MNEMO_DATA_DIR = tempDataDir;
+    process.env.MNEMOSYNE_CONFIG_DIR = tempLegacyDir;
+    try {
+      // Pointer points at the primary test story; explicit override to
+      // the other story's name (and separately, its id) must win.
+      await setCurrentStoryId(storyId!);
+      await expect(resolveStoryId(oc, otherName)).resolves.toBe(other.id);
+      await expect(resolveStoryId(oc, other.id)).resolves.toBe(other.id);
+      await expect(resolveStoryId(oc, undefined)).resolves.toBe(storyId);
+    } finally {
+      if (savedMnemoDataDir === undefined) delete process.env.MNEMO_DATA_DIR;
+      else process.env.MNEMO_DATA_DIR = savedMnemoDataDir;
+      if (savedLegacyDir === undefined) delete process.env.MNEMOSYNE_CONFIG_DIR;
+      else process.env.MNEMOSYNE_CONFIG_DIR = savedLegacyDir;
+      await fs.rm(tempDataDir, { recursive: true, force: true });
+      await fs.rm(tempLegacyDir, { recursive: true, force: true });
+      await oc.projectDelete(other.id);
+    }
   });
 
   it("creates a story with an ai target bound at creation time", async () => {

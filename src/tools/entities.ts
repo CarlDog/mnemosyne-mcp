@@ -5,10 +5,12 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
 import { deleteEntity, ENTITY_TYPES, recall, saveEntity } from "../entities.js";
-import { requireCurrentStoryId } from "../config.js";
+import { resolveStoryId } from "../stories.js";
 import { asText, withLogging } from "./helpers.js";
 
 const ENTITY_TYPE_DESCRIPTIONS = `Entity type. One of: ${ENTITY_TYPES.join(", ")}.`;
+const STORY_OVERRIDE_DESCRIPTION =
+  "Story name or OC project UUID. Overrides the active story for this call only; omit to use the active story (mnemo_story_use).";
 
 export function registerEntityTools(server: McpServer, oc: OcClient): void {
   server.registerTool(
@@ -43,6 +45,11 @@ export function registerEntityTools(server: McpServer, oc: OcClient): void {
           .describe(
             'Additional tags appended to the base set ["mnemosyne", "story", <type>]. Useful for sub-categorization (e.g., "primary" vs "npc" for characters).',
           ),
+        story: z
+          .string()
+          .min(1)
+          .optional()
+          .describe(STORY_OVERRIDE_DESCRIPTION),
       },
     },
     withLogging(
@@ -53,8 +60,9 @@ export function registerEntityTools(server: McpServer, oc: OcClient): void {
         content: string;
         pinned?: boolean;
         extra_tags?: string[];
+        story?: string;
       }) => {
-        const storyId = await requireCurrentStoryId();
+        const storyId = await resolveStoryId(oc, args.story);
         const result = await saveEntity(oc, storyId, {
           type: args.type,
           name: args.name,
@@ -79,12 +87,21 @@ export function registerEntityTools(server: McpServer, oc: OcClient): void {
           .string()
           .min(1)
           .describe("Entity name. Same lookup rule as save_entity."),
+        story: z
+          .string()
+          .min(1)
+          .optional()
+          .describe(STORY_OVERRIDE_DESCRIPTION),
       },
     },
     withLogging(
       "mnemo_delete_entity",
-      async (args: { type: (typeof ENTITY_TYPES)[number]; name: string }) => {
-        const storyId = await requireCurrentStoryId();
+      async (args: {
+        type: (typeof ENTITY_TYPES)[number];
+        name: string;
+        story?: string;
+      }) => {
+        const storyId = await resolveStoryId(oc, args.story);
         const result = await deleteEntity(oc, storyId, args.type, args.name);
         return asText({ ...result, deleted: true });
       },
@@ -115,6 +132,11 @@ export function registerEntityTools(server: McpServer, oc: OcClient): void {
           .max(100)
           .optional()
           .describe("Max results (1-100, default 10)."),
+        story: z
+          .string()
+          .min(1)
+          .optional()
+          .describe(STORY_OVERRIDE_DESCRIPTION),
       },
     },
     withLogging(
@@ -123,8 +145,9 @@ export function registerEntityTools(server: McpServer, oc: OcClient): void {
         query?: string;
         type?: (typeof ENTITY_TYPES)[number];
         limit?: number;
+        story?: string;
       }) => {
-        const storyId = await requireCurrentStoryId();
+        const storyId = await resolveStoryId(oc, args.story);
         const entities = await recall(oc, storyId, args);
         return asText({ entities, count: entities.length });
       },

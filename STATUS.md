@@ -1,6 +1,31 @@
 # Status
 
-**Last updated:** 2026-08-23 (**outgoing companion-chat messages now carry
+**Last updated:** 2026-08-23 (**Slice 0 shipped: HTTP transport +
+story-pointer override — the exact prerequisite the pre-build review
+below called for.** `resolveStoryId()` generalizes `mnemo_export_story`'s
+existing bypass pattern to all 9 story-touching tools (a per-call `story`
+override, deliberately not session-scoped server state); a byte-verbatim
+copy of kindroid-mcp's fleet-canonical `mountMcpHttp()` gives mnemosyne
+real Streamable HTTP transport for the first time, with `src/index.ts`
+mode-switching on `MCP_PORT` (unset = stdio, unchanged). Verified
+end-to-end against the real compiled server, not just unit tests: `/health`
++ a real MCP initialize handshake in HTTP mode, and a confirmed
+byte-for-byte-unchanged stdio boot. 193 tests passing with `OC_URL` set
+(up from 144), including a new `http-integration.test.ts` proving two
+concurrent sessions don't collide and the story override bypasses the
+pointer over the actual wire. Full writeup in the dated Done entry below.
+Earlier, same day — **WEBUI_NOTES.md got its first real review pass, and
+the previous headline finding was that §9 has no slice 0.** A paired
+senior-sde feasibility review and senior-ui-ux-designer critique (plus a
+live browser survey of both reference apps and the real Chaos Saga reader
+artifact from the import campaign) converged on the same conclusion: the
+doc's build order assumes a foundation — HTTP transport, per-request story
+scoping — that doesn't exist yet. New §0 names it; §3/§4's sections got
+reality-checked against the actual code; the design critique added a
+cold-start gap, a mode-switching layout fix, and two anti-patterns to avoid
+on purpose. Full writeup below. Next: scope §0 as real engineering work,
+per operator direction — see the dated Done entry for everything.) Earlier,
+same day — **outgoing companion-chat messages now carry
 a provenance header.** `companion-message.ts`'s `buildCompanionMessage()`
 was bracketing the story-context block it prepends but sending the
 direction itself, and the group-conversation nudge, bare — so an automated
@@ -246,6 +271,124 @@ provider keys configured (179 total). See Done below for everything
 that's landed since.
 
 ## Done
+
+- **Slice 0 shipped: HTTP transport + story-pointer override — the
+  prerequisite WEBUI_NOTES.md §0 named** (2026-08-23). Both blockers the
+  pre-build review found are now closed, following the plan the review
+  produced (`senior-sde` feasibility review → two Explore passes mapping
+  the actual codebase and the fleet's proven HTTP pattern → a `Plan`
+  agent's file-by-file design → operator approval → implementation).
+  - **Story-pointer override.** `resolveStoryId(oc, explicit?)` (new,
+    `src/stories.ts`) generalizes `mnemo_export_story`'s existing
+    `name_or_id ?? requireCurrentStoryId()` pattern to the other 8
+    story-touching tools: `mnemo_save_entity`/`mnemo_delete_entity`/
+    `mnemo_recall` (`src/tools/entities.ts`), `mnemo_continue`
+    (`continue.ts`), `mnemo_revalidate_scenes`/`mnemo_validate`
+    (`revalidate.ts`/`validate.ts`) all gained an optional `story`
+    parameter; `mnemo_import_story` got export's exact inline pattern
+    rather than routing through the shared helper, since it needs the
+    full `MnemoStory` object downstream. Deliberately a per-call
+    argument, not session-scoped server state: the HTTP transport below
+    evicts idle sessions, which would silently drop a session-scoped
+    "active story" mid-use — an explicit argument has no lifetime and
+    can't be evicted, and a future web UI just tracks which story is
+    open in its own client state. The fallback path (no `story` given)
+    is pure file I/O with zero OC calls — proven by a pure test that
+    passes a poisoned `OcClient` stub (throws on any method call) and
+    asserts it's never touched, the strongest available evidence every
+    existing stdio/Claude-Desktop caller is byte-for-byte unaffected.
+    `mnemo_story_use` still writes the pointer unconditionally — noted
+    as a residual gap slice 1 inherits, not silently resolved here.
+  - **HTTP transport.** `src/shared/http-transport.ts` is a byte-verbatim
+    copy of kindroid-mcp's fleet-canonical `mountMcpHttp()` (hash-compared
+    across repos by a `/repo-standards-audit` check) — fresh `McpServer`
+    per session via a `createServer()` factory, idle-session eviction,
+    Host/Origin allowlist (DNS-rebinding defense), timing-safe bearer
+    auth. mnemosyne's `log.info(scope, msg, meta)` signature already
+    matched the file's calls, so zero adaptation was needed. New
+    `src/http-config.ts` reads `MCP_PORT`/`MCP_BIND_HOST`/
+    `MCP_ALLOWED_HOSTS`/`MCP_AUTH_TOKEN`/`MCP_SESSION_IDLE_MS` directly
+    off `process.env` (not an injected-env parameter like kindroid's own
+    `loadConfig` — `tests/env-schema.test.ts` regex-matches literal
+    `process.env.` references, so an injected signature would make these
+    vars invisible to that drift check). `src/index.ts` now wraps server
+    construction in a `makeServer()` factory (`oc`/`generator`/`validator`
+    stay startup singletons shared across sessions; only the `McpServer`
+    + its tool registrations are per-session) and mode-switches on
+    `httpConfig.port`: unset runs the unchanged stdio path, set runs
+    Express + `mountMcpHttp` + `/health` + graceful SIGTERM/SIGINT
+    shutdown. `express ^4.21.0` added (matching kindroid/plex/botify —
+    not servarr-mcp's Express 5, a fleet outlier); `npm install` also
+    picked up `npm audit fix` for two unrelated high-severity transitive
+    advisories (brace-expansion, nanoid) already present in the lockfile.
+  - **Verified end-to-end, not just unit-tested.** The compiled
+    `dist/index.js` was actually booted in HTTP mode against the real NAS
+    OC and a real Ollama config: `/health` returned
+    `{"status":"ok","version":"0.1.3"}`, a real MCP `initialize` handshake
+    minted a session id and returned correct server info, and startup
+    logs showed the right transport/bind/auth lines. Booted again with
+    `MCP_PORT` unset to confirm stdio mode is byte-for-byte unchanged
+    (identical "ready transport=stdio" log, no new code path touched
+    since every existing deployment already runs with `MCP_PORT` unset).
+    New `tests/http-integration.test.ts` — the first suite in this repo
+    to exercise the real tool-registration + wire protocol instead of
+    calling domain functions directly — proves two concurrent sessions
+    don't collide (direct evidence the per-session factory, not a shared
+    instance, is actually wired correctly) and proves the story override
+    bypasses the pointer *over the wire*, not just through the helper
+    function. New `tests/http-config.test.ts` (pure) and
+    `tests/http-transport.test.ts` (verbatim copy of kindroid-mcp's own
+    test of the shared module — the 404-not-400 idle-eviction behavior,
+    session lifecycle, bearer auth, host allowlist) round out coverage.
+    164 pure tests passing (up from 143), 193 passing with `OC_URL` set
+    (up from 144) — 209 total, 45/16 skipping cleanly without the
+    relevant env vars.
+  - **Explicitly out of scope, same as the plan stated:** Docker/compose
+    deployment for the new HTTP mode, the actual web UI (slice 1+), and
+    registering `listAllEntities` as an MCP tool (exists, used internally
+    by export/import — becomes slice 1's job per WEBUI_NOTES §9).
+
+- **WEBUI_NOTES.md got its first real review pass — a pre-build risk review
+  plus a design critique, and the headline finding is that §9 has no slice
+  0** (2026-08-23). A live browser survey of both reference apps' actual
+  screens (not just the feature-catalog pass from the prior session) fed two
+  parallel agent reviews: a senior-sde pre-build feasibility pass against the
+  real codebase, and a senior-ui-ux-designer critique of both the doc and
+  live use of Botify/Kindroid. Both independently converged on the same
+  conclusion from different angles — the doc's build order assumes a
+  foundation that doesn't exist. New **§0: Prerequisites** names it plainly:
+  mnemosyne is stdio-only with nothing a browser can reach (`src/index.ts`),
+  the active-story pointer is global single-writer state (`src/config.ts`,
+  blocks slice 1's own "browse across all stories"), and the eventual HTTP
+  layer needs a real Host/Origin allowlist per the fleet's own
+  `docker-deployments.md` guidance, not just loopback binding. Also
+  surfaced: §3's floor-handback mechanic turned out to already be shipped
+  (the doc described finished work as future work) — but with two real gaps
+  the ship missed: the provenance header now brands the *operator's own*
+  turn as "not Carl typing" when the floor comes back to them, and mode
+  never reaches Kindroid/Botify generation at all (systemPrompt is ignored
+  by both companion providers, so participant/director/audience is pure UI
+  chrome against them today). §4's assembly panel turned out to be roughly
+  half real — entity identity needed for the pin/deprioritize/exclude levers
+  is discarded in `pullByType` before `ContextBundle` exists, and token/
+  window accounting doesn't exist outside an internal, unreturned Ollama
+  estimate. The design critique added: no cold-start/empty-state path
+  exists anywhere in the doc; "switching mode should re-arrange the room"
+  contradicts live mid-scene switching (fixed to a stated layout invariant —
+  stable landmarks, variable density); the assembly panel is now scoped
+  collapsed-by-default instead of permanent display; and two anti-patterns
+  worth avoiding on purpose, both observed live — Kindroid's destructive/
+  safe actions sharing one undifferentiated menu with no confirmation, and
+  Botify's browse-a-character-commits-you-to-a-conversation flow (fixed to
+  an explicit "browsing must be strictly inert" constraint on the entity
+  library, §9 slice 1). Separately, the operator surfaced the actual Chaos
+  Saga reader artifact from the import campaign — not a finished audience
+  mode, but real grounding for it: the serif pairing, the cold-cut color
+  shift for POV/location jumps, the per-chapter provenance tags, and the
+  cast-card pattern are now cited concretely in §2 instead of the doc's prior
+  abstract reference to "the reader artifact." Next: scope §0 (transport +
+  story-pointer fix) as real engineering work, per operator direction — this
+  is now the actual first slice, ahead of anything in §9.
 
 - **Outgoing companion-chat messages carry a provenance header; generated
   output states the asterisk-for-action convention** (2026-08-23). Found

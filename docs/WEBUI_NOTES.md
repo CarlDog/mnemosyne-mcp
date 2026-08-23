@@ -3,13 +3,61 @@
 **Status: input, not specification.** Captured 2026-08-23 from a review of
 Botify AI and Kindroid, plus what the first real import campaign taught us
 about where mnemosyne actually hurts. Nothing here is ratified. It exists so
-the thinking survives until the web UI phase starts.
+the thinking survives until the web UI phase starts. **Updated same day** with
+findings from a live browser pass on both reference apps' actual screens (not
+just feature descriptions), plus a paired senior-ui-ux-designer critique and a
+senior-sde pre-build feasibility review — see §0 for the headline change: this
+design has no buildable starting point yet without the prerequisites there.
 
 The web UI is on the roadmap for a hard reason (ARCHITECTURE.md): Claude
 Desktop's host LLM sits in the response path and refuses on content it doesn't
 like, so uncensored storytelling needs a surface where no host model reads the
 output. But refusal-avoidance is the *reason we need one*, not a design. This
 document is about what it should be.
+
+---
+
+## 0. Prerequisites — what has to exist before any slice in §9
+
+A pre-build review (senior-sde, 2026-08-23) found that §9's slices all assume
+a foundation that doesn't exist yet. None of this is a slice-9 problem to
+discover later — it blocks slice 1.
+
+- **Mnemosyne has no way for a browser to reach it.** `src/index.ts` connects
+  over stdio only — mnemosyne is an MCP *client* to OC/Kindroid/Botify, all
+  over Streamable HTTP, but exposes nothing a browser can talk to itself.
+  stdio is a parent-process pipe; only a co-located host (Claude Desktop,
+  Claude Code) can spawn and talk to it. Adding Streamable HTTP transport is
+  real, scoped work — and even once added, MCP tool-call semantics (blocking
+  request/response, one JSON text block per call, no server push) are a poor
+  fit for what this document proposes: a `kindroid_advance_group` beat blocks
+  up to `KINDROID_MCP_TIMEOUT_MS` (180s) with zero intermediate signal, so
+  "watch a scene run" (§2) means staring at one long spinner unless a real API
+  layer adds streaming or turn-by-turn polling. ARCHITECTURE.md already
+  anticipates a second surface ("thin adapters over the same core") — that
+  adapter is the missing slice 0, not an assumed given.
+- **The active-story pointer is global, single-writer, file-backed state.**
+  `src/config.ts`'s `current_story_id` is one JSON file read by every entity
+  and generation tool, with no scoping by session or caller —
+  `requireCurrentStoryId()` throws if it's unset, and nothing distinguishes
+  one caller's active story from another's. §7 already half-diagnoses this for
+  the plex-companion case ("a webhook-driven caller must not stomp a pointer
+  some concurrent Claude session is also using") but frames it as narrow. It
+  isn't: slice 1's own "browse... across all stories" (§1: "one operator, five
+  stories... discovery is a solved problem when the whole corpus fits on one
+  screen") is impossible against a single global pointer without either racy
+  repeated `mnemo_story_use` calls or new per-call story-id parameters. Solve
+  this once, generically, before slice 1 — not piecemeal in §7.
+- **Once the HTTP layer exists, it needs a real access-control story.**
+  ARCHITECTURE.md is explicit that this UI's entire reason to exist is
+  serving unmoderated NSFW output with no host LLM in the path — the
+  highest-stakes surface in this whole system. Binding to loopback is not
+  access control once something's reachable from a browser (DNS rebinding);
+  the fleet's own `docker-deployments.md` guidance calls for a Host/Origin
+  allowlist. Scope this into slice 0, not as a retrofit after the fact.
+
+Everything below this line is still the design target. It's just not
+buildable until the three things above are.
 
 ---
 
@@ -41,7 +89,20 @@ should follow, and chrome density should follow with it.
 | **audience** | *Outside* the scene | Narrates to you; you offer light guidance | Almost none — a reading surface |
 
 This is the spine. Same story, same canon, three postures — and switching
-mode should visibly re-arrange the room, not just change a dropdown value.
+mode should be legible at a glance, not just change a dropdown value.
+
+**Design review caught a real tension here (2026-08-23):** "visibly
+re-arrange the room" and "a live control you flip mid-scene without losing
+your place" pull against each other — rearranging a room while someone is
+actively reading it destroys the spatial memory that makes a live-switchable
+control usable at all. The fix is **stable landmarks, variable density**: the
+story header, the canon/cast rail, and the primary content column stay in the
+same screen positions across all three modes; what changes is which of them is
+expanded, which collapses to a sliver, and what controls appear inside them.
+Same room, different lighting — not a different room. This also serves "step
+in the moment you have something to say" directly: if the composer's position
+never moves, stepping from audience into participant is "this panel gets an
+input field," not "the screen reflows."
 
 **Mode is a live control, not a commitment made at the top of a session.** You
 should be able to sit back in audience mode, watch a scene run, and step into
@@ -62,7 +123,12 @@ recedes.
 
 ### director
 
-The dense one, and the mode neither reference app really has. This is a
+The dense one, and the mode neither reference app has *as a first-class mode*
+— though Kindroid has a precedent worth citing directly rather than treating
+this as unprecedented: a single kin can narrate multiple named characters
+within one reply (observed live 2026-08-23, in a real Kindroid where one AI
+voices several named cast members in the same message) — closer to what
+director mode wants than either app's stated feature list suggests. This is a
 staging desk: cast presence, turn order, location, pacing, and direction —
 see §3.
 
@@ -71,6 +137,44 @@ see §3.
 We have already built this once. The Chaos Saga reader artifact *is* audience
 mode: prose-forward, chapter headers, drop caps, no controls but "keep
 going." Audience mode should be that reader with a Continue button.
+
+**What "built" actually means, concretely** (re-examined 2026-08-23): a serif
+pairing (Fraunces for display/chapter heads, Literata for body prose — regular
+weight throughout, no italic-wall; selective `<em>` only for in-line
+emphasis, which happens to already be the fix the design review's
+accessibility finding above asks for), a warm near-black palette with one
+amber accent and a **distinct cooler palette reserved for scene shifts** (a
+cross-cut section runs a visibly colder temperature than the surrounding
+chapter — a real, already-validated technique for signaling a POV/location
+jump without breaking the reading flow, worth reusing anywhere a story cuts
+between threads), a per-chapter meta row naming location, cast present, and a
+provenance tag (original canon vs. continued-by-Claude) — a lightweight,
+already-working precedent for the kind of provenance §4's assembly panel
+wants to generalize — and a "Dramatis Personae" cast grid (photo, name,
+epithet, one italicized signature line) worth reusing directly as the entity
+library's character-card pattern (§9 slice 1). This artifact has no
+interactive elements at all — no Continue button exists yet — so it's the
+reading surface to build audience mode *from*, not audience mode itself.
+
+### Empty and first-run states
+
+**Gap flagged by design review (2026-08-23): nothing above describes day
+one.** Every section — director's cast rail, the open-thread chips, the
+assembly panel, the budget/influence editor — assumes a mature canon already
+exists. A brand-new sixth story, or a second operator's first five minutes,
+has none of it: no cast to stage, no keyphrases to match, no threads to
+surface as chips. §9's slice 1 doesn't fix this either — "browse... across
+all stories" is a view over existing data, not a first-run flow for creating
+the first entity in a new one.
+
+This needs an explicit design pass before slice 1 ships, not an assumption
+that it falls out of the rest: what does director mode's cast rail show with
+zero characters, what does the open-thread row show with zero threads, what's
+the first thing a brand-new story's screen invites the operator to do. Botify's
+own "All memories" panel is the cautionary example — a bare `Search` box and
+"No memories found," no explanation, no worked example, despite §8 crediting
+Kindroid elsewhere for "instructional empty states." Don't repeat the
+functional-but-not-instructive version.
 
 ---
 
@@ -98,20 +202,46 @@ The plane with no equivalent in either reference app.
 - **Cast presence** — who is in *this* scene. Not who exists; who is here.
 - **Turn order, and when you interject.** Botify's group triad is the right
   shape for who speaks — auto-advance / random next / nominate a specific
-  character — and today `advanceGroup` has no way to say "Riley next."
-  The deeper control is whether the floor ever comes back to *you*.
-  `kindroid-provider.ts` hardcodes `allowUser: false`, and its comment is
-  honest about why: mnemosyne is generating a beat "for a caller with no way
-  to take that turn." A web UI is precisely a caller that has one, so the
-  hardcode stops being right the day this ships. Two things make the fix
-  small: `KindroidClient.advanceGroup` already accepts `allowUser` as an
-  option (only the provider pins it), and `AdvanceGroupResult` already
-  reports `ended: "user_turn" | "max_turns"` — a first-class signal for
-  "they've said their piece, you're up" that we currently can never receive,
-  because a forced `allowUser: false` can only ever end in `max_turns`.
-  So: **let the loop hand the floor back, and let the operator decide
-  whether to take it.** Interjecting, staying quiet, and letting it run are
-  all one control, not three modes.
+  character — and `advanceGroup` still has no way to say "Riley next." The
+  deeper control, whether the floor ever comes back to *you*, **shipped
+  2026-08-23** — `allowUser` is settable per call via `mnemo_continue`'s
+  `allow_user`, and `AdvanceGroupResult.ended: "user_turn" | "max_turns"` is a
+  real, receivable signal today. Interjecting, staying quiet, and letting it
+  run are one control, not three modes, as designed.
+
+  **Two gaps survived the ship (design + code review, 2026-08-23), both
+  load-bearing for the UI:**
+  - **The provenance header now fights the mechanic it sits next to.**
+    `buildCompanionMessage` unconditionally opens every outgoing message with
+    `[Mnemosyne — automated scene direction, not ${userName} typing]` —
+    correct for an automated direction, backwards for the one case this
+    turn-handback mechanic exists to enable: when the loop yields `user_turn`
+    and the operator actually takes the floor, their own in-character line
+    still gets branded "not Carl typing." Needs a per-call "this is really the
+    operator" flag threaded to `buildCompanionMessage`, or routing true
+    operator turns through `kindroid_groupchats_user_message` instead of the
+    automated-direction path.
+  - **Mode never reaches Kindroid or Botify generation.** Neither provider
+    reads `systemPrompt`; `buildCompanionMessage`/`buildKindroidMessage` take
+    no mode parameter at all. The three-postures table in §2 ("what the model
+    does" changes per mode) is real only for the five direct-LLM providers —
+    against a companion-chat target, switching participant/director/audience
+    changes zero generation behavior today. Mode is pure UI chrome there
+    unless this gets deliberate design attention: how do you "direct all
+    characters" through a service that only has one send-message channel and
+    a server-side persona? §7's watch-party framing leans on mode doing
+    something in exactly the case where, right now, it does nothing.
+  - **No affordance is specified for the live mode switch itself.** It needs
+    to be a small, persistent, always-visible control (a three-state
+    segmented toggle is the obvious shape), placed away from the composer's
+    send action — the risk of an accidental mid-scene flip is highest when
+    mode and send sit close enough for a mis-click. Apply a flip on the next
+    beat, never mid-generation. And the turn-handback signal above is the
+    natural hook for exactly this moment: surface "the floor is offered to
+    you" as an *event* the UI reacts to (a highlighted composer, a quiet
+    prompt) independent of whichever mode is currently selected, rather than
+    requiring the operator to have pre-flipped to participant before the loop
+    happens to pause.
 - **Location** — set the scene from the story's own locations. BattleChasers
   has 28. Shadowflame's style guide even encodes *which* spaces are for
   performance and which are for truth — the UI can honor that.
@@ -136,14 +266,50 @@ that some may be irrelevant, and gives each one a **Deprioritize** button.
 We should do this, and we are better positioned to, because our retrieval is
 typed and deterministic rather than a vector black box.
 
-For any generated beat, show:
+**Scoped as collapsed-by-default instrumentation, not permanent display (UX
+review, 2026-08-23).** The 2026-08-22 incident below argues for the data being
+*available*, not for showing entity lists, keyphrase matches, token counts,
+and validator flags next to every beat by default — an instrument you check
+when something looks wrong stays valuable; one that's always expanded becomes
+wallpaper within a session or two, and works against audience mode's own
+"almost no chrome" premise (§2). One collapsed line per beat —
+`47 entities · 14.2k/131k tok · validator: clean` — expanding on click into
+the full breakdown gives the same ten-second diagnosis without competing with
+the prose permanently.
+
+For any generated beat, the expanded view shows:
 
 - Which entities `gatherContext` pulled, grouped by type
-- Which keyphrases matched, for companion providers —
-  `companion-message.ts` already computes exactly this
+- Which keyphrases matched, for companion providers
 - Token count of the assembled prompt, and the window it went into
 - What the validator flagged, if it ran
 - A lever per entity: pin, deprioritize, or exclude from this story
+
+**Reality check on what's actually free (code review, 2026-08-23).** Of the
+four data points above, two need real backend work, not just surfacing:
+`pullByType` flattens each recalled entity down to a bare `"name\nbody"`
+string before `ContextBundle` exists, discarding the `memory_id`/`tags`/
+`pinned` the per-entity lever needs — a reshape through `prompt.ts`,
+`companion-message.ts`, and `validator.ts`, not a UI wiring task. And token/
+window accounting barely exists: `computeNumCtx`/`estPromptTokens` are
+computed inside `OllamaProvider` and logged, never returned, and none of the
+four cloud providers or either companion provider parse or expose a usage
+field — "the window it went into" is an Ollama-only concept, not something 6
+of 7 providers can report. The keyphrase-match list and the validator report
+*are* close to free (computed today, just need to survive the trip back out
+of the provider call). Budget the panel's build accordingly — it is not a
+pure-instrumentation slice, whatever §9 assumes.
+
+**A gap the panel's own model doesn't obviously cover:** Kindroid's "Recalled
+journals & memories" pattern was checked live inside a real group chat (design
+review, 2026-08-23) and wasn't in the per-message menu there at all — only
+confirmed in single-AI chats. Director mode is inherently multi-character (§2:
+"the mode neither reference app has as a first-class mode"), so don't assume
+the single-entity recall UI this section is modeled on generalizes to "which
+of 12 entities in this scene's cast fired" without designing that case
+explicitly. Whichever slice builds this panel first should prove it out
+against a single-character audience-mode beat before it's asked to summarize
+a multi-character director-mode one.
 
 **Why this earns its place.** On 2026-08-22 a generation produced confident
 word salad and the cause was invisible; it took a bisection to prove the
@@ -176,6 +342,25 @@ Our version is a per-type honesty note in the entity editor:
 
 Plus the real ceilings where they exist: OC's 100k content cap, the companion
 persona limits, and the auto-sized `num_ctx`.
+
+**A failure mode observed in the live Kindroid editor, not just theorized (UX
+review, 2026-08-23).** The pattern is real and does what's described above —
+each field header shows a live count plus a static influence/style note — but
+watching it in use surfaces two problems worth designing around rather than
+copying wholesale: the instructional prose is *permanent*, not progressive
+(three lines of guidance repeat above every field, every time, consuming
+roughly 40% of visible vertical space before the actual textarea, so by field
+five you've lost sight of field one — works against the exact goal of holding
+the whole character in view); and the counter never changes visual weight
+approaching the cap — same color at 99% full as at 10% full, so "budget" isn't
+doing any early-warning work, just displaying a number you have to read. Our
+version should collapse the guidance text after first exposure per field
+(tooltip/disclosure, not permanent body copy), and give the counter a real
+warning state past ~90% — that's the one moment it's actually actionable. Also
+worth deciding on purpose: one field observed live (Kindroid's "Additional
+context") carried no stated influence tier at all, inconsistent with every
+other field — if a field has no meaningful influence weight, say so explicitly
+rather than silently omitting the line.
 
 ---
 
@@ -356,25 +541,87 @@ Same tiering as media (§6): Off / Manual / Suggested / Auto.
 | Botify — cost printed on the button | Spend is a surprise | §6, and provider/token estimates generally |
 | Botify — contextual action chips | The blank-page problem | §3, driven by the canon's own open threads |
 | Botify — narration vs dialogue styled differently in one bubble, and (operator preference, 2026-08-23) split-level italics within a single reply — the *first* asterisk-action gets a spotlighted accent color, later ones in the same reply fall back to a quieter muted tone | Prose is a wall; every action beat competing equally for attention is still a wall | Render the asterisk convention our style guides already mandate, **and** carry the same two-tier hierarchy: the reply's first action beat gets the accent treatment, subsequent ones recede — confirmed as a real, named platform mechanism (`message__text_italic` / `message__text_magic-glow`) via DOM inspection, not a rendering coincidence (see STATUS.md's live Botify probe, 2026-08-23) |
-| Ours — the Chaos Saga reader artifact | — | Already audience mode; adopt it wholesale |
+| Botify — left rail pairs icon + text label on every nav item | Icon-only navigation is mystery-meat until clicked once to learn it | Primary nav follows Botify's labeled-icon model, not Kindroid's icon-only top bar |
+| Ours — the Chaos Saga reader artifact | — | Not a finished audience mode — an example of how imported + generated content assembles into one reading surface with provenance intact; the concrete patterns worth carrying forward (serif pairing, cold-cut color shift, chapter-level provenance tags, cast cards) are itemized in §2's audience subsection |
+
+### Anti-patterns — deliberately not borrowing
+
+Live use of both apps (design review, 2026-08-23) surfaced patterns worth
+naming explicitly as things to avoid, not just omit by silence:
+
+- **Kindroid — destructive and safe actions share one undifferentiated menu.**
+  A message's "..." menu lists Continue message, Autoselfie, Rewind messages,
+  Chat break, and Tweak AI message at identical weight, no grouping, no
+  confirmation observed before a destructive one fires. "Delete chat" in the
+  Preferences drawer is the same problem — a plain red text link at the bottom
+  of a long scrollable panel, easy to fat-finger after scrolling past several
+  toggles. Any mnemosyne control that can discard generated beats (director
+  mode's turn/rewind controls especially) needs a confirmation step *and*
+  visual separation from safe actions in the same menu — a divider, distinct
+  color, or a secondary "more" tier — from day one, not retrofitted later.
+- **Botify — browsing a character commits you to a conversation.** Clicking a
+  bot card in the discovery grid doesn't open a profile, it opens
+  `/bot_X/chat` and fires the greeting immediately; the inert profile view is
+  reachable only *from inside* the chat you've already started — backwards
+  order for "look before you leap." For the entity library (§9 slice 1), given
+  our entities are curated canon rather than disposable chat-bot avatars, a
+  browse action that accidentally spends context or starts a beat is a
+  materially worse failure than Botify's stray "hi" costs there. **Browsing an
+  entity must be strictly inert** — state this as an explicit constraint on
+  slice 1, not an implicit assumption.
+- **Both apps — low-contrast italic body text for AI-generated prose.**
+  Readable at full attention in a screenshot, a real strain across the
+  long-form reading audience mode is built toward. If audience mode carries
+  over Kindroid's *chat-bubble* typography wholesale it inherits this; the
+  Chaos Saga reader artifact already avoids it (regular-weight serif body,
+  `<em>` only for in-line emphasis) — carry that forward, not the chat
+  bubble's.
+- **Botify — cost transparency is a pattern, not a system.** The inline chat
+  media button correctly prints cost on the button (credited above), but the
+  dedicated Generate page's primary CTA for the same spend just says
+  "Generate 2 images" with no price on it — same product, two entry points,
+  inconsistent. §6's "cost shown as information, never a paywall" needs "at
+  every action point that spends, not just some" as an explicit acceptance
+  criterion, since Botify itself doesn't clear that bar consistently.
 
 ---
 
 ## 9. If we build it in slices
 
+**Prerequisite to all of the below: §0.** None of these are buildable against
+the current stdio-only, single-global-story-pointer server.
+
 1. **Entity library** — browse, search, edit, delete across all stories.
-   Highest value, zero generation risk, and it retires the patch-script
-   workflow the imports ran on.
-2. **Audience mode** — the reader we already have, plus Continue.
-3. **The assembly panel** (§4) — pure instrumentation, no new writes.
-4. **Director mode** — cast, turn order, location, open-thread chips.
+   Highest value, and it retires the patch-script workflow the imports ran
+   on — but "zero generation risk" undersells the real prerequisite work
+   (code review, 2026-08-23): it needs §0's story-pointer fix before anything
+   else, plus a genuinely complete, sortable listing — `listAllEntities()`
+   already exists (built for export, to avoid `memory_search`'s ranked
+   100-result cap silently truncating) but isn't a registered tool yet.
+   **Browsing must be strictly inert** — no entity click may fire a beat or
+   spend context (see §8's anti-patterns). Audience mode (next) needs this
+   same complete/sortable listing for chronological scene order, so plan the
+   two together rather than as independent slices.
+2. **Audience mode** — the reader we already have, plus Continue. Shares
+   slice 1's listing prerequisite (see above).
+3. **The assembly panel** (§4) — not pure instrumentation as originally
+   scoped; see §4's reality check for what's actually free versus what needs
+   backend restructuring. Prove it out against a single-character
+   audience-mode beat before director mode's multi-character case.
+4. **Director mode** — cast, turn order, location, open-thread chips. §3's
+   storyline-plane controls (cast presence, turn order, location, pacing) have
+   zero existing backend today — `gatherContext` takes no such overrides, so
+   this is new schema work, not just UI wiring on top of what §3's
+   turn-handback mechanic already shipped.
 5. **Participant mode** — persona binding, conversational composer.
 6. **Media in flow** (§6) — late, because it spends money and wants the
    art/sidecar plumbing exercised first.
 7. **Watch parties** (§7) — last, and the only slice with another service in
-   the path. Needs the per-call story selector first; wants director mode and
-   media already working, since a watch party is a `mnemo_continue` someone
-   else triggered.
+   the path. Needs the per-call story selector first (subsumed into §0's
+   story-pointer fix); wants director mode and media already working, since a
+   watch party is a `mnemo_continue` someone else triggered. Mode doing
+   nothing against companion providers (§3) is most visible here — resolve
+   that before this slice, or the mode control in a watch party is decorative.
 
 ---
 

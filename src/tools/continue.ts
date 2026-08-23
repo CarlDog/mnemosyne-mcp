@@ -18,10 +18,10 @@ import type { OcClient } from "../oc-client.js";
 import type { LlmProvider } from "../llm.js";
 import { buildSystemPrompt, gatherContext, MODES } from "../prompt.js";
 import { saveEntity, retagValidation } from "../entities.js";
-import { requireCurrentStoryId } from "../config.js";
 import {
   combineKindroidTarget,
   findStory,
+  resolveStoryId,
   type KindroidTarget,
 } from "../stories.js";
 import {
@@ -136,6 +136,13 @@ export function registerContinueTool(
           .describe(
             "Run an LLM validation pass after generation. Returns a verdict (issues + summary) alongside the beat. The beat is always saved first; validation results are advisory.",
           ),
+        story: z
+          .string()
+          .min(1)
+          .optional()
+          .describe(
+            "Story name or OC project UUID. Overrides the active story for this call only; omit to use the active story (mnemo_story_use).",
+          ),
       },
     },
     withLogging(
@@ -151,8 +158,9 @@ export function registerContinueTool(
         group_max_turns?: number;
         allow_user?: boolean;
         validate?: boolean;
+        story?: string;
       }) => {
-        const storyId = await requireCurrentStoryId();
+        const storyId = await resolveStoryId(oc, args.story);
         const mode = args.mode ?? DEFAULT_MODE;
 
         const context = await gatherContext(oc, storyId, args.direction);

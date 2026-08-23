@@ -28,8 +28,9 @@ export function registerImportTool(server: McpServer, oc: OcClient): void {
     {
       title: "Import Story Entities",
       description:
-        "Batch-write already-classified entities into the ACTIVE story " +
-        "(set one with mnemo_story_use first). Two modes, exactly one per " +
+        "Batch-write already-classified entities into the active story " +
+        "(set one with mnemo_story_use first, or pass `story` to target " +
+        "another for this call only). Two modes, exactly one per " +
         "call: `entities` — an array of records the caller has already " +
         "classified and the user has approved (this tool validates and " +
         "writes; it never classifies); or `file_path` — a mnemosyne " +
@@ -75,6 +76,13 @@ export function registerImportTool(server: McpServer, oc: OcClient): void {
             "What to do when a record's (type, name) already exists in the " +
               "story. Default error: abort the batch, write nothing.",
           ),
+        story: z
+          .string()
+          .min(1)
+          .optional()
+          .describe(
+            "Story name or OC project UUID. Overrides the active story for this call only; omit to use the active story (mnemo_story_use).",
+          ),
       },
     },
     withLogging(
@@ -84,6 +92,7 @@ export function registerImportTool(server: McpServer, oc: OcClient): void {
         file_path?: string;
         dry_run?: boolean;
         on_conflict?: "skip" | "overwrite" | "error";
+        story?: string;
       }) => {
         if (!args.entities === !args.file_path) {
           throw new Error(
@@ -91,13 +100,13 @@ export function registerImportTool(server: McpServer, oc: OcClient): void {
           );
         }
 
-        const storyId = await requireCurrentStoryId();
-        const story = await findStory(oc, storyId);
+        const nameOrId = args.story ?? (await requireCurrentStoryId());
+        const story = await findStory(oc, nameOrId);
         if (!story) {
           return asText(
             {
               error: "story_not_found",
-              message: `Active story id ${storyId} no longer resolves. Call mnemo_story_use to set a valid story.`,
+              message: `No story matches "${nameOrId}". Use mnemo_story_list to see what exists.`,
             },
             { isError: true },
           );
