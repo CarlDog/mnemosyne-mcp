@@ -78,6 +78,10 @@ sessions applying the playbook, not development work.
 - `docs/DATA_LAYOUT.md` — the data-directory organization and naming
   standard: per-story `references/` and `art/` conventions, generation
   sidecars, and the server-written `story.json` identity card.
+- `docs/WEBUI_NOTES.md` — design input for the planned web UI (explicitly
+  not ratified): mode-adaptive layout, the storyline control plane, the
+  retrieval-assembly panel, media in the beat flow, plex-companion watch
+  parties, and a parked graphic-novel reading format.
 - `docs/V2_RETROSPECTIVE.md` — entity schemas, verbatim prompt templates,
   lessons learned, and anti-patterns from the v2 OpenChronicle
   storytelling plugin. v2 code is NOT being ported; this doc is the

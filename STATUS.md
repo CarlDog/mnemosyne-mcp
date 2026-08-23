@@ -981,6 +981,12 @@ real use and pressure points emerge:
   uncensored content. Daily-driver SFW use through Claude Desktop
   works now via the MCP; NSFW use requires either a non-Anthropic MCP
   host (Cline, LM Studio, etc.) or the web UI.
+  Design input, captured 2026-08-23 and explicitly not ratified:
+  [docs/WEBUI_NOTES.md](docs/WEBUI_NOTES.md) — three modes as three
+  postures, a storyline control plane alongside the character one,
+  showing the retrieval assembly, media generation inside the beat
+  flow, plex-companion watch parties, and a parked graphic-novel
+  reading format.
 - ~~**Botify provider**~~ / ~~**Anthropic provider**~~ — **shipped
   2026-08-21** along with OpenAI, Gemini, and Atlas Cloud; see the Done
   log. Seven generators now sit behind `GENERATOR_PROVIDER`; the
