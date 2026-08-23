@@ -336,6 +336,35 @@ that's landed since.
   asterisk-delimited action text is a first-class, client-recognized
   convention on Botify, not just an incidental pattern the model happens to
   produce.
+  **Confirmed against Botify's own community, not just its DOM.**
+  `r/botify_ai` (12.9K members, official `Botify_AI` account active) was
+  unreachable to the original automated research (WebFetch refuses
+  reddit.com outright) but not to a live logged-in browser. Four findings
+  worth recording: (1) Botify exposes an "instruction and example messages"
+  field per bot (Person icon > More > Edit bot) — the same mechanism
+  Kindroid calls Example Message — but the community's own bot-creation
+  wiki has no section documenting chat-formatting conventions, and
+  `Botify_AI` has twice acknowledged that gap without filling it as of this
+  check. (2) A real bug report shows genuine Example Message content using
+  the identical asterisk-action/plain-dialogue split, and `Botify_AI`
+  treats a bot blurring the two as a bug ("Thanks for noticing! It's sent
+  to devs!") — confirming the convention is intended platform behavior, not
+  incidental model habit. (3) `(OOC: ...)` parenthetical commands get the
+  same mixed-reliability reports Kindroid's community gives brackets — some
+  users say they work, some say they don't, no official command list
+  exists, and one reply's read ("the AI does not react as if you said it,
+  but incorporates it in future responses") matches Kindroid's own
+  no-true-system-channel finding exactly. (4) **The one that actually
+  matters for reliability:** two recent threads (2 months old: "lost the
+  use of the asterisk"; 8 days old: "the purple words thing has broken...
+  will convert roleplay text into speech text, and vice versa") report an
+  active regression in exactly the mechanism this probe depends on, and
+  `Botify_AI` confirmed it **6 days before this was written**: "We
+  previously had a negative feedback about purple words/asterisks... So we
+  do work on fix of this all." The two-clean-exchanges probe above is real
+  evidence, but it's evidence of "worked on this bot at this moment," not a
+  guarantee — the vendor's own team is mid-fix on the exact feature it
+  depends on.
   **A second, adjacent gap closed the same day:** `mnemo_continue`'s
   `direction` field never told the calling LLM to phrase in-fiction
   narration using the asterisk convention — caught live when a hand-written
