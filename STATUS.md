@@ -208,12 +208,41 @@ Dovecoast smoke test against `nous-hermes2-mixtral` + `phi4:14b`:
 
 37/37 tests passed at the time.
 
-Current count: 129 passing, 41 integration tests skipping cleanly
+Current count: 138 passing, 41 integration tests skipping cleanly
 without `OC_URL`/`OLLAMA_GENERATOR_MODEL`/`KINDROID_MCP_URL`/cloud
-provider keys configured (170 total). See Done below for everything
+provider keys configured (179 total). See Done below for everything
 that's landed since.
 
 ## Done
+
+- **A timed-out Kindroid call no longer looks like a failed one**
+  (2026-08-23). Found by running a real group beat, not by review. On a group
+  fed daily by plex-companion, `advanceGroup` timed out at the MCP SDK's
+  default 60s — *after* both AI turns had generated and persisted. mnemosyne
+  saw a bare transport error and reported total failure; retrying would have
+  duplicated real messages in a real conversation. Exactly the hazard the
+  read-back guard above exists for, arriving through a door it cannot cover,
+  because a transport timeout throws before any result exists to inspect.
+  `sendMessage` and `advanceGroup` now share one chokepoint,
+  `callMutatingTool`, which does two things. It sets a per-request timeout
+  (`KINDROID_MCP_TIMEOUT_MS`, default **180s**) — deliberately well above the
+  SDK's 60s, because a group beat chains `maxTurns` sequential generations at
+  a live-measured ~13s each, so the documented 8-turn ceiling needs ~105s of
+  generation alone. Erring long is the safe direction *here specifically*: a
+  too-short timeout manufactures the ambiguous, retry-hazardous failure we're
+  trying to eliminate, while a too-long one only delays an error on a call
+  that was already lost. And on a timeout it rethrows saying the call may
+  have already posted and generated, naming the elapsed time and the env var
+  to raise rather than the retry to attempt. Non-timeout failures pass
+  through untouched, on purpose — a genuine "no such group" is not a
+  maybe-mutated call, and dressing it up as one would teach the caller to
+  ignore the real warning. Nine new tests, six verified discriminating.
+  **Root cause fixed upstream the same day:** kindroid-mcp's read-back walked
+  the entire conversation to reach the newest N (`get-chat-messages` is
+  oldest-first with only a forward cursor), so it was O(history). Now
+  anchored — measured 1 read instead of 10+, and the same beat that timed out
+  at 60s completed in 22.5s. This guard remains the belt to that fix's
+  braces.
 
 - **The group turn loop can hand the floor back** (2026-08-23). The
   companion to the beat-length change below. `allowUser` was hardcoded
