@@ -205,7 +205,7 @@ consumers of the resulting likeness. See the parked image-pipeline note in OC.
 
 ---
 
-## 7. Watch parties — plex-companion in the loop
+## 7. Watch parties — mnemosyne as plex-companion's passthrough
 
 [plex-companion](https://github.com/CarlDog/plex-companion) is already
 deployed: a Plex webhook wakes it when you finish something, it pulls the
@@ -214,68 +214,99 @@ or a whole group, which is already a watch party — reacts in the app in its ow
 voice. It has an MCP surface: `companion_status`, `companion_history`,
 `companion_pause`, `companion_resume`, `companion_engage`, `companion_suggest`.
 
-It has no idea stories exist. Reactions land in Kindroid scrollback and a
-500-record engagement log; nothing reaches OC. That gap is the whole
-integration question.
+**Operator intent, stated 2026-08-23 and load-bearing for everything below:
+mnemosyne is the passthrough.** plex-companion should not deliver to Kindroid
+itself — it hands the engagement to mnemosyne, and mnemosyne delivers. Two
+reasons, and the second is the one that's easy to under-read.
 
-### Who drives decides everything
+### Recall runs both directions
 
-The four controls wanted here — pause, switch target, set the scene, in or out
-of canon — cost wildly different amounts depending on which service is in
-charge. That, not the feature list, is the finding:
+The obvious half is **watch → canon**: what happens during a watch party is a
+beat, and it shouldn't evaporate into chat scrollback.
 
-| Control | In canon — **mnemosyne drives** | Out of canon — **plex-companion delivers** |
+The half that actually motivates the architecture is **canon → watch**. A kin
+reacting to a film through mnemosyne reacts *as that character in that story* —
+carrying its history, its voice, its relationships, everything `gatherContext`
+pulls — instead of as a bare companion persona that remembers none of it.
+plex-companion structurally cannot do this: it has no story, no entities, and
+no OC connection at all. Passthrough isn't plumbing convenience. It's the only
+way the reaction is in character.
+
+### The seam
+
+plex-companion **keeps** everything about Plex and about knowing what you
+watched: the webhook and its parser, the account/library filter, the per-item
+and global cooldowns and the `ENGAGEMENT_CHANCE` roll, the plex-mcp metadata
+pull, the lore brief with its subtitle grounding, old-content awareness, the
+engagement log, `companion_pause` / `companion_resume`.
+
+It **sheds** everything about talking to a companion: the Kindroid backends,
+the message templates, the target binding. That is mnemosyne's whole job.
+
+Clean seam, and it falls out of what each service already is.
+
+### What passthrough buys
+
+| | Direct delivery (today) | Through mnemosyne |
 |---|---|---|
-| Pause reactions to watch history | n/a | **exists** — `companion_pause` / `companion_resume` |
-| Switch to another kin or group | **exists** — `mnemo_continue`'s per-call `kindroid_kin` / `kindroid_group_id` | **new** — env-var only (`KINDROID_AI_ID` / `KINDROID_GROUP_ID`) plus a redeploy; `companion_engage` takes no target argument |
-| Set where the watch party happens | **free** — text in `direction`, from the story's own locations (§3) | **new** — the message templates carry no place, so it needs a preamble hook |
-| Keep the exchange as canon | **free** — `mnemo_continue` auto-saves the beat, validated | **new** — see below |
+| Keeping the exchange | **Lost.** `EngagementRecord` stores `at`/`kind`/`stage`/`ratingKey`/`title`/`ok`/`detail` — **no reply text**. `companion_history` can say a reaction to *Alien* happened at 21:14; it can't say what was said | **Free** — mnemosyne holds the reply and auto-saves it as a validated scene |
+| Reacting in character | Impossible — no story, no entities | **Free** — the same context gathering every beat gets |
+| Switching kin or group | **New API** — env var plus a redeploy; `companion_engage` takes no target argument | **Exists** — `mnemo_continue`'s per-call `kindroid_kin` / `kindroid_group_id` |
+| Setting the scene | **New API** — the templates carry no place | **Free** — text in `direction`, from the story's own locations (§3) |
+| Botify instead of Kindroid | **New API** — plex-companion is Kindroid-only | **Free** — seven generators already sit behind `GENERATOR_PROVIDER` |
 
-*Almost everything is free if mnemosyne drives; almost everything is new if
-plex-companion does.* An in-canon watch party is just a `mnemo_continue` whose
-direction was built from a Plex item — and it inherits context gathering,
-keyphrase gating, the group turn loop, validation, and scene-saving, none of
-which plex-companion has or should grow. Its job in that path shrinks to the
-thing it is uniquely good at: knowing you finished something, and what it was.
+That last row is why the operator said "kins *(or botify bots)*." Under
+passthrough plex-companion never learns what Botify is — it never needs a
+backend abstraction at all.
 
-### Canon is a target, not a checkbox
+The first row is worth dwelling on: the capture problem doesn't get *solved* by
+passthrough, it **dissolves**. Direct delivery would need either a chat
+read-back keyed on the record's timestamp (possible, unverified) or a new field
+on plex-companion's record. Neither is necessary if mnemosyne is holding the
+reply already.
 
-Both services write into the same Kindroid chat, and that chat *is* the kins'
-short-term memory. A watch-along note posted into the group your story runs in
-is in that conversation's context whether or not you also save it to OC. So
-out-of-canon can't be a bookkeeping flag on an otherwise identical send — it
-has to be a **different target**: the story keeps its bound one, the companion
-gets its own.
+### The interface, and the one thing that's actually new
 
-Fencing a watch party off *inside* the story's target is possible —
-`kindroid_chat_break` / `kindroid_groupchats_chat_break` exist — but the price
-is wiping the story's short-term continuity to make room for TV chatter, and
-the single-AI form takes a mandatory greeting, so it isn't even a silent fence.
-Two targets is the cheap answer.
+plex-companion calls us, not the reverse — it is already an MCP client to
+plex-mcp, kindroid-mcp and filesystem-mcp, so a mnemosyne backend is a shape it
+already has, while mnemosyne is a passive server with no scheduler and couldn't
+poll if it wanted to. The call is `mnemo_continue` with a direction built from
+the Plex item.
 
-### Capturing an ambient watch — proposed, not verified
+**The gap:** `mnemo_continue` operates on the *active* story, and that pointer
+is machine-local config that `mnemo_story_use` mutates globally. A
+webhook-driven caller must not stomp a pointer some concurrent Claude session
+is also using. So `mnemo_continue` needs an optional per-call story selector.
+As far as I can tell that is the only genuinely new API the whole integration
+requires on our side.
 
-The manual path is settled: `companion_engage` returns the reply text, so
-mnemosyne can save it. The *ambient* path — the webhook fired while you weren't
-looking — is open, because `EngagementRecord` stores only
-`at / kind / stage / ratingKey / title / ok / detail`. **No reply text.**
-`companion_history` can say a reaction to *Alien* happened at 21:14; it cannot
-say what was said.
+Open and genuinely the operator's call: which mode a watch party runs in.
+Participant fits an operator who is in the room; a group target naturally
+behaves more like director. Low stakes, easy to change.
 
-Proposed: take the record's `at` as `start_after_timestamp` to
-`kindroid_get_chat_messages` against that target and save the returned exchange
-as a scene. Every tool already exists, but the timestamp alignment is an
-inference and untested. The alternative is a one-field change over in
-plex-companion — record the reply on `EngagementRecord` — which is less clever
-and probably better.
+### Canon is a target and a save, not a checkbox
+
+Canon-ness should control **the save and the target — never the context.**
+Story context always goes in; that was the point.
+
+- **In canon** — the story's bound target, saved as a scene entity.
+- **Out of canon** — a separate companion target, not saved.
+
+It has to be a different *target* rather than a flag on an otherwise identical
+send, because a Kindroid chat **is** the kins' short-term memory: a watch-along
+note posted into the group your story runs in is in that conversation's context
+whether or not you also write it to OC. Fencing one off inside the story's own
+target is possible — `kindroid_chat_break` exists — but it costs you the
+story's short-term continuity, and the single-AI form takes a mandatory
+greeting, so it isn't even a silent fence.
 
 ### Eligibility is per story, and most stories say no
 
 Three of the five live stories are fantasy — BattleChasers, Wonderland,
 Shadowflame — and an in-canon watch party drags real-world film titles into
 them. Only Chaos Saga and GhostHunters are contemporary enough for it to land.
-So canon-eligibility is a per-story opt-in defaulting to off; a story that
-opts out never shows the control at all.
+So canon-eligibility is a per-story opt-in defaulting to off; a story that opts
+out never shows the control at all.
 
 ### In the UI
 
@@ -316,9 +347,10 @@ Same tiering as media (§6): Off / Manual / Suggested / Auto.
 5. **Participant mode** — persona binding, conversational composer.
 6. **Media in flow** (§6) — late, because it spends money and wants the
    art/sidecar plumbing exercised first.
-7. **Watch parties** (§7) — last, and the only slice with an external service
-   in the path. Wants director mode and media already working, since the
-   in-canon form is a `mnemo_continue` with pictures.
+7. **Watch parties** (§7) — last, and the only slice with another service in
+   the path. Needs the per-call story selector first; wants director mode and
+   media already working, since a watch party is a `mnemo_continue` someone
+   else triggered.
 
 ---
 
