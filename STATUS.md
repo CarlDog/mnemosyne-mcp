@@ -208,12 +208,37 @@ Dovecoast smoke test against `nous-hermes2-mixtral` + `phi4:14b`:
 
 37/37 tests passed at the time.
 
-Current count: 103 passing, 40 integration tests skipping cleanly
+Current count: 122 passing, 41 integration tests skipping cleanly
 without `OC_URL`/`OLLAMA_GENERATOR_MODEL`/`KINDROID_MCP_URL`/cloud
-provider keys configured (143 total). See Done below for everything
+provider keys configured (163 total). See Done below for everything
 that's landed since.
 
 ## Done
+
+- **Group beat length is configurable** (2026-08-23). `maxTurns` on the
+  Kindroid group path had been hardcoded to 4 since Phase 6, flagged in
+  CLAUDE.md as "a cheap follow-up if needed." It is now settable two
+  ways, mirroring how the group *target* already resolves: server-wide
+  via `KINDROID_GROUP_MAX_TURNS`, and per call via `mnemo_continue`'s
+  `group_max_turns`, with the per-call value winning. Bounds are 1–8 and
+  the default is 4 — both mirrored from `kindroid_advance_group`'s own
+  zod schema rather than invented, so an out-of-range value fails local
+  validation with a useful message instead of surfacing as an opaque
+  upstream MCP error. The tool description says "turns, NOT tokens"
+  out loud, because `group_max_turns` and the unrelated `max_tokens` sit
+  two fields apart and differ by two characters. Single-AI targets ignore
+  it (they always produce exactly one reply), as does every non-Kindroid
+  provider. Five stubbed-client tests pin the precedence chain; a live
+  assertion would have been flaky, since a real group loop can end early
+  on `user_turn` and return fewer turns than requested.
+  **Deliberately NOT changed:** the `allowUser: false` hardcode beside it.
+  Its comment states the precondition honestly — mnemosyne generates
+  beats "for a caller with no way to take that turn" — and that holds
+  until the web UI exists. Flipping it now would just produce empty
+  beats. See [WEBUI_NOTES.md](docs/WEBUI_NOTES.md) §3, where the
+  floor-handback mechanic is designed out.
+  *Also corrected here:* the test count above had drifted 14 tests stale
+  (said 103/40/143, was really 117/41/158 before this change).
 
 - **The curated-import campaign — five live stories, ~369 entities**
   (2026-08-23). The feature built in August finally got used in anger.

@@ -34,12 +34,23 @@ export interface KindroidProviderConfig {
   /** The dedicated storytelling target (a single AI or a group chat) used
    * when no story-bound or per-call override applies. */
   defaultTarget: KindroidTarget;
+  /** Server-wide default AI turns per group beat (KINDROID_GROUP_MAX_TURNS).
+   * Falls back to DEFAULT_GROUP_MAX_TURNS when unset. */
+  groupMaxTurns?: number;
 }
 
 // Matches kindroid-mcp's own kindroid_advance_group default -- a "beat"
 // against a group naturally involves a few characters exchanging lines,
-// not just one. Not yet configurable; a cheap follow-up if that's needed.
-const DEFAULT_GROUP_MAX_TURNS = 4;
+// not just one. Overridable server-wide via KINDROID_GROUP_MAX_TURNS, and
+// per call via mnemo_continue's group_max_turns.
+export const DEFAULT_GROUP_MAX_TURNS = 4;
+
+// kindroid_advance_group's own schema bound (z.number().int().min(1).max(8)).
+// Mirrored rather than invented so an out-of-range value fails local zod /
+// startup validation with a useful message, instead of surfacing as an
+// opaque MCP error from upstream.
+export const MIN_GROUP_MAX_TURNS = 1;
+export const MAX_GROUP_MAX_TURNS = 8;
 
 // Group chats default to funneling every reaction at the direction/situation
 // rather than at each other -- discovered via cross-repo comparison with
@@ -153,9 +164,16 @@ export class KindroidProvider implements LlmProvider {
       // allowUser forced false: mnemosyne is generating a story beat, not
       // waiting on a live human's real-time turn in the group -- letting
       // the loop hand the turn back to "the user" would just mean zero AI
-      // replies for a caller with no way to take that turn.
+      // replies for a caller with no way to take that turn. (That
+      // precondition stops holding for a live web UI, which IS a caller
+      // that can take the turn -- see docs/WEBUI_NOTES.md section 3. Left
+      // pinned until such a caller exists: flipping it now would just
+      // produce empty beats.)
       const result = await this.client.advanceGroup(target.id, message, {
-        maxTurns: DEFAULT_GROUP_MAX_TURNS,
+        maxTurns:
+          opts.groupMaxTurns ??
+          this.config.groupMaxTurns ??
+          DEFAULT_GROUP_MAX_TURNS,
         allowUser: false,
       });
       if (result.replies.length === 0) {
