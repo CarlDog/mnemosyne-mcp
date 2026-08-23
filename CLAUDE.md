@@ -75,6 +75,9 @@ sessions applying the playbook, not development work.
 - `docs/ARCHITECTURE.md` — locked architectural decisions. Read this
   first to understand project shape, state model, validation strategy,
   provider strategy, and build sequence.
+- `docs/DATA_LAYOUT.md` — the data-directory organization and naming
+  standard: per-story `references/` and `art/` conventions, generation
+  sidecars, and the server-written `story.json` identity card.
 - `docs/V2_RETROSPECTIVE.md` — entity schemas, verbatim prompt templates,
   lessons learned, and anti-patterns from the v2 OpenChronicle
   storytelling plugin. v2 code is NOT being ported; this doc is the

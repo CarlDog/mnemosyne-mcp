@@ -223,6 +223,18 @@ that's landed since.
   `tests/config-data-dir.test.ts` covers dir resolution, empty-string
   normalization, migration, migration-precedence, the
   neither-location case, and the corrupt-legacy fail-soft escape.
+  Ratified the same day: **docs/DATA_LAYOUT.md** — the organization and
+  naming standard for the story subtrees (every filename shell-safe
+  lowercase slug — `references/<type>/<entity-slug>.<ext>` with
+  `.<variant>` infixes; machine-named `art/`
+  outputs each with a JSON sidecar capturing prompt/model/params/cost,
+  since unseeded generation is otherwise unreproducible; master copies
+  in the operator's curation archive — currently OneDrive, provisional
+  — with `data/` as the operational copy that pointers cite), plus a
+  server-written `story.json` identity card per story root
+  (`buildStoryIndex()`, refreshed on default-path exports only) holding
+  the slug↔story join that the lossy `storySlug()` can't recover —
+  deliberately not a file index, which would drift.
 
 - **Five new generator providers: botify, anthropic, openai, gemini,
   atlascloud** (2026-08-21, late same day). `GENERATOR_PROVIDER` now
