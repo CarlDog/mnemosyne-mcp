@@ -113,6 +113,12 @@ export function registerContinueTool(
           .describe(
             `How many AI turns a Kindroid GROUP target generates for this beat (${MIN_GROUP_MAX_TURNS}-${MAX_GROUP_MAX_TURNS}, default ${DEFAULT_GROUP_MAX_TURNS}) -- a longer exchange between the kins, not a longer single reply. Note this is turns, NOT tokens: max_tokens above is the unrelated generation-length cap. No effect on a single-AI Kindroid target (always exactly one reply) or on any other provider. Overrides KINDROID_GROUP_MAX_TURNS for this call only.`,
           ),
+        allow_user: z
+          .boolean()
+          .optional()
+          .describe(
+            "Kindroid GROUP targets only: let the turn loop hand the floor back to you mid-scene instead of forcing AI-only turns (default false). Pass true only if you can actually take that turn -- a conversational caller can, a scheduled one cannot. When the loop yields, the response carries group_ended='user_turn'; if it yields before anyone speaks you get yielded_to_user=true, an empty beat, and NOTHING is saved -- your direction is already posted to the group, so continue the scene rather than re-sending it.",
+          ),
         kindroid_group_id: z
           .string()
           .optional()
@@ -138,6 +144,7 @@ export function registerContinueTool(
         kindroid_kin?: string;
         kindroid_group_id?: string;
         group_max_turns?: number;
+        allow_user?: boolean;
         validate?: boolean;
       }) => {
         const storyId = await requireCurrentStoryId();
@@ -166,7 +173,7 @@ export function registerContinueTool(
           storyTarget,
         );
 
-        const beatText = await generator.generate({
+        const beat = await generator.generate({
           systemPrompt,
           userMessage: args.direction,
           temperature: args.temperature,
@@ -175,7 +182,38 @@ export function registerContinueTool(
           context,
           kindroidTarget,
           groupMaxTurns: args.group_max_turns,
+          allowUser: args.allow_user,
         });
+        const beatText = beat.text;
+        const groupMeta = {
+          ...(beat.groupEnded !== undefined && {
+            group_ended: beat.groupEnded,
+          }),
+          ...(beat.groupTurns !== undefined && {
+            group_turns: beat.groupTurns,
+          }),
+        };
+
+        // A group can hand the floor back before anyone speaks (allow_user:
+        // true only). Nothing was generated, so there is no beat to save --
+        // saving an empty scene would poison both recall and the validator.
+        // The direction itself HAS already been posted to the group by
+        // advanceGroup, so say so: the caller must continue the scene, not
+        // re-send, or the group sees it twice.
+        if (beatText.trim() === "") {
+          return asText({
+            yielded_to_user: true,
+            beat_text: "",
+            saved: false,
+            message:
+              "The group handed the floor straight back to you -- no AI " +
+              "turns were generated, so nothing was saved. Your direction " +
+              "was already posted to the group; do not re-send it. Take " +
+              "the turn: call mnemo_continue again with what you say next.",
+            mode,
+            ...groupMeta,
+          });
+        }
 
         // Guard the save: the beat is an expensive LLM generation, and a
         // transient OC write failure must not discard it. On save error,
@@ -256,6 +294,7 @@ export function registerContinueTool(
           ...(validationError !== undefined && {
             validation_error: validationError,
           }),
+          ...groupMeta,
         });
       },
     ),

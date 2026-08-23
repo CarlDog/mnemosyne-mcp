@@ -28,6 +28,10 @@ export interface AdvanceGroupResult {
   replies: KindroidGroupReply[];
   ended: "user_turn" | "max_turns";
   turns: number;
+  /** Set by kindroid-mcp when the turns ran but reading them back failed.
+   * `replies` is empty while `turns` is not -- the generations DID happen
+   * upstream, so this is never a retry signal. */
+  read_back_error?: string;
 }
 
 export class KindroidClient {

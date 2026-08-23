@@ -88,7 +88,7 @@ suite("Phase C-1 — continue (real OC + real Ollama)", () => {
         "Aria walks into the Dovecoast Tavern looking for a man named Holt.",
       );
       const systemPrompt = buildSystemPrompt("director", ctx);
-      const beatText = await generator.generate({
+      const { text: beatText } = await generator.generate({
         systemPrompt,
         userMessage:
           "Aria walks into the Dovecoast Tavern looking for a man named Holt.",
@@ -121,7 +121,7 @@ suite("Phase C-1 — continue (real OC + real Ollama)", () => {
       const direction =
         "Aria steps out onto the dock at dawn, Holt nowhere in sight.";
       const context = await gatherContext(oc, storyId, direction);
-      const beatText = await generator.generate({
+      const { text: beatText } = await generator.generate({
         systemPrompt: buildSystemPrompt("director", context),
         userMessage: direction,
         maxTokens: 256,
@@ -158,7 +158,7 @@ suite("Phase C-1 — continue (real OC + real Ollama)", () => {
     async () => {
       const direction = "Aria lights a lantern against the coming fog.";
       const context = await gatherContext(oc, storyId, direction);
-      const beatText = await generator.generate({
+      const { text: beatText } = await generator.generate({
         systemPrompt: buildSystemPrompt("director", context),
         userMessage: direction,
         maxTokens: 256,

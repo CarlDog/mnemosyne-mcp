@@ -255,7 +255,7 @@ anthropicSuite("AnthropicProvider (live)", () => {
       apiKey: process.env.ANTHROPIC_API_KEY!,
       defaultModel: process.env.ANTHROPIC_MODEL!,
     });
-    const text = await provider.generate(LIVE_OPTS);
+    const { text } = await provider.generate(LIVE_OPTS);
     expect(text.length).toBeGreaterThan(0);
   }, 60_000);
 });
@@ -272,7 +272,7 @@ openaiSuite("OpenAICompatProvider (live, openai)", () => {
       apiKey: process.env.OPENAI_API_KEY!,
       defaultModel: process.env.OPENAI_MODEL!,
     });
-    const text = await provider.generate(LIVE_OPTS);
+    const { text } = await provider.generate(LIVE_OPTS);
     expect(text.length).toBeGreaterThan(0);
   }, 60_000);
 });
@@ -287,7 +287,7 @@ geminiSuite("GeminiProvider (live)", () => {
       apiKey: process.env.GEMINI_API_KEY!,
       defaultModel: process.env.GEMINI_MODEL!,
     });
-    const text = await provider.generate(LIVE_OPTS);
+    const { text } = await provider.generate(LIVE_OPTS);
     expect(text.length).toBeGreaterThan(0);
   }, 60_000);
 });
@@ -308,7 +308,7 @@ botifySuite("BotifyProvider (live)", () => {
       defaultChatId: process.env.BOTIFY_STORYTELLING_CHAT!,
     });
     try {
-      const text = await provider.generate({
+      const { text } = await provider.generate({
         systemPrompt: "",
         userMessage:
           "(mnemosyne integration test — just say hi back in one short sentence)",
@@ -333,7 +333,7 @@ atlasSuite("OpenAICompatProvider (live, atlascloud)", () => {
       apiKey: process.env.ATLASCLOUD_API_KEY!,
       defaultModel: process.env.ATLASCLOUD_MODEL!,
     });
-    const text = await provider.generate(LIVE_OPTS);
+    const { text } = await provider.generate(LIVE_OPTS);
     expect(text.length).toBeGreaterThan(0);
   }, 120_000);
 });

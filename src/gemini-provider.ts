@@ -17,7 +17,7 @@
 
 import { llmPostJson } from "./llm-http.js";
 import { log } from "./log.js";
-import type { LlmGenerateOptions, LlmProvider } from "./llm.js";
+import type { GeneratedBeat, LlmGenerateOptions, LlmProvider } from "./llm.js";
 
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com";
 
@@ -91,7 +91,7 @@ export class GeminiProvider implements LlmProvider {
 
   constructor(private readonly config: GeminiConfig) {}
 
-  async generate(opts: LlmGenerateOptions): Promise<string> {
+  async generate(opts: LlmGenerateOptions): Promise<GeneratedBeat> {
     const model = opts.model ?? this.config.defaultModel;
     const body = buildGeminiBody(opts);
     const start = Date.now();
@@ -112,6 +112,6 @@ export class GeminiProvider implements LlmProvider {
       ms: Date.now() - start,
       chars: text.length,
     });
-    return text;
+    return { text };
   }
 }

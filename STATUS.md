@@ -208,12 +208,43 @@ Dovecoast smoke test against `nous-hermes2-mixtral` + `phi4:14b`:
 
 37/37 tests passed at the time.
 
-Current count: 122 passing, 41 integration tests skipping cleanly
+Current count: 129 passing, 41 integration tests skipping cleanly
 without `OC_URL`/`OLLAMA_GENERATOR_MODEL`/`KINDROID_MCP_URL`/cloud
-provider keys configured (163 total). See Done below for everything
+provider keys configured (170 total). See Done below for everything
 that's landed since.
 
 ## Done
+
+- **The group turn loop can hand the floor back** (2026-08-23). The
+  companion to the beat-length change below. `allowUser` was hardcoded
+  `false` on the Kindroid group path, with a comment explaining that
+  mnemosyne generates beats "for a caller with no way to take that turn."
+  That precondition was always too pessimistic — a conversational MCP host
+  *is* such a caller — so it is now settable per call via
+  `mnemo_continue`'s `allow_user`, defaulting to `false` so nothing
+  scheduled or webhook-driven changes behavior. **No env counterpart, on
+  purpose:** it describes the caller, not the deployment, and both kinds
+  hit the same server; a server-wide `true` would hand the floor to
+  someone who isn't there. The comment says so, since the asymmetry with
+  `KINDROID_GROUP_MAX_TURNS` otherwise looks like an oversight.
+  Flipping the flag alone would have been unsafe, so two things came with
+  it. **`LlmProvider.generate()` now returns `GeneratedBeat`**
+  (`{text, groupEnded?, groupTurns?}`) instead of a bare string — without
+  it, a beat the group handed back mid-scene is indistinguishable from one
+  that ran to completion, which is the entire point of the flag. Six
+  providers, two call sites, thirteen test sites; all mechanical and
+  typecheck-caught. **This is not the deferred `LlmProvider` redesign** —
+  that one is about `LlmGenerateOptions` (providers ignoring most input
+  fields) and is still queued. This only widened the return.
+  And `mnemo_continue` no longer saves an empty beat: reading kindroid-mcp's
+  source showed two opposite zero-reply cases that only `turns` separates
+  — `turns === 0` is a legitimate immediate yield, while `turns > 0` with
+  no replies means the turns generated upstream and only the read-back
+  failed. The first returns `yielded_to_user` and saves nothing, telling
+  the caller the direction is already posted and to continue rather than
+  re-send; the second throws and says explicitly not to retry, because a
+  retry would duplicate real generations in a real conversation. Seven new
+  stubbed tests, verified to fail against the old behavior.
 
 - **Group beat length is configurable** (2026-08-23). `maxTurns` on the
   Kindroid group path had been hardcoded to 4 since Phase 6, flagged in

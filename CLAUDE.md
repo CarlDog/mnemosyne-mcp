@@ -168,13 +168,21 @@ Key architectural decisions (see ARCHITECTURE.md for full reasoning):
 - **Group targets drive kindroid-mcp's turn loop, not a single reply.**
   `KindroidProvider.generate()` against a group target calls
   `KindroidClient.advanceGroup()` (→ kindroid-mcp's `kindroid_advance_group`
-  tool) with `allowUser: false` forced — mnemosyne is generating a story
-  beat, not waiting on a live human's real-time turn in the chat, so
-  letting the loop hand the turn back to "the user" would just produce zero
-  AI replies for a caller with no way to take that turn — a precondition
-  that stops holding for a live web UI, which *is* a caller that can take
-  the turn (docs/WEBUI_NOTES.md §3); left pinned until such a caller
-  exists, since flipping it now would only produce empty beats. `maxTurns`
+  tool). `allowUser` defaults to **false** — AI-only turns, correct for a
+  caller that cannot take a turn (scheduled, webhook-driven) — and is
+  settable per call via `mnemo_continue`'s `allow_user` (2026-08-23).
+  Deliberately per-call with **no env counterpart**, unlike
+  `KINDROID_GROUP_MAX_TURNS`: it describes the *caller*, not the
+  deployment, and both kinds of caller can hit the same server, so a
+  server-wide `true` would hand the floor to someone who isn't there.
+  `generate()` returns a `GeneratedBeat` (`{text, groupEnded?,
+  groupTurns?}`) rather than a bare string, so a caller can tell a
+  finished beat from one the group handed back mid-scene. Two zero-reply
+  cases exist and only `turns` separates them: `turns === 0` is a
+  legitimate immediate yield (empty beat, nothing saved — the direction is
+  already posted, so continue rather than re-send), while `turns > 0` with
+  no replies means the turns generated upstream and only the read-back
+  failed, which throws and says explicitly not to retry. `maxTurns`
   is configurable (2026-08-23): server-wide via `KINDROID_GROUP_MAX_TURNS`
   and per call via `mnemo_continue`'s `group_max_turns`, defaulting to 4
   and bounded 1–8 to mirror `kindroid_advance_group`'s own schema rather

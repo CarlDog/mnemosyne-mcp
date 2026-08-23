@@ -296,25 +296,35 @@ describe("formatGroupReplies (pure)", () => {
 describe("group max turns (stubbed client)", () => {
   const GROUP: KindroidTarget = { type: "group", id: "grp-1" };
 
-  function stubProvider(configTurns?: number): {
+  type StubResult = {
+    replies: KindroidGroupReply[];
+    ended: "user_turn" | "max_turns";
+    turns: number;
+    read_back_error?: string;
+  };
+
+  const ONE_REPLY: StubResult = {
+    replies: [{ sender: "ai", message: "ok", display_name: "Riley" }],
+    ended: "max_turns",
+    turns: 1,
+  };
+
+  function stubProvider(
+    configTurns?: number,
+    result: StubResult = ONE_REPLY,
+  ): {
     provider: KindroidProvider;
-    seen: () => number | undefined;
+    seen: () => { maxTurns?: number; allowUser?: boolean } | undefined;
   } {
-    let seen: number | undefined;
+    let seen: { maxTurns?: number; allowUser?: boolean } | undefined;
     const client = {
       advanceGroup: (
         _id: string,
         _message: string,
         opts?: { maxTurns?: number; allowUser?: boolean },
       ) => {
-        seen = opts?.maxTurns;
-        return Promise.resolve({
-          replies: [
-            { sender: "ai", message: "ok", display_name: "Riley" },
-          ] as KindroidGroupReply[],
-          ended: "max_turns" as const,
-          turns: 1,
-        });
+        seen = opts;
+        return Promise.resolve(result);
       },
     } as unknown as KindroidClient;
 
@@ -330,13 +340,13 @@ describe("group max turns (stubbed client)", () => {
   it("falls back to the default when neither config nor call sets it", async () => {
     const { provider, seen } = stubProvider();
     await provider.generate({ systemPrompt: "", userMessage: "go" });
-    expect(seen()).toBe(DEFAULT_GROUP_MAX_TURNS);
+    expect(seen()?.maxTurns).toBe(DEFAULT_GROUP_MAX_TURNS);
   });
 
   it("uses the server-wide config value when no per-call override is given", async () => {
     const { provider, seen } = stubProvider(7);
     await provider.generate({ systemPrompt: "", userMessage: "go" });
-    expect(seen()).toBe(7);
+    expect(seen()?.maxTurns).toBe(7);
   });
 
   it("a per-call groupMaxTurns beats the server-wide config value", async () => {
@@ -346,7 +356,7 @@ describe("group max turns (stubbed client)", () => {
       userMessage: "go",
       groupMaxTurns: 2,
     });
-    expect(seen()).toBe(2);
+    expect(seen()?.maxTurns).toBe(2);
   });
 
   it("a per-call groupMaxTurns applies with no config value set", async () => {
@@ -356,7 +366,7 @@ describe("group max turns (stubbed client)", () => {
       userMessage: "go",
       groupMaxTurns: 8,
     });
-    expect(seen()).toBe(8);
+    expect(seen()?.maxTurns).toBe(8);
   });
 
   it("the documented bounds match kindroid_advance_group's own schema", () => {
@@ -364,6 +374,135 @@ describe("group max turns (stubbed client)", () => {
     expect(MAX_GROUP_MAX_TURNS).toBe(8);
     expect(DEFAULT_GROUP_MAX_TURNS).toBeGreaterThanOrEqual(MIN_GROUP_MAX_TURNS);
     expect(DEFAULT_GROUP_MAX_TURNS).toBeLessThanOrEqual(MAX_GROUP_MAX_TURNS);
+  });
+});
+
+// allowUser and the widened GeneratedBeat return. Stubbed for the same
+// reason as above: a real group's turn loop is nondeterministic about when
+// it yields, and these assertions are about what the provider does with a
+// given upstream result, which is not.
+describe("group allowUser and beat telemetry (stubbed client)", () => {
+  const GROUP: KindroidTarget = { type: "group", id: "grp-1" };
+  const AI: KindroidTarget = { type: "ai", id: "kin-1" };
+
+  type StubResult = {
+    replies: KindroidGroupReply[];
+    ended: "user_turn" | "max_turns";
+    turns: number;
+    read_back_error?: string;
+  };
+
+  function stub(result: StubResult): {
+    provider: KindroidProvider;
+    seen: () => { allowUser?: boolean } | undefined;
+  } {
+    let seen: { allowUser?: boolean } | undefined;
+    const client = {
+      advanceGroup: (
+        _id: string,
+        _message: string,
+        opts?: { maxTurns?: number; allowUser?: boolean },
+      ) => {
+        seen = opts;
+        return Promise.resolve(result);
+      },
+    } as unknown as KindroidClient;
+    return {
+      provider: new KindroidProvider(client, { defaultTarget: GROUP }),
+      seen: () => seen,
+    };
+  }
+
+  const SPOKE: StubResult = {
+    replies: [{ sender: "ai", message: "hey", display_name: "Riley" }],
+    ended: "max_turns",
+    turns: 1,
+  };
+
+  it("forces AI-only turns by default", async () => {
+    const { provider, seen } = stub(SPOKE);
+    await provider.generate({ systemPrompt: "", userMessage: "go" });
+    expect(seen()?.allowUser).toBe(false);
+  });
+
+  it("passes allowUser through when the caller can take the turn", async () => {
+    const { provider, seen } = stub(SPOKE);
+    await provider.generate({
+      systemPrompt: "",
+      userMessage: "go",
+      allowUser: true,
+    });
+    expect(seen()?.allowUser).toBe(true);
+  });
+
+  it("surfaces how the turn loop ended alongside the beat", async () => {
+    const { provider } = stub({
+      replies: [
+        { sender: "ai", message: "one", display_name: "Riley" },
+        { sender: "ai", message: "two", display_name: "Jenna" },
+      ],
+      ended: "user_turn",
+      turns: 2,
+    });
+    const beat = await provider.generate({
+      systemPrompt: "",
+      userMessage: "go",
+      allowUser: true,
+    });
+    expect(beat.text).toContain("Riley: one");
+    expect(beat.text).toContain("Jenna: two");
+    expect(beat.groupEnded).toBe("user_turn");
+    expect(beat.groupTurns).toBe(2);
+  });
+
+  it("yielding before anyone speaks is an empty beat, not an error", async () => {
+    const { provider } = stub({ replies: [], ended: "user_turn", turns: 0 });
+    const beat = await provider.generate({
+      systemPrompt: "",
+      userMessage: "go",
+      allowUser: true,
+    });
+    expect(beat.text).toBe("");
+    expect(beat.groupEnded).toBe("user_turn");
+    expect(beat.groupTurns).toBe(0);
+  });
+
+  it("throws when turns ran but could not be read back, and says not to retry", async () => {
+    const { provider } = stub({
+      replies: [],
+      ended: "max_turns",
+      turns: 3,
+      read_back_error: "history window exhausted",
+    });
+    await expect(
+      provider.generate({ systemPrompt: "", userMessage: "go" }),
+    ).rejects.toThrow(/do NOT retry/);
+  });
+
+  it("includes the turn count and upstream cause in that error", async () => {
+    const { provider } = stub({
+      replies: [],
+      ended: "max_turns",
+      turns: 3,
+      read_back_error: "history window exhausted",
+    });
+    await expect(
+      provider.generate({ systemPrompt: "", userMessage: "go" }),
+    ).rejects.toThrow(/3 turn\(s\).*history window exhausted/s);
+  });
+
+  it("a single-AI target carries no group telemetry", async () => {
+    const client = {
+      sendMessage: () => Promise.resolve("a single reply"),
+    } as unknown as KindroidClient;
+    const provider = new KindroidProvider(client, { defaultTarget: AI });
+    const beat = await provider.generate({
+      systemPrompt: "",
+      userMessage: "go",
+    });
+    expect(beat.text).toBe("a single reply");
+    expect(beat.groupEnded).toBeUndefined();
+    expect(beat.groupTurns).toBeUndefined();
   });
 });
 
@@ -396,7 +535,7 @@ suite("Phase 6 — KindroidProvider (real kindroid-mcp)", () => {
   });
 
   it("generates a real reply, ignoring systemPrompt/temperature/maxTokens", async () => {
-    const reply = await provider.generate({
+    const { text: reply } = await provider.generate({
       systemPrompt: "this should be ignored entirely",
       userMessage:
         "This is an automated integration test from mnemosyne-mcp. Reply with a short one-sentence acknowledgment.",
@@ -412,7 +551,7 @@ suite("Phase 6 — KindroidProvider (real kindroid-mcp)", () => {
     // override path (a second real kin isn't assumed to exist in every
     // environment) -- it confirms the override plumbing reaches
     // kindroid_send_message rather than silently falling back.
-    const reply = await provider.generate({
+    const { text: reply } = await provider.generate({
       systemPrompt: "",
       userMessage:
         "Second automated integration-test message: acknowledge briefly.",
