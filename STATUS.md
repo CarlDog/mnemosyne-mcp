@@ -881,11 +881,22 @@ real use and pressure points emerge:
   then the mapping playbook + seed templates as docs (**also shipped
   2026-08-21** —
   [docs/IMPORT_PLAYBOOK.md](docs/IMPORT_PLAYBOOK.md) /
-  [docs/SEED_TEMPLATES.md](docs/SEED_TEMPLATES.md), see Done). **All
-  that remains: the actual curated imports of the four ChatGPT projects**
-  (Chaos Saga, GhostHunters, BattleChasers, Wonderland) — interactive
-  sessions applying the playbook, not development work. Note the live
-  MCP host must be restarted to pick up the new tools (stale-dist).
+  [docs/SEED_TEMPLATES.md](docs/SEED_TEMPLATES.md), see Done). **The
+  first curated import is done: Chaos Saga landed 2026-08-22** — 28
+  entities (10 characters, 6 locations, 1 style, 7 pinned rules, 3
+  worldbuilding, 1 scene backdated to its 2025 lock date) via one
+  dry-run-previewed `mnemo_import_story` call, immediately re-exported
+  as a backup. Curation per the playbook: tattoos folded back into
+  characters, the divergent Vanessa profiles merged, Cassie's stale
+  profile reconciled with locked scene CH-017, all PG-13/platform
+  content boundaries stripped as ChatGPT artifacts (operator decision),
+  named style clauses extracted to individual pinned rules, and the
+  C.H.A.O.S. availability schedules salvaged as worldbuilding.
+  **Remaining: GhostHunters, BattleChasers, Wonderland** — same
+  interactive process. (Dogfooding note filed: unfiltered
+  `mnemo_recall` with a small limit gets its window consumed by OC's
+  pinned-prepend in rule-heavy stories; type-filtered recall is
+  unaffected.)
   `mnemo_seed_from_template` is retired as a planned tool — seeding is a
   host conversation plus one import call.
 - **Atlas Cloud illustration integration (scope recorded 2026-08-05,
