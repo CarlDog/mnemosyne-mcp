@@ -43,6 +43,13 @@ should follow, and chrome density should follow with it.
 This is the spine. Same story, same canon, three postures — and switching
 mode should visibly re-arrange the room, not just change a dropdown value.
 
+**Mode is a live control, not a commitment made at the top of a session.** You
+should be able to sit back in audience mode, watch a scene run, and step into
+it the moment you have something to say — without ending anything or starting
+a new session. The whole point of one canon behind three postures is that the
+posture is the cheap thing to change. See §3's turn order for the mechanic
+that makes stepping in real rather than cosmetic.
+
 ### participant
 
 Closest to a messaging app. The operator is a character, so **who they are
@@ -89,9 +96,22 @@ Reachable from any character named in a scene.
 The plane with no equivalent in either reference app.
 
 - **Cast presence** — who is in *this* scene. Not who exists; who is here.
-- **Turn order** — Botify's group triad is the right shape: auto-advance /
-  random next / nominate a specific character. Today `advanceGroup` hardcodes
-  `allowUser: false` and `maxTurns: 4`, with no way to say "Riley next."
+- **Turn order, and when you interject.** Botify's group triad is the right
+  shape for who speaks — auto-advance / random next / nominate a specific
+  character — and today `advanceGroup` has no way to say "Riley next."
+  The deeper control is whether the floor ever comes back to *you*.
+  `kindroid-provider.ts` hardcodes `allowUser: false`, and its comment is
+  honest about why: mnemosyne is generating a beat "for a caller with no way
+  to take that turn." A web UI is precisely a caller that has one, so the
+  hardcode stops being right the day this ships. Two things make the fix
+  small: `KindroidClient.advanceGroup` already accepts `allowUser` as an
+  option (only the provider pins it), and `AdvanceGroupResult` already
+  reports `ended: "user_turn" | "max_turns"` — a first-class signal for
+  "they've said their piece, you're up" that we currently can never receive,
+  because a forced `allowUser: false` can only ever end in `max_turns`.
+  So: **let the loop hand the floor back, and let the operator decide
+  whether to take it.** Interjecting, staying quiet, and letting it run are
+  all one control, not three modes.
 - **Location** — set the scene from the story's own locations. BattleChasers
   has 28. Shadowflame's style guide even encodes *which* spaces are for
   performance and which are for truth — the UI can honor that.
@@ -280,9 +300,13 @@ is also using. So `mnemo_continue` needs an optional per-call story selector.
 As far as I can tell that is the only genuinely new API the whole integration
 requires on our side.
 
-Open and genuinely the operator's call: which mode a watch party runs in.
-Participant fits an operator who is in the room; a group target naturally
-behaves more like director. Low stakes, easy to change.
+**Mode is adjustable, and that resolves the question of which one a watch party
+"is."** It isn't any of them by default — you pick, and you can change your
+mind while it runs. Sit in audience while the kins argue about the third act;
+drop into participant when you want to answer one of them; take director if
+the party needs staging. This is the same live-mode control as §2 and the
+same floor-handback mechanic as §3 — a watch party is just the case that
+makes the need obvious, because you are demonstrably sitting right there.
 
 ### Canon is a target and a save, not a checkbox
 
