@@ -44,8 +44,9 @@ sessions applying the playbook, not development work.
 - `src/oc-client.ts` — Streamable HTTP MCP client wrapper for OC.
 - `src/kindroid-client.ts` — Streamable HTTP MCP client wrapper for
   kindroid-mcp (same shape as `oc-client.ts`).
-- `src/config.ts` — local config (current story pointer, OS-appropriate
-  config dir).
+- `src/config.ts` — local config (current story pointer; repo-local
+  `data/` dir, gitignored, `MNEMO_DATA_DIR` override — Docker-mountable
+  as persistent storage; legacy OS-config-dir location auto-migrates).
 - `src/stories.ts`, `src/entities.ts`, `src/prompt.ts`, `src/validator.ts`,
   `src/llm.ts`, `src/export.ts`, `src/import.ts` — domain logic.
 - `src/kindroid-provider.ts` — `KindroidProvider implements LlmProvider`;

@@ -10,6 +10,8 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import {
   buildExportDocument,
   defaultExportFilename,
+  defaultExportPath,
+  storySlug,
   exportStory,
   type StoryExportDocument,
 } from "../src/export.js";
@@ -135,6 +137,44 @@ describe("defaultExportFilename (pure)", () => {
     expect(defaultExportFilename("!!!", "2026-08-21T12:00:00.000Z")).toBe(
       "story-2026-08-21T120000.json",
     );
+  });
+});
+
+describe("defaultExportPath (pure)", () => {
+  it("lands in the story's data subtree: stories/<slug>/exports/<file>", () => {
+    // Adversarial-review regression: this is the ?? branch exportStory
+    // takes when no out_path is given — previously untested entirely.
+    const saved = process.env.MNEMO_DATA_DIR;
+    const dataRoot = join(tmpdir(), "mnemo-default-path");
+    process.env.MNEMO_DATA_DIR = dataRoot;
+    try {
+      expect(defaultExportPath("Chaos Saga", "2026-08-21T12:00:05.123Z")).toBe(
+        join(
+          dataRoot,
+          "stories",
+          "chaos-saga",
+          "exports",
+          "chaos-saga-2026-08-21T120005.json",
+        ),
+      );
+    } finally {
+      if (saved === undefined) delete process.env.MNEMO_DATA_DIR;
+      else process.env.MNEMO_DATA_DIR = saved;
+    }
+  });
+});
+
+describe("storySlug (pure)", () => {
+  it("names the per-story exports subfolder identically to the filename slug", () => {
+    expect(storySlug("Chaos Saga")).toBe("chaos-saga");
+    expect(storySlug("Kimmy's Night Shift")).toBe("kimmy-s-night-shift");
+  });
+
+  it("shares the filename builder's id-prefix fallback", () => {
+    expect(storySlug("!!!", "11111111-2222-3333-4444-555555555555")).toBe(
+      "story-11111111",
+    );
+    expect(storySlug("!!!")).toBe("story");
   });
 });
 

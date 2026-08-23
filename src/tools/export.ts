@@ -36,8 +36,8 @@ export function registerExportTool(server: McpServer, oc: OcClient): void {
           .min(1)
           .optional()
           .describe(
-            "Destination file path. Default: <config dir>/exports/" +
-              "<story-slug>-<date>.json.",
+            "Destination file path. Default: <data dir>/stories/" +
+              "<story-slug>/exports/<story-slug>-<date>.json.",
           ),
       },
     },

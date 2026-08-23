@@ -1,6 +1,15 @@
 # Status
 
-**Last updated:** 2026-08-22 (**first generated beat on imported
+**Last updated:** 2026-08-23 (**repo-local `data/` directory, organized
+by storyline**: operational state moved out of the OS config dir into
+gitignored `<repo>/data` — `config.json` at the root plus one
+`stories/<slug>/` subtree per storyline holding `exports/` backups and
+`references/` assets, `MNEMO_DATA_DIR` override, Docker-mountable as
+persistent storage. Legacy OS-config-dir `config.json` auto-migrates
+(copy, not move) with fail-soft on a corrupt legacy file; the
+pre-commit adversarial review caught both the corrupt-legacy wedge and
+an untested default-export-path branch — fixed with regression tests.
+Previous, 2026-08-22 — **first generated beat on imported
 canon**: `mnemo_continue` against the freshly-imported Chaos Saga
 produced "Home Ground" via the Anthropic provider — full 59KB context
 (28 entities), style clauses and character voices honored, saved as
@@ -192,6 +201,28 @@ provider keys configured (143 total). See Done below for everything
 that's landed since.
 
 ## Done
+
+- **Repo-local `data/` directory, organized by storyline** (2026-08-23).
+  Operational state moved out of the OS config dir into `<repo>/data`
+  (gitignored): `data/config.json` (current-story pointer) plus one
+  `data/stories/<slug>/` subtree per storyline — `exports/` (the
+  `mnemo_export_story` default; new `storySlug()` shared by folder and
+  filename so they can't disagree) and `references/` (operator-curated
+  assets, e.g. character reference photos; never written by the
+  server). Override: `MNEMO_DATA_DIR` (empty string treated as unset;
+  must be set explicitly for an npm-installed copy, where the
+  repo-relative default would land inside node_modules). Motivation: a
+  Docker deployment bind-mounts `data/` as persistent storage instead
+  of depending on `%APPDATA%`/XDG paths that don't exist meaningfully
+  in a container. A legacy `config.json` at the old OS location
+  (`MNEMOSYNE_CONFIG_DIR` override still honored there) is
+  auto-migrated — copied, not moved — on first read, with a stderr log
+  line; a corrupt/unreadable legacy file fails soft (warn + skip, next
+  write self-heals) instead of wedging every config read — caught by
+  the pre-commit adversarial review. New pure test
+  `tests/config-data-dir.test.ts` covers dir resolution, empty-string
+  normalization, migration, migration-precedence, the
+  neither-location case, and the corrupt-legacy fail-soft escape.
 
 - **Five new generator providers: botify, anthropic, openai, gemini,
   atlascloud** (2026-08-21, late same day). `GENERATOR_PROVIDER` now
@@ -810,9 +841,13 @@ that's landed since.
 
 - **OC client:** `@modelcontextprotocol/sdk/client/streamableHttp.js`
   over Streamable HTTP. Mnemosyne is a first-class MCP client to OC.
-- **Local config:** `%APPDATA%\mnemosyne-mcp\config.json` (Windows) /
-  `~/.config/mnemosyne-mcp/config.json` (Linux/Mac). Override:
-  `MNEMOSYNE_CONFIG_DIR`. v0 holds `current_story_id` only.
+- **Local config:** `<repo>/data/config.json` (gitignored; override:
+  `MNEMO_DATA_DIR`) — repo-local so a Docker deployment can bind-mount
+  `data/` as persistent storage. Exports default to `data/exports/`.
+  The legacy OS config dir (`%APPDATA%\mnemosyne-mcp` /
+  `~/.config/mnemosyne-mcp`, override `MNEMOSYNE_CONFIG_DIR`) is
+  auto-migrated — copied, not moved — on first read. v0 holds
+  `current_story_id` only.
 - **Ollama config:** `OLLAMA_URL` (default `http://localhost:11434`),
   `OLLAMA_GENERATOR_MODEL`, `OLLAMA_VALIDATOR_MODEL` (defaults to
   generator). Plain `fetch` to `/api/chat`. No SDK dep.

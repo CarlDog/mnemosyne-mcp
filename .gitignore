@@ -52,3 +52,8 @@ coverage/
 # Scratch directory for ad-hoc test content (e.g. dump-validation.mjs
 # input files). Transient by convention.
 tmp/
+
+# Runtime data (current-story pointer + story exports). Repo-local so a
+# Docker deployment can bind-mount it as persistent storage; override
+# with MNEMO_DATA_DIR.
+data/

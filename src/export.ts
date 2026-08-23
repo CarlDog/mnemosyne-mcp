@@ -26,7 +26,7 @@ import {
   type EntityType,
   type RecalledEntity,
 } from "./entities.js";
-import { exportsDir } from "./config.js";
+import { storyDataDir } from "./config.js";
 import type { OcClient } from "./oc-client.js";
 import type { KindroidTarget, MnemoStory } from "./stories.js";
 
@@ -97,28 +97,51 @@ export function buildExportDocument(
   };
 }
 
-/** `<slugged-story-name>-<utc-timestamp>.json`. Slug keeps [a-z0-9-]
- * only so the name is safe on every filesystem the config dir can live
- * on. The timestamp is UTC to the second (matching `exported_at`, colons
- * stripped for Windows) so back-to-back exports of one story never
- * silently overwrite each other — the concrete loss scenario is
- * export-as-backup, run an import, export again "to inspect", and the
- * pre-import backup is gone. A name that slugs to nothing (e.g. entirely
- * non-Latin) falls back to the story id's prefix rather than a shared
- * "story" bucket, so two such stories can't collide either. */
+/** Filesystem-safe story slug — [a-z0-9-] only, so it works on every
+ * filesystem the data dir can live on. A name that slugs to nothing
+ * (e.g. entirely non-Latin) falls back to the story id's prefix rather
+ * than a shared "story" bucket, so two such stories can't collide.
+ * Names both the per-story exports subfolder and the file itself. */
+export function storySlug(storyName: string, storyId?: string): string {
+  return (
+    storyName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") ||
+    (storyId ? `story-${storyId.slice(0, 8)}` : "story")
+  );
+}
+
+/** `<slugged-story-name>-<utc-timestamp>.json`. The timestamp is UTC to
+ * the second (matching `exported_at`, colons stripped for Windows) so
+ * back-to-back exports of one story never silently overwrite each other
+ * — the concrete loss scenario is export-as-backup, run an import,
+ * export again "to inspect", and the pre-import backup is gone. The slug
+ * stays in the filename even though the default destination folder also
+ * carries it, so a backup remains self-identifying after being copied
+ * somewhere else. */
 export function defaultExportFilename(
   storyName: string,
   exportedAt: string,
   storyId?: string,
 ): string {
-  const slug =
-    storyName
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "") ||
-    (storyId ? `story-${storyId.slice(0, 8)}` : "story");
   const stamp = exportedAt.slice(0, 19).replace(/:/g, "");
-  return `${slug}-${stamp}.json`;
+  return `${storySlug(storyName, storyId)}-${stamp}.json`;
+}
+
+/** Default export destination:
+ * `<data dir>/stories/<slug>/exports/<filename>`. Pure (given env) so
+ * the default-path branch is unit-testable without touching OC. */
+export function defaultExportPath(
+  storyName: string,
+  exportedAt: string,
+  storyId?: string,
+): string {
+  return join(
+    storyDataDir(storySlug(storyName, storyId)),
+    "exports",
+    defaultExportFilename(storyName, exportedAt, storyId),
+  );
 }
 
 function countByType(entities: RecalledEntity[]): Record<EntityType, number> {
@@ -132,8 +155,9 @@ function countByType(entities: RecalledEntity[]): Record<EntityType, number> {
 
 /**
  * Full export orchestration: enumerate every entity, assemble the
- * document, write it to `outPath` (default: the config-dir exports
- * folder), and return the manifest the tool response surfaces. Split from
+ * document, write it to `outPath` (default: the exports/ folder under
+ * the story's own data-dir subtree, so multiple storylines' backups
+ * don't interleave), and return the manifest the tool response surfaces. Split from
  * the tool registration so the integration suite can exercise the real
  * OC-to-file path with an explicit temp destination.
  */
@@ -154,11 +178,7 @@ export async function exportStory(
   // host), and the manifest's `path` is the document's only retrieval
   // handle — it must be unambiguous.
   const path = resolve(
-    outPath ??
-      join(
-        exportsDir(),
-        defaultExportFilename(story.name, exportedAt, story.id),
-      ),
+    outPath ?? defaultExportPath(story.name, exportedAt, story.id),
   );
   await fs.mkdir(dirname(path), { recursive: true });
   await fs.writeFile(path, JSON.stringify(document, null, 2) + "\n", "utf8");

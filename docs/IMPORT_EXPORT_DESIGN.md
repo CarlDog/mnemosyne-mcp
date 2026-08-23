@@ -79,7 +79,8 @@ Serialize a story's full OC project to a versioned JSON document.
   from `entities` but **listed in the response manifest** — nothing
   silently drops.
 - Writes the document to a file (default
-  `<config dir>/exports/<story-slug>-<utc-timestamp>.json` — timestamped
+  `<data dir>/stories/<story-slug>/exports/<story-slug>-<utc-timestamp>.json`,
+  one subtree per storyline — timestamped
   to the second so back-to-back exports of one story never silently
   overwrite an earlier backup; a relative `out_path` is resolved to
   absolute, since a stdio server's cwd is unpredictable and the
