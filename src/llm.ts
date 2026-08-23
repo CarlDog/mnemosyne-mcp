@@ -58,11 +58,53 @@ export interface LlmProvider {
 export interface OllamaConfig {
   url: string;
   defaultModel: string;
+  /** Cap on the per-request context window (num_ctx). Default
+   * DEFAULT_MAX_NUM_CTX; operator-tunable via OLLAMA_NUM_CTX. */
+  maxContextWindow?: number;
 }
 
 const OLLAMA_TIMEOUT_MS = 5 * 60 * 1000;
 const DEFAULT_TEMPERATURE = 0.8;
 const DEFAULT_MAX_TOKENS = 2048;
+
+// Ollama's own default num_ctx is ~4096 — far below what a fully-imported
+// story assembles (Chaos Saga's system prompt alone is ~60KB ≈ 16k
+// tokens). A prompt past the window doesn't error: llama.cpp truncates /
+// slides, and the model generates confident word salad off a mangled
+// view of the prompt — live-observed on the first mnemo_continue against
+// a large imported story (2026-08-22). So every request sizes num_ctx to
+// its actual prompt (plus the generation budget), capped by
+// maxContextWindow. The cap matters in the other direction too: pushing
+// num_ctx far past a model's TRAINED context (e.g. a llama2-era 4k
+// model) degrades output via RoPE stretching — operators running
+// small-context models should set OLLAMA_NUM_CTX accordingly.
+const DEFAULT_MAX_NUM_CTX = 32_768;
+const MIN_NUM_CTX = 4_096;
+// Conservative prose estimate — better to over-provision KV cache than
+// to truncate: English prose runs ~3.5-4 chars/token.
+const EST_CHARS_PER_TOKEN = 3.5;
+const NUM_CTX_MARGIN_TOKENS = 256;
+
+export interface NumCtxPlan {
+  numCtx: number;
+  estPromptTokens: number;
+  /** True when the cap forced numCtx below what the prompt likely
+   * needs — the generation may degrade; the log says how to fix it. */
+  capped: boolean;
+}
+
+/** Pure sizing so it's unit-testable: fit the window to the actual
+ * request, never below Ollama's own default, never above the cap. */
+export function computeNumCtx(
+  promptChars: number,
+  numPredict: number,
+  maxContextWindow = DEFAULT_MAX_NUM_CTX,
+): NumCtxPlan {
+  const estPromptTokens = Math.ceil(promptChars / EST_CHARS_PER_TOKEN);
+  const wanted = estPromptTokens + numPredict + NUM_CTX_MARGIN_TOKENS;
+  const numCtx = Math.min(Math.max(MIN_NUM_CTX, wanted), maxContextWindow);
+  return { numCtx, estPromptTokens, capped: numCtx < wanted };
+}
 
 interface OllamaChatResponse {
   message?: { role?: string; content?: string };
@@ -79,6 +121,21 @@ export class OllamaProvider implements LlmProvider {
     const model = opts.model ?? this.config.defaultModel;
     const url = new URL("/api/chat", this.config.url);
 
+    const numPredict = opts.maxTokens ?? DEFAULT_MAX_TOKENS;
+    const ctxPlan = computeNumCtx(
+      opts.systemPrompt.length + opts.userMessage.length,
+      numPredict,
+      this.config.maxContextWindow,
+    );
+    if (ctxPlan.capped) {
+      log.warn("ollama", "prompt likely exceeds context window cap", {
+        model,
+        est_prompt_tokens: ctxPlan.estPromptTokens,
+        num_ctx: ctxPlan.numCtx,
+        hint: "raise OLLAMA_NUM_CTX (and check the model's trained context) or trim story context — a truncated prompt degenerates into word salad",
+      });
+    }
+
     const body = {
       model,
       messages: [
@@ -88,7 +145,8 @@ export class OllamaProvider implements LlmProvider {
       stream: false,
       options: {
         temperature: opts.temperature ?? DEFAULT_TEMPERATURE,
-        num_predict: opts.maxTokens ?? DEFAULT_MAX_TOKENS,
+        num_predict: numPredict,
+        num_ctx: ctxPlan.numCtx,
       },
     };
 
@@ -97,6 +155,8 @@ export class OllamaProvider implements LlmProvider {
       model,
       system_chars: opts.systemPrompt.length,
       user_chars: opts.userMessage.length,
+      num_ctx: ctxPlan.numCtx,
+      est_prompt_tokens: ctxPlan.estPromptTokens,
     });
 
     const controller = new AbortController();

@@ -1,6 +1,22 @@
 # Status
 
-**Last updated:** 2026-08-22 (**all four cloud providers live-verified**
+**Last updated:** 2026-08-22 (**first generated beat on imported
+canon**: `mnemo_continue` against the freshly-imported Chaos Saga
+produced "Home Ground" via the Anthropic provider — full 59KB context
+(28 entities), style clauses and character voices honored, saved as
+canon. The road there surfaced two findings: (1) `OllamaProvider`
+never set `num_ctx` — now auto-sized per request to the actual prompt
+(pure `computeNumCtx`, capped by new `OLLAMA_NUM_CTX`, warns when
+capped below the estimate), making the context window deterministic
+regardless of any install's defaults; (2) the desktop's local Ollama
+(0.32.15, GPU) turned out to corrupt long-context inference OUTSIDE
+mnemosyne's control — two model families produce word salad on prompts
+past ~7-8k tokens while staying perfect below ~6k, with the full
+window loaded and 100% GPU; bisected and confirmed install-level, not
+prompt-level. Local-Ollama big-story use needs that install fixed
+(update/reinstall, or try disabling flash attention) or `OLLAMA_URL`
+pointed at the NAS; cloud providers are unaffected.) Earlier: **all
+four cloud providers live-verified**
 — the operator dropped real API keys into `.env` and the env-gated
 suites lit up: Anthropic (`claude-sonnet-4-5`), OpenAI (`gpt-5.4-mini`),
 Gemini (`gemini-3.6-flash`), and Atlas Cloud
