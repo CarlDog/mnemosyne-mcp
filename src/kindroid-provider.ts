@@ -26,7 +26,7 @@
 
 import { buildCompanionMessage } from "./companion-message.js";
 import type { KindroidClient, KindroidGroupReply } from "./kindroid-client.js";
-import type { LlmGenerateOptions, LlmProvider } from "./llm.js";
+import type { GeneratedBeat, LlmGenerateOptions, LlmProvider } from "./llm.js";
 import type { ContextBundle } from "./prompt.js";
 import type { KindroidTarget } from "./stories.js";
 
@@ -152,7 +152,7 @@ export class KindroidProvider implements LlmProvider {
     private readonly config: KindroidProviderConfig,
   ) {}
 
-  async generate(opts: LlmGenerateOptions): Promise<string> {
+  async generate(opts: LlmGenerateOptions): Promise<GeneratedBeat> {
     const target = opts.kindroidTarget ?? this.config.defaultTarget;
     const message = buildKindroidMessage(
       opts.userMessage,
@@ -161,29 +161,47 @@ export class KindroidProvider implements LlmProvider {
     );
 
     if (target.type === "group") {
-      // allowUser forced false: mnemosyne is generating a story beat, not
-      // waiting on a live human's real-time turn in the group -- letting
-      // the loop hand the turn back to "the user" would just mean zero AI
-      // replies for a caller with no way to take that turn. (That
-      // precondition stops holding for a live web UI, which IS a caller
-      // that can take the turn -- see docs/WEBUI_NOTES.md section 3. Left
-      // pinned until such a caller exists: flipping it now would just
-      // produce empty beats.)
+      // allowUser defaults false -- AI-only turns, the right shape for a
+      // caller that can't take a turn (a scheduled or webhook-driven one).
+      // A conversational caller CAN take it, and passes allowUser: true to
+      // let the loop hand the floor back mid-scene. See LlmGenerateOptions
+      // for why this is per-call with no env counterpart.
       const result = await this.client.advanceGroup(target.id, message, {
         maxTurns:
           opts.groupMaxTurns ??
           this.config.groupMaxTurns ??
           DEFAULT_GROUP_MAX_TURNS,
-        allowUser: false,
+        allowUser: opts.allowUser ?? false,
       });
-      if (result.replies.length === 0) {
+
+      // Keyed on `turns`, not on replies or allowUser, because the two
+      // zero-reply cases are opposites and only `turns` separates them.
+      // turns === 0: the group yielded before anyone spoke (reachable only
+      // when allowUser is true -- kindroid-mcp's get-turn can only come
+      // back empty in that case). A legitimate outcome, not an error.
+      // turns > 0 with no replies: the turns WERE generated and persisted
+      // upstream, and only the read-back failed. Never retry that -- it
+      // would generate duplicates against a real conversation.
+      if (result.turns > 0 && result.replies.length === 0) {
+        const cause = result.read_back_error
+          ? `: ${result.read_back_error}`
+          : "";
         throw new Error(
-          `Kindroid group ${target.id} produced no AI replies for this beat.`,
+          `Kindroid group ${target.id} generated ${result.turns} ` +
+            `turn(s) but they could not be read back${cause}. Those turns ` +
+            `exist in the conversation -- do NOT retry this beat, that ` +
+            `would generate duplicates. Read the group's recent history ` +
+            `instead.`,
         );
       }
-      return formatGroupReplies(result.replies);
+
+      return {
+        text: formatGroupReplies(result.replies),
+        groupEnded: result.ended,
+        groupTurns: result.turns,
+      };
     }
 
-    return this.client.sendMessage(target.id, message);
+    return { text: await this.client.sendMessage(target.id, message) };
   }
 }

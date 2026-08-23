@@ -122,7 +122,7 @@ export async function validateContent(
     ? `Established story context:\n\n${constraints}\n\nNew content to validate:\n\n${content}\n\nReturn your verdict as JSON.`
     : `New content to validate (no established story constraints in this story yet):\n\n${content}\n\nReturn your verdict as JSON. With no constraints, you should typically return an empty issues array.`;
 
-  const raw = await validator.generate({
+  const { text: raw } = await validator.generate({
     systemPrompt: SYSTEM_PROMPT,
     userMessage,
     temperature: VALIDATOR_TEMPERATURE,

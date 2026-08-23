@@ -18,7 +18,7 @@
 
 import { buildCompanionMessage } from "./companion-message.js";
 import type { BotifyClient } from "./botify-client.js";
-import type { LlmGenerateOptions, LlmProvider } from "./llm.js";
+import type { GeneratedBeat, LlmGenerateOptions, LlmProvider } from "./llm.js";
 
 export interface BotifyProviderConfig {
   /** The dedicated storytelling chat (a Botify chat UUID -- an existing
@@ -34,8 +34,10 @@ export class BotifyProvider implements LlmProvider {
     private readonly config: BotifyProviderConfig,
   ) {}
 
-  async generate(opts: LlmGenerateOptions): Promise<string> {
+  async generate(opts: LlmGenerateOptions): Promise<GeneratedBeat> {
     const message = buildCompanionMessage(opts.userMessage, opts.context);
-    return this.client.sendMessage(this.config.defaultChatId, message);
+    return {
+      text: await this.client.sendMessage(this.config.defaultChatId, message),
+    };
   }
 }

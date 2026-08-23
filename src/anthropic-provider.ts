@@ -23,7 +23,7 @@
 
 import { llmPostJson } from "./llm-http.js";
 import { log } from "./log.js";
-import type { LlmGenerateOptions, LlmProvider } from "./llm.js";
+import type { GeneratedBeat, LlmGenerateOptions, LlmProvider } from "./llm.js";
 
 const ANTHROPIC_BASE_URL = "https://api.anthropic.com";
 const ANTHROPIC_VERSION = "2023-06-01";
@@ -81,7 +81,7 @@ export class AnthropicProvider implements LlmProvider {
 
   constructor(private readonly config: AnthropicConfig) {}
 
-  async generate(opts: LlmGenerateOptions): Promise<string> {
+  async generate(opts: LlmGenerateOptions): Promise<GeneratedBeat> {
     const body = buildAnthropicBody(this.config.defaultModel, opts);
     const start = Date.now();
     log.info(this.name, "generate", {
@@ -104,6 +104,6 @@ export class AnthropicProvider implements LlmProvider {
       ms: Date.now() - start,
       chars: text.length,
     });
-    return text;
+    return { text };
   }
 }

@@ -54,11 +54,44 @@ export interface LlmGenerateOptions {
    * by every non-Kindroid provider. Overrides KINDROID_GROUP_MAX_TURNS for
    * this call only. */
   groupMaxTurns?: number;
+  /** Let a Kindroid GROUP turn loop hand the floor back to the user
+   * (default false -- AI-only turns). When true the loop stops as soon as
+   * it is the user's turn, which is reported as `groupEnded: "user_turn"`
+   * on the result.
+   *
+   * Deliberately per-call ONLY, with no KINDROID_* env counterpart, unlike
+   * groupMaxTurns above: this is a property of the *caller*, not of the
+   * deployment. A conversational host can take the turn; a scheduled or
+   * webhook-driven caller cannot, and both may hit the same server. A
+   * server-wide default of true would hand the floor to a caller that
+   * isn't there. Don't "fix" the inconsistency. */
+  allowUser?: boolean;
+}
+
+/** What a provider returns for one beat.
+ *
+ * `text` is the beat. The `group*` fields are Kindroid-group-only telemetry
+ * about the turn loop that produced it -- every other provider omits them,
+ * so there is no per-provider semantics to invent. This widened the return
+ * type from a bare string (2026-08-23) so a caller can tell a finished beat
+ * from one the group handed back mid-scene; it deliberately does NOT touch
+ * LlmGenerateOptions, whose separate "providers ignore most fields" problem
+ * is still queued as its own redesign (see STATUS.md). */
+export interface GeneratedBeat {
+  text: string;
+  /** Kindroid group only: why the turn loop stopped. "user_turn" means the
+   * floor came back to you mid-scene -- there may still be replies in
+   * `text`. Only ever set when allowUser was true (kindroid-mcp's own
+   * get-turn can only return empty in that case). */
+  groupEnded?: "user_turn" | "max_turns";
+  /** Kindroid group only: AI turns actually generated. 0 means the group
+   * yielded immediately and `text` is empty. */
+  groupTurns?: number;
 }
 
 export interface LlmProvider {
   readonly name: string;
-  generate(opts: LlmGenerateOptions): Promise<string>;
+  generate(opts: LlmGenerateOptions): Promise<GeneratedBeat>;
 }
 
 export interface OllamaConfig {
@@ -123,7 +156,7 @@ export class OllamaProvider implements LlmProvider {
 
   constructor(private readonly config: OllamaConfig) {}
 
-  async generate(opts: LlmGenerateOptions): Promise<string> {
+  async generate(opts: LlmGenerateOptions): Promise<GeneratedBeat> {
     const model = opts.model ?? this.config.defaultModel;
     const url = new URL("/api/chat", this.config.url);
 
@@ -199,7 +232,7 @@ export class OllamaProvider implements LlmProvider {
         ms: Date.now() - start,
         chars: trimmed.length,
       });
-      return trimmed;
+      return { text: trimmed };
     } catch (err) {
       const message = describeTransportError(err);
       log.error("ollama", "generate error", {
