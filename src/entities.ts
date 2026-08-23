@@ -362,3 +362,40 @@ export async function listAllEntities(
   }
   return { entities, skipped_memory_ids: skipped };
 }
+
+export type EntitySummary = Omit<RecalledEntity, "body">;
+
+export interface ListEntitiesFilter {
+  type?: EntityType;
+  includeBody?: boolean;
+}
+
+/**
+ * Narrow a complete listAllEntities() result for mnemo_list_entities: an
+ * optional type filter, and body stripped by default. Pure/testable --
+ * body-stripping matters because a large story's complete prose can run to
+ * hundreds of KB across its scenes, and a browse/inventory caller (the
+ * entity library this exists for) usually wants the roster, not the
+ * content, until it drills into one entity. Every summary still carries
+ * created_at, so a caller can sort chronologically itself -- this
+ * deliberately does no sorting of its own, mirroring recall()'s existing
+ * "the caller composes" posture.
+ */
+export function filterListedEntities(
+  entities: RecalledEntity[],
+  filter: ListEntitiesFilter,
+): RecalledEntity[] | EntitySummary[] {
+  const filtered = filter.type
+    ? entities.filter((e) => e.type === filter.type)
+    : entities;
+  if (filter.includeBody) return filtered;
+  return filtered.map((e) => ({
+    memory_id: e.memory_id,
+    type: e.type,
+    name: e.name,
+    pinned: e.pinned,
+    tags: e.tags,
+    created_at: e.created_at,
+    updated_at: e.updated_at,
+  }));
+}

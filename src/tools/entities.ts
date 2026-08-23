@@ -1,11 +1,20 @@
-// Entity tools: mnemo_save_entity, mnemo_recall.
-// Both require an active story (mnemo_story_use must have been called).
+// Entity tools: mnemo_save_entity, mnemo_delete_entity, mnemo_recall,
+// mnemo_list_entities. All operate on the active story (mnemo_story_use)
+// unless a per-call `story` override is given.
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
-import { deleteEntity, ENTITY_TYPES, recall, saveEntity } from "../entities.js";
-import { resolveStoryId } from "../stories.js";
+import {
+  deleteEntity,
+  ENTITY_TYPES,
+  filterListedEntities,
+  listAllEntities,
+  recall,
+  saveEntity,
+} from "../entities.js";
+import { requireCurrentStoryId } from "../config.js";
+import { findStory, resolveStoryId } from "../stories.js";
 import { asText, withLogging } from "./helpers.js";
 
 const ENTITY_TYPE_DESCRIPTIONS = `Entity type. One of: ${ENTITY_TYPES.join(", ")}.`;
@@ -150,6 +159,77 @@ export function registerEntityTools(server: McpServer, oc: OcClient): void {
         const storyId = await resolveStoryId(oc, args.story);
         const entities = await recall(oc, storyId, args);
         return asText({ entities, count: entities.length });
+      },
+    ),
+  );
+
+  server.registerTool(
+    "mnemo_list_entities",
+    {
+      title: "List All Story Entities",
+      description:
+        "Complete, unranked enumeration of every entity in the active story " +
+        "-- unlike mnemo_recall (a ranked, capped semantic search), this " +
+        "returns everything, so nothing is silently left out. Every entity " +
+        "carries created_at, so a caller can sort chronologically itself; " +
+        "this tool does no sorting of its own. Body content is omitted by " +
+        "default (a large story's complete prose can run to hundreds of KB " +
+        "across its scenes) -- pass include_body=true to get it inline, or " +
+        "fetch individual entities with mnemo_recall once you know what you " +
+        "want. Also reports skipped_memory_ids: memory ids present in the " +
+        "story that are neither the story marker nor a parseable entity.",
+      inputSchema: {
+        type: z
+          .enum(ENTITY_TYPES)
+          .optional()
+          .describe(`Filter to one entity type. ${ENTITY_TYPE_DESCRIPTIONS}`),
+        include_body: z
+          .boolean()
+          .optional()
+          .describe(
+            "Include each entity's full body content. Default false -- " +
+              "omit unless you actually need the content, not just the " +
+              "inventory.",
+          ),
+        story: z
+          .string()
+          .min(1)
+          .optional()
+          .describe(STORY_OVERRIDE_DESCRIPTION),
+      },
+    },
+    withLogging(
+      "mnemo_list_entities",
+      async (args: {
+        type?: (typeof ENTITY_TYPES)[number];
+        include_body?: boolean;
+        story?: string;
+      }) => {
+        const nameOrId = args.story ?? (await requireCurrentStoryId());
+        const story = await findStory(oc, nameOrId);
+        if (!story) {
+          return asText(
+            {
+              error: "story_not_found",
+              message: `No story matches "${nameOrId}". Use mnemo_story_list to see what exists.`,
+            },
+            { isError: true },
+          );
+        }
+        const result = await listAllEntities(
+          oc,
+          story.id,
+          story.marker_memory_id,
+        );
+        const entities = filterListedEntities(result.entities, {
+          type: args.type,
+          includeBody: args.include_body,
+        });
+        return asText({
+          entities,
+          count: entities.length,
+          skipped_memory_ids: result.skipped_memory_ids,
+        });
       },
     ),
   );

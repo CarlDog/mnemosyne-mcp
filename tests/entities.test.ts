@@ -5,10 +5,12 @@ import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import type { OcClient } from "../src/oc-client.js";
 import {
   deleteEntity,
+  filterListedEntities,
   parseEntityContent,
   recall,
   retagValidation,
   saveEntity,
+  type RecalledEntity,
 } from "../src/entities.js";
 import { setupTestStory, teardownStory } from "./helpers.js";
 
@@ -38,6 +40,70 @@ describe("entities — pure", () => {
     ).toBeNull();
     expect(parseEntityContent("Random text with no header")).toBeNull();
     expect(parseEntityContent("[BadType] Name\n\nbody")).toBeNull();
+  });
+});
+
+describe("filterListedEntities (pure)", () => {
+  const character: RecalledEntity = {
+    type: "character",
+    name: "Aria Voss",
+    body: "A weathered cartographer.",
+    memory_id: "mem-char",
+    pinned: false,
+    tags: ["mnemosyne", "story", "character"],
+    created_at: "2026-01-01T00:00:00Z",
+  };
+  const scene: RecalledEntity = {
+    type: "scene",
+    name: "Scene 2026-01-02T00:00:00.000Z",
+    body: "A long generated beat that could run to thousands of words.",
+    memory_id: "mem-scene",
+    pinned: false,
+    tags: ["mnemosyne", "story", "scene"],
+    created_at: "2026-01-02T00:00:00Z",
+    updated_at: "2026-01-02T00:00:00Z",
+  };
+  const entities = [character, scene];
+
+  it("strips body by default", () => {
+    const result = filterListedEntities(entities, {});
+    expect(result).toHaveLength(2);
+    for (const e of result) {
+      expect(e).not.toHaveProperty("body");
+    }
+    // Every other field survives the strip.
+    expect(result[0]).toMatchObject({
+      memory_id: "mem-char",
+      type: "character",
+      name: "Aria Voss",
+      pinned: false,
+      tags: character.tags,
+      created_at: character.created_at,
+    });
+  });
+
+  it("keeps body when includeBody is true", () => {
+    const result = filterListedEntities(entities, { includeBody: true });
+    expect(result).toEqual(entities);
+  });
+
+  it("filters to one type", () => {
+    const result = filterListedEntities(entities, {
+      type: "scene",
+      includeBody: true,
+    });
+    expect(result).toEqual([scene]);
+  });
+
+  it("filter and body-strip compose", () => {
+    const result = filterListedEntities(entities, { type: "character" });
+    expect(result).toHaveLength(1);
+    expect(result[0]).not.toHaveProperty("body");
+    expect(result[0]).toMatchObject({ name: "Aria Voss" });
+  });
+
+  it("returns an empty array, not undefined, when nothing matches", () => {
+    expect(filterListedEntities(entities, { type: "lore" })).toEqual([]);
   });
 });
 
