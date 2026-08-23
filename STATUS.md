@@ -1313,8 +1313,12 @@ real use and pressure points emerge:
 
 ## Known Gaps
 
-- No CI yet. Add when v0 lands and there's a stable surface to gate.
-- No Dockerfile yet (deferred per scaffolding decision).
+- ~~No CI yet~~ — stale. CI has existed since 2026-07-23 (`test.yml`,
+  typecheck/build/test matrixed across ubuntu/windows/macos) and 2026-08-01
+  (`gitleaks.yml`); a `quality` job runs lint + format check. Verified green
+  against the actual GitHub Actions runs (not a local proxy) on 2026-08-23.
+- No Dockerfile yet (deferred per scaffolding decision; confirmed still
+  true 2026-08-23).
 - **Recent scenes ordering** — `gatherContext` pulls scenes via
   `memory_search` ranked by relevance to the user's direction, not
   strict recency. OC's `memory_search` exposes no `order_by` parameter
