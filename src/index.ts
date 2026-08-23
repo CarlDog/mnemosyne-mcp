@@ -5,7 +5,12 @@ import { log } from "./log.js";
 import { OcClient } from "./oc-client.js";
 import { OllamaProvider, type LlmProvider } from "./llm.js";
 import { KindroidClient } from "./kindroid-client.js";
-import { KindroidProvider } from "./kindroid-provider.js";
+import {
+  DEFAULT_GROUP_MAX_TURNS,
+  KindroidProvider,
+  MAX_GROUP_MAX_TURNS,
+  MIN_GROUP_MAX_TURNS,
+} from "./kindroid-provider.js";
 import { BotifyClient } from "./botify-client.js";
 import { BotifyProvider } from "./botify-provider.js";
 import { AnthropicProvider } from "./anthropic-provider.js";
@@ -107,6 +112,7 @@ type GeneratorConfig =
       url: URL;
       rawUrl: string;
       defaultTarget: KindroidTarget;
+      groupMaxTurns?: number;
     }
   | { provider: "botify"; url: URL; rawUrl: string; chatId: string }
   | {
@@ -168,6 +174,26 @@ if (GENERATOR_PROVIDER === "kindroid") {
   const defaultTarget: KindroidTarget = KINDROID_STORYTELLING_KIN
     ? { type: "ai", id: KINDROID_STORYTELLING_KIN }
     : { type: "group", id: KINDROID_STORYTELLING_GROUP! };
+
+  // Server-wide default AI turns per group beat. `||` not `??`: an MCP host
+  // injects "" for a blank config field, which must read as unset.
+  const rawGroupMaxTurns = process.env.KINDROID_GROUP_MAX_TURNS || undefined;
+  let groupMaxTurns: number | undefined;
+  if (rawGroupMaxTurns !== undefined) {
+    groupMaxTurns = Number(rawGroupMaxTurns);
+    if (
+      !Number.isInteger(groupMaxTurns) ||
+      groupMaxTurns < MIN_GROUP_MAX_TURNS ||
+      groupMaxTurns > MAX_GROUP_MAX_TURNS
+    ) {
+      log.error(
+        "startup",
+        `KINDROID_GROUP_MAX_TURNS must be an integer between ${MIN_GROUP_MAX_TURNS} and ${MAX_GROUP_MAX_TURNS}`,
+        { value: rawGroupMaxTurns },
+      );
+      process.exit(1);
+    }
+  }
   ollamaValidatorModel = requireValidatorModel("kindroid");
 
   let kindroidUrl: URL;
@@ -186,6 +212,7 @@ if (GENERATOR_PROVIDER === "kindroid") {
     url: kindroidUrl,
     rawUrl: KINDROID_MCP_URL,
     defaultTarget,
+    groupMaxTurns,
   };
 } else if (GENERATOR_PROVIDER === "botify") {
   const BOTIFY_MCP_URL = process.env.BOTIFY_MCP_URL;
@@ -343,11 +370,13 @@ if (generatorConfig.provider === "kindroid") {
   );
   generator = new KindroidProvider(kindroidClient, {
     defaultTarget: generatorConfig.defaultTarget,
+    groupMaxTurns: generatorConfig.groupMaxTurns,
   });
   log.info("startup", "kindroid generator configured", {
     url: generatorConfig.rawUrl,
     target_type: generatorConfig.defaultTarget.type,
     target_id: generatorConfig.defaultTarget.id,
+    group_max_turns: generatorConfig.groupMaxTurns ?? DEFAULT_GROUP_MAX_TURNS,
     auth: process.env.KINDROID_MCP_AUTH_TOKEN ? "bearer" : "none",
   });
 } else if (generatorConfig.provider === "botify") {

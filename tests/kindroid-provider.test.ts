@@ -17,7 +17,10 @@ import {
   type KindroidGroupReply,
 } from "../src/kindroid-client.js";
 import {
+  DEFAULT_GROUP_MAX_TURNS,
   KindroidProvider,
+  MAX_GROUP_MAX_TURNS,
+  MIN_GROUP_MAX_TURNS,
   buildKindroidMessage,
   resolveKindroidTarget,
   formatGroupReplies,
@@ -281,6 +284,86 @@ describe("formatGroupReplies (pure)", () => {
 
   it("returns an empty string for no replies", () => {
     expect(formatGroupReplies([])).toBe("");
+  });
+});
+
+// Group max-turns precedence, exercised against a stub client -- pure, no
+// network. The real-kindroid suite below can't assert this: advanceGroup's
+// result carries `turns`, but a group loop can legitimately end early on
+// `user_turn`, so a live assertion on the number would be flaky. What
+// matters is which value the provider HANDS to the client, and that is
+// deterministic.
+describe("group max turns (stubbed client)", () => {
+  const GROUP: KindroidTarget = { type: "group", id: "grp-1" };
+
+  function stubProvider(configTurns?: number): {
+    provider: KindroidProvider;
+    seen: () => number | undefined;
+  } {
+    let seen: number | undefined;
+    const client = {
+      advanceGroup: (
+        _id: string,
+        _message: string,
+        opts?: { maxTurns?: number; allowUser?: boolean },
+      ) => {
+        seen = opts?.maxTurns;
+        return Promise.resolve({
+          replies: [
+            { sender: "ai", message: "ok", display_name: "Riley" },
+          ] as KindroidGroupReply[],
+          ended: "max_turns" as const,
+          turns: 1,
+        });
+      },
+    } as unknown as KindroidClient;
+
+    return {
+      provider: new KindroidProvider(client, {
+        defaultTarget: GROUP,
+        groupMaxTurns: configTurns,
+      }),
+      seen: () => seen,
+    };
+  }
+
+  it("falls back to the default when neither config nor call sets it", async () => {
+    const { provider, seen } = stubProvider();
+    await provider.generate({ systemPrompt: "", userMessage: "go" });
+    expect(seen()).toBe(DEFAULT_GROUP_MAX_TURNS);
+  });
+
+  it("uses the server-wide config value when no per-call override is given", async () => {
+    const { provider, seen } = stubProvider(7);
+    await provider.generate({ systemPrompt: "", userMessage: "go" });
+    expect(seen()).toBe(7);
+  });
+
+  it("a per-call groupMaxTurns beats the server-wide config value", async () => {
+    const { provider, seen } = stubProvider(7);
+    await provider.generate({
+      systemPrompt: "",
+      userMessage: "go",
+      groupMaxTurns: 2,
+    });
+    expect(seen()).toBe(2);
+  });
+
+  it("a per-call groupMaxTurns applies with no config value set", async () => {
+    const { provider, seen } = stubProvider();
+    await provider.generate({
+      systemPrompt: "",
+      userMessage: "go",
+      groupMaxTurns: 8,
+    });
+    expect(seen()).toBe(8);
+  });
+
+  it("the documented bounds match kindroid_advance_group's own schema", () => {
+    expect(MIN_GROUP_MAX_TURNS).toBe(1);
+    expect(MAX_GROUP_MAX_TURNS).toBe(8);
+    expect(DEFAULT_GROUP_MAX_TURNS).toBeGreaterThanOrEqual(MIN_GROUP_MAX_TURNS);
+    expect(DEFAULT_GROUP_MAX_TURNS).toBeLessThanOrEqual(MAX_GROUP_MAX_TURNS);
   });
 });
 

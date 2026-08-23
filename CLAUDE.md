@@ -171,9 +171,14 @@ Key architectural decisions (see ARCHITECTURE.md for full reasoning):
   tool) with `allowUser: false` forced — mnemosyne is generating a story
   beat, not waiting on a live human's real-time turn in the chat, so
   letting the loop hand the turn back to "the user" would just produce zero
-  AI replies for a caller with no way to take that turn. `maxTurns`
-  defaults to 4 (matching kindroid-mcp's own default; not yet configurable
-  — a cheap follow-up if needed). The turn loop's replies are joined into a
+  AI replies for a caller with no way to take that turn — a precondition
+  that stops holding for a live web UI, which *is* a caller that can take
+  the turn (docs/WEBUI_NOTES.md §3); left pinned until such a caller
+  exists, since flipping it now would only produce empty beats. `maxTurns`
+  is configurable (2026-08-23): server-wide via `KINDROID_GROUP_MAX_TURNS`
+  and per call via `mnemo_continue`'s `group_max_turns`, defaulting to 4
+  and bounded 1–8 to mirror `kindroid_advance_group`'s own schema rather
+  than invent a range. Single-AI targets ignore it entirely. The turn loop's replies are joined into a
   single beat string by `formatGroupReplies()` — one `"Name: message"` line
   per speaker, in generation order — since a "beat" against a group
   naturally involves a few characters exchanging lines, and `LlmProvider`'s

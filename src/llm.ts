@@ -48,6 +48,12 @@ export interface LlmGenerateOptions {
    * chat), taking precedence over the provider's configured/story-bound
    * default. OllamaProvider ignores this. */
   kindroidTarget?: KindroidTarget;
+  /** How many AI turns a Kindroid GROUP target generates for this beat
+   * (1-8, mirroring kindroid_advance_group's own bound). Meaningless for a
+   * single-AI target, which always produces exactly one reply, and ignored
+   * by every non-Kindroid provider. Overrides KINDROID_GROUP_MAX_TURNS for
+   * this call only. */
+  groupMaxTurns?: number;
 }
 
 export interface LlmProvider {

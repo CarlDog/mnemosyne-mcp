@@ -24,7 +24,12 @@ import {
   findStory,
   type KindroidTarget,
 } from "../stories.js";
-import { resolveKindroidTarget } from "../kindroid-provider.js";
+import {
+  DEFAULT_GROUP_MAX_TURNS,
+  MAX_GROUP_MAX_TURNS,
+  MIN_GROUP_MAX_TURNS,
+  resolveKindroidTarget,
+} from "../kindroid-provider.js";
 import {
   validateContent,
   classifyVerdict,
@@ -99,6 +104,15 @@ export function registerContinueTool(
           .describe(
             "Kindroid per-call override (GENERATOR_PROVIDER=kindroid only): target this specific AI (a raw ai_id or a kindroid-mcp registered name) for this call only. Mutually exclusive with kindroid_group_id. Precedence: this override, then the active story's own bound target (see mnemo_story_use's kindroid_kin/kindroid_group_id params), then the server-wide KINDROID_STORYTELLING_KIN/KINDROID_STORYTELLING_GROUP default.",
           ),
+        group_max_turns: z
+          .number()
+          .int()
+          .min(MIN_GROUP_MAX_TURNS)
+          .max(MAX_GROUP_MAX_TURNS)
+          .optional()
+          .describe(
+            `How many AI turns a Kindroid GROUP target generates for this beat (${MIN_GROUP_MAX_TURNS}-${MAX_GROUP_MAX_TURNS}, default ${DEFAULT_GROUP_MAX_TURNS}) -- a longer exchange between the kins, not a longer single reply. Note this is turns, NOT tokens: max_tokens above is the unrelated generation-length cap. No effect on a single-AI Kindroid target (always exactly one reply) or on any other provider. Overrides KINDROID_GROUP_MAX_TURNS for this call only.`,
+          ),
         kindroid_group_id: z
           .string()
           .optional()
@@ -123,6 +137,7 @@ export function registerContinueTool(
         model?: string;
         kindroid_kin?: string;
         kindroid_group_id?: string;
+        group_max_turns?: number;
         validate?: boolean;
       }) => {
         const storyId = await requireCurrentStoryId();
@@ -159,6 +174,7 @@ export function registerContinueTool(
           model: args.model,
           context,
           kindroidTarget,
+          groupMaxTurns: args.group_max_turns,
         });
 
         // Guard the save: the beat is an expensive LLM generation, and a
