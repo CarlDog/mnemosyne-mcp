@@ -57,7 +57,12 @@ export function registerContinueTool(
           .string()
           .min(1)
           .describe(
-            "What should happen next. The user's prompt for the scene.",
+            "What should happen next. The user's prompt for the scene. " +
+              "When it narrates an in-fiction event or action (not a bare " +
+              'meta-instruction like "continue the scene"), phrase it the ' +
+              "same way generated beats are: physical action in *asterisks*, " +
+              "dialogue plain -- so the direction and the beat it produces " +
+              "read as one consistent voice, not two.",
           ),
         mode: z
           .enum(MODES)
