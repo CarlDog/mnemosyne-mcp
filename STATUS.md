@@ -306,11 +306,47 @@ that's landed since.
   `buildKindroidMessage`; `KindroidProviderConfig.userName` plumbing
   end-to-end against a stubbed client; the asterisk statement present in
   all three modes) — 142/142 passing, typecheck/lint/format clean.
-  **Not done here, and worth noting:** the `MNEMO_USER_NAME`-equivalent
-  live verification against a real Botify bot, and any defensive handling
-  for a Kin echoing the bracketed header back in a reply (speculative until
-  actually observed in this repo's own logs, per the research's own
-  caveat).
+  **Live-verified against a real Botify bot the same day.** Sent two
+  `[Mnemosyne — automated scene direction, not Carl typing]`-prefixed
+  directions into a real ongoing chat via the browser (a standard
+  companion-style bot with a normal back-and-forth text reply — one of
+  Botify's image-generation "Experience" bots was tried first and rejected:
+  it turned every message into a photo-generation action with no comparable
+  text reply to inspect). Both replies wove the direction in as a scene
+  event rather than reading it as Carl talking (no confusion about who
+  "Mnemosyne" was, no echo of the header back, and the second reply
+  correctly carried continuity from the first — "a localized power
+  fluctuation **and** a sitewide lockdown simultaneously"), and both used
+  asterisks for action / plain text for dialogue **unprompted** — closing
+  the one gap the original research couldn't reach (Botify's docs and
+  community were unreachable to that research; genre analogy was the best
+  available evidence until this). Two clean exchanges is proportionate
+  confirmation, not exhaustive — the echo-back risk Kindroid users report
+  after *repeated* exposure remains unobserved either way and still
+  warrants watching for in real use, not defensive code written against a
+  failure mode that hasn't happened.
+  **Corroborating detail, pulled from Botify's own rendered DOM (not
+  guessed):** the client parses `*asterisk*` spans into a
+  `message__text_italic` CSS class and colors it context-dependently —
+  solid purple in the operator's own bubble, translucent grey in the bot's
+  reply bubble by default, except the *first* action span of each bot
+  reply, which carries an extra `message__text_magic-glow` modifier that
+  forces it back to solid purple (a deliberate "spotlight the opening
+  action" visual hierarchy, not a color accident). This confirms
+  asterisk-delimited action text is a first-class, client-recognized
+  convention on Botify, not just an incidental pattern the model happens to
+  produce.
+  **A second, adjacent gap closed the same day:** `mnemo_continue`'s
+  `direction` field never told the calling LLM to phrase in-fiction
+  narration using the asterisk convention — caught live when a hand-written
+  test direction ("The guard's radio crackles...") was sent as plain prose,
+  breaking the very consistency the header + `prompt.ts` changes above
+  exist to establish. The `direction` schema description now says so
+  explicitly. Deliberately a schema-description fix, not a code
+  transformation: `direction` can also be a bare meta-instruction ("continue
+  the scene") that asterisk-wrapping would corrupt, and it may already mix
+  dialogue with action — only the caller can tell which, so this guides
+  the caller rather than blindly reformatting their input.
 
 - **A timed-out Kindroid call no longer looks like a failed one**
   (2026-08-23). Found by running a real group beat, not by review. On a group
