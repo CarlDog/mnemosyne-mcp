@@ -5,10 +5,11 @@
 
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import {
   buildExportDocument,
+  buildStoryIndex,
   defaultExportFilename,
   defaultExportPath,
   storySlug,
@@ -164,6 +165,21 @@ describe("defaultExportPath (pure)", () => {
   });
 });
 
+describe("buildStoryIndex (pure)", () => {
+  it("captures the slug↔story join and nothing derivable", () => {
+    expect(buildStoryIndex(STORY, "2026-08-23T05:00:00.000Z")).toEqual({
+      mnemosyne_story: 1,
+      story: {
+        id: STORY.id,
+        name: "Dovecoast",
+        created_at: STORY.created_at,
+      },
+      slug: "dovecoast",
+      updated_at: "2026-08-23T05:00:00.000Z",
+    });
+  });
+});
+
 describe("storySlug (pure)", () => {
   it("names the per-story exports subfolder identically to the filename slug", () => {
     expect(storySlug("Chaos Saga")).toBe("chaos-saga");
@@ -290,6 +306,33 @@ suite("exportStory (integration, real OC)", () => {
     // backdate via OC's memory_save.
     for (const entity of doc.entities) {
       expect(entity.created_at).toBeTruthy();
+    }
+  }, 60_000);
+
+  it("default-path export lands in stories/<slug>/exports and refreshes story.json", async () => {
+    const story = await findStory(oc, storyId);
+    expect(story).not.toBeNull();
+
+    const savedEnv = process.env.MNEMO_DATA_DIR;
+    const dataRoot = await mkdtemp(join(tmpdir(), "mnemo-data-"));
+    process.env.MNEMO_DATA_DIR = dataRoot;
+    try {
+      const manifest = await exportStory(oc, story!);
+
+      const storyRoot = dirname(dirname(manifest.path));
+      expect(dirname(storyRoot)).toBe(join(dataRoot, "stories"));
+      expect(basename(dirname(manifest.path))).toBe("exports");
+
+      const index = JSON.parse(
+        await readFile(join(storyRoot, "story.json"), "utf8"),
+      ) as { mnemosyne_story: number; story: { id: string }; slug: string };
+      expect(index.mnemosyne_story).toBe(1);
+      expect(index.story.id).toBe(storyId);
+      expect(index.slug).toBe(basename(storyRoot));
+    } finally {
+      if (savedEnv === undefined) delete process.env.MNEMO_DATA_DIR;
+      else process.env.MNEMO_DATA_DIR = savedEnv;
+      await rm(dataRoot, { recursive: true, force: true });
     }
   }, 60_000);
 });

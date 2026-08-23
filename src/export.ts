@@ -129,6 +129,29 @@ export function defaultExportFilename(
   return `${storySlug(storyName, storyId)}-${stamp}.json`;
 }
 
+/** The story-root identity card (docs/DATA_LAYOUT.md): the slug↔story
+ * join a machine reader cannot derive from the filesystem — storySlug()
+ * is lossy — and deliberately nothing more (a file enumeration would
+ * drift; readdir is the index). */
+export interface StoryIndex {
+  mnemosyne_story: 1;
+  story: { id: string; name: string; created_at: string };
+  slug: string;
+  updated_at: string;
+}
+
+export function buildStoryIndex(
+  story: MnemoStory,
+  updatedAt: string,
+): StoryIndex {
+  return {
+    mnemosyne_story: 1,
+    story: { id: story.id, name: story.name, created_at: story.created_at },
+    slug: storySlug(story.name, story.id),
+    updated_at: updatedAt,
+  };
+}
+
 /** Default export destination:
  * `<data dir>/stories/<slug>/exports/<filename>`. Pure (given env) so
  * the default-path branch is unit-testable without touching OC. */
@@ -177,11 +200,23 @@ export async function exportStory(
   // server process's cwd happens to be (unpredictable under a stdio
   // host), and the manifest's `path` is the document's only retrieval
   // handle — it must be unambiguous.
+  const isDefaultDestination = outPath === undefined;
   const path = resolve(
     outPath ?? defaultExportPath(story.name, exportedAt, story.id),
   );
   await fs.mkdir(dirname(path), { recursive: true });
   await fs.writeFile(path, JSON.stringify(document, null, 2) + "\n", "utf8");
+  if (isDefaultDestination) {
+    // Refresh the story-root identity card alongside default-path
+    // exports only — an explicit out_path export (e.g. a test writing
+    // to a temp dir) stays free of data-dir side effects. The exports/
+    // mkdir above already created the story root this lands in.
+    await fs.writeFile(
+      join(storyDataDir(storySlug(story.name, story.id)), "story.json"),
+      JSON.stringify(buildStoryIndex(story, exportedAt), null, 2) + "\n",
+      "utf8",
+    );
+  }
   return {
     path,
     schema: EXPORT_SCHEMA_VERSION,
