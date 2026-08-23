@@ -355,7 +355,7 @@ Same tiering as media (§6): Off / Manual / Suggested / Auto.
 | Botify — group turn triad (auto / random / nominate) | Who speaks next | §3, storyline plane |
 | Botify — cost printed on the button | Spend is a surprise | §6, and provider/token estimates generally |
 | Botify — contextual action chips | The blank-page problem | §3, driven by the canon's own open threads |
-| Botify — narration vs dialogue styled differently in one bubble | Prose is a wall | Render the asterisk convention our style guides already mandate |
+| Botify — narration vs dialogue styled differently in one bubble, and (operator preference, 2026-08-23) split-level italics within a single reply — the *first* asterisk-action gets a spotlighted accent color, later ones in the same reply fall back to a quieter muted tone | Prose is a wall; every action beat competing equally for attention is still a wall | Render the asterisk convention our style guides already mandate, **and** carry the same two-tier hierarchy: the reply's first action beat gets the accent treatment, subsequent ones recede — confirmed as a real, named platform mechanism (`message__text_italic` / `message__text_magic-glow`) via DOM inspection, not a rendering coincidence (see STATUS.md's live Botify probe, 2026-08-23) |
 | Ours — the Chaos Saga reader artifact | — | Already audience mode; adopt it wholesale |
 
 ---
