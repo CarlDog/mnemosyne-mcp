@@ -21,7 +21,7 @@ import type { OcClient } from "../oc-client.js";
 import type { LlmProvider } from "../llm.js";
 import { gatherContext } from "../prompt.js";
 import { validateContent } from "../validator.js";
-import { requireCurrentStoryId } from "../config.js";
+import { resolveStoryId } from "../stories.js";
 import { log } from "../log.js";
 import { asText, withLogging } from "./helpers.js";
 
@@ -43,26 +43,40 @@ export function registerValidateTool(
           .describe(
             "The text to validate. Can be a paragraph, a full scene, or any prose excerpt.",
           ),
+        story: z
+          .string()
+          .min(1)
+          .optional()
+          .describe(
+            "Story name or OC project UUID. Overrides the active story for this call only; omit to use the active story (mnemo_story_use).",
+          ),
       },
     },
-    withLogging("mnemo_validate", async (args: { content: string }) => {
-      const storyId = await requireCurrentStoryId();
-      // Reuse continue's gatherContext so the validator sees the same
-      // shape of context. The validator only consumes rules / style /
-      // characters / locations; the rest of the bundle is harmlessly
-      // ignored by validateContent.
-      const context = await gatherContext(oc, storyId, args.content);
-      // Guard the validator pass: a validator-LLM failure or non-JSON
-      // output degrades to a structured error instead of a raw MCP tool
-      // error — symmetric with mnemo_continue's validation_error field.
-      try {
-        const report = await validateContent(validator, context, args.content);
-        return asText(report);
-      } catch (err) {
-        const msg = (err as Error).message;
-        log.warn("mnemo_validate", "validation pass failed", { msg });
-        return asText({ validation_error: msg });
-      }
-    }),
+    withLogging(
+      "mnemo_validate",
+      async (args: { content: string; story?: string }) => {
+        const storyId = await resolveStoryId(oc, args.story);
+        // Reuse continue's gatherContext so the validator sees the same
+        // shape of context. The validator only consumes rules / style /
+        // characters / locations; the rest of the bundle is harmlessly
+        // ignored by validateContent.
+        const context = await gatherContext(oc, storyId, args.content);
+        // Guard the validator pass: a validator-LLM failure or non-JSON
+        // output degrades to a structured error instead of a raw MCP tool
+        // error — symmetric with mnemo_continue's validation_error field.
+        try {
+          const report = await validateContent(
+            validator,
+            context,
+            args.content,
+          );
+          return asText(report);
+        } catch (err) {
+          const msg = (err as Error).message;
+          log.warn("mnemo_validate", "validation pass failed", { msg });
+          return asText({ validation_error: msg });
+        }
+      },
+    ),
   );
 }
