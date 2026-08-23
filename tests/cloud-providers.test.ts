@@ -236,11 +236,13 @@ describe("buildCompanionMessage ↔ buildKindroidMessage equivalence", () => {
 // setting the env vars is the opt-in.
 // ---------------------------------------------------------------------------
 
+// Deliberately NO temperature/maxTokens: the pass-through posture means
+// omitting them is the path every model accepts (reasoning-era models
+// reject the fields, and a tight cap would starve a thinking model's
+// budget). Cost is bounded by the prompt asking for a one-word reply.
 const LIVE_OPTS: LlmGenerateOptions = {
   systemPrompt: "You are a terse assistant. Reply with a single short word.",
   userMessage: "Say hello.",
-  maxTokens: 20,
-  temperature: 0,
 };
 
 const anthropicSuite =

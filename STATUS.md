@@ -1,7 +1,18 @@
 # Status
 
-**Last updated:** 2026-08-21 (late same day: **five new generator
-providers** — `botify` (MCP client to botify-mcp, the companion-chat
+**Last updated:** 2026-08-22 (**all four cloud providers live-verified**
+— the operator dropped real API keys into `.env` and the env-gated
+suites lit up: Anthropic (`claude-sonnet-4-5`), OpenAI (`gpt-5.4-mini`),
+Gemini (`gemini-3.6-flash`), and Atlas Cloud
+(`deepseek-ai/deepseek-v4-flash`) each completed a real generation
+round-trip. One live finding, and it validated a day-old design
+decision within hours: Google has retired `gemini-2.5-flash` for new
+users — the explicit-model-required posture surfaced it as a clean,
+self-explanatory 404 naming the replacement rather than a silently
+wrong baked-in default. The live test options also stopped sending
+temperature/max_tokens, matching the pass-through posture. Botify
+remains env-gated pending the operator picking a storytelling chat
+UUID. Earlier (2026-08-21, late): **five new generator providers** — `botify` (MCP client to botify-mcp, the companion-chat
 pattern shared with Kindroid via a new extracted
 `companion-message.ts` builder), plus direct-API `anthropic`, `openai`,
 `gemini`, and `atlascloud` (the OpenAI-compatible pair share one class;
@@ -224,7 +235,8 @@ that's landed since.
     a companion-message ↔ buildKindroidMessage equivalence check) + 5
     env-gated live suites that skip until the operator sets the
     relevant key — setting a key is the opt-in, and live verification
-    happens per provider as keys arrive. Two more review catches
+    happens per provider as keys arrive (**all four cloud providers
+    live-verified 2026-08-22**, see Last-updated). Two more review catches
     hardened the MCP-client path for everyone: `extractBotReply`
     distinguishes "inference ran but produced no text" (bot_message
     null — don't blame the app token) from "inference never attempted",
