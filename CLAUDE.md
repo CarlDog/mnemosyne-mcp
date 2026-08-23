@@ -9,26 +9,23 @@ into this file, MEMORY.md, or Serena memories — reference STATUS.md.
 
 ## Current Sprint
 
-See [STATUS.md](STATUS.md). Current: v0.1.3 shipped (validator-gated
-scene inclusion — fix for the few-shot-vs-rule diagnostic from the
-Dovecoast smoke test). Phase 6 (Kindroid generator bridge) is shipped
-and live-verified against a dedicated test kin. Per-story Kindroid
-target binding (AI or group chat) landed via
-`mnemo_story_use`/`mnemo_continue`, resolved through
-`resolveKindroidTarget()` — both the single-AI and group-chat paths are
-now live-verified (2026-08-12) against real Kindroid targets. That
-live verification surfaced a same-speaker-repeats problem in group
-chats, now fixed via a conversation nudge pointing kins at Kindroid's
-documented `@Name` turn-handoff mechanism (2026-08-12) — see
-"Kindroid generator" below and STATUS.md's Done log. Latest: the
-import/export family is complete (2026-08-21) — design ratified
-(docs/IMPORT_EXPORT_DESIGN.md: classification happens caller-side in
-the host conversation; the server is a typed batch writer), both
-`mnemo_export_story` and `mnemo_import_story` shipped and round-trip
-live-verified, and the mapping playbook + seed templates shipped as
-docs (docs/IMPORT_PLAYBOOK.md, docs/SEED_TEMPLATES.md). Next: the
-curated imports of the four original ChatGPT projects — interactive
-sessions applying the playbook, not development work.
+See [STATUS.md](STATUS.md). The curated-import campaign is complete
+(2026-08-23) — five live stories, ~369 entities, all four original
+ChatGPT projects plus a new fifth story (Shadowflame). Latest:
+outgoing companion-chat messages now carry a provenance header
+(`[Mnemosyne — automated scene direction, not Carl typing]`, new
+`MNEMO_USER_NAME` env var) so an automated `mnemo_continue` direction
+never reads as the operator typing in Kindroid/Botify's own chat
+history — wording researched against Kindroid/AI Dungeon docs and
+community convention, not guessed; plex-companion's own equivalent
+header needed zero changes, it was the reference implementation.
+Paired with a `prompt.ts` change stating the asterisk-for-action /
+plain-dialogue convention in every mode directive, so the five
+direct-LLM providers' generated output stays visually consistent with
+the wider companion-chat convention. See STATUS.md's Done log for the
+full writeup. Not yet done: a live Botify probe of the same convention
+(the research found no reachable Botify docs/community to confirm
+against).
 
 ## Stack
 

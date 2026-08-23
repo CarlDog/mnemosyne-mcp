@@ -168,6 +168,24 @@ function block(header: string, entries: string[]): string | null {
   return `=== ${header} ===\n${safe.join("\n\n")}`;
 }
 
+// Appended to every mode directive so mnemosyne's own generated output
+// (the five direct-LLM providers -- Kindroid/Botify ignore systemPrompt
+// entirely and format replies per their own persona config) stays
+// visually consistent with the wider companion-chat convention: Kindroid's
+// own docs document exactly this split for a Kin's Example Message
+// ("actions in asterisks, speech in quotes"), and cross-platform research
+// (2026-08-23) found no surveyed convention ever collides action-asterisks
+// with bracket/OOC markup. Consistency is the point, not just style --
+// making generated output uniform across every generator this project
+// supports makes a bad reaction easier to attribute to a specific
+// generator rather than to inconsistent formatting. Phrased descriptively
+// ("X are written in Y"), not as an imperative directive -- Kindroid's own
+// docs warn imperative phrasing (e.g. "narrate in 3rd person") over-triggers
+// into unwanted narration walls; RULES/STYLE below can still override it
+// per RULE_PRECEDENCE_STATEMENT, same as any other narration convention.
+const ACTION_FORMATTING_STATEMENT =
+  "Physical actions are written in *asterisks*; spoken dialogue stays plain text.";
+
 // Inserted between the mode directive and the constraint blocks when the
 // story has rules or style entries. The mode directives use action verbs
 // ("Narrate actions, describe the environment...") that the LLM tends to
@@ -182,7 +200,7 @@ const RULE_PRECEDENCE_STATEMENT =
 export function buildSystemPrompt(mode: Mode, context: ContextBundle): string {
   const hasConstraints = context.rules.length > 0 || context.style.length > 0;
   const parts: (string | null)[] = [
-    MODE_DIRECTIVES[mode],
+    `${MODE_DIRECTIVES[mode]} ${ACTION_FORMATTING_STATEMENT}`,
     hasConstraints ? RULE_PRECEDENCE_STATEMENT : null,
     block("RULES", context.rules),
     block("STYLE", context.style),

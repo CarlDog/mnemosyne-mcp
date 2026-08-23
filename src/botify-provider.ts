@@ -24,6 +24,9 @@ export interface BotifyProviderConfig {
   /** The dedicated storytelling chat (a Botify chat UUID -- an existing
    * chat thread with the bot). */
   defaultChatId: string;
+  /** Operator display name for the outgoing-message provenance header
+   * (MNEMO_USER_NAME). Falls back to DEFAULT_USER_NAME when unset. */
+  userName?: string;
 }
 
 export class BotifyProvider implements LlmProvider {
@@ -35,7 +38,12 @@ export class BotifyProvider implements LlmProvider {
   ) {}
 
   async generate(opts: LlmGenerateOptions): Promise<GeneratedBeat> {
-    const message = buildCompanionMessage(opts.userMessage, opts.context);
+    const message = buildCompanionMessage(
+      opts.userMessage,
+      opts.context,
+      undefined,
+      this.config.userName,
+    );
     return {
       text: await this.client.sendMessage(this.config.defaultChatId, message),
     };

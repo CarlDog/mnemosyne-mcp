@@ -24,7 +24,10 @@
 // what's sent -- and thus in the AI's (or group's) own chat history.
 // Confirmed acceptable trade-off (operator, 2026-08-01).
 
-import { buildCompanionMessage } from "./companion-message.js";
+import {
+  buildCompanionMessage,
+  DEFAULT_USER_NAME,
+} from "./companion-message.js";
 import type { KindroidClient, KindroidGroupReply } from "./kindroid-client.js";
 import type { GeneratedBeat, LlmGenerateOptions, LlmProvider } from "./llm.js";
 import type { ContextBundle } from "./prompt.js";
@@ -37,6 +40,9 @@ export interface KindroidProviderConfig {
   /** Server-wide default AI turns per group beat (KINDROID_GROUP_MAX_TURNS).
    * Falls back to DEFAULT_GROUP_MAX_TURNS when unset. */
   groupMaxTurns?: number;
+  /** Operator display name for the outgoing-message provenance header
+   * (MNEMO_USER_NAME). Falls back to DEFAULT_USER_NAME when unset. */
+  userName?: string;
 }
 
 // Matches kindroid-mcp's own kindroid_advance_group default -- a "beat"
@@ -95,20 +101,22 @@ function groupConversationNote(matchedCharacterNames: string[]): string {
 
 /**
  * Builds the message actually sent to Kindroid: the shared companion-
- * message construction (see companion-message.ts — story-context block +
- * direction), suffixed with the group-conversation nudge when `isGroup`
- * is true. Kept as the public entry point so callers and tests are
- * insulated from the shared-builder extraction.
+ * message construction (see companion-message.ts — provenance header +
+ * story-context block + direction), suffixed with the group-conversation
+ * nudge when `isGroup` is true. Kept as the public entry point so callers
+ * and tests are insulated from the shared-builder extraction.
  */
 export function buildKindroidMessage(
   userMessage: string,
   context?: ContextBundle,
   isGroup = false,
+  userName: string = DEFAULT_USER_NAME,
 ): string {
   return buildCompanionMessage(
     userMessage,
     context,
     isGroup ? { groupNote: groupConversationNote } : undefined,
+    userName,
   );
 }
 
@@ -158,6 +166,7 @@ export class KindroidProvider implements LlmProvider {
       opts.userMessage,
       opts.context,
       target.type === "group",
+      this.config.userName,
     );
 
     if (target.type === "group") {

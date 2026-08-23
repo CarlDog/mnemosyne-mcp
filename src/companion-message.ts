@@ -9,8 +9,20 @@
 // kindroid-provider.ts when Botify became the second consumer: the
 // word-boundary matching and scene-inclusion rules are correctness
 // contracts that must not drift between providers.
+//
+// Every outgoing message is also unconditionally marked as an automated
+// note (2026-08-23) -- the API writes it into the chat as a user turn, so
+// without a marker it reads as the operator themselves typing, silently
+// poisoning the companion's own memory of who said what. Bracket wording
+// and rationale (square brackets over parens/OOC, descriptive not
+// imperative framing) are researched, not guessed -- see the commit this
+// landed in. Mirrors plex-companion's own `[Plex Companion -- automated
+// ... note, not ${userName} typing]` convention, already live there.
 
 import type { ContextBundle } from "./prompt.js";
+
+/** Fallback when no operator name is configured (MNEMO_USER_NAME). */
+export const DEFAULT_USER_NAME = "Carl";
 
 interface ParsedEntry {
   name: string;
@@ -68,20 +80,22 @@ export interface CompanionMessageOptions {
 }
 
 /**
- * Builds the message actually sent to a companion-chat service: the raw
- * direction, prefixed with a story-context block when the direction
- * name-mentions a character/location/lore/worldbuilding entity, or when
- * there are recent scenes, and optionally suffixed with a group note (see
- * CompanionMessageOptions). Recent scenes are always included (already
- * relevance-filtered by gatherContext, capped at 5) -- reference entities
- * are keyphrase-gated so an unrelated direction doesn't drag in the whole
- * cast list every call. Pure function (no I/O) so it's unit-testable
- * without a live client.
+ * Builds the message actually sent to a companion-chat service: an
+ * unconditional provenance header (this is an automated note, not the
+ * operator typing), then a story-context block when the direction
+ * name-mentions a character/location/lore/worldbuilding entity or when
+ * there are recent scenes, then the raw direction, then optionally a group
+ * note (see CompanionMessageOptions). Recent scenes are always included
+ * (already relevance-filtered by gatherContext, capped at 5) -- reference
+ * entities are keyphrase-gated so an unrelated direction doesn't drag in
+ * the whole cast list every call. Pure function (no I/O) so it's
+ * unit-testable without a live client.
  */
 export function buildCompanionMessage(
   userMessage: string,
   context?: ContextBundle,
   opts?: CompanionMessageOptions,
+  userName: string = DEFAULT_USER_NAME,
 ): string {
   const matched = context
     ? REFERENCE_TYPES.flatMap((key) =>
@@ -103,9 +117,9 @@ export function buildCompanionMessage(
         .map((entry) => entry.name)
     : [];
 
-  if (!hasContextBlock && !opts?.groupNote) return userMessage;
-
-  const parts: string[] = [];
+  const parts: string[] = [
+    `[Mnemosyne — automated scene direction, not ${userName} typing]`,
+  ];
   if (hasContextBlock) {
     const lines = [
       "[Story context -- background knowledge, not something to quote verbatim:",

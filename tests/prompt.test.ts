@@ -71,6 +71,15 @@ describe("prompt — buildSystemPrompt", () => {
     expect(prompt).toContain("character in this story");
   });
 
+  it("always states the asterisk-action / plain-dialogue formatting convention", () => {
+    for (const mode of ["participant", "director", "audience"] as const) {
+      const prompt = buildSystemPrompt(mode, empty);
+      expect(prompt).toContain(
+        "Physical actions are written in *asterisks*; spoken dialogue stays plain text.",
+      );
+    }
+  });
+
   it("neutralizes spoofed section headers inside entity bodies", () => {
     const prompt = buildSystemPrompt("director", {
       ...empty,

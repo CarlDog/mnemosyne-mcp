@@ -38,18 +38,33 @@ const EMPTY_CONTEXT: ContextBundle = {
   worldbuilding: [],
 };
 
+const HEADER = "[Mnemosyne — automated scene direction, not Carl typing]";
+
 describe("buildKindroidMessage (pure)", () => {
-  it("returns the message unchanged when context is undefined", () => {
-    expect(buildKindroidMessage("hello there")).toBe("hello there");
+  it("always prefixes the provenance header, even with no context at all", () => {
+    const result = buildKindroidMessage("hello there");
+    expect(result).toBe(`${HEADER}\n\nhello there`);
   });
 
-  it("returns the message unchanged when nothing matches and there are no scenes", () => {
+  it("honors a custom operator name in the header", () => {
+    const result = buildKindroidMessage(
+      "hello there",
+      undefined,
+      false,
+      "Jamie",
+    );
+    expect(result).toBe(
+      "[Mnemosyne — automated scene direction, not Jamie typing]\n\nhello there",
+    );
+  });
+
+  it("prefixes the header even when nothing matches and there are no scenes", () => {
     const context: ContextBundle = {
       ...EMPTY_CONTEXT,
       characters: ["Aria Voss\nA weathered cartographer."],
     };
     expect(buildKindroidMessage("what should I do next?", context)).toBe(
-      "what should I do next?",
+      `${HEADER}\n\nwhat should I do next?`,
     );
   });
 
@@ -76,7 +91,7 @@ describe("buildKindroidMessage (pure)", () => {
     };
     // "Arial" contains "Aria" as a substring but is not a mention of it.
     const result = buildKindroidMessage("set the font to Arial", context);
-    expect(result).toBe("set the font to Arial");
+    expect(result).toBe(`${HEADER}\n\nset the font to Arial`);
   });
 
   it("matches a name whose own edge character is non-word (regression: \\b fails here)", () => {
@@ -135,7 +150,7 @@ describe("buildKindroidMessage (pure)", () => {
       style: ["Tone\nThird-limited POV."],
     };
     const result = buildKindroidMessage("keep the Tone consistent", context);
-    expect(result).toBe("keep the Tone consistent");
+    expect(result).toBe(`${HEADER}\n\nkeep the Tone consistent`);
   });
 
   it("appends a group-conversation nudge when isGroup is true, even with no context at all", () => {
@@ -188,16 +203,18 @@ describe("buildKindroidMessage (pure)", () => {
     expect(result).not.toContain("included");
   });
 
-  it("orders the group nudge after the context block and the direction", () => {
+  it("orders the header, then the context block, then the direction, then the group nudge", () => {
     const context: ContextBundle = {
       ...EMPTY_CONTEXT,
       characters: ["Aria Voss\nA cartographer."],
     };
     const result = buildKindroidMessage("find Aria Voss", context, true);
+    const headerIdx = result.indexOf(HEADER);
     const contextIdx = result.indexOf("[Story context");
     const directionIdx = result.indexOf("find Aria Voss");
     const nudgeIdx = result.indexOf("more than one of you");
-    expect(contextIdx).toBeGreaterThanOrEqual(0);
+    expect(headerIdx).toBe(0);
+    expect(contextIdx).toBeGreaterThan(headerIdx);
     expect(contextIdx).toBeLessThan(directionIdx);
     expect(directionIdx).toBeLessThan(nudgeIdx);
   });
@@ -284,6 +301,41 @@ describe("formatGroupReplies (pure)", () => {
 
   it("returns an empty string for no replies", () => {
     expect(formatGroupReplies([])).toBe("");
+  });
+});
+
+describe("KindroidProviderConfig.userName plumbing (stubbed client)", () => {
+  const AI: KindroidTarget = { type: "ai", id: "kin-1" };
+
+  it("defaults the sent message's header to Carl when unset", async () => {
+    let seenMessage: string | undefined;
+    const client = {
+      sendMessage: (_id: string, message: string) => {
+        seenMessage = message;
+        return Promise.resolve("ok");
+      },
+    } as unknown as KindroidClient;
+    const provider = new KindroidProvider(client, { defaultTarget: AI });
+    await provider.generate({ systemPrompt: "", userMessage: "go" });
+    expect(seenMessage).toBe(`${HEADER}\n\ngo`);
+  });
+
+  it("honors a configured userName in the sent message's header", async () => {
+    let seenMessage: string | undefined;
+    const client = {
+      sendMessage: (_id: string, message: string) => {
+        seenMessage = message;
+        return Promise.resolve("ok");
+      },
+    } as unknown as KindroidClient;
+    const provider = new KindroidProvider(client, {
+      defaultTarget: AI,
+      userName: "Jamie",
+    });
+    await provider.generate({ systemPrompt: "", userMessage: "go" });
+    expect(seenMessage).toBe(
+      "[Mnemosyne — automated scene direction, not Jamie typing]\n\ngo",
+    );
   });
 });
 

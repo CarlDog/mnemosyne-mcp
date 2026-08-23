@@ -1,6 +1,38 @@
 # Status
 
-**Last updated:** 2026-08-23 (**the import campaign is complete — five
+**Last updated:** 2026-08-23 (**outgoing companion-chat messages now carry
+a provenance header.** `companion-message.ts`'s `buildCompanionMessage()`
+was bracketing the story-context block it prepends but sending the
+direction itself, and the group-conversation nudge, bare — so an automated
+`mnemo_continue` direction read as the operator typing directly in
+Kindroid/Botify's own chat history. Every outgoing message now opens with
+`[Mnemosyne — automated scene direction, not Carl typing]` (new
+`MNEMO_USER_NAME` env var, default Carl, threaded through both
+`KindroidProviderConfig` and `BotifyProviderConfig`). The wording is
+researched, not guessed: a 4-agent workflow catalogued Kindroid's and AI
+Dungeon's official docs plus Reddit community convention (2026-08-23) —
+square brackets beat parens/OOC (AI Dungeon's own docs give the mechanism:
+fiction-trained models read `[ ]` as "descriptive indicator, not story
+text"; Kindroid's community independently reports brackets outperforming
+parens), and the literal word "OOC" is deliberately dropped since heavy
+`OOC:`-tagging is reported to train a Kin into echoing it back unprompted.
+Framing is descriptive, not imperative — Kindroid's docs warn imperative
+directives over-trigger. plex-companion's own `[Plex Companion — automated
+... note, not Carl typing]` header already matched this shape exactly and
+needed zero changes — it was the reference implementation the research
+validated. Paired with a `prompt.ts` addition: every mode directive now
+states the asterisk-for-action / plain-dialogue convention (Kindroid's own
+documented Example Message format), so the five direct-LLM providers'
+generated output stays visually consistent with the wider companion-chat
+convention. Consistency is the point, not just style — the operator's own
+framing: "when we run into problems, like a bot reacting poorly, it's
+easier to isolate what caused it" if every generator formats the same way.
+Botify's own OOC/bracket handling is unconfirmed by the research (its docs
+and community were unreachable) — flagged as a follow-up empirical probe,
+not assumed. 5 new/updated tests (142/142 passing); a separate same-day
+plex-companion timeout fix (`KINDROID_ENGAGEMENT_TIMEOUT_MS`, split from
+`REQUEST_TIMEOUT_MS`) is documented in that repo's own STATUS.md.) Earlier,
+same day — **the import campaign is complete — five
 live stories, ~369 entities**. All four original ChatGPT projects are
 imported and a fifth story, Shadowflame, was created from material
 found in Botify. Chaos Saga 41, GhostHunters 94, BattleChasers 138,
@@ -214,6 +246,71 @@ provider keys configured (179 total). See Done below for everything
 that's landed since.
 
 ## Done
+
+- **Outgoing companion-chat messages carry a provenance header; generated
+  output states the asterisk-for-action convention** (2026-08-23). Found
+  while investigating why a power-outage direction sent through Kindroid
+  posted as a bare message from "Carl Maddox" with nothing marking it as
+  automated — `companion-message.ts`'s `buildCompanionMessage()` bracketed
+  the story-context block it prepends but sent the direction itself, and
+  the group-conversation nudge, bare. Every outgoing message now
+  unconditionally opens with `[Mnemosyne — automated scene direction, not
+  ${userName} typing]` — the operator name comes from the new
+  `MNEMO_USER_NAME` env var (default `Carl`), threaded through
+  `KindroidProviderConfig`/`BotifyProviderConfig` and defaulted again at
+  the pure-function layer (`companion-message.ts`'s exported
+  `DEFAULT_USER_NAME`) so existing call sites and tests didn't need to
+  thread it through everywhere. The old short-circuit
+  (`if (!hasContextBlock && !opts?.groupNote) return userMessage`) is gone
+  — every message now does real work, matching the invariant plex-companion
+  already had.
+  Wording is researched, not guessed: a 4-agent Workflow catalogued
+  Kindroid's and AI Dungeon's official docs, Character.AI/SillyTavern/
+  NovelAI convention, and r/KindroidAI community practice (9 threads read
+  in full), every claim requiring a verbatim quote + URL. Findings that
+  shaped the wording: square brackets over parens or literal "OOC" —
+  AI Dungeon's own docs state the mechanism (`[ ]` is read by
+  fiction-trained models as "a descriptive indicator about what should
+  come next," not story text to speak), Kindroid's community independently
+  reports brackets outperforming parens, and heavy `OOC:`-tagging is
+  reported (GlitterBombFallout, misterjupiter on r/KindroidAI) to train a
+  Kin into echoing `OOC:`-tagged text back unprompted after repeated
+  exposure — a risk worth naming even though this repo hasn't observed it
+  yet. Framing is descriptive ("automated ... note, not X typing"), not
+  imperative — Kindroid's own docs warn imperative Response Directives
+  over-trigger (their example: "narrate in 3rd person" gets read as a
+  standing command and produces unwanted narration walls). Botify's own
+  handling of bracket/asterisk markup is unconfirmed by the research (its
+  docs are an unreachable client-rendered SPA; Reddit/Discord were
+  categorically unreachable by the research tooling) — flagged as a
+  follow-up empirical probe via `botify_send_message`, not assumed safe.
+  **plex-companion needed zero changes** — its three message builders
+  (`buildReactionMessage`/`buildStartMessage`/`buildSuggestionMessage` in
+  `src/backends/kindroid.ts`) already open every message with
+  `[Plex Companion — automated ... note, not ${userName} typing]`; it was
+  the reference implementation the research validated, not a second thing
+  to fix.
+  A companion change landed in `prompt.ts`: every mode directive now ends
+  with a stated asterisk-for-action / plain-dialogue convention (matching
+  Kindroid's own documented Example Message format — "actions in
+  asterisks, speech in quotes"), so the five direct-LLM providers'
+  generated prose stays visually consistent with what a companion-chat
+  reply looks like. This is a *different* half of the same ratified
+  decision from the header change — outgoing-direction marking protects a
+  stateful companion's memory of who's talking; asterisk-consistency is
+  about the model's own generated formatting — and only the latter applies
+  to `prompt.ts`, since the five direct-LLM providers are stateless
+  single-shot completions with no persistent "who's typing" concept for a
+  bracket header to protect.
+  5 new/updated pure tests (header presence and custom-name override in
+  `buildKindroidMessage`; `KindroidProviderConfig.userName` plumbing
+  end-to-end against a stubbed client; the asterisk statement present in
+  all three modes) — 142/142 passing, typecheck/lint/format clean.
+  **Not done here, and worth noting:** the `MNEMO_USER_NAME`-equivalent
+  live verification against a real Botify bot, and any defensive handling
+  for a Kin echoing the bracketed header back in a reply (speculative until
+  actually observed in this repo's own logs, per the research's own
+  caveat).
 
 - **A timed-out Kindroid call no longer looks like a failed one**
   (2026-08-23). Found by running a real group beat, not by review. On a group
@@ -1116,10 +1213,12 @@ real use and pressure points emerge:
   content boundaries stripped as ChatGPT artifacts (operator decision),
   named style clauses extracted to individual pinned rules, and the
   C.H.A.O.S. availability schedules salvaged as worldbuilding.
-  **Remaining: GhostHunters, BattleChasers, Wonderland** — same
-  interactive process. (Dogfooding note filed: unfiltered
-  `mnemo_recall` with a small limit gets its window consumed by OC's
-  pinned-prepend in rule-heavy stories; type-filtered recall is
+  **Campaign complete (2026-08-23):** GhostHunters, BattleChasers,
+  Wonderland, and a new fifth story (Shadowflame) all landed the same
+  process — five live stories, ~369 entities total. See the dated Done
+  entry above for the full per-story writeup. (Dogfooding note filed:
+  unfiltered `mnemo_recall` with a small limit gets its window consumed by
+  OC's pinned-prepend in rule-heavy stories; type-filtered recall is
   unaffected.)
   `mnemo_seed_from_template` is retired as a planned tool — seeding is a
   host conversation plus one import call.
