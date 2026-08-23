@@ -508,7 +508,11 @@ v0 surface:
   write a character/location/rule/style/scene/lore/worldbuilding entry to
   the active story. Overwrites by (type, name).
 - mnemo_recall(query?, type?, limit?, story?) — semantic recall over the
-  active story's entities.
+  active story's entities (ranked, capped).
+- mnemo_list_entities(type?, include_body?, story?) — complete, unranked
+  enumeration of every entity in the story (nothing capped or left out).
+  Body omitted by default (include_body=true to get it); every entity
+  carries created_at for caller-side sorting.
 - mnemo_delete_entity(type, name, story?) — delete one entity from the
   active story by (type, name).
 - mnemo_continue(direction, mode?, max_tokens?, temperature?, model?,

@@ -11,8 +11,14 @@ into this file, MEMORY.md, or Serena memories — reference STATUS.md.
 
 See [STATUS.md](STATUS.md). The curated-import campaign is complete
 (2026-08-23) — five live stories, ~369 entities, all four original
-ChatGPT projects plus a new fifth story (Shadowflame). Latest: **slice 0
-shipped** — the prerequisite a pre-build review of
+ChatGPT projects plus a new fifth story (Shadowflame). Latest:
+**`mnemo_list_entities` shipped** — slice 1's complete-listing
+primitive (`listAllEntities()`, previously export-only plumbing) is now
+a real tool: `mnemo_list_entities(type?, include_body?, story?)`,
+unranked and uncapped unlike `mnemo_recall`, body stripped by default
+via the new pure `filterListedEntities()` helper. Live-smoke-tested
+against real data (Chaos Saga's actual 41 entities). Earlier the same
+day: **slice 0 shipped** — the prerequisite a pre-build review of
 [docs/WEBUI_NOTES.md](docs/WEBUI_NOTES.md) found blocking every planned
 web-UI build slice. `resolveStoryId()` (`src/stories.ts`) generalizes
 `mnemo_export_story`'s existing bypass pattern to all 9 story-touching
@@ -40,7 +46,7 @@ outgoing companion-chat messages now carry a provenance header
 `MNEMO_USER_NAME` env var), live-verified against a real Botify bot,
 paired with a `prompt.ts` change stating the asterisk-for-action /
 plain-dialogue convention in every mode directive. See STATUS.md's Done
-log for all three full writeups.
+log for all four full writeups.
 
 ## Stack
 
@@ -71,8 +77,12 @@ log for all three full writeups.
   explicit?)`: the per-call `story` override every story-touching tool
   accepts, falling back to the active-story pointer (pure file I/O, no
   OC call) when omitted.
-- `src/entities.ts`, `src/prompt.ts`, `src/validator.ts`,
-  `src/llm.ts`, `src/export.ts`, `src/import.ts` — domain logic.
+- `src/entities.ts` — entity CRUD + recall, plus `listAllEntities()` (a
+  complete, unranked enumeration — no cap, unlike `recall()`) and
+  `filterListedEntities()` (pure: optional type filter + default body
+  strip, backing `mnemo_list_entities`).
+- `src/prompt.ts`, `src/validator.ts`, `src/llm.ts`, `src/export.ts`,
+  `src/import.ts` — domain logic.
 - `src/kindroid-provider.ts` — `KindroidProvider implements LlmProvider`;
   generator-only (validator always stays on Ollama). Exports
   `buildKindroidMessage()` (pure, unit-tested) — a wrapper over the

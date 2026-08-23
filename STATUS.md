@@ -1,8 +1,15 @@
 # Status
 
-**Last updated:** 2026-08-23 (**Slice 0 shipped: HTTP transport +
-story-pointer override — the exact prerequisite the pre-build review
-below called for.** `resolveStoryId()` generalizes `mnemo_export_story`'s
+**Last updated:** 2026-08-23 (**`mnemo_list_entities` shipped — slice 1's
+complete-listing primitive is now a real tool, not just internal
+plumbing.** Generalizes the existing (export-only) `listAllEntities()`
+into `mnemo_list_entities(type?, include_body?, story?)`: a complete,
+unranked enumeration (nothing capped the way `mnemo_recall` is), body
+stripped by default to keep a large story's browse response light. Live-
+smoke-tested against real production data — Chaos Saga's real 41 entities
+came back correctly. Full writeup in the dated Done entry below. Earlier,
+same day — **Slice 0 shipped: HTTP transport + story-pointer override —
+the exact prerequisite the pre-build review below called for.** `resolveStoryId()` generalizes `mnemo_export_story`'s
 existing bypass pattern to all 9 story-touching tools (a per-call `story`
 override, deliberately not session-scoped server state); a byte-verbatim
 copy of kindroid-mcp's fleet-canonical `mountMcpHttp()` gives mnemosyne
@@ -271,6 +278,46 @@ provider keys configured (179 total). See Done below for everything
 that's landed since.
 
 ## Done
+
+- **`mnemo_list_entities` shipped — the complete-listing primitive slice 1
+  needs, registered as a real tool for the first time** (2026-08-23).
+  `listAllEntities()` (`src/entities.ts`) already existed — built for
+  `mnemo_export_story`, using OC's unbounded `memory_list` rather than
+  `memory_search`'s ranked/capped window — but was only reachable
+  internally via export/import. It's now also `mnemo_list_entities(type?,
+  include_body?, story?)`: a complete, unranked enumeration (nothing left
+  out the way `mnemo_recall`'s cap can), with an optional type filter and
+  body content stripped by default — a large story's complete prose can
+  run to hundreds of KB across its scenes, and the entity library this
+  exists for (WEBUI_NOTES §9 slice 1) wants a roster to browse, not a
+  content dump. Every summary still carries `created_at` so a caller
+  sorts chronologically itself; the tool does no sorting of its own,
+  mirroring `recall()`'s existing "caller composes" posture. The
+  filter/strip logic is a new pure function, `filterListedEntities()`
+  (`src/entities.ts`), covered by 5 new unit tests — kept separate from
+  the MCP tool wrapper so it's testable without the framework, matching
+  this repo's existing pattern for `revalidateScenes` et al. Live-smoke-
+  tested against real production data (not just the test story): Chaos
+  Saga's real 41 entities came back correctly (matches STATUS.md's own
+  import-campaign count), the `type: "character"` filter correctly
+  returned 10 with `body` absent, and `skipped_memory_ids` came back
+  empty on a clean story. `mnemo_story_use`'s tool description
+  (`src/index.ts`'s `INSTRUCTIONS`) updated alongside it. Noticed in
+  passing, not fixed: `src/tools/export.ts` and `src/tools/import.ts`
+  both inline an identical "resolve `story` to the full `MnemoStory`
+  object, or 404" pattern, and this tool is now a third copy — a real
+  but small duplication (flagged, not extracted, since export/import's
+  existing structured error-response shape would need to survive any
+  extraction unchanged, and that's out of scope for a tool-registration
+  task).
+  **Pre-existing, unrelated to this change:** 8 test failures observed in
+  this pass (`continue.test.ts`, `revalidate.test.ts`,
+  `validate-tool.test.ts`, `validator.test.ts`) — all `Ollama HTTP 404:
+  model 'mistral-nemo:12b' not found` against this workstation's local
+  Ollama, which doesn't have that model pulled. Confirmed unrelated by
+  running the entity/story/export/import suites in isolation (67/67
+  pass); flagging per the fleet's own "pre-existing issues are still
+  real, surface them" practice rather than silently working around them.
 
 - **Slice 0 shipped: HTTP transport + story-pointer override — the
   prerequisite WEBUI_NOTES.md §0 named** (2026-08-23). Both blockers the
