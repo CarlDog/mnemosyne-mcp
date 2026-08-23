@@ -13,6 +13,7 @@ import {
 } from "./kindroid-provider.js";
 import { BotifyClient } from "./botify-client.js";
 import { BotifyProvider } from "./botify-provider.js";
+import { DEFAULT_USER_NAME } from "./companion-message.js";
 import { AnthropicProvider } from "./anthropic-provider.js";
 import { GeminiProvider } from "./gemini-provider.js";
 import { OpenAICompatProvider } from "./openai-compat-provider.js";
@@ -52,6 +53,14 @@ if (!GENERATOR_PROVIDERS.includes(GENERATOR_PROVIDER)) {
 }
 
 const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
+
+// Operator display name for the companion-chat providers' outgoing-message
+// provenance header (e.g. "[Mnemosyne -- automated scene direction, not
+// Carl typing]") -- see companion-message.ts. Read unconditionally (cheap,
+// and only the kindroid/botify branches below actually consume it) so
+// every generator path shares one source of truth. `||` not `??`: an MCP
+// host injects "" for a blank config field, which must read as unset.
+const MNEMO_USER_NAME = process.env.MNEMO_USER_NAME || DEFAULT_USER_NAME;
 
 // Cap on the auto-sized per-request context window (see llm.ts's
 // computeNumCtx — requests size num_ctx to their actual prompt, bounded
@@ -391,6 +400,7 @@ if (generatorConfig.provider === "kindroid") {
   generator = new KindroidProvider(kindroidClient, {
     defaultTarget: generatorConfig.defaultTarget,
     groupMaxTurns: generatorConfig.groupMaxTurns,
+    userName: MNEMO_USER_NAME,
   });
   log.info("startup", "kindroid generator configured", {
     url: generatorConfig.rawUrl,
@@ -399,6 +409,7 @@ if (generatorConfig.provider === "kindroid") {
     group_max_turns: generatorConfig.groupMaxTurns ?? DEFAULT_GROUP_MAX_TURNS,
     timeout_ms: generatorConfig.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     auth: process.env.KINDROID_MCP_AUTH_TOKEN ? "bearer" : "none",
+    user_name: MNEMO_USER_NAME,
   });
 } else if (generatorConfig.provider === "botify") {
   const botifyClient = new BotifyClient(
@@ -407,11 +418,13 @@ if (generatorConfig.provider === "kindroid") {
   );
   generator = new BotifyProvider(botifyClient, {
     defaultChatId: generatorConfig.chatId,
+    userName: MNEMO_USER_NAME,
   });
   log.info("startup", "botify generator configured", {
     url: generatorConfig.rawUrl,
     chat_id: generatorConfig.chatId,
     auth: process.env.BOTIFY_MCP_AUTH_TOKEN ? "bearer" : "none",
+    user_name: MNEMO_USER_NAME,
   });
 } else if (generatorConfig.provider === "anthropic") {
   generator = new AnthropicProvider({
