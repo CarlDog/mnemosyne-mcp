@@ -1,7 +1,20 @@
 # Status
 
-**Last updated:** 2026-08-23 (**repo-local `data/` directory, organized
-by storyline**: operational state moved out of the OS config dir into
+**Last updated:** 2026-08-23 (**the import campaign is complete — five
+live stories, ~369 entities**. All four original ChatGPT projects are
+imported and a fifth story, Shadowflame, was created from material
+found in Botify. Chaos Saga 41, GhostHunters 94, BattleChasers 138,
+Wonderland 54, Shadowflame 42. The night's biggest methodological
+finding: the operator's Botify bots hold *primary canon* — authored
+profile blocks and played story logs — so an empty `Profiles/` folder
+on disk proves nothing. Wonderland's entire cast was in Botify while
+its folders sat empty. Two long transcripts (1,882 and 1,513 messages)
+were mined with 8-agent extraction workflows plus continuity critics,
+which repeatedly earned their keep: one caught a cast brief leaking
+surnames into "extracted" output that appear nowhere in 6,083 lines of
+source, and another caught a ratified canon clause that the source
+flatly refutes. Previous, same day — **repo-local `data/` directory,
+organized by storyline**: operational state moved out of the OS config dir into
 gitignored `<repo>/data` — `config.json` at the root plus one
 `stories/<slug>/` subtree per storyline holding `exports/` backups and
 `references/` assets, `MNEMO_DATA_DIR` override, Docker-mountable as
@@ -201,6 +214,55 @@ provider keys configured (143 total). See Done below for everything
 that's landed since.
 
 ## Done
+
+- **The curated-import campaign — five live stories, ~369 entities**
+  (2026-08-23). The feature built in August finally got used in anger.
+  All four original ChatGPT projects are imported per
+  [IMPORT_PLAYBOOK.md](docs/IMPORT_PLAYBOOK.md), and a fifth story was
+  created from material that existed nowhere on disk:
+  - **Chaos Saga** (41) — backstory canonized from 2.4MB of raw
+    transcripts, distilled character essences, photo-grounded
+    appearances, and three per-pair relationship documents found on the
+    Riley and Jenna Botify bots. The Riley/Jenna bond is recorded from
+    *both* sides, because the two accounts agree on the facts and differ
+    on what each woman fears.
+  - **GhostHunters** (94) — 69 from files, then the Blackwood Manor case
+    mined from a 1,882-message transcript. Yielded a fourth Blackwood
+    sister, Lyla, who exists in no file and no memory block: she names
+    the other three as "my sisters," which makes her the one left
+    behind. Operator ruled "same story, early names," so Millfield →
+    Dovecoast and Carl Yeager → Carl Ashcombe were normalized, with the
+    rename disclosed inside the timeline entity.
+  - **BattleChasers** (138) — the largest. Region files that live under
+    `Profiles/Location` are regional compendia, split three ways
+    (region frame → location, cities → locations, orders roll-up →
+    worldbuilding). Two operator changes applied: Thorne Vex renamed
+    Hodrek Sootbraid (word-boundary matched so "Thornevale" survived),
+    and the Vale twins split into separate profiles by a parser that
+    routes per-twin bullets and duplicates shared narrative.
+  - **Wonderland** (54) — 40 from two files, then Alice Grimm's Botify
+    memory blocks supplied the entire missing cast, five locations, and
+    both relics.
+  - **Shadowflame** (42) — NEW. A successor continuity to BattleChasers
+    set several centuries later, built from the "Dark Queen Lilith" bot
+    and named by the operator. Its pinned **BattleChasers Bridge** is
+    the join between the two stories and is tiered: what the transcript
+    sources, what has been ratified to connect them, and what is open by
+    design. One ratified clause was **corrected** when the transcript
+    refuted it — recorded inside the entity rather than silently
+    overwritten.
+
+  Method notes worth keeping: the adversarial-review habit extended to
+  content work and paid every time — a critic caught surnames leaking
+  from a task brief into supposedly extracted output, caught opposite
+  dedup policies applied to identical bundle-vs-standalone patterns,
+  caught two *diverging* Races documents that would both have survived
+  under different names and contradicted each other, and established
+  that trim-then-exact is the only delimiter rule that works across a
+  corpus mixing hard-break headings with nested sub-headings. Explicit
+  material throughout was reduced to one beat recording who and what
+  changed — which is both appropriate and produces better continuity
+  entities than choreography would.
 
 - **Repo-local `data/` directory, organized by storyline** (2026-08-23).
   Operational state moved out of the OS config dir into `<repo>/data`
