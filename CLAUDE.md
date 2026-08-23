@@ -182,7 +182,15 @@ Key architectural decisions (see ARCHITECTURE.md for full reasoning):
   legitimate immediate yield (empty beat, nothing saved — the direction is
   already posted, so continue rather than re-send), while `turns > 0` with
   no replies means the turns generated upstream and only the read-back
-  failed, which throws and says explicitly not to retry. `maxTurns`
+  failed, which throws and says explicitly not to retry.
+  Every kindroid-mcp call goes through one chokepoint,
+  `KindroidClient.callMutatingTool` — they all mutate a real conversation, so
+  a failure leaves "did anything happen?" unanswerable. It sets a per-request
+  timeout (`KINDROID_MCP_TIMEOUT_MS`, default 180s, well above the SDK's 60s
+  because a group chains sequential generations at ~13s each) and, on a
+  timeout **specifically**, rethrows saying the call may have already posted
+  and generated — do not retry. Non-timeout failures pass through untouched
+  so the warning stays scarce enough to mean something. `maxTurns`
   is configurable (2026-08-23): server-wide via `KINDROID_GROUP_MAX_TURNS`
   and per call via `mnemo_continue`'s `group_max_turns`, defaulting to 4
   and bounded 1–8 to mirror `kindroid_advance_group`'s own schema rather

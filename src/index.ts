@@ -4,7 +4,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { log } from "./log.js";
 import { OcClient } from "./oc-client.js";
 import { OllamaProvider, type LlmProvider } from "./llm.js";
-import { KindroidClient } from "./kindroid-client.js";
+import { DEFAULT_TIMEOUT_MS, KindroidClient } from "./kindroid-client.js";
 import {
   DEFAULT_GROUP_MAX_TURNS,
   KindroidProvider,
@@ -113,6 +113,7 @@ type GeneratorConfig =
       rawUrl: string;
       defaultTarget: KindroidTarget;
       groupMaxTurns?: number;
+      timeoutMs?: number;
     }
   | { provider: "botify"; url: URL; rawUrl: string; chatId: string }
   | {
@@ -196,6 +197,23 @@ if (GENERATOR_PROVIDER === "kindroid") {
   }
   ollamaValidatorModel = requireValidatorModel("kindroid");
 
+  // Per-request timeout for kindroid-mcp calls. `||` not `??`, per the rest
+  // of this file: an MCP host injects "" for a blank field, which must read
+  // as unset.
+  const rawTimeout = process.env.KINDROID_MCP_TIMEOUT_MS || undefined;
+  let kindroidTimeoutMs: number | undefined;
+  if (rawTimeout !== undefined) {
+    kindroidTimeoutMs = Number(rawTimeout);
+    if (!Number.isInteger(kindroidTimeoutMs) || kindroidTimeoutMs < 1000) {
+      log.error(
+        "startup",
+        "KINDROID_MCP_TIMEOUT_MS must be an integer >= 1000 (milliseconds)",
+        { value: rawTimeout },
+      );
+      process.exit(1);
+    }
+  }
+
   let kindroidUrl: URL;
   try {
     kindroidUrl = new URL(KINDROID_MCP_URL);
@@ -213,6 +231,7 @@ if (GENERATOR_PROVIDER === "kindroid") {
     rawUrl: KINDROID_MCP_URL,
     defaultTarget,
     groupMaxTurns,
+    timeoutMs: kindroidTimeoutMs,
   };
 } else if (GENERATOR_PROVIDER === "botify") {
   const BOTIFY_MCP_URL = process.env.BOTIFY_MCP_URL;
@@ -367,6 +386,7 @@ if (generatorConfig.provider === "kindroid") {
   const kindroidClient = new KindroidClient(
     generatorConfig.url,
     process.env.KINDROID_MCP_AUTH_TOKEN,
+    generatorConfig.timeoutMs,
   );
   generator = new KindroidProvider(kindroidClient, {
     defaultTarget: generatorConfig.defaultTarget,
@@ -377,6 +397,7 @@ if (generatorConfig.provider === "kindroid") {
     target_type: generatorConfig.defaultTarget.type,
     target_id: generatorConfig.defaultTarget.id,
     group_max_turns: generatorConfig.groupMaxTurns ?? DEFAULT_GROUP_MAX_TURNS,
+    timeout_ms: generatorConfig.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     auth: process.env.KINDROID_MCP_AUTH_TOKEN ? "bearer" : "none",
   });
 } else if (generatorConfig.provider === "botify") {
