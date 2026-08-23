@@ -48,6 +48,21 @@ if (!GENERATOR_PROVIDERS.includes(GENERATOR_PROVIDER)) {
 
 const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
 
+// Cap on the auto-sized per-request context window (see llm.ts's
+// computeNumCtx — requests size num_ctx to their actual prompt, bounded
+// by this). Optional; empty/unset uses the built-in default.
+const OLLAMA_NUM_CTX = process.env.OLLAMA_NUM_CTX;
+let ollamaNumCtx: number | undefined;
+if (OLLAMA_NUM_CTX) {
+  ollamaNumCtx = Number(OLLAMA_NUM_CTX);
+  if (!Number.isInteger(ollamaNumCtx) || ollamaNumCtx <= 0) {
+    log.error("startup", "OLLAMA_NUM_CTX must be a positive integer", {
+      value: OLLAMA_NUM_CTX,
+    });
+    process.exit(1);
+  }
+}
+
 let ocUrl: URL;
 try {
   ocUrl = new URL(OC_URL);
@@ -382,6 +397,7 @@ if (generatorConfig.provider === "kindroid") {
   generator = new OllamaProvider({
     url: OLLAMA_URL,
     defaultModel: generatorConfig.model,
+    maxContextWindow: ollamaNumCtx,
   });
   log.info("startup", "ollama generator configured", {
     url: OLLAMA_URL,
@@ -392,6 +408,7 @@ if (generatorConfig.provider === "kindroid") {
 const validator = new OllamaProvider({
   url: OLLAMA_URL,
   defaultModel: ollamaValidatorModel,
+  maxContextWindow: ollamaNumCtx,
 });
 log.info("startup", "ollama validator configured", {
   url: OLLAMA_URL,
