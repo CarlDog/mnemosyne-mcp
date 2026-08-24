@@ -11,40 +11,25 @@ import {
   findStory,
   listStories,
   setKindroidTarget,
+  toStorySummary,
   type MnemoStory,
+  type StorySummary,
 } from "../stories.js";
 import { getCurrentStoryId, setCurrentStoryId } from "../config.js";
 import { asText, withLogging } from "./helpers.js";
 
-// Explicit field whitelist rather than spreading MnemoStory -- keeps
-// internal plumbing (marker_memory_id) out of tool responses. kindroid_kin
-// / kindroid_group_id mirror the input params' shape rather than exposing
-// the internal kindroid_target: {type, id} representation.
-interface AnnotatedStory {
-  id: string;
-  name: string;
-  created_at: string;
-  kindroid_kin?: string;
-  kindroid_group_id?: string;
-  current: boolean;
-}
+// AnnotatedStory = StorySummary + "current" (which story the local
+// active-story pointer points at) -- meaningful only here, since these
+// tools are the ones reading that pointer. toStorySummary (src/stories.ts)
+// is shared with the web API, which never annotates "current" (see its
+// doc comment for why).
+type AnnotatedStory = StorySummary & { current: boolean };
 
 function toAnnotated(
   story: MnemoStory,
   currentId: string | undefined,
 ): AnnotatedStory {
-  return {
-    id: story.id,
-    name: story.name,
-    created_at: story.created_at,
-    ...(story.kindroid_target?.type === "ai" && {
-      kindroid_kin: story.kindroid_target.id,
-    }),
-    ...(story.kindroid_target?.type === "group" && {
-      kindroid_group_id: story.kindroid_target.id,
-    }),
-    current: story.id === currentId,
-  };
+  return { ...toStorySummary(story), current: story.id === currentId };
 }
 
 export function registerStoryTools(server: McpServer, oc: OcClient): void {
@@ -131,18 +116,7 @@ export function registerStoryTools(server: McpServer, oc: OcClient): void {
           story = await setKindroidTarget(oc, story, requestedTarget);
         }
         await setCurrentStoryId(story.id);
-        return asText({
-          id: story.id,
-          name: story.name,
-          created_at: story.created_at,
-          ...(story.kindroid_target?.type === "ai" && {
-            kindroid_kin: story.kindroid_target.id,
-          }),
-          ...(story.kindroid_target?.type === "group" && {
-            kindroid_group_id: story.kindroid_target.id,
-          }),
-          current: true,
-        });
+        return asText({ ...toStorySummary(story), current: true });
       },
     ),
   );

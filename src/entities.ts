@@ -100,7 +100,7 @@ export interface RecalledEntity extends ParsedEntity {
   updated_at?: string;
 }
 
-function memoryToRecalled(memory: OcMemory): RecalledEntity | null {
+export function memoryToRecalled(memory: OcMemory): RecalledEntity | null {
   const parsed = parseEntityContent(memory.content);
   if (!parsed) return null;
   return {
@@ -367,6 +367,13 @@ export type EntitySummary = Omit<RecalledEntity, "body">;
 
 export interface ListEntitiesFilter {
   type?: EntityType;
+  /** Case-insensitive substring match against name OR body. Runs BEFORE
+   * the body-strip step below, so a match found only in body text (e.g. a
+   * scene mentioning a location by name) still counts even though the
+   * returned summary omits body when includeBody is false. Added for the
+   * web UI's entity-roster search (slice 1) -- mnemo_list_entities
+   * doesn't pass this, so its behavior is unchanged. */
+  query?: string;
   includeBody?: boolean;
 }
 
@@ -385,9 +392,16 @@ export function filterListedEntities(
   entities: RecalledEntity[],
   filter: ListEntitiesFilter,
 ): RecalledEntity[] | EntitySummary[] {
-  const filtered = filter.type
+  let filtered = filter.type
     ? entities.filter((e) => e.type === filter.type)
     : entities;
+  if (filter.query) {
+    const q = filter.query.toLowerCase();
+    filtered = filtered.filter(
+      (e) =>
+        e.name.toLowerCase().includes(q) || e.body.toLowerCase().includes(q),
+    );
+  }
   if (filter.includeBody) return filtered;
   return filtered.map((e) => ({
     memory_id: e.memory_id,
@@ -398,4 +412,25 @@ export function filterListedEntities(
     created_at: e.created_at,
     updated_at: e.updated_at,
   }));
+}
+
+/**
+ * Fetch one entity by its OC memory id, scoped to a specific story.
+ * memory_get itself is NOT project-scoped (OC will happily return a memory
+ * belonging to a different project), so this enforces story ownership
+ * itself -- a cross-story id and a genuinely nonexistent one both come
+ * back as null, deliberately: neither should tell the caller whether the
+ * id exists in *some other* story. Also returns null (not a parse error)
+ * if the memory exists but isn't a well-formed entity (e.g. it's the
+ * story marker itself) -- an unlikely but real case if a caller guesses a
+ * marker's memory_id.
+ */
+export async function getEntityByMemoryId(
+  oc: OcClient,
+  storyId: string,
+  memoryId: string,
+): Promise<RecalledEntity | null> {
+  const memory = await oc.memoryGet(memoryId);
+  if (!memory || memory.project_id !== storyId) return null;
+  return memoryToRecalled(memory);
 }

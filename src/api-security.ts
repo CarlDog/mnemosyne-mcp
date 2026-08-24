@@ -1,0 +1,63 @@
+// Host/Origin allowlist + bearer-auth for everything EXCEPT /mcp (self-
+// protected by shared/http-transport.ts's mountMcpHttp) and /health (left
+// open, matching the fleet's own convention of an unauthenticated
+// healthcheck endpoint). Mounted via app.use() in src/index.ts AFTER
+// /health and /mcp are registered -- both fully end the request-response
+// cycle on a match, so this middleware never runs for either and needs no
+// path-exclusion logic of its own; registration order is the exclusion
+// mechanism.
+//
+// Deliberately duplicates hostAllowed()/tokenMatches() from
+// shared/http-transport.ts rather than importing them -- that file is a
+// byte-verbatim, hash-compared copy of kindroid-mcp's fleet-canonical
+// module (see its own header comment) and must not gain mnemosyne-only
+// exports. This is a small, accepted, deliberate duplication against the
+// canonical file, not accidental drift.
+
+import { createHash, timingSafeEqual } from "node:crypto";
+import type { NextFunction, Request, RequestHandler, Response } from "express";
+import type { HttpConfig } from "./http-config.js";
+
+/** Constant-time bearer comparison over SHA-256 digests. */
+function tokenMatches(provided: string, expected: string): boolean {
+  const a = createHash("sha256").update(provided).digest();
+  const b = createHash("sha256").update(expected).digest();
+  return timingSafeEqual(a, b);
+}
+
+function hostAllowed(req: Request, allowed: string[] | undefined): boolean {
+  if (!allowed || allowed.length === 0) return true; // not configured: open
+  const host = (req.headers.host ?? "").split(":")[0]?.toLowerCase() ?? "";
+  if (allowed.some((h) => h.toLowerCase() === host)) return true;
+
+  const origin = req.headers.origin;
+  if (typeof origin === "string" && origin) {
+    try {
+      const originHost = new URL(origin).hostname.toLowerCase();
+      return allowed.some((h) => h.toLowerCase() === originHost);
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
+export function apiSecurity(
+  config: Pick<HttpConfig, "allowedHosts" | "authToken">,
+): RequestHandler {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!hostAllowed(req, config.allowedHosts)) {
+      res.status(403).json({ error: "Forbidden: host not allowed" });
+      return;
+    }
+    if (config.authToken) {
+      const header = req.headers.authorization ?? "";
+      const provided = header.startsWith("Bearer ") ? header.slice(7) : "";
+      if (!provided || !tokenMatches(provided, config.authToken)) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+    }
+    next();
+  };
+}

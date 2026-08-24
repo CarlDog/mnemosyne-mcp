@@ -1,9 +1,14 @@
 #!/usr/bin/env node
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import express from "express";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { mountMcpHttp } from "./shared/http-transport.js";
 import { loadHttpConfig, type HttpConfig } from "./http-config.js";
+import { apiSecurity } from "./api-security.js";
+import { createApiRouter } from "./api/index.js";
 import { log } from "./log.js";
 import { OcClient } from "./oc-client.js";
 import { OllamaProvider, type LlmProvider } from "./llm.js";
@@ -573,6 +578,41 @@ if (httpConfig.port === undefined) {
     allowedHosts: httpConfig.allowedHosts,
     sessionIdleMs: httpConfig.sessionIdleMs,
   });
+
+  // Everything below this line is protected by the same Host/Origin
+  // allowlist + bearer auth as /mcp -- /health and /mcp above both fully
+  // end the request cycle on a match, so this never runs for either.
+  app.use(apiSecurity(httpConfig));
+  app.use("/api", createApiRouter(oc));
+
+  // Static web UI (webui/, built separately -- see package.json's
+  // build:webui script) plus a SPA-fallback route so a deep link survives
+  // a hard refresh. import.meta.url is dist/index.js's own URL once
+  // compiled, so "./webui" resolves to dist/webui, matching where
+  // scripts/copy-webui-dist.mjs copies the built UI to. Under `npm run
+  // dev` (tsx running src/index.ts directly) this resolves to a
+  // nonexistent src/webui -- expected and harmless: the dev workflow
+  // never hits this server for the UI at all, the browser talks to
+  // Vite's own dev server, which proxies /api/* back here.
+  const webuiDistDir = fileURLToPath(new URL("./webui", import.meta.url));
+  const webuiAvailable = existsSync(join(webuiDistDir, "index.html"));
+  if (webuiAvailable) {
+    app.use(express.static(webuiDistDir));
+  } else {
+    log.warn("server", "webui build not found -- static UI disabled", {
+      path: webuiDistDir,
+    });
+  }
+  app.get(
+    /^\/(?!api(?:\/|$)|mcp(?:\/|$)|health(?:\/|$)).*/,
+    (_req, res, next) => {
+      if (!webuiAvailable) {
+        next();
+        return;
+      }
+      res.sendFile(join(webuiDistDir, "index.html"));
+    },
+  );
 
   const httpServer = app.listen(httpConfig.port, httpConfig.bindHost, () => {
     log.info("server", "mnemosyne-mcp ready", {

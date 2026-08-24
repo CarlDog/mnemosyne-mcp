@@ -210,6 +210,36 @@ export class OcClient {
     });
   }
 
+  // Fetch one memory by id (unscoped by project -- callers that need a
+  // per-story guarantee must check `project_id` on the result themselves;
+  // see getEntityByMemoryId in entities.ts). Returns null on OC's own
+  // NotFoundError rather than throwing -- "no such memory" is an expected,
+  // routine outcome for a caller resolving a URL/query param, not an
+  // exceptional one.
+  //
+  // The exact wrapped message was verified live against real OC (not
+  // assumed from reading OC's source): OC's NotFoundError raises
+  // "Memory not found: <id>", but FastMCP wraps that in its own
+  // "Error executing tool memory_get: <message>" envelope before
+  // extractText's "memory_get failed: <text>" wrapping is applied here --
+  // so the actual thrown message is
+  // "memory_get failed: Error executing tool memory_get: Memory not
+  // found: <id>". Match on "Memory not found: " as a substring rather
+  // than hardcoding the full wrapper chain, since that's the one part of
+  // the message OC itself controls and guarantees.
+  async memoryGet(memoryId: string): Promise<OcMemory | null> {
+    try {
+      return await this.callTool<OcMemory>("memory_get", {
+        memory_id: memoryId,
+      });
+    } catch (err) {
+      if (/Memory not found: /.test((err as Error).message)) {
+        return null;
+      }
+      throw err;
+    }
+  }
+
   async memoryUpdate(opts: {
     memoryId: string;
     content?: string;

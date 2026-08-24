@@ -105,6 +105,37 @@ describe("filterListedEntities (pure)", () => {
   it("returns an empty array, not undefined, when nothing matches", () => {
     expect(filterListedEntities(entities, { type: "lore" })).toEqual([]);
   });
+
+  it("query matches on name (case-insensitive)", () => {
+    const result = filterListedEntities(entities, {
+      query: "aria",
+      includeBody: true,
+    });
+    expect(result).toEqual([character]);
+  });
+
+  it("query matches on body even when the name doesn't contain it", () => {
+    const result = filterListedEntities(entities, {
+      query: "thousands",
+      includeBody: true,
+    });
+    expect(result).toEqual([scene]);
+  });
+
+  it("a body-only match still has its body stripped when includeBody is false (filter runs before strip)", () => {
+    const result = filterListedEntities(entities, { query: "thousands" });
+    expect(result).toHaveLength(1);
+    expect(result[0]).not.toHaveProperty("body");
+    expect(result[0]).toMatchObject({ memory_id: "mem-scene" });
+  });
+
+  it("type and query compose", () => {
+    const result = filterListedEntities(entities, {
+      type: "character",
+      query: "thousands", // only in scene's body -- character shouldn't match
+    });
+    expect(result).toEqual([]);
+  });
 });
 
 describe("entities — retagValidation (pure)", () => {
