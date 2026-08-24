@@ -13,6 +13,11 @@ export default [
       "node_modules/**",
       "scripts/**",
       "tmp/**",
+      // webui/ is its own npm package (browser/JSX target, its own
+      // tsconfig) with its own eslint config -- linting it under the
+      // root's Node/NodeNext parser config would produce nonsense JSX
+      // parse errors.
+      "webui/**",
     ],
   },
   js.configs.recommended,

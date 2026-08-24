@@ -41,6 +41,37 @@ export interface MnemoStory {
   kindroid_target?: KindroidTarget;
 }
 
+// Explicit field whitelist rather than spreading MnemoStory -- keeps
+// internal plumbing (marker_memory_id) out of any caller's response.
+// kindroid_kin / kindroid_group_id mirror mnemo_story_use's own input
+// param shape rather than exposing the internal kindroid_target: {type,
+// id} representation. Deliberately omits "current" (which story the
+// local active-story pointer points at) -- that's meaningful only to a
+// caller reading the pointer itself (the MCP tools); a caller resolving
+// stories through an explicit id/name (the web API) should never need or
+// imply reliance on it. See resolveStoryId's doc comment above for why.
+export interface StorySummary {
+  id: string;
+  name: string;
+  created_at: string;
+  kindroid_kin?: string;
+  kindroid_group_id?: string;
+}
+
+export function toStorySummary(story: MnemoStory): StorySummary {
+  return {
+    id: story.id,
+    name: story.name,
+    created_at: story.created_at,
+    ...(story.kindroid_target?.type === "ai" && {
+      kindroid_kin: story.kindroid_target.id,
+    }),
+    ...(story.kindroid_target?.type === "group" && {
+      kindroid_group_id: story.kindroid_target.id,
+    }),
+  };
+}
+
 function buildMarkerContent(
   name: string,
   createdAt: string,

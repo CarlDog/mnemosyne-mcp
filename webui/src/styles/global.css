@@ -1,0 +1,539 @@
+/* ==========================================================================
+   The Archivist's Desk — mnemosyne's entity library.
+
+   A private study at night, not a dashboard: warm near-black ground,
+   brass/amber lamplight, index cards pulled from a wooden drawer. Extends
+   the palette already validated in the Chaos Saga reader artifact (same
+   ground/surface/amber/cold tokens) into a denser reference-tool register.
+
+   Three faces, three jobs — never one font doing everything:
+     Fraunces        — display: entity names, page titles, story names
+     Literata         — prose: entity body text
+     Courier Prime    — chrome: labels, tags, meta, search, nav, buttons
+   ========================================================================== */
+
+:root {
+  /* Ground */
+  --ground: #15100c;
+  --surface: #1f1811;
+  --surface-raised: #292016;
+  --line: #3a2d22;
+  --line-soft: #2a2119;
+
+  /* Ink */
+  --ink: #ede1cd;
+  --ink-soft: #c9b9a2;
+  --muted: #8a7862;
+  --faint: #5c4f40;
+
+  /* Accents */
+  --amber: #d9913b;
+  --amber-bright: #f0ab54;
+  --amber-glow: rgba(217, 145, 59, 0.16);
+  --cold: #8fa3b8;
+  --ember: #c65540;
+
+  /* Type scale */
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --font-body: "Literata", ui-serif, Georgia, serif;
+  --font-mono: "Courier Prime", ui-monospace, "SF Mono", Consolas, monospace;
+
+  /* Rhythm */
+  --space-1: 0.4rem;
+  --space-2: 0.7rem;
+  --space-3: 1.1rem;
+  --space-4: 1.8rem;
+  --space-5: 2.8rem;
+  --space-6: 4.4rem;
+
+  --radius: 3px;
+  --shadow-card:
+    0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 28px -12px rgba(0, 0, 0, 0.55);
+  --shadow-card-hover:
+    0 2px 4px rgba(0, 0, 0, 0.45), 0 20px 40px -14px rgba(0, 0, 0, 0.65);
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  /* Faint grain + a warm vignette so the ground reads as a lit desk, not a
+     flat rectangle. Layered radial gradients only -- no image assets. */
+  background-image:
+    radial-gradient(
+      ellipse 70% 50% at 15% -10%,
+      rgba(217, 145, 59, 0.06),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 60% 40% at 100% 110%,
+      rgba(143, 163, 184, 0.04),
+      transparent 60%
+    );
+  background-attachment: fixed;
+}
+
+/* Subtle noise overlay, pure CSS -- a repeating SVG turbulence filter data
+   URI, kept extremely low-opacity so it reads as paper tooth, not static. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+input {
+  font: inherit;
+  color: inherit;
+}
+
+::selection {
+  background: var(--amber-glow);
+  color: var(--amber-bright);
+}
+
+/* ---------- layout ---------- */
+
+.page {
+  position: relative;
+  z-index: 1;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5) var(--space-3);
+  border-bottom: 1px solid var(--line);
+  animation: rise 0.5s ease both;
+}
+
+.brand {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-style: italic;
+  font-size: 1.4rem;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+}
+
+.brand-mark {
+  color: var(--amber);
+  font-style: normal;
+  margin-right: 0.35em;
+}
+
+.crumbs {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.crumbs a:hover {
+  color: var(--amber-bright);
+}
+
+.crumb-sep {
+  color: var(--faint);
+}
+
+.content {
+  flex: 1;
+  padding: var(--space-5);
+  max-width: 76rem;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* ---------- roster layout: index rail + card grid ---------- */
+
+.roster-layout {
+  display: grid;
+  grid-template-columns: 13rem 1fr;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+@media (max-width: 60rem) {
+  .roster-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rail {
+  position: sticky;
+  top: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  animation: rise 0.5s ease 0.05s both;
+}
+
+.rail-label {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin: 0 0 var(--space-2) var(--space-2);
+}
+
+.rail-tab {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border-left: 2px solid transparent;
+  color: var(--ink-soft);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  transition: all 0.15s ease;
+}
+
+.rail-tab:hover {
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.rail-tab.active {
+  color: var(--amber-bright);
+  border-left-color: var(--amber);
+  background: var(--amber-glow);
+}
+
+.rail-count {
+  color: var(--faint);
+  margin-left: var(--space-1);
+}
+
+.rail-tab.active .rail-count {
+  color: var(--amber);
+}
+
+/* ---------- search ---------- */
+
+.search-field {
+  position: relative;
+  margin-bottom: var(--space-4);
+  animation: rise 0.5s ease 0.02s both;
+}
+
+.search-field input {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--space-2) var(--space-3) var(--space-2) 2.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--ink);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.search-field input::placeholder {
+  color: var(--muted);
+}
+
+.search-field input:focus {
+  outline: none;
+  border-color: var(--amber);
+  box-shadow: 0 0 0 3px var(--amber-glow);
+}
+
+.search-field .glyph {
+  position: absolute;
+  left: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  pointer-events: none;
+}
+
+/* ---------- cards ---------- */
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr));
+  gap: var(--space-3);
+}
+
+.card {
+  position: relative;
+  display: block;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    border-color 0.16s ease,
+    background 0.16s ease;
+  box-shadow: var(--shadow-card);
+  animation: rise 0.45s ease both;
+}
+
+.card:hover,
+.card:focus-visible {
+  transform: translateY(-2px);
+  border-color: var(--amber);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-card-hover);
+  outline: none;
+}
+
+/* The signature detail: a punched index-card hole with a brass grommet
+   ring, top-left of every card -- library-catalog cards, not UI chrome. */
+.card::before {
+  content: "";
+  position: absolute;
+  left: var(--space-2);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--ground);
+  border: 1px solid var(--line);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.6);
+}
+
+.card:hover::before {
+  border-color: var(--amber);
+}
+
+.card-type {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  margin-bottom: var(--space-1);
+}
+
+.pinned-mark {
+  color: var(--amber);
+  font-size: 0.9em;
+}
+
+.card-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.15rem;
+  color: var(--ink);
+  margin: 0 0 var(--space-1);
+  line-height: 1.25;
+}
+
+.card-meta {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--faint);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+}
+
+.card-meta .tag {
+  color: var(--cold);
+}
+
+/* story cards read slightly larger -- there are only ever a handful */
+.story-card {
+  padding: var(--space-4);
+}
+
+.story-card .card-name {
+  font-size: 1.5rem;
+  font-style: italic;
+}
+
+.story-card .card-meta {
+  margin-top: var(--space-2);
+}
+
+/* ---------- entity detail ---------- */
+
+.detail-header {
+  animation: rise 0.5s ease both;
+  margin-bottom: var(--space-5);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+
+.detail-type {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: var(--space-2);
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.detail-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 2.4rem;
+  line-height: 1.15;
+  margin: 0 0 var(--space-2);
+}
+
+.detail-meta {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2em;
+}
+
+.detail-meta .tag {
+  color: var(--cold);
+}
+
+.detail-body {
+  font-family: var(--font-body);
+  font-size: 1.08rem;
+  line-height: 1.85;
+  color: var(--ink);
+  max-width: 42rem;
+  animation: rise 0.5s ease 0.08s both;
+  white-space: pre-wrap;
+}
+
+.detail-body em {
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+/* ---------- misc chrome ---------- */
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-bottom: var(--space-4);
+  transition: color 0.15s ease;
+}
+
+.back-link:hover {
+  color: var(--amber-bright);
+}
+
+.state-block {
+  padding: var(--space-5) 0;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--muted);
+  animation: rise 0.4s ease both;
+}
+
+.state-block.error {
+  color: var(--ember);
+}
+
+.empty-block {
+  padding: var(--space-6) 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+/* ---------- motion ---------- */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.card-grid .card:nth-child(1) {
+  animation-delay: 0.02s;
+}
+.card-grid .card:nth-child(2) {
+  animation-delay: 0.05s;
+}
+.card-grid .card:nth-child(3) {
+  animation-delay: 0.08s;
+}
+.card-grid .card:nth-child(4) {
+  animation-delay: 0.11s;
+}
+.card-grid .card:nth-child(5) {
+  animation-delay: 0.14s;
+}
+.card-grid .card:nth-child(6) {
+  animation-delay: 0.17s;
+}
+.card-grid .card:nth-child(n + 7) {
+  animation-delay: 0.19s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

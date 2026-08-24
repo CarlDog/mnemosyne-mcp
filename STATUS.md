@@ -1,6 +1,19 @@
 # Status
 
-**Last updated:** 2026-08-23 (**`mnemo_list_entities` shipped — slice 1's
+**Last updated:** 2026-08-23 (**The web UI exists.** WEBUI_NOTES §9 slice 1
+(entity library, read-only) shipped end to end — a new `/api/*` REST layer
+(`src/api/`, thin adapters over the same domain functions the MCP tools
+already wrap) and a real React 19 + Vite SPA (`webui/`, its own package),
+built and served by the same Express app slice 0 added. Design direction
+"The Archivist's Desk" extends the Chaos Saga reader artifact's palette
+into a card-catalog aesthetic. Verified twice over: 220 automated tests
+passing (up from 193), and a real browser walkthrough against real
+production data (Chaos Saga's 41 entities, all filter counts exact, zero
+console errors). One real npm footgun found and fixed along the way:
+`npm --prefix webui install` run from the root's CWD silently injects a
+self-referencing `file:..` dependency into `webui/package.json` — fixed by
+using an actual `cd` instead of `--prefix`. Full writeup in the dated Done
+entry below. Earlier, same day — **`mnemo_list_entities` shipped — slice 1's
 complete-listing primitive is now a real tool, not just internal
 plumbing.** Generalizes the existing (export-only) `listAllEntities()`
 into `mnemo_list_entities(type?, include_body?, story?)`: a complete,
@@ -278,6 +291,90 @@ provider keys configured (179 total). See Done below for everything
 that's landed since.
 
 ## Done
+
+- **The web UI exists — WEBUI_NOTES §9 slice 1 (entity library, read-only)
+  shipped end to end: story list, filterable/searchable entity roster,
+  entity detail** (2026-08-23). First real UI code in this repo's history.
+  Two halves, both on top of slice 0's HTTP transport:
+  - **`/api/*` REST layer** (`src/api/`) — `GET /stories`, `GET
+    /stories/:storyId`, `GET /stories/:storyId/entities?type=&q=`, `GET
+    /stories/:storyId/entities/:memoryId`. Thin JSON adapters over the same
+    domain functions the MCP tools already wrap (`listStories`,
+    `findStory`, `listAllEntities`, `filterListedEntities`) — no protocol
+    envelope, `docs/ARCHITECTURE.md`'s "thin adapters over the same core"
+    applied literally. Every route takes `storyId` from the URL, never the
+    local `current_story_id` pointer (`GET /stories` deliberately omits
+    `current` for the same reason `resolveStoryId` exists — see slice 0).
+    New `OcClient.memoryGet()` (`src/oc-client.ts`) backs single-entity
+    lookup; its not-found detection was verified live against real OC
+    rather than trusted from reading OC's source — the actual wrapped error
+    is `"memory_get failed: Error executing tool memory_get: Memory not
+    found: <id>"` (FastMCP adds its own "Error executing tool" layer the
+    source alone didn't reveal), confirmed by a live throwaway call before
+    committing the match pattern. `getEntityByMemoryId` enforces
+    `project_id === storyId` itself (`memory_get` isn't project-scoped) —
+    live-verified a cross-story id correctly 404s rather than leaking
+    another story's entity. `filterListedEntities` gained an optional
+    `query` (case-insensitive substring over name OR body, filtering before
+    the existing body-strip). New `src/api-security.ts` extends slice 0's
+    Host/Origin allowlist + bearer auth to `/api/*` and the static UI (not
+    just `/mcp`) — deliberately duplicated logic against the byte-verbatim
+    `shared/http-transport.ts` rather than exporting from it, since that
+    file stays hash-compared against kindroid-mcp's canonical copy.
+  - **`webui/` — a separate React 19 + Vite + react-router SPA**, its own
+    `package.json`/tsconfig (browser+JSX target, incompatible with the
+    server's `NodeNext`/no-DOM config). Dev: Vite's own server proxies
+    `/api/*` to Express, no CORS needed. Prod: `npm run build` at root now
+    builds `webui/` too and copies its output into `dist/webui/`
+    (`scripts/copy-webui-dist.mjs`, `fs.cpSync`, no new dependency) — a
+    complete `npm ci && npm run build && npm start` produces a working
+    deploy; Express serves `dist/webui/` as static files plus a
+    regex-based SPA-fallback route (excludes `/api`, `/mcp`, `/health`)
+    so a deep link survives a hard refresh. Design direction: **"The
+    Archivist's Desk"** — extends the Chaos Saga reader artifact's warm
+    near-black palette (same amber/cold/ember tokens) into a card-catalog
+    aesthetic for a denser reference-tool register: Fraunces (display) +
+    Literata (body prose, regular weight — no italic-wall) + Courier Prime
+    (chrome/labels/tags, evoking a typewritten catalog label) as three
+    faces with three distinct jobs, plus a signature "punched index card"
+    detail on every card. Entity body rendering respects mnemosyne's own
+    asterisk-for-action convention (`webui/src/components/BodyText.tsx`
+    turns `*action*` into styled `<em>`, never the whole paragraph) and
+    preserves single-newline field structure in structured profile text
+    (confirmed against a real character profile, not assumed). Screens
+    follow WEBUI_NOTES' already-ratified constraints: no search/filter
+    chrome on the story list (§1, discovery is solved at 5 stories),
+    browsing is strictly inert (§8 anti-pattern — every roster interaction
+    is a plain navigation), no edit/delete/continue controls anywhere in
+    this slice.
+  - **A real npm footgun found and fixed, not just noticed:** running
+    `npm --prefix webui install` from the repo root's CWD (as the original
+    build-script draft did) silently injects `"mnemosyne-mcp": "file:.."`
+    into `webui/package.json`'s own dependencies — reproduced twice
+    deliberately to confirm before concluding it wasn't one-off flakiness.
+    Root cause not fully chased down, but the fix is clean: `cd webui &&
+    npm install && npm run build && cd ..` (an actual working-directory
+    change) instead of `--prefix`, verified clean across a full
+    rm-node_modules-and-reinstall cycle.
+  - **Verified for real, twice over.** Automated: `tests/api-security.test.ts`
+    (mirrors `http-transport.test.ts`'s harness for the new middleware),
+    `tests/api-integration.test.ts` (real OC, all 4 routes, both 404 cases,
+    the cross-story guard, `type`/`q` filters), plus new pure
+    `filterListedEntities` query cases in `tests/entities.test.ts` — 220
+    tests passing (up from 193), 0 failed (8 pre-existing, unrelated
+    Ollama-model-unavailable failures on this workstation, confirmed
+    isolated by running the affected suites alone). Manual: the actual
+    compiled server was booted and driven in a real browser against real
+    production data — Chaos Saga's 41 entities, all 7 type-filter counts
+    matching exactly, search composing correctly with an active type
+    filter, hover/focus states, a full story→roster→detail→back
+    navigation loop, and a console check that found zero app errors (only
+    unrelated browser-extension noise) — not just curl'd JSON.
+  - **Explicitly deferred, matching the plan:** entity edit/delete UI (the
+    MCP tools and domain functions already exist; no route or UI yet),
+    Docker deployment of the built static assets, director/participant/
+    audience generation screens, the assembly panel, watch parties — all
+    later WEBUI_NOTES §9 slices.
 
 - **`mnemo_list_entities` shipped — the complete-listing primitive slice 1
   needs, registered as a real tool for the first time** (2026-08-23).

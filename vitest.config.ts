@@ -12,5 +12,9 @@ export default defineConfig({
     // memory_search calls). Serialize across files; tests within a file
     // already run sequentially.
     fileParallelism: false,
+    // webui/ is its own npm package (React/Vite, browser target) with no
+    // test dependencies installed at root -- exclude it so a future
+    // webui/src/*.test.tsx is never picked up by root `npm test`.
+    exclude: ["webui/**", "node_modules/**"],
   },
 });

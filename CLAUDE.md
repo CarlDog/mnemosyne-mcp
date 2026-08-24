@@ -11,42 +11,30 @@ into this file, MEMORY.md, or Serena memories — reference STATUS.md.
 
 See [STATUS.md](STATUS.md). The curated-import campaign is complete
 (2026-08-23) — five live stories, ~369 entities, all four original
-ChatGPT projects plus a new fifth story (Shadowflame). Latest:
-**`mnemo_list_entities` shipped** — slice 1's complete-listing
-primitive (`listAllEntities()`, previously export-only plumbing) is now
-a real tool: `mnemo_list_entities(type?, include_body?, story?)`,
-unranked and uncapped unlike `mnemo_recall`, body stripped by default
-via the new pure `filterListedEntities()` helper. Live-smoke-tested
-against real data (Chaos Saga's actual 41 entities). Earlier the same
-day: **slice 0 shipped** — the prerequisite a pre-build review of
-[docs/WEBUI_NOTES.md](docs/WEBUI_NOTES.md) found blocking every planned
-web-UI build slice. `resolveStoryId()` (`src/stories.ts`) generalizes
-`mnemo_export_story`'s existing bypass pattern to all 9 story-touching
-tools — an optional per-call `story` override, deliberately not
-session-scoped server state (a future web UI just passes it explicitly
-on every call; the fallback path is proven zero-OC-calls, so every
-existing stdio caller is unaffected). `src/shared/http-transport.ts` is
-a byte-verbatim copy of kindroid-mcp's fleet-canonical `mountMcpHttp()`
-(fresh `McpServer` per session, idle eviction, Host/Origin allowlist,
-bearer auth), wired into `src/index.ts` via a `makeServer()` factory
-that mode-switches on `MCP_PORT` (unset = stdio, unchanged). Verified
-end-to-end against the real compiled server — a real MCP initialize
-handshake in HTTP mode, `/health`, and a confirmed byte-for-byte
-unchanged stdio boot — not just unit tests. 193 tests passing with
-`OC_URL` set (up from 144), including a new `http-integration.test.ts`
-proving two concurrent sessions don't collide and the story override
-bypasses the pointer over the actual wire. Docker deployment for the new
-HTTP mode and the actual web UI (slice 1+) are explicitly next, not yet
-started. Earlier the same day: the WEBUI_NOTES.md review itself (a
-paired senior-sde feasibility review and senior-ui-ux-designer critique)
-found the doc's build order had no slice 0 at all, plus several
-sections needing reality-checks and design fixes. And earlier still:
-outgoing companion-chat messages now carry a provenance header
-(`[Mnemosyne — automated scene direction, not Carl typing]`, new
-`MNEMO_USER_NAME` env var), live-verified against a real Botify bot,
-paired with a `prompt.ts` change stating the asterisk-for-action /
-plain-dialogue convention in every mode directive. See STATUS.md's Done
-log for all four full writeups.
+ChatGPT projects plus a new fifth story (Shadowflame).
+
+**The web UI exists** (2026-08-23) — WEBUI_NOTES §9 slice 1 (entity
+library, read-only: browse stories, filter/search a story's entities,
+view one entity in full) shipped end to end: a new `/api/*` REST layer
+(`src/api/`, thin adapters over the same domain functions the MCP tools
+already wrap) plus a real React + Vite SPA (`webui/`, its own package,
+built and served by the same Express app slice 0 added — see "Layout"
+below). Verified twice over: 220 automated tests passing, and an actual
+browser walkthrough against real production data with zero console
+errors. Entity edit/delete UI, Docker deployment, and every other
+WEBUI_NOTES §9 slice (director/participant/audience modes, the assembly
+panel, watch parties) are explicitly not started yet.
+
+This landed on top of two same-day prerequisites: **slice 0**
+(`resolveStoryId()`'s per-call `story` override generalized across every
+story-touching tool, plus real Streamable HTTP transport via a
+byte-verbatim copy of kindroid-mcp's fleet-canonical `mountMcpHttp()`)
+and **`mnemo_list_entities`** (the complete/unranked entity-listing
+primitive, previously export-only plumbing, now a real tool). Both grew
+out of a pre-build review of [docs/WEBUI_NOTES.md](docs/WEBUI_NOTES.md)
+(paired senior-sde feasibility review + senior-ui-ux-designer critique)
+that found the doc's original build order had no working prerequisite
+at all. See STATUS.md's Done log for the full writeup of every stage.
 
 ## Stack
 
@@ -67,6 +55,25 @@ log for all four full writeups.
   Streamable HTTP transport (fresh `McpServer` per session, idle-session
   eviction, Host/Origin allowlist, bearer auth) — a byte-verbatim copy
   of kindroid-mcp's own `src/shared/http-transport.ts`.
+- `src/api-security.ts` — `apiSecurity()`: the same Host/Origin allowlist
+  + bearer-auth check as `shared/http-transport.ts`, reimplemented (not
+  imported — that file must stay byte-verbatim) as Express middleware
+  protecting `/api/*` and the static web UI.
+- `src/api/` — the REST layer the web UI talks to: `index.ts`
+  (`createApiRouter()`, mirrors `tools/index.ts`'s orchestrator shape),
+  `stories.ts`, `entities.ts` (route handlers — thin JSON adapters over
+  the same domain functions the MCP tools wrap), `helpers.ts`
+  (`asyncRoute()`, error middleware).
+- `webui/` — the actual web UI (WEBUI_NOTES §9 slice 1: entity library,
+  read-only). A separate npm package — React 19 + Vite + react-router,
+  its own tsconfig (browser/JSX target, incompatible with the server's
+  `NodeNext`/no-DOM config) and its own eslint config (pinned to eslint 9;
+  `eslint-plugin-react-hooks`'s peer range doesn't reach 10 yet). `npm run
+  build` at the repo root builds this too and copies its output into
+  `dist/webui/` (`scripts/copy-webui-dist.mjs`) for `src/index.ts` to
+  serve as static files + a SPA-fallback route. Dev: `npm --prefix webui
+  run dev` runs Vite's own server, proxying `/api/*` to the Express
+  server started via the root's `npm run dev`.
 - `src/oc-client.ts` — Streamable HTTP MCP client wrapper for OC.
 - `src/kindroid-client.ts` — Streamable HTTP MCP client wrapper for
   kindroid-mcp (same shape as `oc-client.ts`).
