@@ -1592,19 +1592,52 @@ real use and pressure points emerge:
   carries a real bearer token), so an interactive Claude session working
   in this repo can call its tools ad hoc today without any of the
   server-side work described in the design doc.
-- **Deterministic engine primitives: an internal clock/calendar and
-  RNG.** Mnemosyne has no notion of in-story time progression today —
-  nothing tracks how much story-time has passed between beats, so timed
-  events (a deadline, an anniversary, "three days later") and seasonal
-  ones (a winter festival, a harvest scene) can't trigger reliably; the
-  LLM would otherwise have to infer elapsed time from prose alone, which
-  won't hold up. Same gap for randomness: no random-number generator
-  exists for procedural rolls (encounter checks, loot tables) — related
-  to, but narrower than, the "Game mechanics" bullet above
-  (StatBlock/dice/HP/inventory, v2 Phase 4 territory). Both need their
-  own design pass (calendar model + advancement rule; RNG scope and
-  where seeds/results get recorded for reproducibility) before
-  implementation. Surfaced 2026-08-24 by the operator.
+- **Position tracking: an origin-anchored space+time coordinate per
+  story.** Mnemosyne has no notion of "where and when the story
+  currently is" — nothing tracks in-story location or elapsed time
+  between beats, so timed events (a deadline, an anniversary, "three
+  days later") and seasonal ones (a winter festival, a harvest scene)
+  can't trigger reliably, and there's no way to say "the story is
+  currently at X" the way `mnemo_story_use` says which story is active.
+  Surfaced 2026-08-24 as a bare need for a clock; developed further
+  2026-08-25 into a fuller shape via the operator's own framing: think
+  of it like a Stargate gate address — six symbols locate a destination
+  (two points per axis), but the connection only resolves relative to a
+  seventh symbol, the dialer's own point of origin. Translated to
+  Mnemosyne:
+  - **Origin = the story itself**, not a generic "session zero." Each
+    story's own epoch — a start date and a start location — tied to
+    its OC project. Without this anchor, "day 12" or "the docks" is
+    ambiguous across the five live story arcs.
+  - **Time = an offset from the epoch**, not an absolute value:
+    `current_story_date = epoch_date + elapsed`.
+  - **Location = a pointer into existing `type:location` entities,
+    two-level rather than a flat single coordinate** — a place and a
+    spot within it. Chaos House already has this shape organically
+    (Master Suite, Garage, Backyard as sub-locations), which is closer
+    to the "two points per axis" instinct than a single flat
+    coordinate would be.
+  - Deliberately NOT three continuous spatial axes the way literal
+    Stargate coordinates are — Mnemosyne's "space" is a discrete graph
+    of named places, not free 3D space, so forcing three independent
+    axes would over-engineer a problem that's really "which place,
+    which spot in it."
+  Open questions, unresolved: where the pointer lives (local
+  operational state like the current-story pointer, or an OC-canonical
+  marker the way the Kindroid target binding works — probably the
+  latter, since a future web UI caller needs to read/set it too);
+  whether advancing position is an explicit tool call or inferred from
+  generated prose; and how to represent travel/duration between two
+  locations if that distance ever matters. Design not started — this
+  is a shape, not a spec.
+- **Deterministic RNG for procedural rolls.** No random-number
+  generator exists for encounter checks, loot tables, or other
+  procedural rolls — related to, but narrower than, the "Game
+  mechanics" bullet above (StatBlock/dice/HP/inventory, v2 Phase 4
+  territory) and distinct from the position-tracking bullet above
+  (RNG doesn't need an origin anchor the way space/time do). Needs its
+  own design pass: RNG scope, and where seeds/results get recorded for
+  reproducibility. Surfaced 2026-08-24 by the operator.
 
 ## Open Decisions
 
