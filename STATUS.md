@@ -1586,12 +1586,16 @@ real use and pressure points emerge:
   Shape in brief: mirrors the existing `src/kindroid-client.ts` pattern
   (a new `src/atlascloud-client.ts` Streamable HTTP MCP client,
   `ATLASCLOUD_MCP_URL` + `ATLASCLOUD_MCP_AUTH_TOKEN` config) against
-  [atlascloud-mcp](https://github.com/CarlDog/atlascloud-mcp) (deployed
-  `http://carldog-nas:3010/mcp`). In the meantime, atlascloud-mcp is
-  already registered in this repo's `.mcp.json` (2026-08-05, gitignored —
-  carries a real bearer token), so an interactive Claude session working
-  in this repo can call its tools ad hoc today without any of the
-  server-side work described in the design doc.
+  [atlascloud-mcp](https://github.com/CarlDog/atlascloud-mcp) — **not
+  currently deployed.** It was live on the NAS (`http://carldog-nas:3010/mcp`,
+  Portainer stack 171) as of 2026-08-05 but has since been decommissioned
+  (confirmed 2026-08-25: no stack, no container). This repo's `.mcp.json`
+  had a matching `atlascloud` HTTP entry pointing at that dead endpoint —
+  removed 2026-08-25. The design above remains unbuilt and would need a
+  live atlascloud-mcp deployment (or a redesign against the npm package's
+  local stdio form) before it's actionable — see the fleet's actual
+  `atlascloud` generator provider note above instead, which talks to the
+  Atlas Cloud REST API directly and needs neither.
 - **Position tracking: an origin-anchored space+time coordinate per
   story.** Mnemosyne has no notion of "where and when the story
   currently is" — nothing tracks in-story location or elapsed time
