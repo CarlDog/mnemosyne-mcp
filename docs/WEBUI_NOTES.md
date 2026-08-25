@@ -191,7 +191,7 @@ Reachable from any character named in a scene.
 
 - Full profile, editable in place
 - Its distilled essence / voice notes
-- Reference images (`references/characters/<slug>.jpg`, per DATA_LAYOUT.md)
+- Reference images (`references/characters/<slug>/portrait.png`, per DATA_LAYOUT.md)
 - How strongly it reaches the prompt — see §5
 - Kindroid or Botify target binding, where the story uses a companion provider
 
@@ -377,7 +377,7 @@ context, and the cost is printed on the button.
 What makes ours different is that **we can generate in character.** The
 groundwork already exists:
 
-- `references/characters/<slug>.jpg` — identity-conditioning inputs, already
+- `references/characters/<slug>/portrait.png` — identity-conditioning inputs, already
   populated for Riley and Jenna
 - `art/` with a mandatory JSON sidecar recording prompt, model, params,
   references used, cost, and subject — already ratified in DATA_LAYOUT.md,

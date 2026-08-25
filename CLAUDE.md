@@ -119,6 +119,12 @@ at all. See STATUS.md's Done log for the full writeup of every stage.
 - `docs/DATA_LAYOUT.md` — the data-directory organization and naming
   standard: per-story `references/` and `art/` conventions, generation
   sidecars, and the server-written `story.json` identity card.
+- `docs/LIVING_CANON_STANDARD.md` — the ratified editorial quality contract
+  for curated story references and polished export derivatives: proportional
+  character depth, playable locations, material objects, relationship and
+  knowledge geometry, hook ecology, truth tiers, current-state extraction,
+  provenance, mature-content/routing separation, and cross-story improvement
+  without forced canon connections.
 - `docs/WEBUI_NOTES.md` — design input for the planned web UI (explicitly
   not ratified): mode-adaptive layout, the storyline control plane, the
   retrieval-assembly panel, media in the beat flow, plex-companion watch
