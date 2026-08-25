@@ -1592,6 +1592,19 @@ real use and pressure points emerge:
   carries a real bearer token), so an interactive Claude session working
   in this repo can call its tools ad hoc today without any of the
   server-side work described in the design doc.
+- **Deterministic engine primitives: an internal clock/calendar and
+  RNG.** Mnemosyne has no notion of in-story time progression today —
+  nothing tracks how much story-time has passed between beats, so timed
+  events (a deadline, an anniversary, "three days later") and seasonal
+  ones (a winter festival, a harvest scene) can't trigger reliably; the
+  LLM would otherwise have to infer elapsed time from prose alone, which
+  won't hold up. Same gap for randomness: no random-number generator
+  exists for procedural rolls (encounter checks, loot tables) — related
+  to, but narrower than, the "Game mechanics" bullet above
+  (StatBlock/dice/HP/inventory, v2 Phase 4 territory). Both need their
+  own design pass (calendar model + advancement rule; RNG scope and
+  where seeds/results get recorded for reproducibility) before
+  implementation. Surfaced 2026-08-24 by the operator.
 
 ## Open Decisions
 
