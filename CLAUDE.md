@@ -135,6 +135,10 @@ at all. See STATUS.md's Done log for the full writeup of every stage.
   bridge that captures the durable informational value.
 - `.githooks/pre-commit` — gitleaks + PII pattern scan + author identity check.
 - `.gitleaks.toml` — secret-scanning config.
+- `vendor/atlascloud-cli` — [Atlas Cloud CLI](https://github.com/AtlasCloudAI/cli)
+  (credit: AtlasCloudAI), vendored as a git submodule. Manual dev/ops tool
+  only (shell-side balance/model/connectivity checks) — the `atlascloud`
+  generator provider talks to the API directly and does not use it.
 
 ## Architecture Overview
 

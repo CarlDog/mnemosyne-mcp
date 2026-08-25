@@ -93,6 +93,16 @@ OC_URL=http://your-nas:18000/mcp \
   node scripts/dump-kindroid-group-message.mjs <story_id> <group_id> "<user direction>"
 ```
 
+## Third-Party Tools
+
+- **[Atlas Cloud CLI](https://github.com/AtlasCloudAI/cli)** (vendored as a
+  git submodule at `vendor/atlascloud-cli`) — credit to AtlasCloudAI. A
+  manual dev/ops tool for checking Atlas Cloud account balance, model
+  availability, and API connectivity from the shell; mnemosyne's own
+  `atlascloud` generator provider (`src/openai-compat-provider.ts`) talks
+  to the Atlas Cloud API directly and does not call this CLI. After
+  cloning, run `git submodule update --init --recursive` to pull it in.
+
 ## License
 
 MIT
