@@ -1,6 +1,37 @@
 # Status
 
-**Last updated:** 2026-08-23 (**The web UI exists.** WEBUI_NOTES §9 slice 1
+**Last updated:** 2026-08-25 (**The Living Canon Standard is ratified, and
+story references moved to per-entity folders.**
+[docs/LIVING_CANON_STANDARD.md](docs/LIVING_CANON_STANDARD.md) (ratified
+2026-08-24) is now the editorial quality contract for curated story
+references and export derivatives — proportional character depth,
+playable locations, material objects, relationship/knowledge geometry,
+hook ecology, truth tiers, current-state extraction, provenance, and
+mature-content/routing separation.
+[docs/DATA_LAYOUT.md](docs/DATA_LAYOUT.md)'s `references/` convention
+moved the same window from flat `<slug>.jpg` files to one folder per
+entity (`references/<type>/<slug>/<variant>.png` + sidecar), added an
+`objects/` category alongside `characters/`/`locations/`, and expanded
+the JSON sidecar schema (`asset_role`, `review_status`,
+`provenance_status`, `prompt_capture`); the legacy flat layout is
+retired. Also this window: the deferred Atlas Cloud MCP-client design
+(`atlascloud-client.ts`, under "What's next") was corrected — the
+atlascloud-mcp NAS deployment it targeted was decommissioned
+2026-08-25 and the matching dead `.mcp.json` entry removed, so that
+design needs a live redeploy or a stdio redesign before it's
+actionable (the real `atlascloud` generator provider is unaffected —
+it talks to the Atlas Cloud REST API directly and was never routed
+through atlascloud-mcp); and
+[vendor/atlascloud-cli](vendor/atlascloud-cli) was added as a git
+submodule (credit: AtlasCloudAI) for manual shell-side
+balance/model/connectivity checks, unused by the generator provider.
+Two post-v0 engine-primitive needs were also filed under "What's next"
+with no design started: an in-story clock/calendar plus a real RNG for
+procedural rolls, and an origin-anchored space+time position
+coordinate per story (a story epoch + elapsed time, inspired by a
+Stargate gate-address framing — six symbols locate a destination, but
+the connection only resolves relative to the seventh, the point of
+origin).) Earlier (2026-08-23): **The web UI exists.** WEBUI_NOTES §9 slice 1
 (entity library, read-only) shipped end to end — a new `/api/*` REST layer
 (`src/api/`, thin adapters over the same domain functions the MCP tools
 already wrap) and a real React 19 + Vite SPA (`webui/`, its own package),
@@ -72,9 +103,12 @@ generated output stays visually consistent with the wider companion-chat
 convention. Consistency is the point, not just style — the operator's own
 framing: "when we run into problems, like a bot reacting poorly, it's
 easier to isolate what caused it" if every generator formats the same way.
-Botify's own OOC/bracket handling is unconfirmed by the research (its docs
-and community were unreachable) — flagged as a follow-up empirical probe,
-not assumed. 5 new/updated tests (142/142 passing); a separate same-day
+Botify's own OOC/bracket handling was confirmed the same day by a live
+probe plus r/botify_ai community research (full detail in the dated
+Done entry below) — a bracketed direction read as a scene event, not
+Carl typing, and asterisk-for-action came back unprompted, though two
+active regression threads mean Botify's own team was mid-fix on the
+exact mechanism at the time. 5 new/updated tests (142/142 passing); a separate same-day
 plex-companion timeout fix (`KINDROID_ENGAGEMENT_TIMEOUT_MS`, split from
 `REQUEST_TIMEOUT_MS`) is documented in that repo's own STATUS.md.) Earlier,
 same day — **the import campaign is complete — five

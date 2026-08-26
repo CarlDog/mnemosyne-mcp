@@ -13,6 +13,20 @@ See [STATUS.md](STATUS.md). The curated-import campaign is complete
 (2026-08-23) — five live stories, ~369 entities, all four original
 ChatGPT projects plus a new fifth story (Shadowflame).
 
+**Outgoing companion-chat messages carry a provenance header, and
+in-fiction narration follows one asterisk/bracket convention everywhere**
+(2026-08-23) — every Kindroid/Botify direction now opens with
+`[Mnemosyne — automated scene direction, not Carl typing]`
+(`MNEMO_USER_NAME`), and every mode directive in `prompt.ts` states the
+same asterisk-for-action / plain-dialogue rule so the five direct-LLM
+providers' output stays visually consistent with it. Grounded in real
+research, not invented: Kindroid's and AI Dungeon's own docs plus Reddit
+community convention, then confirmed live against a real Botify bot and
+cross-checked against r/botify_ai — a bracketed direction read as a
+scene event, not Carl typing, and asterisk-for-action came back
+unprompted, though two active regression threads mean Botify's own team
+was mid-fix on that exact mechanism at the time.
+
 **The web UI exists** (2026-08-23) — WEBUI_NOTES §9 slice 1 (entity
 library, read-only: browse stories, filter/search a story's entities,
 view one entity in full) shipped end to end: a new `/api/*` REST layer
@@ -35,6 +49,17 @@ out of a pre-build review of [docs/WEBUI_NOTES.md](docs/WEBUI_NOTES.md)
 (paired senior-sde feasibility review + senior-ui-ux-designer critique)
 that found the doc's original build order had no working prerequisite
 at all. See STATUS.md's Done log for the full writeup of every stage.
+
+**The Living Canon Standard is ratified, and story references moved to
+per-entity folders** (2026-08-24/25) —
+[docs/LIVING_CANON_STANDARD.md](docs/LIVING_CANON_STANDARD.md) is now
+the editorial quality contract for curated story references and export
+derivatives (character depth, playable locations, material objects,
+relationship/knowledge geometry, hook ecology, truth tiers, provenance,
+mature-content routing); `references/` moved from flat `<slug>.jpg`
+files to one folder per entity per
+[docs/DATA_LAYOUT.md](docs/DATA_LAYOUT.md), with a new `objects/`
+category alongside `characters/`/`locations/`.
 
 ## Stack
 
