@@ -36,9 +36,18 @@ against the original ChatGPT source found detail-level gaps (missing
 locations, missing mechanical rules, compressed-out narrative anecdotes,
 one internal rules.md/style.md contradiction) which were restored/
 resolved per operator direction; `validate-canon.mjs` reports it clean.
-Nothing in any story's `canon/` has been imported to live OC; per
-standing instruction, nothing gets "locked in" as canon until explicitly
-told to. Full detail in STATUS.md's dated Done entry.
+**GhostHunters is the third, and the cleanest so far** (2026-08-27, 105
+entities) — a 4-agent sweep found the large majority of content already
+present verbatim; real gaps were narrow (a second Interpersonal Dynamics
+list for Carl's corgi Max, a missing group-chat message-format system in
+a new `worldbuilding/group-chat.md`, the Chapter Lock Trigger Clause, and
+one unilateral judgment call re-adding sensory/craft intimacy guidance as
+craft advice rather than a censorship-era relic). The same content-rating
+liberalization pattern (PG-13/implication-only → Mature/hard-R explicit)
+now holds consistently across all three consolidated stories. Nothing in
+any story's `canon/` has been imported to live OC; per standing
+instruction, nothing gets "locked in" as canon until explicitly told to.
+Full detail in STATUS.md's dated Done entry.
 
 **Outgoing companion-chat messages carry a provenance header, and
 in-fiction narration follows one asterisk/bracket convention everywhere**
