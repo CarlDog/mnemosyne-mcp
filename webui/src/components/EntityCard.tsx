@@ -19,24 +19,39 @@ export default function EntityCard({
   );
 
   return (
-    <Link
-      to={`/stories/${storyId}/entities/${entity.memory_id}`}
-      className="card"
-    >
-      <div className="card-type">
-        {entity.pinned && <span className="pinned-mark">★</span>}
-        {entity.type}
-      </div>
-      <h3 className="card-name">{entity.name}</h3>
-      {extraTags.length > 0 && (
-        <div className="card-meta">
-          {extraTags.map((tag) => (
-            <span key={tag} className="tag">
-              {tag}
-            </span>
-          ))}
+    <article className="card">
+      <Link
+        to={`/stories/${storyId}/entities/${entity.memory_id}`}
+        className="card-title-link"
+      >
+        <div className="card-type">
+          {entity.pinned && <span className="pinned-mark">★</span>}
+          {entity.type}
         </div>
-      )}
-    </Link>
+        <h3 className="card-name">{entity.name}</h3>
+        {extraTags.length > 0 && (
+          <div className="card-meta">
+            {extraTags.map((tag) => (
+              <span key={tag} className="tag">
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+      </Link>
+      <div className="card-actions">
+        <Link
+          to={`/stories/${storyId}/entities/${entity.memory_id}`}
+          className="card-action"
+        >
+          Open
+        </Link>
+        {entity.type === "scene" && (
+          <Link to={`/stories/${storyId}/continue`} className="card-action">
+            Continue
+          </Link>
+        )}
+      </div>
+    </article>
   );
 }
