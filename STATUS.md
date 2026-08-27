@@ -1942,7 +1942,9 @@ real use and pressure points emerge:
   API (or an explicit `order_by` in `memory_search`) so Mnemosyne can ask
   OC for both recency and relevance scene ordering without fallback logic
   and client-side tag filtering. This would remove the current split in
-  scene retrieval behavior and simplify `mnemo_continue` context selection.
+  scene retrieval behavior and simplify `mnemo_continue` context selection,
+  now that `scene_context_strategy` is configurable per request on the
+  Mnemosyne side.
 - **OC rate limit (120 RPM per IP)** — OC v3's `RateLimitMiddleware`
   defaults to 120 requests/minute per client (configurable via
   `OC_API_RATE_LIMIT_RPM`). Bursts from `gatherContext` (7 sequential

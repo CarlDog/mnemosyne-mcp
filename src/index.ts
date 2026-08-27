@@ -582,7 +582,7 @@ v0 surface:
 - mnemo_delete_entity(type, name, story?) — delete one entity from the
   active story by (type, name).
 - mnemo_continue(direction, mode?, max_tokens?, temperature?, model?,
-  kindroid_kin?, kindroid_group_id?, validate?, story?) — pull context
+  kindroid_kin?, kindroid_group_id?, scene_context_strategy?, validate?, story?) — pull context
   from OC, generate the next beat via the generator LLM, auto-save the
   result as a scene entity. Mode defaults to 'director'. model overrides
   the generator's default model for this call (honored by every
