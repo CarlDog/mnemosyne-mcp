@@ -43,6 +43,12 @@ suite("/api routes (real OC)", () => {
       }),
     }),
   };
+  const stubGenerator: LlmProvider = {
+    name: "stub-generator",
+    generate: async () => ({
+      text: "The lantern flares as the rain briefly eases, and a shadowed figure nods toward the dock.",
+    }),
+  };
 
   beforeAll(async () => {
     const setup = await setupTestStory(OC_URL!, "api");
@@ -72,6 +78,7 @@ suite("/api routes (real OC)", () => {
     app.use(
       "/api",
       createApiRouter(oc, {
+        generator: stubGenerator,
         validator: stubValidator,
       }),
     );
@@ -226,6 +233,43 @@ suite("/api routes (real OC)", () => {
     const body = await res.json();
     expect(body.scenes_checked).toBe(2);
     expect(body.failures).toEqual([]);
+  });
+
+  it("POST /stories/:storyId/continue generates and saves a scene", async () => {
+    const res = await fetch(`${baseUrl}/stories/${storyId}/continue`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        direction: "The captain lifts the bell rope and waits for a response.",
+      }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.mode).toBe("director");
+    expect(body.beat_text).toContain("rain briefly eases");
+    expect(typeof body.memory_id).toBe("string");
+    const lookup = await fetch(
+      `${baseUrl}/stories/${storyId}/entities/${body.memory_id}`,
+    );
+    expect(lookup.status).toBe(200);
+    const found = await lookup.json();
+    expect(found.entity.body).toContain("rain briefly eases");
+  });
+
+  it("POST /stories/:storyId/continue accepts scene_context_strategy and validate", async () => {
+    const res = await fetch(`${baseUrl}/stories/${storyId}/continue`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        direction: "A new signal lantern burns at the edge of the fog.",
+        scene_context_strategy: "query-ranked",
+        validate: true,
+      }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.validation.summary).toContain("stubbed validator summary");
+    expect(body.validation.issues).toHaveLength(1);
   });
 
   it("an unmatched /api path returns a JSON 404, not HTML", async () => {

@@ -654,6 +654,7 @@ if (httpConfig.port === undefined) {
   app.use(
     "/api",
     createApiRouter(oc, {
+      generator,
       validator,
       sceneContextStrategy: SCENE_CONTEXT_STRATEGY,
     }),
