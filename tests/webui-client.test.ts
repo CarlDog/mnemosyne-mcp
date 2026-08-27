@@ -45,6 +45,7 @@ describe("web client api module", () => {
       direction: "The foghorn calls again.",
       mode: "director",
       scene_context_strategy: "query-ranked",
+      scene_context_fallback_strategy: "recency-first",
       validate: true,
       max_tokens: 111,
       temperature: 0.7,
@@ -66,6 +67,7 @@ describe("web client api module", () => {
     expect(payload.direction).toBe("The foghorn calls again.");
     expect(payload.mode).toBe("director");
     expect(payload.scene_context_strategy).toBe("query-ranked");
+    expect(payload.scene_context_fallback_strategy).toBe("recency-first");
     expect(payload.validate).toBe(true);
     expect(payload.max_tokens).toBe(111);
     expect(payload.temperature).toBe(0.7);

@@ -25,6 +25,9 @@ export default function ContinueScenePage() {
   const [direction, setDirection] = useState("");
   const [mode, setMode] = useState<Mode>("director");
   const [strategy, setStrategy] = useState<SceneContextStrategy>("recency-first");
+  const [fallbackStrategy, setFallbackStrategy] = useState<
+    SceneContextStrategy | "none"
+  >("none");
   const [validate, setValidate] = useState(false);
   const [maxTokens, setMaxTokens] = useState("");
   const [temperature, setTemperature] = useState("");
@@ -52,6 +55,9 @@ export default function ContinueScenePage() {
         scene_context_strategy: strategy,
         validate,
       };
+      if (fallbackStrategy !== "none") {
+        payload.scene_context_fallback_strategy = fallbackStrategy;
+      }
       if (maxTokens.trim() !== "") payload.max_tokens = Number(maxTokens);
       if (temperature.trim() !== "") payload.temperature = Number(temperature);
       if (model.trim() !== "") payload.model = model.trim();
@@ -133,6 +139,29 @@ export default function ContinueScenePage() {
               }
               className="select"
             >
+              {SCENE_CONTEXT_STRATEGIES.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="field-pair">
+            <label className="field-label" htmlFor="fallbackStrategy">
+              Fallback scene context strategy
+            </label>
+            <select
+              id="fallbackStrategy"
+              value={fallbackStrategy}
+              onChange={(event) =>
+                setFallbackStrategy(
+                  event.target.value as SceneContextStrategy | "none",
+                )
+              }
+              className="select"
+            >
+              <option value="none">None</option>
               {SCENE_CONTEXT_STRATEGIES.map((item) => (
                 <option key={item} value={item}>
                   {item}
@@ -235,7 +264,10 @@ export default function ContinueScenePage() {
             )}
             <div className="result-meta">
               <span>Mode: {result.mode}</span>
-              <span>Recency strategy: {strategy}</span>
+              <span>Scene strategy: {strategy}</span>
+              {fallbackStrategy !== "none" && (
+                <span>Fallback strategy: {fallbackStrategy}</span>
+              )}
               <span>
                 Gather / generate / save / validate: {result.stages_ms.gather_ms}ms /{" "}
                 {result.stages_ms.generate_ms}ms / {result.stages_ms.save_ms}ms /{" "}

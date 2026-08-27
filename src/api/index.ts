@@ -17,6 +17,7 @@ export interface ApiRouterOptions {
   generator?: LlmProvider;
   validator?: LlmProvider;
   sceneContextStrategy?: SceneContextStrategy;
+  sceneContextFallbackStrategy?: SceneContextStrategy;
 }
 
 export function createApiRouter(
@@ -26,6 +27,8 @@ export function createApiRouter(
   const router = Router();
   const sceneContextStrategy =
     options.sceneContextStrategy ?? DEFAULT_SCENE_CONTEXT_STRATEGY;
+  const sceneContextFallbackStrategy =
+    options.sceneContextFallbackStrategy ?? sceneContextStrategy;
 
   registerStoryRoutes(router, oc);
   registerEntityRoutes(router, oc);
@@ -37,6 +40,7 @@ export function createApiRouter(
       options.generator,
       options.validator,
       sceneContextStrategy,
+      sceneContextFallbackStrategy,
     );
   }
 

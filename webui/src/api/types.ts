@@ -46,6 +46,7 @@ export interface ContinueRequest {
   direction: string;
   mode?: Mode;
   scene_context_strategy?: SceneContextStrategy;
+  scene_context_fallback_strategy?: SceneContextStrategy;
   max_tokens?: number;
   temperature?: number;
   model?: string;
