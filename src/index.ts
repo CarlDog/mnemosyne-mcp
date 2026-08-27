@@ -61,6 +61,7 @@ if (!GENERATOR_PROVIDERS.includes(GENERATOR_PROVIDER)) {
 }
 
 const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
+const OLLAMA_KEEP_ALIVE = process.env.OLLAMA_KEEP_ALIVE || "30m";
 
 // Operator display name for the companion-chat providers' outgoing-message
 // provenance header (e.g. "[Mnemosyne -- automated scene direction, not
@@ -83,6 +84,15 @@ if (OLLAMA_NUM_CTX) {
     });
     process.exit(1);
   }
+}
+
+const OLLAMA_KEEP_ALIVE_CLEAN = OLLAMA_KEEP_ALIVE.trim();
+if (!OLLAMA_KEEP_ALIVE_CLEAN) {
+  log.error("startup", "OLLAMA_KEEP_ALIVE is invalid", {
+    value: OLLAMA_KEEP_ALIVE,
+    hint: "set OLLAMA_KEEP_ALIVE to a non-empty Ollama keep_alive value, or unset to use the default 30m",
+  });
+  process.exit(1);
 }
 
 let ocUrl: URL;
@@ -145,6 +155,7 @@ type GeneratorConfig =
 
 let generatorConfig: GeneratorConfig;
 let ollamaValidatorModel: string;
+let ollamaGeneratorModel: string | undefined;
 
 // The validator pass always runs on Ollama regardless of the generator (a
 // companion-chat model can't do structured JSON, and keeping the validator
@@ -376,6 +387,7 @@ if (GENERATOR_PROVIDER === "kindroid") {
   ollamaValidatorModel =
     process.env.OLLAMA_VALIDATOR_MODEL || OLLAMA_GENERATOR_MODEL;
 
+  ollamaGeneratorModel = OLLAMA_GENERATOR_MODEL;
   generatorConfig = { provider: "ollama", model: OLLAMA_GENERATOR_MODEL };
 }
 
@@ -477,10 +489,12 @@ if (generatorConfig.provider === "kindroid") {
     url: OLLAMA_URL,
     defaultModel: generatorConfig.model,
     maxContextWindow: ollamaNumCtx,
+    keepAlive: OLLAMA_KEEP_ALIVE_CLEAN,
   });
   log.info("startup", "ollama generator configured", {
     url: OLLAMA_URL,
     generator_model: generatorConfig.model,
+    keep_alive: OLLAMA_KEEP_ALIVE_CLEAN,
   });
 }
 
@@ -488,11 +502,40 @@ const validator = new OllamaProvider({
   url: OLLAMA_URL,
   defaultModel: ollamaValidatorModel,
   maxContextWindow: ollamaNumCtx,
+  keepAlive: OLLAMA_KEEP_ALIVE_CLEAN,
 });
 log.info("startup", "ollama validator configured", {
   url: OLLAMA_URL,
   validator_model: ollamaValidatorModel,
+  keep_alive: OLLAMA_KEEP_ALIVE_CLEAN,
 });
+
+function warmupProvider(provider: LlmProvider, label: string): void {
+  if (!provider.warmup) return;
+  provider
+    .warmup()
+    .then(() => {
+      log.info("startup", "provider warmup complete", { provider: label });
+    })
+    .catch((err) => {
+      log.warn("startup", "provider warmup failed", {
+        provider: label,
+        msg: (err as Error).message,
+      });
+    });
+}
+
+if (generatorConfig.provider === "ollama") {
+  warmupProvider(generator, "ollama generator");
+  if (
+    ollamaGeneratorModel !== undefined &&
+    ollamaGeneratorModel !== ollamaValidatorModel
+  ) {
+    warmupProvider(validator, "ollama validator");
+  }
+} else {
+  warmupProvider(validator, "ollama validator");
+}
 
 const INSTRUCTIONS = `MCP server for long-form storytelling on top of OpenChronicle (OC) memory.
 Mnemosyne owns narrative logic; OC owns persistent memory. Each Mnemosyne

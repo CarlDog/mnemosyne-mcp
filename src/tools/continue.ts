@@ -11,6 +11,9 @@
 //      characters / locations and attach the verdict to the response.
 //      Save-first: the beat is persisted regardless of validation
 //      outcome; failures land in the response, not as exceptions.
+//      Returns optional stage-level timing in `stages_ms` to support
+//      per-call latency triage: gather_ms, generate_ms, save_ms,
+//      validate_ms.
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
@@ -88,8 +91,8 @@ export function registerContinueTool(
           .max(2)
           .optional()
           .describe(
-            "Sampling temperature. Ollama defaults to 0.8 when unset; cloud " +
-              "providers pass this through only when set, and ranges/support " +
+            "Sampling temperature. Ollama defaults to 0.8 when unset; " +
+              "cloud providers pass this through only when set, and ranges/support " +
               "vary by provider (Anthropic accepts 0-1 and current-gen Claude " +
               "models reject the field entirely). Ignored by kindroid/botify.",
           ),
@@ -163,7 +166,9 @@ export function registerContinueTool(
         const storyId = await resolveStoryId(oc, args.story);
         const mode = args.mode ?? DEFAULT_MODE;
 
+        const gatherStart = Date.now();
         const context = await gatherContext(oc, storyId, args.direction);
+        const gatherMs = Date.now() - gatherStart;
         const systemPrompt = buildSystemPrompt(mode, context);
 
         // Throws on a genuine kindroid_kin + kindroid_group_id conflict.
@@ -186,6 +191,7 @@ export function registerContinueTool(
           storyTarget,
         );
 
+        const generateStart = Date.now();
         const beat = await generator.generate({
           systemPrompt,
           userMessage: args.direction,
@@ -197,6 +203,7 @@ export function registerContinueTool(
           groupMaxTurns: args.group_max_turns,
           allowUser: args.allow_user,
         });
+        const generateMs = Date.now() - generateStart;
         const beatText = beat.text;
         const groupMeta = {
           ...(beat.groupEnded !== undefined && {
@@ -224,6 +231,12 @@ export function registerContinueTool(
               "was already posted to the group; do not re-send it. Take " +
               "the turn: call mnemo_continue again with what you say next.",
             mode,
+            stages_ms: {
+              gather_ms: gatherMs,
+              generate_ms: generateMs,
+              save_ms: 0,
+              validate_ms: 0,
+            },
             ...groupMeta,
           });
         }
@@ -233,6 +246,7 @@ export function registerContinueTool(
         // still return the beat text with a save_error field so the user
         // can retry the persist (e.g., via mnemo_save_entity) without
         // regenerating.
+        const saveStart = Date.now();
         const beatName = `Scene ${new Date().toISOString()}`;
         let memoryId: string | undefined;
         let savedTags: string[] | undefined;
@@ -249,10 +263,13 @@ export function registerContinueTool(
           saveError = (err as Error).message;
           log.warn("mnemo_continue", "scene save failed", { msg: saveError });
         }
+        const saveMs = Date.now() - saveStart;
 
+        let validateMs = 0;
         let validation: ValidationReport | undefined;
         let validationError: string | undefined;
         if (args.validate) {
+          const validateStart = Date.now();
           try {
             validation = await validateContent(validator, context, beatText);
           } catch (err) {
@@ -260,6 +277,8 @@ export function registerContinueTool(
             log.warn("mnemo_continue", "validation pass failed", {
               msg: validationError,
             });
+          } finally {
+            validateMs = Date.now() - validateStart;
           }
         }
 
@@ -307,6 +326,12 @@ export function registerContinueTool(
           ...(validationError !== undefined && {
             validation_error: validationError,
           }),
+          stages_ms: {
+            gather_ms: gatherMs,
+            generate_ms: generateMs,
+            save_ms: saveMs,
+            validate_ms: validateMs,
+          },
           ...groupMeta,
         });
       },

@@ -6,9 +6,8 @@
 //   3. STYLE — style guide entities
 //   4. CHARACTERS — character entities
 //   5. LOCATIONS — location entities
-//   6. RECENT SCENES — scene entities (relevance-ranked, not strict recency
-//      yet — see STATUS.md "Known Gaps" — OC's memory_search has no
-//      order_by parameter)
+//   6. RECENT SCENES — scene entities (strict recency ordering with
+//      validation:clean preference and untagged fallback)
 //   7. LORE — lore entities
 //   8. WORLDBUILDING — worldbuilding entities
 //
@@ -21,8 +20,12 @@
 // ===" with nothing under it.
 
 import type { OcClient } from "./oc-client.js";
-import type { EntityType } from "./entities.js";
-import { recall } from "./entities.js";
+import {
+  recall,
+  memoryToRecalled,
+  type EntityType,
+  type RecalledEntity,
+} from "./entities.js";
 
 export const MODES = ["participant", "director", "audience"] as const;
 export type Mode = (typeof MODES)[number];
@@ -85,26 +88,34 @@ async function pullByType(
   return entities.map((e) => `${e.name}\n${e.body}`);
 }
 
-// Recall scene candidates over SCENE_POOL_SIZE (wider than TYPE_LIMITS.scene)
-// and filter by validation verdict client-side, since OC's memory_search
-// has no server-side tag exclusion. validation:clean scenes are preferred;
-// untagged scenes (saved before v0.1.3's validation tagging existed, or
-// saved with validate=false) fill remaining slots; validation:errors
-// scenes are hard-excluded -- never selected, regardless of pool size.
-// Relative relevance-ranked order within each bucket is preserved (no
-// re-sort) -- only exported for direct unit testing of the bucketing
-// logic (prompt.test.ts's existing convention is to only import exported
-// symbols, never reach into unexported internals like pullByType).
+// Recall scene candidates from a project-scoped `memory_list` pull (strict
+// recency), then filter by validation verdict client-side since OC's
+// memory_search has no server-side exclusion for tags. validation:clean
+// scenes are preferred; untagged scenes (saved before v0.1.3's validation
+// tagging existed, or saved with validate=false) fill remaining slots; validation:errors
+// scenes are hard-excluded — never selected, regardless of pool size.
+// Validation and type buckets preserve strict recency, so no external
+// relevance scoring is involved.
 export async function pullFilteredScenes(
   oc: OcClient,
   storyId: string,
   query: string,
 ): Promise<string[]> {
-  const pool = await recall(oc, storyId, {
-    query,
-    type: "scene",
-    limit: SCENE_POOL_SIZE,
-  });
+  void query;
+  const pool = (await oc.memoryList({ projectId: storyId }))
+    .map((memory) => memoryToRecalled(memory))
+    .filter(
+      (entity): entity is RecalledEntity =>
+        entity !== null && entity.type === "scene",
+    )
+    .sort((a, b) => {
+      const aMs = Date.parse(a.created_at);
+      const bMs = Date.parse(b.created_at);
+      const aSafe = Number.isFinite(aMs) ? aMs : 0;
+      const bSafe = Number.isFinite(bMs) ? bMs : 0;
+      return bSafe - aSafe;
+    })
+    .slice(0, SCENE_POOL_SIZE);
   const clean = pool.filter((e) => e.tags.includes("validation:clean"));
   const untagged = pool.filter(
     (e) =>

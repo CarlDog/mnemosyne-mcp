@@ -105,6 +105,7 @@ function sceneMemory(
   id: string,
   name: string,
   extraTags: string[] = [],
+  createdAt: string = "2026-01-01T00:00:00Z",
 ): OcMemory {
   return {
     id,
@@ -112,23 +113,23 @@ function sceneMemory(
     project_id: "story-1",
     tags: ["mnemosyne", "story", "scene", ...extraTags],
     pinned: false,
-    created_at: "2026-01-01T00:00:00Z",
+    created_at: createdAt,
   };
 }
 
 function mockOcWithScenes(memories: OcMemory[]): OcClient {
-  return { memorySearch: async () => memories } as unknown as OcClient;
+  return { memoryList: async () => memories } as unknown as OcClient;
 }
 
 describe("prompt — pullFilteredScenes", () => {
   const storyId = "story-1";
 
-  it("prefers validation:clean-tagged scenes over untagged when the pool has both", async () => {
+  it("prefers validation:clean-tagged scenes over untagged when the pool has both, and keeps strict recency within each bucket", async () => {
     const pool = [
-      sceneMemory("1", "Clean A", ["validation:clean"]),
-      sceneMemory("2", "Untagged A"),
-      sceneMemory("3", "Clean B", ["validation:clean"]),
-      sceneMemory("4", "Untagged B"),
+      sceneMemory("1", "Clean A", ["validation:clean"], "2026-01-01T11:00:00Z"),
+      sceneMemory("2", "Untagged A", [], "2026-01-01T11:05:00Z"),
+      sceneMemory("3", "Clean B", ["validation:clean"], "2026-01-01T10:00:00Z"),
+      sceneMemory("4", "Untagged B", [], "2026-01-01T10:30:00Z"),
     ];
     const result = await pullFilteredScenes(
       mockOcWithScenes(pool),
@@ -136,23 +137,22 @@ describe("prompt — pullFilteredScenes", () => {
       "query",
     );
     // Cap (TYPE_LIMITS.scene = 5 in src/prompt.ts) isn't reached, so all 4
-    // are included, but clean entries lead and untagged entries follow,
-    // each bucket preserving its relevance-ranked order.
+    // are included, but clean entries lead and untagged entries follow.
     expect(result).toHaveLength(4);
     expect(result[0]).toContain("Clean A");
     expect(result[1]).toContain("Clean B");
-    expect(result[2]).toContain("Untagged A");
-    expect(result[3]).toContain("Untagged B");
+    expect(result[2]).toContain("Untagged B");
+    expect(result[3]).toContain("Untagged A");
   });
 
   it("falls back to untagged scenes when there aren't enough clean ones to fill the cap", async () => {
     const pool = [
-      sceneMemory("1", "Clean A", ["validation:clean"]),
-      sceneMemory("2", "Untagged A"),
-      sceneMemory("3", "Untagged B"),
-      sceneMemory("4", "Untagged C"),
-      sceneMemory("5", "Untagged D"),
-      sceneMemory("6", "Untagged E"),
+      sceneMemory("1", "Clean A", ["validation:clean"], "2026-01-01T10:00:00Z"),
+      sceneMemory("2", "Untagged A", [], "2026-01-01T10:10:00Z"),
+      sceneMemory("3", "Untagged B", [], "2026-01-01T10:08:00Z"),
+      sceneMemory("4", "Untagged C", [], "2026-01-01T10:06:00Z"),
+      sceneMemory("5", "Untagged D", [], "2026-01-01T10:04:00Z"),
+      sceneMemory("6", "Untagged E", [], "2026-01-01T10:02:00Z"),
     ];
     const result = await pullFilteredScenes(
       mockOcWithScenes(pool),
@@ -160,8 +160,7 @@ describe("prompt — pullFilteredScenes", () => {
       "query",
     );
     // 1 clean + 5 untagged = 6 candidates, capped to 5 (TYPE_LIMITS.scene):
-    // the clean scene plus the first 4 untagged in pool order; the 5th
-    // untagged ("Untagged E") is dropped by the cap.
+    // the clean scene plus the first 4 untagged by strict recency.
     expect(result).toHaveLength(5);
     expect(result[0]).toContain("Clean A");
     expect(result[1]).toContain("Untagged A");
@@ -202,12 +201,12 @@ describe("prompt — pullFilteredScenes", () => {
 
   it("respects the TYPE_LIMITS.scene cap (5) when more clean+untagged candidates exist than the cap", async () => {
     const pool = [
-      sceneMemory("1", "Clean A", ["validation:clean"]),
-      sceneMemory("2", "Clean B", ["validation:clean"]),
-      sceneMemory("3", "Clean C", ["validation:clean"]),
-      sceneMemory("4", "Clean D", ["validation:clean"]),
-      sceneMemory("5", "Clean E", ["validation:clean"]),
-      sceneMemory("6", "Clean F", ["validation:clean"]),
+      sceneMemory("1", "Clean A", ["validation:clean"], "2026-01-01T12:00:00Z"),
+      sceneMemory("2", "Clean B", ["validation:clean"], "2026-01-01T11:00:00Z"),
+      sceneMemory("3", "Clean C", ["validation:clean"], "2026-01-01T10:00:00Z"),
+      sceneMemory("4", "Clean D", ["validation:clean"], "2026-01-01T09:00:00Z"),
+      sceneMemory("5", "Clean E", ["validation:clean"], "2026-01-01T08:00:00Z"),
+      sceneMemory("6", "Clean F", ["validation:clean"], "2026-01-01T07:00:00Z"),
     ];
     const result = await pullFilteredScenes(
       mockOcWithScenes(pool),

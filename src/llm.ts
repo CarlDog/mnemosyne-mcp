@@ -52,7 +52,14 @@ export interface LlmGenerateOptions {
    * (1-8, mirroring kindroid_advance_group's own bound). Meaningless for a
    * single-AI target, which always produces exactly one reply, and ignored
    * by every non-Kindroid provider. Overrides KINDROID_GROUP_MAX_TURNS for
-   * this call only. */
+   * this call only.
+   *
+   * Deliberately per-call ONLY, with no KINDROID_* env counterpart, unlike
+   * groupMaxTurns above: this is a property of the *caller*, not of the
+   * deployment. A conversational host can take the turn; a scheduled or
+   * webhook-driven caller cannot, and both may hit the same server. A
+   * server-wide default of true would hand the floor to a caller that
+   * isn't there. Don't "fix" the inconsistency. */
   groupMaxTurns?: number;
   /** Let a Kindroid GROUP turn loop hand the floor back to the user
    * (default false -- AI-only turns). When true the loop stops as soon as
@@ -92,6 +99,11 @@ export interface GeneratedBeat {
 export interface LlmProvider {
   readonly name: string;
   generate(opts: LlmGenerateOptions): Promise<GeneratedBeat>;
+  /** Optional provider warmup hook. Implemented for Ollama so we can force
+   * a model load at startup and reduce first-call cold-start latency.
+   * Implementations should be non-fatal and low-cost; callers use it
+   * fire-and-forget. */
+  warmup?: () => Promise<void>;
 }
 
 export interface OllamaConfig {
@@ -100,11 +112,15 @@ export interface OllamaConfig {
   /** Cap on the per-request context window (num_ctx). Default
    * DEFAULT_MAX_NUM_CTX; operator-tunable via OLLAMA_NUM_CTX. */
   maxContextWindow?: number;
+  /** keep_alive for Ollama /api/chat. */
+  keepAlive?: string;
 }
 
 const OLLAMA_TIMEOUT_MS = 5 * 60 * 1000;
+const DEFAULT_KEEP_ALIVE = "30m";
 const DEFAULT_TEMPERATURE = 0.8;
 const DEFAULT_MAX_TOKENS = 2048;
+const WARMUP_TOKENS = 4;
 
 // Ollama's own default num_ctx is ~4096 — far below what a fully-imported
 // story assembles (Chaos Saga's system prompt alone is ~60KB ≈ 16k
@@ -186,6 +202,7 @@ export class OllamaProvider implements LlmProvider {
         temperature: opts.temperature ?? DEFAULT_TEMPERATURE,
         num_predict: numPredict,
         num_ctx: ctxPlan.numCtx,
+        keep_alive: this.config.keepAlive ?? DEFAULT_KEEP_ALIVE,
       },
     };
 
@@ -196,6 +213,7 @@ export class OllamaProvider implements LlmProvider {
       user_chars: opts.userMessage.length,
       num_ctx: ctxPlan.numCtx,
       est_prompt_tokens: ctxPlan.estPromptTokens,
+      keep_alive: this.config.keepAlive ?? DEFAULT_KEEP_ALIVE,
     });
 
     const controller = new AbortController();
@@ -246,5 +264,13 @@ export class OllamaProvider implements LlmProvider {
     } finally {
       clearTimeout(timeout);
     }
+  }
+
+  async warmup(): Promise<void> {
+    await this.generate({
+      systemPrompt: "",
+      userMessage: "ready",
+      maxTokens: WARMUP_TOKENS,
+    });
   }
 }

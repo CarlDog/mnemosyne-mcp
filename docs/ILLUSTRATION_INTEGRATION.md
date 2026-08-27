@@ -101,6 +101,24 @@ Once a prediction resolves, its result URL needs to land on the relevant
 entity in OC — not just surface once in a chat transcript and then be
 gone. See §6 for a candidate tool.
 
+### 3e. Model-variant fallback is explicit and bounded
+
+When a production or stable model unexpectedly refuses an otherwise valid
+image request, query the live catalog for sibling variants before abandoning
+the model family. In particular, an explicitly labeled `dev` or development
+variant is worth considering when one exists: operator experience indicates
+that these variants can sometimes be more permissive than their corresponding
+stable releases. This is an observed heuristic, not a guaranteed capability.
+
+Before a paid retry, inspect the candidate variant's current schema, accepted
+modalities, resolution limits, and price. Use a dry run when the provider
+supports one. Make at most one controlled variant retry, and record the exact
+model ID, selection rationale, prediction ID, result, and cost—including a
+failed generation's reported or inferred charge. If the variant is absent or
+also fails, change model family or generation strategy instead of repeatedly
+submitting the same request. Variant selection must remain transparent; it is
+not a silent policy-bypass mechanism.
+
 ## 4. Where would reference images live in the entity model?
 
 Grounded against the actual current schema (`src/entities.ts`): an
