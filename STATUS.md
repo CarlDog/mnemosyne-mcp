@@ -1,6 +1,21 @@
 # Status
 
-**Last updated:** 2026-08-26 (**The canon/ authoring-layer standard is
+**Last updated:** 2026-08-27 (**Chaos Saga is the second story fully
+consolidated onto the canon/ authoring layer.** A 7-agent completeness
+sweep against every original ChatGPT source file found no missing
+characters or locations, but did surface real detail-level gaps — 4
+missing locations, 3 missing mechanical/procedural rules, missing
+group-chat output conventions, ~10 narrative-color anecdotes compressed
+out of an earlier pass, and one real internal contradiction between
+`rules.md` and `style.md` on whether intimate-scene aftermath can be
+neutral. All restored/resolved per operator direction; `validate-canon.mjs`
+reports 62/62 clean, no cross-story leaks. The scaffold script's header/
+body splitter was fixed along the way to handle Chaos Saga's flat
+`Label:`-only template (no Markdown headings at all, unlike
+BattleChasers) — regression-testing that fix against BattleChasers also
+caught a real latent bug that had silently dropped three characters'
+`Voice` content, now restored. Full writeup in the dated Done entry
+below.) Earlier (2026-08-26): (**The canon/ authoring-layer standard is
 built, and BattleChasers is the first story fully consolidated onto it.**
 `data/stories/<slug>/canon/` (documented in a new "Canon" section of
 [docs/DATA_LAYOUT.md](docs/DATA_LAYOUT.md)) replaces the single-JSON-export
@@ -441,18 +456,40 @@ that's landed since.
     Living Canon Standard convention scoped to art-bearing core/recurring
     characters. `validate-canon.mjs` reports BattleChasers' `canon/`
     clean: 143 unique `(type, name)` keys, no structural problems.
-  - **Chaos Saga is next; a dry-run surfaced a real script gap.** Its
-    export lineage is clean (linear, no fork, latest at revision 10/56
-    entities), but its original character template has no Markdown
-    headings anywhere — every section (Backstory, Anchor Wound,
-    Emotional Contradiction, Skills, Secrets, etc.) is a flat `Label:`
-    line, including ones followed by multi-paragraph prose, unlike
-    BattleChasers' clean header-block-then-`##`-sections split. The
-    current splitter treats everything before the first `##` heading as
-    header lines, so Chaos Saga's rich section structure collapses into
-    an undifferentiated body blob instead of being preserved as distinct
-    sections. Needs a Chaos-Saga-aware fix to the header/body splitter
-    before running the real (non-dry-run) extraction.
+  - **Chaos Saga is the second story fully consolidated (2026-08-27).**
+    The dry-run's script gap is fixed: `splitHeaderBody` now groups the
+    header block into blank-line-delimited paragraphs, and a paragraph
+    opening with a bare `Label:` (nothing after the colon) plus more
+    content beneath it renders as a real `## Label` section instead of
+    collapsing into an undifferentiated blob — this is what let Chaos
+    Saga's flat-template characters (Backstory, Anchor Wound, Emotional
+    Contradiction, Relationships, TATTOOS & INK, etc.) come through with
+    their section structure intact. Regression-testing the fix against
+    BattleChasers (diffing old- vs new-algorithm output) caught a real
+    latent bug in the *old* code as a bonus: a bare `Label:` line was
+    silently matching as an empty-value field, which the renderer then
+    dropped — costing three BattleChasers characters (Nira Vale, Sera
+    Vale, Wisp) their `Voice` content. Restored by hand; BattleChasers
+    re-validated clean at 143/143.
+    A 7-agent completeness-sweep workflow then compared the scaffold
+    against every original ChatGPT source file. Found no missing
+    characters or locations at the "does it exist" level, but did surface
+    real detail-level gaps: 4 missing locations (two bathrooms every
+    sibling room had gotten, two of Lacey Summers' named residences), 3
+    missing mechanical rules (Chapter Lock Trigger, Scene Header Format,
+    Default Scene Logic), missing group-chat output conventions, ~10
+    narrative-color anecdotes compressed out of an earlier distillation
+    pass (Riley's and Carl's dating histories, Nyx's dropped "former
+    addict" framing tied to her implants, Lacey's academic backstory, an
+    engagement-ring prop detail), and one real internal contradiction
+    (`rules.md`'s Aftershock Clause said aftermath must "never" be
+    neutral; `style.md` allows "entirely ordinary" aftermath). Operator
+    scoped the restoration ("structural + narrative color, skip trivial
+    single-word drops") and ruled style.md wins on the contradiction; all
+    of it is now in canon/. `validate-canon.mjs` reports 62/62 unique,
+    clean. No cross-story leaks found. No cosmetic polish pass was
+    needed — this story's own prior editorial revisions had already
+    tidied heading style before the reorg.
   - Nothing under any story's `canon/` has been imported to live OC —
     `data/` is gitignored and the operator's standing instruction is to
     commit nothing to canon until a storyline is deliberately "locked in."

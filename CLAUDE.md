@@ -26,12 +26,19 @@ with a generic merge for sibling revision forks) and
 entities, no empty bodies; content correctness still needs a human pass).
 BattleChasers is fully migrated (143 entities, verified complete against
 both its own export lineage and the original ChatGPT source, one
-Shadowflame truth-tier leak fixed, a cosmetic polish pass done). Chaos
-Saga is next; a dry-run surfaced a real script gap — its source template
-has no Markdown headings at all, unlike BattleChasers — that needs fixing
-before real extraction. Nothing in any story's `canon/` has been imported
-to live OC; per standing instruction, nothing gets "locked in" as canon
-until explicitly told to. Full detail in STATUS.md's dated Done entry.
+Shadowflame truth-tier leak fixed, a cosmetic polish pass done). **Chaos
+Saga is the second story fully consolidated** (2026-08-27, 62 entities) —
+fixing the script's header/body splitter for its flat `Label:`-only
+template (no Markdown headings at all, unlike BattleChasers) also caught
+a real latent bug that had silently dropped three BattleChasers
+characters' `Voice` content, now restored. A 7-agent completeness sweep
+against the original ChatGPT source found detail-level gaps (missing
+locations, missing mechanical rules, compressed-out narrative anecdotes,
+one internal rules.md/style.md contradiction) which were restored/
+resolved per operator direction; `validate-canon.mjs` reports it clean.
+Nothing in any story's `canon/` has been imported to live OC; per
+standing instruction, nothing gets "locked in" as canon until explicitly
+told to. Full detail in STATUS.md's dated Done entry.
 
 **Outgoing companion-chat messages carry a provenance header, and
 in-fiction narration follows one asterisk/bracket convention everywhere**
