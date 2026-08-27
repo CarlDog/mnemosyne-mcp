@@ -33,6 +33,6 @@ export function registerTools(
     validator,
     sceneContextStrategy,
   );
-  registerValidateTool(server, oc, validator);
-  registerRevalidateTool(server, oc, validator);
+  registerValidateTool(server, oc, validator, sceneContextStrategy);
+  registerRevalidateTool(server, oc, validator, sceneContextStrategy);
 }
