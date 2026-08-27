@@ -57,7 +57,33 @@ note). The Lilith/Karl truth-tier continuity with BattleChasers held up
 well on direct inspection. A real `scaffold-story.mjs` diacritic bug
 (`Karl von Jäger` → a mangled filename) was found and fixed, which also
 caught the same latent bug already live in BattleChasers' canon
-(`Kharag-dûm`). Nothing in any story's `canon/` has been imported to live
+(`Kharag-dûm`). **Wonderland is the fifth story, and the last of the five
+original curated-import stories** (2026-08-27, 76 entities) — its
+ChatGPT-project source was unusually sparse (just Project Instructions +
+Style Guide, no character/location files), so the real depth came from a
+Botify bot ("Alice Grimm," bot 3197891, found only via a private chat-list
+search). A 10-agent extraction sweep of its ~24,000-line export hit the
+worst intermittent file-read failure rate yet (2 of 6 chunks succeeded),
+compensated with direct grep/manual verification. Found a second
+scaffold-script bug in the same family as the diacritic fix — a rule/style
+entity with its own internal `##` sub-headings wasn't demoted before being
+folded into `rules.md`/`style.md` — fixed, and regression-checking found
+the identical bug already live in Chaos Saga's `rules.md` and
+GhostHunters' `style.md`; both fixed by hand. Six real source divergences
+were found and, in every case but one blend (cinnamon-scented mushrooms
+layered onto canon's morel visual), the operator ruled to keep canon's
+more mysterious version over the source's more-explicit one — the
+Wrong-Song Child stays unnamed, the mechanical lantern stays unexplained,
+the Vorpal Blade stays masterless, the Market Below's location stays
+unresolved. Real narrative-color gaps (Alice's pre-Wonderland childhood,
+a Carl survival-promise exchange, a washbasin-as-hat moment) were folded
+in; one source-grounded gap (Carl's hunting background) was deliberately
+skipped because his own file cautions against inventing unestablished
+civilian-life specifics. **All five original curated-import stories are
+now fully consolidated onto `canon/`; only Star Wars: The Black Ledger
+remains** — a different shape entirely (no ChatGPT-project origin, already
+partially live via Botify, an ongoing story rather than a completed-arc
+consolidation). Nothing in any story's `canon/` has been imported to live
 OC; per standing instruction, nothing gets "locked in" as canon until
 explicitly told to. Full detail in STATUS.md's dated Done entry.
 

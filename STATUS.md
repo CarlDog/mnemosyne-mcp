@@ -1,8 +1,54 @@
 # Status
 
-**Last updated:** 2026-08-27 (**Shadowflame is the fourth story fully
-consolidated onto the canon/ authoring layer — and the cleanest by a wide
-margin.** Unlike the other three, it has no ChatGPT-project origin at all;
+**Last updated:** 2026-08-27 (**Wonderland is the fifth story fully
+consolidated onto the canon/ authoring layer — and the last of the five
+original curated-import stories.** 76 entities (10 core characters — every
+named character was rich enough to classify core, no batched `_minor.md` —
+12 locations, 12 lore, 12 worldbuilding, 9 rules, 21 style headings),
+scaffolded from `wonderland-visual-references-2026-08-25.json`. A second
+real `scaffold-story.mjs` bug surfaced and was fixed: a rule/style entity
+whose own content contains internal `##` sub-headings (two of Wonderland's
+own — "Core Narrative Tone," "Evidence & Competing Explanations") was
+pushed into `rules.md`/`style.md` without demotion — the same collision
+already handled for `_minor.md`'s batched minor characters, but never
+extended to rules/style. Fixed by applying the existing `demoteHeadings()`
+helper there too; regression-checking the other four stories then found the
+identical bug already live in Chaos Saga's `rules.md` and GhostHunters'
+`style.md` — both fixed by hand in the published canon/ trees (Chaos Saga
+64→62 entities, GhostHunters 105→101, both re-validated clean). Wonderland's
+ChatGPT-project source turned out unusually thin — just Project
+Instructions + Style Guide, no character/location profile files at all —
+so the real character depth actually came from a Botify bot, "Alice Grimm"
+(bot 3197891), found only via a private chat-list search since the public
+bot catalog returned nothing. A 10-agent extraction/compare workflow
+against its ~24,000-line export hit the worst intermittent file-read
+failure rate seen yet (only 2 of 6 chunks succeeded); compensated with
+direct grep verification ("Marywraithe"/"Frabjous") and manual reads of
+the bot's opening scene and the White Queen's-assault climax, finding no
+gaps beyond what the two working chunks already surfaced. Six real
+divergences were found, and in every case but one the operator ruled to
+keep canon's version over the source's more-explicit one — a consistent
+"protect the mystery, keep the asymmetry" pattern: the Wrong-Song Child
+stays unnamed under the Mystery Entity Clause, the mechanical lantern
+stays unexplained, the Vorpal Blade stays silent/masterless (unlike
+Alice's bonded, speaking Keyblade), the Market Below's location stays
+unresolved, and the mill keeps its one mysterious journal over the
+source's multi-volume authored answer. The one blend: cinnamon-roll-
+scented mushrooms layered onto canon's existing morel-like visual. Real
+narrative-color gaps were folded in (Alice's pre-Wonderland childhood
+memories, a Carl survival-promise exchange referencing unnamed dead
+"others," a washbasin-as-a-joke-hat moment), while one source-grounded
+gap — Carl's hunting background — was deliberately skipped because his
+own file already cautions against inventing unestablished civilian-life
+specifics. `validate-canon.mjs` reports 76/76 clean, no cross-story leaks;
+alice-grimm.md was the only file needing cosmetic heading de-colonization.
+**All five original curated-import stories are now fully consolidated onto
+canon/; only Star Wars: The Black Ledger remains — a different shape
+entirely (no ChatGPT-project origin, already partially live via Botify, an
+ongoing story rather than a completed-arc consolidation).** Full writeup
+in the dated Done entry below.) Earlier (2026-08-27): (**Shadowflame is the
+fourth story fully consolidated onto the canon/ authoring layer — and the
+cleanest by a wide margin.** Unlike the other three, it has no ChatGPT-project origin at all;
 it came entirely from a Botify bot ("Dark Queen Lilith"), which an earlier
 session had flagged with a real unresolved risk — the source's founding
 thrall is named "Briar Rose Blackwood," recruited at a "Blackwood
@@ -417,6 +463,129 @@ provider keys configured (179 total). See Done below for everything
 that's landed since.
 
 ## Done
+
+- **Wonderland is the fifth story fully consolidated onto canon/**
+  (2026-08-27) — the last of the five original curated-import stories.
+  - Scaffolded from `wonderland-visual-references-2026-08-25.json`
+    (linear lineage, no fork, revision 9). 76 entities: 10 core
+    characters (every named character was rich enough to classify core
+    — no batched `_minor.md`), 12 locations, 12 lore, 12 worldbuilding,
+    9 rules, 21 style headings.
+  - Found and fixed a second real `scaffold-story.mjs` bug, in the same
+    family as Shadowflame's Karl von Jäger diacritic fix: a single
+    rule/style *entity* whose own content contains internal `## `
+    sub-headings (Wonderland's "Core Narrative Tone" style entity and
+    "Evidence & Competing Explanations" rule both had this shape) was
+    pushed verbatim into `rules.md`/`style.md` without demotion — the
+    exact same collision already fixed for `_minor.md`'s batched minor
+    characters, just never extended to rules/style. `validate-canon.mjs`'s
+    naive "one `## ` line = one entity" count then over-counted (inflated,
+    not colliding — no data was lost, just structurally ambiguous).
+    Fixed by applying the existing `demoteHeadings()` helper to
+    rule/style entities too. Regression-checking the other four
+    already-consolidated stories found the *same* bug already live in
+    two of them — Chaos Saga's `rules.md` ("Canon Authority & State
+    Extraction" nesting "Authority Order by Question" and
+    "Scene-to-State Extraction") and GhostHunters' `style.md` ("Horror
+    Ecology & Misdirection" nesting four subsections) — demoted the
+    affected headings by hand in both published canon/ trees (Chaos
+    Saga 64→62 entities, GhostHunters 105→101, both re-validated clean).
+  - Wonderland's original ChatGPT-project source is unusually sparse —
+    only Project Instructions + Style Guide, no character/location
+    profile files at all (unlike the other three ChatGPT-origin
+    stories). The rich character content (Alice Grimm's full sheet,
+    Carl Mercer's detailed backstory, etc.) actually came from a Botify
+    bot, "Alice Grimm" (bot 3197891) — confirmed via a private search of
+    the operator's own chat list, since the public bot catalog returned
+    nothing.
+  - Pulled the full export (24,068 lines; the export's 815 messages is
+    far fewer than the bot's own reported 3,754 `messagesCount` —
+    likely edited/regenerated alternates not counted as distinct turns;
+    confirmed the export still spans the full chronological range by
+    manually verifying both the greeting/opening message at the tail
+    and the most-recent message at the head).
+  - Ran a 10-agent extraction-and-compare workflow; this one hit a
+    notably worse intermittent file-read failure rate than
+    GhostHunters/Shadowflame (only 2 of 6 extraction chunks succeeded).
+    Compensated with direct manual verification: grepped the full raw
+    file for "Marywraithe"/"Frabjous" (confirmed both terms only appear
+    within the successfully-read chunks' line ranges) and read the
+    actual opening scene (the bot's own configured greeting, matching
+    canon's established origin) and the White Queen's-assault scene
+    directly (confirmed it closely matches `alice-grimm.md`'s existing
+    "Current Canon State" section). No new contradictions surfaced
+    beyond what the 2 successful chunks found.
+  - Six real divergences found; the operator's ruling on each was a
+    clear "keep canon in almost every case" pattern — canon's choices
+    consistently read as a deliberate philosophy of preserving mystery
+    and building meaningful asymmetries, not just compression:
+    - The Wrong-Song Child: source names it "Marywraithe," a defined
+      fear/memory-feeding creature type, met twice with full lure-song
+      lyrics. RULED: keep canon's unresolved Mystery-Entity-Clause
+      sighting — naming and mechanizing it would undo exactly the
+      ambiguity the clause protects.
+    - Foraged mushroom identity: source's "cinnamon caps" (smell/taste
+      like cinnamon rolls) vs. canon's "morel-like caps." RULED: blend
+      — kept canon's morel-like visual, added the cinnamon-roll smell
+      as an anomalous Wonderland-appropriate detail
+      (`worldbuilding/wonderland-foraging.md`).
+    - Mechanical lantern power source: source says hand-crank; canon
+      says gears move with no visible winding. RULED: keep canon — fits
+      the style guide's own "magic corrupts/never explain it" principle
+      better than a mundane crank would.
+    - Mill furnishings: source's four-poster canopy bed + a trunk of
+      decades-spanning journals authored by "the miller" vs. canon's
+      plainer bed + one journal with deliberately unresolved authorship.
+      RULED: keep canon's single mysterious journal (a better open hook
+      than a used-up multi-volume answer); folded in the harmless
+      furnishing texture that resolves nothing — a fallen ceiling beam
+      as part of the door barricade, and a kitchenette corner — into
+      `locations/the-abandoned-mill.md`.
+    - Vorpal Blade: source claims sentience and knowledge-granting for a
+      "worthy" wielder, plus a mutiny/betrayal backstory for its
+      vanished company. Canon states "no master, no voice" (a deliberate
+      contrast with Alice's bonded, speaking Keyblade) and leaves the
+      Vanguard's fate open. RULED: keep canon on both.
+    - Market Below's location: source says beneath "the Frabjous Tree";
+      canon leaves the geography of "below" deliberately unresolved.
+      RULED: keep canon.
+    - (Not actually reopened, just reconfirmed: source's "Carl Yeager"
+      — the operator's own real surname, a self-insert pattern already
+      seen in Chaos Saga's Carl Maddox and GhostHunters' Carl Ashcombe —
+      vs. canon's "Carl Mercer.")
+  - Gaps folded in (present in source, absent from canon, not
+    contradicted, not undermining any deliberate mystery): Alice's
+    pre-Wonderland childhood memories (tea parties, stories read aloud,
+    a beloved pet) as a new "## Life Before Wonderland" section in
+    `characters/alice-grimm.md`, mirroring the section name already
+    used in `carl-mercer.md`; Alice asking Carl to promise to prioritize
+    his own survival over staying for her if she falters, referencing
+    unnamed "others" who didn't survive her decade in Wonderland, and
+    Carl's established refusal to make that promise
+    (`lore/established-relationship-knowledge-geometry.md`); Carl's
+    washbasin-as-a-joke-hat moment at the cave
+    (`locations/vale-side-cave-stream.md`).
+  - One gap deliberately NOT folded in despite looking low-stakes: Carl's
+    hunting background (deer/rabbit/pheasant). `carl-mercer.md`'s own
+    "Life Before Wonderland" section explicitly states that civilian-life
+    specifics "should not be invented casually" — a self-documented
+    discipline protecting that chapter as an open hook, the same
+    philosophy as the Wrong-Song Child. Recognized this applied even
+    though the detail has real source provenance, and skipped it rather
+    than overriding a caution the file states about itself. Also skipped,
+    per the Marywraithe ruling: the child-creature's specific appearance
+    and its second sighting.
+  - `validate-canon.mjs` reports 76/76 unique, no structural problems. No
+    cross-story leaks. Cosmetic polish: `alice-grimm.md` was the only
+    file (of all 10 characters) needing heading de-colonization — the
+    rest were already clean, the same "only the earliest-imported
+    character needs polish" pattern seen in BattleChasers.
+  - Pipeline status: **all five original curated-import stories
+    (BattleChasers, Chaos Saga, GhostHunters, Shadowflame, Wonderland)
+    are now fully consolidated onto `canon/`.** Only Star Wars: The
+    Black Ledger remains — a different shape entirely (no ChatGPT-project
+    origin, already partially live via Botify, an ongoing story rather
+    than a completed-arc consolidation).
 
 - **Shadowflame is the fourth story fully consolidated onto canon/**
   (2026-08-27), and the cleanest of the four by a wide margin.
