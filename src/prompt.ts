@@ -98,6 +98,11 @@ async function pullByType(
 //   sorting, then client-side validation filtering.
 // - query-ranked: project-scoped semantic recall + OC query ranking,
 //   then query-order filtering to drop only hard-errored scenes.
+//
+// DOGFOODING NOTE: OpenChronicle currently exposes this as either generic
+// recall (query ranking) or list+local filtering. If OC adds an ordered
+// scene-query endpoint that preserves relevance ordering and tags in one call,
+// we can remove this local multi-hop fallback path and reduce latency.
 // In both cases, validation:errors scenes are excluded. In recency-first,
 // validation:clean scenes are preferred over untagged.
 function applySceneValidationFilter(
@@ -132,35 +137,60 @@ function byCreatedAtDesc(a: RecalledEntity, b: RecalledEntity): number {
   return bSafe - aSafe;
 }
 
+async function pullScenePool(
+  oc: OcClient,
+  storyId: string,
+  query: string,
+  strategy: SceneContextStrategy,
+): Promise<RecalledEntity[]> {
+  if (strategy === "query-ranked") {
+    return recall(oc, storyId, {
+      query,
+      type: "scene",
+      limit: SCENE_POOL_SIZE,
+    });
+  }
+
+  // memory_list gives deterministic scene recency at the story scope, then
+  // we apply local validation filtering exactly like query-ranked once the
+  // ordered scene slice is ready.
+  return (await oc.memoryList({ projectId: storyId }))
+    .map((memory) => memoryToRecalled(memory))
+    .filter(
+      (entity): entity is RecalledEntity =>
+        entity !== null && entity.type === "scene",
+    )
+    .sort(byCreatedAtDesc)
+    .slice(0, SCENE_POOL_SIZE);
+}
+
 export async function pullFilteredScenes(
   oc: OcClient,
   storyId: string,
   query: string,
   strategy: SceneContextStrategy = DEFAULT_SCENE_CONTEXT_STRATEGY,
+  fallbackStrategy?: SceneContextStrategy,
 ): Promise<string[]> {
-  const pool =
-    strategy === "query-ranked"
-      ? await recall(oc, storyId, {
-          query,
-          type: "scene",
-          limit: SCENE_POOL_SIZE,
-        })
-      : (await oc.memoryList({ projectId: storyId }))
-          .map((memory) => memoryToRecalled(memory))
-          .filter(
-            (entity): entity is RecalledEntity =>
-              entity !== null && entity.type === "scene",
-          )
-          .sort(byCreatedAtDesc)
-          .slice(0, SCENE_POOL_SIZE);
+  const strategies = (
+    fallbackStrategy && fallbackStrategy !== strategy
+      ? [strategy, fallbackStrategy]
+      : [strategy]
+  ) as SceneContextStrategy[];
 
-  // An empty result here is the intended behavior when all scenes are
-  // tagged validation:errors -- RECENT SCENES is omitted from the prompt
-  // entirely (block() returns null for an empty array) rather than
-  // including rule-violating few-shots.
-  return applySceneValidationFilter(pool, strategy)
-    .slice(0, TYPE_LIMITS.scene)
-    .map((e) => `${e.name}\n${e.body}`);
+  for (const currentStrategy of strategies) {
+    const pool = await pullScenePool(oc, storyId, query, currentStrategy);
+    const filteredScenes = applySceneValidationFilter(pool, currentStrategy);
+    if (filteredScenes.length > 0) {
+      return filteredScenes
+        .slice(0, TYPE_LIMITS.scene)
+        .map((e) => `${e.name}\n${e.body}`);
+    }
+  }
+
+  // All candidate pools were exhausted with validation:errors only.
+  // Omitting RECENT SCENES is preferred to seeding few-shot context with
+  // known bad scenes.
+  return [];
 }
 
 export async function gatherContext(
@@ -168,6 +198,7 @@ export async function gatherContext(
   storyId: string,
   query: string,
   sceneContextStrategy: SceneContextStrategy = DEFAULT_SCENE_CONTEXT_STRATEGY,
+  sceneContextFallbackStrategy?: SceneContextStrategy,
 ): Promise<ContextBundle> {
   // Sequential per-type pulls. Parallel (Promise.all over 7 calls) trips
   // OC v3's rate limiter under burst load — same gap that bit Phase A's
@@ -184,6 +215,7 @@ export async function gatherContext(
     storyId,
     query,
     sceneContextStrategy,
+    sceneContextFallbackStrategy,
   );
   const lore = await pullByType(oc, storyId, "lore", query);
   const worldbuilding = await pullByType(oc, storyId, "worldbuilding", query);
