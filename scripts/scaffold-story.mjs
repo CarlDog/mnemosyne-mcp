@@ -359,9 +359,13 @@ async function main() {
         await writeSimpleEntity(opts.out, "worldbuilding", entity),
       );
     } else if (entity.type === "rule") {
-      rulesLines.push(`## ${entity.name}\n\n${entity.content.trim()}\n`);
+      rulesLines.push(
+        `## ${entity.name}\n\n${demoteHeadings(entity.content.trim())}\n`,
+      );
     } else if (entity.type === "style") {
-      styleLines.push(`## ${entity.name}\n\n${entity.content.trim()}\n`);
+      styleLines.push(
+        `## ${entity.name}\n\n${demoteHeadings(entity.content.trim())}\n`,
+      );
     } else if (entity.type === "scene") {
       // deliberately excluded from canon/ -- generated output, not hand-authored (see DATA_LAYOUT.md)
     }
