@@ -1,7 +1,43 @@
 # Status
 
-**Last updated:** 2026-08-25 (**The Living Canon Standard is ratified, and
-story references moved to per-entity folders.**
+**Last updated:** 2026-08-26 (**The canon/ authoring-layer standard is
+built, and BattleChasers is the first story fully consolidated onto it.**
+`data/stories/<slug>/canon/` (documented in a new "Canon" section of
+[docs/DATA_LAYOUT.md](docs/DATA_LAYOUT.md)) replaces the single-JSON-export
+workflow as the permanent, human-editable source of a story's content —
+one Markdown file per character/location/lore/worldbuilding entity, shared
+`rules.md`/`style.md`, YAML frontmatter for structured fields — with OC
+staying canonical for *live* story state the same way it always has (canon/
+is closer to source code; OC is the running deployment). `exports/` is
+narrowed back to plain server-written `<slug>-<stamp>.json` files, with a
+new `exports/archive/` for pre-reorg history. Two new scripts do the
+migration: `scripts/scaffold-story.mjs` (export JSON → canon/, including a
+generic suffix-append merge for sibling revision forks sharing a parent
+revision) and `scripts/validate-canon.mjs` (structural check: frontmatter
+parses, no duplicate `(type, name)` entities, no empty bodies) — both
+iterated hard against BattleChasers' real export history and hardened
+against real bugs found along the way (a `--merge` delimiter that collided
+with Windows drive letters, silent data loss on unparsed header lines, a
+merge-report display bug on multi-word names, YAML leading-hyphen
+ambiguity, stray literal NULL bytes, and heading-level ambiguity inside the
+batched minor-character file). BattleChasers is now the first story fully
+migrated: 143 entities, verified complete against both its own export
+lineage and the original ChatGPT source (2 small rule-clause gaps found and
+restored), a Shadowflame truth-tier leak fixed (Lilith/Karl are the same
+people centuries apart — BattleChasers-era canon can't assert facts only
+true in Shadowflame, e.g. the Heart of Vehl'Remar's full nature), and a
+cosmetic/structural polish pass (heading de-colonization, Status+Location
+merged into one section) — `validate-canon.mjs` reports it clean. Chaos
+Saga is next in the pipeline; a dry-run scaffold surfaced a real script gap
+still to fix — unlike BattleChasers, Chaos Saga's original character
+template has no Markdown headings at all (flat `Label:` lines end to end,
+including multi-paragraph sections like Backstory), so the header/body
+splitter needs a Chaos-Saga-aware fix before real extraction. Nothing in
+`canon/` has been imported to live OC — it's local-only and gitignored,
+per the operator's standing "commit nothing to canon yet" instruction
+until a storyline is deliberately locked in. Full writeup in the dated
+Done entry below.) Earlier (2026-08-25): (**The Living Canon Standard is
+ratified, and story references moved to per-entity folders.**
 [docs/LIVING_CANON_STANDARD.md](docs/LIVING_CANON_STANDARD.md) (ratified
 2026-08-24) is now the editorial quality contract for curated story
 references and export derivatives — proportional character depth,
@@ -325,6 +361,101 @@ provider keys configured (179 total). See Done below for everything
 that's landed since.
 
 ## Done
+
+- **The canon/ authoring-layer standard is built; BattleChasers is the
+  first story fully consolidated onto it** (2026-08-26). Grew out of an
+  operator question after the Living Canon Audit — "so what's the long
+  term plan, draft is a perpetual folder?" — that led to reorganizing
+  `data/stories/<slug>/` around a permanent authoring surface instead of
+  an ever-growing pile of ad-hoc-named export JSON files.
+  - **`canon/` is now documented in DATA_LAYOUT.md** as the human-editable
+    source of a story's content: one Markdown file per character
+    (core/recurring get their own file; minor characters batch into
+    `_minor.md`, one `##` heading each), one file per location/lore/
+    worldbuilding entity, and a single shared `rules.md`/`style.md`.
+    Structured fields (height, age, measurements, etc.) live in YAML
+    frontmatter; prose sections stay Markdown body under `##` headings.
+    Material objects stay `lore` entities (no `object` type), organized
+    under a navigation-only `lore/objects/` subfolder — settled as a
+    Living Canon Standard §5 amendment in passing. `exports/` narrows
+    back to plain server-written `<slug>-<stamp>.json` timestamp naming
+    (the descriptive-suffix convention — `-polished`, `-mature`, etc. —
+    is retired going forward), with a new `exports/archive/` for the
+    pre-reorg history once a story's `canon/` is fully trusted.
+  - **`scripts/scaffold-story.mjs`** migrates an export JSON into `canon/`:
+    classifies characters core vs. minor by content length
+    (`--core-threshold`, default 2500 chars — independently validated
+    against BattleChasers' real art-coverage tiers, where the 8
+    full-3-image-set characters exactly matched the 8 classified core by
+    length alone), splits each entity's flat header block from its
+    `##`-sectioned body, and renders frontmatter + body per the standard.
+    A `--merge` flag does a generic suffix-append merge for sibling
+    revision forks that share a parent revision (BattleChasers' export
+    history forked at revision 7 — a `remediation` branch and a
+    `visual-references` branch both derived from the same `mature`
+    revision 6 — resolved by detecting a clean trailing append and
+    folding it in, now reusable for any future fork).
+  - **`scripts/validate-canon.mjs`** structurally checks the result:
+    every file's frontmatter parses, no `(type, name)` claimed twice
+    anywhere (across one-file-per-entity files and the batched
+    multi-entity files), no entity with a name but an empty body. Content
+    correctness (truth-tier violations, cross-story leaks, prose quality)
+    is explicitly out of scope — that still needs a human or an
+    adversarial pass, the same way the Living Canon Audit did it.
+  - **Six real bugs found and fixed while iterating both scripts against
+    BattleChasers' actual export history**, none caught until tested
+    against real data: a `--merge` delimiter (`:`) that collided with
+    Windows absolute-path drive letters; a header-line parser that
+    silently dropped any line not matching `Label: value` instead of
+    folding it into the body (real data loss, since Chaos Saga's later
+    dry-run showed how common non-matching lines are); a merge-report
+    display bug that mangled multi-word entity names; a YAML scalar
+    regex that allowed a leading hyphen (ambiguous with a YAML list
+    item); three stray literal NULL bytes in the script's own source
+    (a genuine typo, not the "mojibake" it was first mistaken for — see
+    below); and `_minor.md`'s internal `##` sub-headings being
+    indistinguishable from its per-entity separator convention, which
+    `validate-canon.mjs` caught as 330 false "duplicate/empty" problems
+    before the real structural cause was found and fixed.
+  - **A "mojibake" claim made mid-session was investigated and retracted.**
+    Stray `�` characters throughout terminal output were suspected file
+    corruption; a byte-level search found zero real UTF-8 corruption
+    sequences and direct codepoint inspection confirmed a normal em dash
+    — the `�` was a Windows Git-Bash console rendering artifact the whole
+    time, not real damage. The false claim was removed from both the
+    script's header comment and `canon/README.md`.
+  - **BattleChasers fully migrated: 143 entities**, verified complete two
+    ways (0 gaps against its own 9-file export lineage; 2 small
+    rule-clause gaps found and restored against the original ChatGPT
+    project source), one real content fix (a Shadowflame truth-tier leak
+    in `lilith.md` and `lore/objects/heart-of-vehl-remar.md` — BattleChasers
+    happens centuries before Shadowflame, and Lilith/Karl are the same
+    people that story's Karl and Lilith become, so BattleChasers-era canon
+    can't assert facts only true in Shadowflame), and a cosmetic/structural
+    polish pass across all 8 core character files (heading
+    de-colonization, `## Status` + `## Location` merged into one
+    `## Current Status` section) — confirmed by the operator's explicit
+    correction to keep numeric measurement fields even where they read
+    awkwardly in prose ("image generation tends to be more consistent if
+    measurements and standards are given"), which became a new pinned
+    Living Canon Standard convention scoped to art-bearing core/recurring
+    characters. `validate-canon.mjs` reports BattleChasers' `canon/`
+    clean: 143 unique `(type, name)` keys, no structural problems.
+  - **Chaos Saga is next; a dry-run surfaced a real script gap.** Its
+    export lineage is clean (linear, no fork, latest at revision 10/56
+    entities), but its original character template has no Markdown
+    headings anywhere — every section (Backstory, Anchor Wound,
+    Emotional Contradiction, Skills, Secrets, etc.) is a flat `Label:`
+    line, including ones followed by multi-paragraph prose, unlike
+    BattleChasers' clean header-block-then-`##`-sections split. The
+    current splitter treats everything before the first `##` heading as
+    header lines, so Chaos Saga's rich section structure collapses into
+    an undifferentiated body blob instead of being preserved as distinct
+    sections. Needs a Chaos-Saga-aware fix to the header/body splitter
+    before running the real (non-dry-run) extraction.
+  - Nothing under any story's `canon/` has been imported to live OC —
+    `data/` is gitignored and the operator's standing instruction is to
+    commit nothing to canon until a storyline is deliberately "locked in."
 
 - **The web UI exists — WEBUI_NOTES §9 slice 1 (entity library, read-only)
   shipped end to end: story list, filterable/searchable entity roster,

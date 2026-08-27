@@ -13,6 +13,26 @@ See [STATUS.md](STATUS.md). The curated-import campaign is complete
 (2026-08-23) — five live stories, ~369 entities, all four original
 ChatGPT projects plus a new fifth story (Shadowflame).
 
+**A `canon/` authoring-layer standard replaces the single-JSON-export
+workflow, and BattleChasers is the first story fully consolidated onto
+it** (2026-08-26) — `data/stories/<slug>/canon/` (one Markdown file per
+character/location/lore/worldbuilding entity, YAML frontmatter for
+structured fields, documented in [docs/DATA_LAYOUT.md](docs/DATA_LAYOUT.md))
+is now the permanent human-editable source of a story's content; OC stays
+canonical for *live* story state exactly as before. Two new scripts do the
+migration and checking: `scripts/scaffold-story.mjs` (export → canon/,
+with a generic merge for sibling revision forks) and
+`scripts/validate-canon.mjs` (structural check only — no duplicate
+entities, no empty bodies; content correctness still needs a human pass).
+BattleChasers is fully migrated (143 entities, verified complete against
+both its own export lineage and the original ChatGPT source, one
+Shadowflame truth-tier leak fixed, a cosmetic polish pass done). Chaos
+Saga is next; a dry-run surfaced a real script gap — its source template
+has no Markdown headings at all, unlike BattleChasers — that needs fixing
+before real extraction. Nothing in any story's `canon/` has been imported
+to live OC; per standing instruction, nothing gets "locked in" as canon
+until explicitly told to. Full detail in STATUS.md's dated Done entry.
+
 **Outgoing companion-chat messages carry a provenance header, and
 in-fiction narration follows one asterisk/bracket convention everywhere**
 (2026-08-23) — every Kindroid/Botify direction now opens with
