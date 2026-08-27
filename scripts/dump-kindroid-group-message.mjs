@@ -4,12 +4,11 @@
 // folding, with no live server restart required.
 //
 // Exists because the live-connected mnemosyne MCP server only holds
-// whatever dist/ looked like when it was started -- it predates the
-// per-story Kindroid group-binding feature, so mnemo_story_use's exposed
-// tool schema doesn't accept kindroid_group_id at all right now. This script
-// talks to OC directly instead (same OC_URL any mnemosyne deployment uses,
-// no Kindroid credentials needed -- it only builds the message text, it
-// never calls Kindroid).
+// whatever dist/ looked like when it was started; this lets you regenerate
+// the exact same Kindroid message shape against the live memory state without a
+// server restart. It talks to OC directly (same OC_URL any mnemosyne
+// deployment uses, no Kindroid credentials required) and never calls Kindroid,
+// so it is safe for quick message-shape diagnostics.
 //
 // Usage:
 //   OC_URL=http://your-nas:18000/mcp \
@@ -17,17 +16,57 @@
 
 import { OcClient } from "../dist/oc-client.js";
 import { findStory, setKindroidTarget } from "../dist/stories.js";
-import { gatherContext } from "../dist/prompt.js";
+import {
+  DEFAULT_SCENE_CONTEXT_STRATEGY,
+  SCENE_CONTEXT_STRATEGIES,
+  gatherContext,
+} from "../dist/prompt.js";
 import { buildKindroidMessage } from "../dist/kindroid-provider.js";
 
-const [, , storyId, groupId, ...directionParts] = process.argv;
+const args = process.argv.slice(2);
+let storyId;
+let groupId;
+let directionParts = [];
+let sceneContextStrategy = process.env.MNEMO_SCENE_CONTEXT_STRATEGY;
+
+for (let i = 0; i < args.length; i++) {
+  const arg = args[i];
+  if (arg === "--scene-context-strategy" || arg.startsWith("--scene-context-strategy=")) {
+    const value = arg.startsWith("--scene-context-strategy=")
+      ? arg.slice("--scene-context-strategy=".length)
+      : args[++i];
+
+    if (!SCENE_CONTEXT_STRATEGIES.includes(value)) {
+      console.error(
+        `invalid --scene-context-strategy: ${value}. ` +
+          `Expected one of: ${SCENE_CONTEXT_STRATEGIES.join(", ")}`,
+      );
+      process.exit(2);
+    }
+    sceneContextStrategy = value;
+    continue;
+  }
+
+  if (storyId === undefined) {
+    storyId = arg;
+    continue;
+  }
+  if (groupId === undefined) {
+    groupId = arg;
+    continue;
+  }
+  directionParts.push(arg);
+}
+
 if (!storyId || !groupId || directionParts.length === 0) {
   console.error(
-    'usage: node scripts/dump-kindroid-group-message.mjs <story_id> <group_id> "<direction>"',
+    'usage: node scripts/dump-kindroid-group-message.mjs <story_id> <group_id> "<direction>" [--scene-context-strategy recency-first|query-ranked]',
   );
   process.exit(2);
 }
 const direction = directionParts.join(" ");
+const requestedSceneContextStrategy =
+  sceneContextStrategy ?? DEFAULT_SCENE_CONTEXT_STRATEGY;
 
 const ocUrl = process.env.OC_URL;
 if (!ocUrl) {
@@ -59,7 +98,12 @@ console.log(
   ),
 );
 
-const ctx = await gatherContext(oc, storyId, direction);
+const ctx = await gatherContext(
+  oc,
+  storyId,
+  direction,
+  requestedSceneContextStrategy,
+);
 console.log("\n" + "=".repeat(78));
 console.log("CONTEXT BUNDLE COUNTS");
 console.log("=".repeat(78));
