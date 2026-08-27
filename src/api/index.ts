@@ -14,6 +14,7 @@ import { registerInteractiveRoutes } from "./interactive.js";
 import { apiErrorHandler } from "./helpers.js";
 
 export interface ApiRouterOptions {
+  generator?: LlmProvider;
   validator?: LlmProvider;
   sceneContextStrategy?: SceneContextStrategy;
 }
@@ -29,10 +30,11 @@ export function createApiRouter(
   registerStoryRoutes(router, oc);
   registerEntityRoutes(router, oc);
 
-  if (options.validator) {
+  if (options.generator && options.validator) {
     registerInteractiveRoutes(
       router,
       oc,
+      options.generator,
       options.validator,
       sceneContextStrategy,
     );
