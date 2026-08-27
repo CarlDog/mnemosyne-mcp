@@ -154,6 +154,13 @@ category alongside `characters/`/`locations/`.
   not ratified): mode-adaptive layout, the storyline control plane, the
   retrieval-assembly panel, media in the beat flow, plex-companion watch
   parties, and a parked graphic-novel reading format.
+- `docs/CONTENT_ROUTING_DESIGN.md` — proposal (not yet ratified) for
+  implementing Living Canon Standard §10's SFW/NSFW routing boundary: a
+  story-level content-rating declaration on the story marker, a
+  provider-level capability declaration, and a fail-closed pre-flight
+  check at `mnemo_continue`'s one real generation call site. Grounded in
+  OpenChronicle v1's `ContentRoutingConfig`/`ModelSelector` (a real
+  design that was built and never wired to anything).
 - `docs/V2_RETROSPECTIVE.md` — entity schemas, verbatim prompt templates,
   lessons learned, and anti-patterns from the v2 OpenChronicle
   storytelling plugin. v2 code is NOT being ported; this doc is the
