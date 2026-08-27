@@ -248,13 +248,23 @@ function renderFrontmatter(fields) {
   return lines.join("\n");
 }
 
-async function writeCoreCharacter(outDir, entity, threshold) {
-  const { frontmatter, body } = splitHeaderBody(entity.content);
-  frontmatter.name ??= entity.name;
-  const slug = entity.name
+// Diacritics (e.g. "Karl von Jäger") must be transliterated before the
+// non-alphanumeric strip, or the accented letter is discarded entirely --
+// "jäger" -> "j-ger" instead of "jager". NFD decomposition splits the base
+// letter from its combining accent mark, which the second regex then drops.
+function slugify(name) {
+  return name
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+async function writeCoreCharacter(outDir, entity, threshold) {
+  const { frontmatter, body } = splitHeaderBody(entity.content);
+  frontmatter.name ??= entity.name;
+  const slug = slugify(entity.name);
   const file = path.join(outDir, "characters", `${slug}.md`);
   const rendered = `${renderFrontmatter(frontmatter)}\n\n${normalizeHeadings(body)}\n`;
   await writeFile(file, rendered, "utf8");
@@ -277,10 +287,7 @@ async function appendMinorCharacter(minorLines, entity) {
 }
 
 async function writeSimpleEntity(outDir, subdir, entity) {
-  const slug = entity.name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+  const slug = slugify(entity.name);
   const file = path.join(outDir, subdir, `${slug}.md`);
   const rendered = `---\nname: ${toYamlScalar(entity.name)}\n---\n\n${entity.content.trim()}\n`;
   await writeFile(file, rendered, "utf8");
