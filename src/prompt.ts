@@ -39,6 +39,10 @@ const MODE_DIRECTIVES: Record<Mode, string> = {
     "You are a narrator telling a story. The user is your audience. Write vivid, immersive narrative prose. Perform all characters with distinct voices. Advance the plot naturally. The user may offer light guidance but is primarily here to enjoy the story.",
 };
 
+export const SCENE_CONTEXT_STRATEGIES = ["recency-first", "query-ranked"] as const;
+export type SceneContextStrategy = (typeof SCENE_CONTEXT_STRATEGIES)[number];
+export const DEFAULT_SCENE_CONTEXT_STRATEGY: SceneContextStrategy = "recency-first";
+
 // Per-type pull caps. Rules and style are typically small and important —
 // pull all (OC's pinned-always-surface bias gives us all pinned rules
 // regardless of these limits, but the cap matters for non-pinned). Other
@@ -88,48 +92,73 @@ async function pullByType(
   return entities.map((e) => `${e.name}\n${e.body}`);
 }
 
-// Recall scene candidates from a project-scoped `memory_list` pull (strict
-// recency), then filter by validation verdict client-side since OC's
-// memory_search has no server-side exclusion for tags. validation:clean
-// scenes are preferred; untagged scenes (saved before v0.1.3's validation
-// tagging existed, or saved with validate=false) fill remaining slots; validation:errors
-// scenes are hard-excluded — never selected, regardless of pool size.
-// Validation and type buckets preserve strict recency, so no external
-// relevance scoring is involved.
-export async function pullFilteredScenes(
-  oc: OcClient,
-  storyId: string,
-  query: string,
-): Promise<string[]> {
-  void query;
-  const pool = (await oc.memoryList({ projectId: storyId }))
-    .map((memory) => memoryToRecalled(memory))
-    .filter(
-      (entity): entity is RecalledEntity =>
-        entity !== null && entity.type === "scene",
-    )
-    .sort((a, b) => {
-      const aMs = Date.parse(a.created_at);
-      const bMs = Date.parse(b.created_at);
-      const aSafe = Number.isFinite(aMs) ? aMs : 0;
-      const bSafe = Number.isFinite(bMs) ? bMs : 0;
-      return bSafe - aSafe;
-    })
-    .slice(0, SCENE_POOL_SIZE);
+// Scene pulls have two strategies, each with the same validation-safe
+// post-filter:
+// - recency-first (default): project-scoped memory_list + strict recency
+//   sorting, then client-side validation filtering.
+// - query-ranked: project-scoped semantic recall + OC query ranking,
+//   then query-order filtering to drop only hard-errored scenes.
+// In both cases, validation:errors scenes are excluded. In recency-first,
+// validation:clean scenes are preferred over untagged.
+function applySceneValidationFilter(
+  pool: RecalledEntity[],
+  strategy: SceneContextStrategy,
+): RecalledEntity[] {
+  if (strategy === "query-ranked") {
+    return pool.filter((e) => !e.tags.includes("validation:errors"));
+  }
+
   const clean = pool.filter((e) => e.tags.includes("validation:clean"));
   const untagged = pool.filter(
     (e) =>
       !e.tags.includes("validation:clean") &&
       !e.tags.includes("validation:errors"),
   );
-  // validation:errors scenes are hard-excluded -- never selected, regardless
-  // of pool size.
+
+  // validation:errors scenes are hard-excluded -- never selected,
+  // regardless of pool size.
   //
+  // If all pool entries are validation:errors, this returns [] and
+  // RECENT SCENES is omitted from the prompt entirely (block() returns
+  // null), rather than seeding few-shot context with violations.
+  return [...clean, ...untagged];
+}
+
+function byCreatedAtDesc(a: RecalledEntity, b: RecalledEntity): number {
+  const aMs = Date.parse(a.created_at);
+  const bMs = Date.parse(b.created_at);
+  const aSafe = Number.isFinite(aMs) ? aMs : 0;
+  const bSafe = Number.isFinite(bMs) ? bMs : 0;
+  return bSafe - aSafe;
+}
+
+export async function pullFilteredScenes(
+  oc: OcClient,
+  storyId: string,
+  query: string,
+  strategy: SceneContextStrategy = DEFAULT_SCENE_CONTEXT_STRATEGY,
+): Promise<string[]> {
+  const pool =
+    strategy === "query-ranked"
+      ? await recall(oc, storyId, {
+          query,
+          type: "scene",
+          limit: SCENE_POOL_SIZE,
+        })
+      : (await oc.memoryList({ projectId: storyId }))
+          .map((memory) => memoryToRecalled(memory))
+          .filter(
+            (entity): entity is RecalledEntity =>
+              entity !== null && entity.type === "scene",
+          )
+          .sort(byCreatedAtDesc)
+          .slice(0, SCENE_POOL_SIZE);
+
   // An empty result here is the intended behavior when all scenes are
   // tagged validation:errors -- RECENT SCENES is omitted from the prompt
   // entirely (block() returns null for an empty array) rather than
   // including rule-violating few-shots.
-  return [...clean, ...untagged]
+  return applySceneValidationFilter(pool, strategy)
     .slice(0, TYPE_LIMITS.scene)
     .map((e) => `${e.name}\n${e.body}`);
 }
@@ -138,6 +167,7 @@ export async function gatherContext(
   oc: OcClient,
   storyId: string,
   query: string,
+  sceneContextStrategy: SceneContextStrategy = DEFAULT_SCENE_CONTEXT_STRATEGY,
 ): Promise<ContextBundle> {
   // Sequential per-type pulls. Parallel (Promise.all over 7 calls) trips
   // OC v3's rate limiter under burst load — same gap that bit Phase A's
@@ -149,7 +179,12 @@ export async function gatherContext(
   const style = await pullByType(oc, storyId, "style", query);
   const characters = await pullByType(oc, storyId, "character", query);
   const locations = await pullByType(oc, storyId, "location", query);
-  const scenes = await pullFilteredScenes(oc, storyId, query);
+  const scenes = await pullFilteredScenes(
+    oc,
+    storyId,
+    query,
+    sceneContextStrategy,
+  );
   const lore = await pullByType(oc, storyId, "lore", query);
   const worldbuilding = await pullByType(oc, storyId, "worldbuilding", query);
   return { rules, style, characters, locations, scenes, lore, worldbuilding };

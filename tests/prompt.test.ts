@@ -96,11 +96,11 @@ describe("prompt — buildSystemPrompt", () => {
   });
 });
 
-// pullFilteredScenes calls recall() (entities.ts), which calls
-// oc.memorySearch(...) exactly once and maps the results back into
-// entities. This repo has no existing OcClient-mocking convention (per
+// pullFilteredScenes has two strategies: recency-first uses oc.memoryList
+// for a strict recency pull; query-ranked uses oc.memorySearch via
+// recall(). This repo has no existing OcClient-mocking convention (per
 // the caller's instructions), so use a minimal object literal exposing
-// just memorySearch, cast to OcClient to satisfy the type.
+// both hooks, cast to OcClient to satisfy the type.
 function sceneMemory(
   id: string,
   name: string,
@@ -118,7 +118,10 @@ function sceneMemory(
 }
 
 function mockOcWithScenes(memories: OcMemory[]): OcClient {
-  return { memoryList: async () => memories } as unknown as OcClient;
+  return {
+    memoryList: async () => memories,
+    memorySearch: async () => memories,
+  } as unknown as OcClient;
 }
 
 describe("prompt — pullFilteredScenes", () => {
@@ -215,6 +218,35 @@ describe("prompt — pullFilteredScenes", () => {
     );
     expect(result).toHaveLength(5);
     expect(result.some((r) => r.includes("Clean F"))).toBe(false);
+  });
+
+  it("supports query-ranked scene lookup strategy when configured", async () => {
+    const pool = [
+      sceneMemory("1", "Old scene", ["validation:clean"], "2026-01-01T10:00:00Z"),
+      sceneMemory("2", "Middle scene", [], "2026-01-01T10:10:00Z"),
+      sceneMemory("3", "Oldly ranked scene", ["validation:clean"], "2026-01-01T10:05:00Z"),
+      sceneMemory("4", "Newest scene", [], "2026-01-01T10:20:00Z"),
+    ];
+    const ranked = [
+      pool[1],
+      pool[0],
+      pool[3],
+      pool[2],
+    ];
+    const result = await pullFilteredScenes(
+      {
+        memoryList: async () => pool,
+        memorySearch: async () => ranked,
+      } as unknown as OcClient,
+      storyId,
+      "query",
+      "query-ranked",
+    );
+    expect(result).toHaveLength(4);
+    expect(result[0]).toContain("Middle scene");
+    expect(result[1]).toContain("Old scene");
+    expect(result[2]).toContain("Newest scene");
+    expect(result[3]).toContain("Oldly ranked scene");
   });
 });
 

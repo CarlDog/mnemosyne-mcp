@@ -27,6 +27,11 @@ import { GeminiProvider } from "./gemini-provider.js";
 import { OpenAICompatProvider } from "./openai-compat-provider.js";
 import type { KindroidTarget } from "./stories.js";
 import { registerTools } from "./tools/index.js";
+import {
+  DEFAULT_SCENE_CONTEXT_STRATEGY,
+  SCENE_CONTEXT_STRATEGIES,
+  type SceneContextStrategy,
+} from "./prompt.js";
 import { MNEMOSYNE_VERSION } from "./version.js";
 
 const OC_URL = process.env.OC_URL;
@@ -92,6 +97,19 @@ if (!OLLAMA_KEEP_ALIVE_CLEAN) {
     value: OLLAMA_KEEP_ALIVE,
     hint: "set OLLAMA_KEEP_ALIVE to a non-empty Ollama keep_alive value, or unset to use the default 30m",
   });
+  process.exit(1);
+}
+
+const SCENE_CONTEXT_STRATEGY = (
+  process.env.MNEMO_SCENE_CONTEXT_STRATEGY?.trim().toLowerCase() ??
+  DEFAULT_SCENE_CONTEXT_STRATEGY
+) as SceneContextStrategy;
+if (!SCENE_CONTEXT_STRATEGIES.includes(SCENE_CONTEXT_STRATEGY)) {
+  log.error(
+    "startup",
+    `MNEMO_SCENE_CONTEXT_STRATEGY must be one of: ${SCENE_CONTEXT_STRATEGIES.join(", ")}`,
+    { value: process.env.MNEMO_SCENE_CONTEXT_STRATEGY },
+  );
   process.exit(1);
 }
 
@@ -600,7 +618,13 @@ function makeServer(): McpServer {
     { name: "mnemosyne-mcp", version: MNEMOSYNE_VERSION },
     { instructions: INSTRUCTIONS },
   );
-  registerTools(server, oc, generator, validator);
+  registerTools(
+    server,
+    oc,
+    generator,
+    validator,
+    SCENE_CONTEXT_STRATEGY,
+  );
   return server;
 }
 

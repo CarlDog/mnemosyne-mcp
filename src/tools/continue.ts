@@ -19,7 +19,12 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
 import type { LlmProvider } from "../llm.js";
-import { buildSystemPrompt, gatherContext, MODES } from "../prompt.js";
+import {
+  buildSystemPrompt,
+  gatherContext,
+  MODES,
+  type SceneContextStrategy,
+} from "../prompt.js";
 import { saveEntity, retagValidation } from "../entities.js";
 import {
   combineKindroidTarget,
@@ -48,6 +53,7 @@ export function registerContinueTool(
   oc: OcClient,
   generator: LlmProvider,
   validator: LlmProvider,
+  sceneContextStrategy: SceneContextStrategy = "recency-first",
 ): void {
   server.registerTool(
     "mnemo_continue",
@@ -167,7 +173,12 @@ export function registerContinueTool(
         const mode = args.mode ?? DEFAULT_MODE;
 
         const gatherStart = Date.now();
-        const context = await gatherContext(oc, storyId, args.direction);
+        const context = await gatherContext(
+          oc,
+          storyId,
+          args.direction,
+          sceneContextStrategy,
+        );
         const gatherMs = Date.now() - gatherStart;
         const systemPrompt = buildSystemPrompt(mode, context);
 
