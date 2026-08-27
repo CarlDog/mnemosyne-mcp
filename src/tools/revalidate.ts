@@ -27,7 +27,12 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
 import type { LlmProvider } from "../llm.js";
-import { gatherContext } from "../prompt.js";
+import {
+  DEFAULT_SCENE_CONTEXT_STRATEGY,
+  SCENE_CONTEXT_STRATEGIES,
+  type SceneContextStrategy,
+  gatherContext,
+} from "../prompt.js";
 import { validateContent, classifyVerdict } from "../validator.js";
 import { recall, retagValidation, MAX_RECALL_LIMIT } from "../entities.js";
 import { resolveStoryId } from "../stories.js";
@@ -65,6 +70,7 @@ export async function revalidateScenes(
   oc: OcClient,
   validator: LlmProvider,
   storyId: string,
+  sceneContextStrategy: SceneContextStrategy = DEFAULT_SCENE_CONTEXT_STRATEGY,
 ): Promise<RevalidateResult> {
   const scenes = await recall(oc, storyId, {
     type: "scene",
@@ -79,7 +85,12 @@ export async function revalidateScenes(
   // prompt.ts on why parallel OC access trips the rate limiter.
   for (const scene of scenes) {
     try {
-      const context = await gatherContext(oc, storyId, scene.body);
+      const context = await gatherContext(
+        oc,
+        storyId,
+        scene.body,
+        sceneContextStrategy,
+      );
       const report = await validateContent(validator, context, scene.body);
       const verdict = classifyVerdict(report);
       await retagValidation(oc, scene.memory_id, scene.tags, verdict);
@@ -118,6 +129,16 @@ export function registerRevalidateTool(
       description:
         "One-shot bulk validation pass over every scene in the active story. Re-runs the validator against each scene's own gathered context and retags it with a fresh validation:clean or validation:errors verdict. Fixes the bootstrap problem for scenes saved before v0.1.3's validator-gated scene inclusion existed (untagged scenes). Walks all scenes in the active story (or the story named by the optional `story` override), capped at 100 scenes per run (recall has no pagination); scenes_checked reflects what was actually walked. A single scene's validation failure is recorded in the response's failures list, not raised as an error, so one bad scene doesn't abort the walk.",
       inputSchema: {
+        scene_context_strategy: z
+          .enum(SCENE_CONTEXT_STRATEGIES)
+          .optional()
+          .describe(
+            `When selecting RECENT SCENES for context, choose either ` +
+              "recency-first (project-scoped created-at order) or " +
+              "query-ranked (query-ranked memory_search). Overrides the " +
+              "server default MNEMO_SCENE_CONTEXT_STRATEGY for this call only. " +
+              "If unset, uses the server default.",
+          ),
         story: z
           .string()
           .min(1)
@@ -127,9 +148,19 @@ export function registerRevalidateTool(
           ),
       },
     },
-    withLogging("mnemo_revalidate_scenes", async (args: { story?: string }) => {
+    withLogging("mnemo_revalidate_scenes", async (args: {
+      scene_context_strategy?: SceneContextStrategy;
+      story?: string;
+    }) => {
       const storyId = await resolveStoryId(oc, args.story);
-      const result = await revalidateScenes(oc, validator, storyId);
+      const requestedSceneContextStrategy =
+        args.scene_context_strategy ?? DEFAULT_SCENE_CONTEXT_STRATEGY;
+      const result = await revalidateScenes(
+        oc,
+        validator,
+        storyId,
+        requestedSceneContextStrategy,
+      );
       return asText(result);
     }),
   );
