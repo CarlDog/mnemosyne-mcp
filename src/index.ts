@@ -591,7 +591,7 @@ v0 surface:
   the Kindroid target for this call only. With validate=true, runs an
   LLM second pass and attaches a verdict (issues + summary) to the
   response.
-- mnemo_validate(content, story?) — standalone validation pass over
+- mnemo_validate(content, scene_context_strategy?, story?) — standalone validation pass over
   arbitrary content (hand-written prose, previously-saved beats being
   re-audited). Same ValidationReport shape as mnemo_continue's
   validate=true mode.
