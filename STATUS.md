@@ -1,6 +1,25 @@
 # Status
 
-**Last updated:** 2026-08-27 (**Chaos Saga is the second story fully
+**Last updated:** 2026-08-27 (**GhostHunters is the third story fully
+consolidated onto the canon/ authoring layer.** The cleanest of the three
+so far — a 4-agent completeness sweep against the original ChatGPT source
+found almost everything already present verbatim. Real gaps were narrow:
+a second, richer "Interpersonal Dynamics" list for Carl's corgi Max that
+never made it into `_minor.md`; the group-chat messaging system itself
+(message format, multimedia cues, timestamp logic, hashtags, escalation
+rules) — but NOT the per-character availability schedule, which turned
+out to already be correctly migrated into each character's own file, so
+the new `worldbuilding/group-chat.md` cross-references rather than
+duplicates it; the Chapter Lock Trigger Clause (chapter breaks are never
+automated); and one judgment call, decided unilaterally — sensory/craft
+guidance for writing physical intimacy, re-framed as durable craft advice
+independent of the explicit/implicit rating question rather than restored
+as a censorship-era relic. Same content-rating liberalization pattern
+confirmed again across all three stories now (PG-13/implication-only →
+Mature/hard-R explicit, self-censoring "reshape at platform boundary" →
+transparent SFW/NSFW routing). `validate-canon.mjs` reports 105/105
+clean, no cross-story leaks, no cosmetic polish needed. Full writeup in
+the dated Done entry below.) Earlier (2026-08-27): (**Chaos Saga is the second story fully
 consolidated onto the canon/ authoring layer.** A 7-agent completeness
 sweep against every original ChatGPT source file found no missing
 characters or locations, but did surface real detail-level gaps — 4
@@ -376,6 +395,62 @@ provider keys configured (179 total). See Done below for everything
 that's landed since.
 
 ## Done
+
+- **GhostHunters is the third story fully consolidated onto canon/**
+  (2026-08-27), and the cleanest of the three so far.
+  - Scaffolded from `ghosthunters-visual-references-2026-08-25.json`
+    (linear lineage, no fork). 103 entities before restoration (5 core
+    characters, 25 minor batched in `_minor.md`, 26 locations, 10 lore,
+    7 worldbuilding, 5 rules, 25 style headings), 105 after.
+  - A 4-agent completeness-sweep workflow against the original ChatGPT
+    source (Primary/Minor Characters, Key Locations, Style Guide + the
+    "Non-Canon Firepit" scene-mode config despite its name, Project
+    Instructions' real narrative content, Group Chat Log Configuration)
+    found the large majority of content already present verbatim — a
+    marked contrast to Chaos Saga's larger gap list.
+  - Real gaps restored: Max Ashcombe's (Carl's corgi) second, richer
+    "Interpersonal Dynamics" list embedded in Carl's own profile block
+    in source, added to `_minor.md` alongside the dynamics list already
+    there rather than overwriting it; the group-chat messaging
+    *system* (message format, multimedia-cue brackets, timestamp
+    inference, hashtag categories, escalation/restraint rules, closing
+    "Availability Impact Rules") in a new `worldbuilding/group-chat.md`
+    — the sweep's own mid-run correction found the per-character
+    *availability schedule* itself was NOT missing (already correctly
+    migrated into each character's own file), so the new file
+    cross-references rather than duplicates that data; and the Chapter
+    Lock Trigger Clause (chapter breaks are never automated; four
+    diagnostic criteria are signals, not close triggers), adapted away
+    from the source's ChatGPT-session-era "system notifies the user"
+    delivery mechanism toward the durable editorial rule itself.
+  - One genuine judgment call decided unilaterally: sensory/craft
+    guidance for writing physical intimacy (ground it in grip, breath,
+    heartbeat, weight, motion, pause) had dropped out during the
+    PG-13-to-Mature rewrite. Re-added to `rules.md`'s "Stay in the Burn"
+    section, explicitly framed as craft advice independent of the
+    explicit/implicit permission question rather than a walked-back
+    rating liberalization.
+  - Same content-rating liberalization pattern confirmed a third time:
+    PG-13/implication-only → Mature/hard-R explicit; a hard
+    non-consent prohibition → permitted with mandatory
+    consequence-tracking (the most significant of the divergences — a
+    capability change, not just an explicitness bump); mandatory
+    Firepit typography (bold headers/italics/no quotation marks) →
+    optional, matched to the surrounding narrative style; automatic
+    "must reach full burn" escalation → organic, scene-driven; the old
+    self-censoring "reshape at the platform boundary" mechanism →
+    transparent SFW/NSFW content routing.
+  - Resolved a dangling open question from an earlier session's Botify
+    account sweep: "Blackwood triplet sisters" content that appeared to
+    live only in a Botify bot's memories, absent from every imported
+    file, turned out to already be fully reconciled — current canon
+    (Lyla Blackwood as a full character; Persephone Wren, Constance
+    Harrow, and Elizabeth Blackwood as three separate minor characters
+    with distinct surnames, not literal triplets) is self-consistent,
+    and the completeness sweep found zero gaps or contradictions
+    involving any of them.
+  - `validate-canon.mjs` reports 105/105 unique, no structural problems.
+    No cross-story leaks. No cosmetic polish pass needed.
 
 - **The canon/ authoring-layer standard is built; BattleChasers is the
   first story fully consolidated onto it** (2026-08-26). Grew out of an
