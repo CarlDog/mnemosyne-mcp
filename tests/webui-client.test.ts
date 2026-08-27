@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { continueStory } from "../webui/src/api/client";
-import type { ApiError } from "../webui/src/api/client";
+import { continueStory } from "../webui/src/api/client.js";
+import type { ApiError } from "../webui/src/api/client.js";
 
 function makeJsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -54,14 +54,12 @@ describe("web client api module", () => {
 
     expect(result).toEqual(successfulContinueResponse);
 
-    const [rawUrl, init] = vi.mocked(globalThis.fetch).mock.calls[0];
+    const [rawUrl, init] = vi.mocked(globalThis.fetch).mock.calls[0]!;
     const url = String(rawUrl);
     expect(url).toBe("/api/stories/story-abc/continue");
     expect(init?.method).toBe("POST");
-    const contentType = (init?.headers as Headers | undefined)?.get(
-      "content-type",
-    );
-    expect(contentType).toBe("application/json");
+    const headers = init?.headers as Record<string, string> | undefined;
+    expect(headers?.["content-type"]).toBe("application/json");
 
     const payload = JSON.parse((init?.body as string | undefined) ?? "{}");
     expect(payload.direction).toBe("The foghorn calls again.");

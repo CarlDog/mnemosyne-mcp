@@ -10,7 +10,9 @@ import type {
   ContinueResponse,
   EntityType,
   StorySummary,
-} from "./types";
+} from "./types.js";
+
+export type { ContinueResponse };
 
 export class ApiError extends Error {
   constructor(
