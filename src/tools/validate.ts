@@ -19,7 +19,11 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
 import type { LlmProvider } from "../llm.js";
-import { gatherContext } from "../prompt.js";
+import {
+  SCENE_CONTEXT_STRATEGIES,
+  gatherContext,
+  type SceneContextStrategy,
+} from "../prompt.js";
 import { validateContent } from "../validator.js";
 import { resolveStoryId } from "../stories.js";
 import { log } from "../log.js";
@@ -50,17 +54,36 @@ export function registerValidateTool(
           .describe(
             "Story name or OC project UUID. Overrides the active story for this call only; omit to use the active story (mnemo_story_use).",
           ),
+        scene_context_strategy: z
+          .enum(SCENE_CONTEXT_STRATEGIES)
+          .optional()
+          .describe(
+            `When selecting RECENT SCENES for validation context, choose either ` +
+              "recency-first (project-scoped created-at order) or " +
+              "query-ranked (query-ranked memory_search). Overrides the " +
+              "server default MNEMO_SCENE_CONTEXT_STRATEGY for this call only. " +
+              "If unset, uses the server default.",
+          ),
       },
     },
     withLogging(
       "mnemo_validate",
-      async (args: { content: string; story?: string }) => {
+      async (args: {
+        content: string;
+        scene_context_strategy?: SceneContextStrategy;
+        story?: string;
+      }) => {
         const storyId = await resolveStoryId(oc, args.story);
         // Reuse continue's gatherContext so the validator sees the same
         // shape of context. The validator only consumes rules / style /
         // characters / locations; the rest of the bundle is harmlessly
         // ignored by validateContent.
-        const context = await gatherContext(oc, storyId, args.content);
+        const context = await gatherContext(
+          oc,
+          storyId,
+          args.content,
+          args.scene_context_strategy,
+        );
         // Guard the validator pass: a validator-LLM failure or non-JSON
         // output degrades to a structured error instead of a raw MCP tool
         // error — symmetric with mnemo_continue's validation_error field.
