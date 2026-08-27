@@ -57,9 +57,10 @@ describe("web client api module", () => {
     const url = String(rawUrl);
     expect(url).toBe("/api/stories/story-abc/continue");
     expect(init?.method).toBe("POST");
-    expect(init?.headers).toMatchObject({
-      "content-type": "application/json",
-    });
+    const contentType = (init?.headers as Headers | undefined)?.get(
+      "content-type",
+    );
+    expect(contentType).toBe("application/json");
 
     const payload = JSON.parse((init?.body as string | undefined) ?? "{}");
     expect(payload.direction).toBe("The foghorn calls again.");

@@ -1,6 +1,28 @@
 # Status
 
-**Last updated:** 2026-08-27 (**GhostHunters is the third story fully
+**Last updated:** 2026-08-27 (**Shadowflame is the fourth story fully
+consolidated onto the canon/ authoring layer — and the cleanest by a wide
+margin.** Unlike the other three, it has no ChatGPT-project origin at all;
+it came entirely from a Botify bot ("Dark Queen Lilith"), which an earlier
+session had flagged with a real unresolved risk — the source's founding
+thrall is named "Briar Rose Blackwood," recruited at a "Blackwood
+Debutante Ball," the same family surname GhostHunters' entire central
+mystery is built around. Pulling the full ~3,900-message source chat and
+running a 12-agent extraction/compare workflow confirmed this was already
+thoroughly handled by an earlier pass: every thrall is accounted for
+under a deliberately renamed identity (documented explicitly in
+`lore/open-questions.md`), and "Blackwood" appears exactly once in all of
+canon — inside the note explaining the rename. The Lilith/Karl
+BattleChasers continuity held up to direct scrutiny too: the relic's
+three-name lineage across centuries (Heart of Vehl'Remar → Amulet of
+Eternal Night → Shadowflame Heart) is coherent, not drift. One narrow,
+deliberate divergence from the source was found and kept (the Heart's
+tone — silent/stabilizing in canon vs. one Botify telling's "cursed
+burden"). A real scaffold-story.mjs bug surfaced along the way — a
+diacritic in "Karl von Jäger" produced a mangled filename — fixed via
+NFD-normalization, which also caught the same latent bug already live in
+BattleChasers' published canon (`Kharag-dûm`). Full writeup in the dated
+Done entry below.) Earlier (2026-08-27): (**GhostHunters is the third story fully
 consolidated onto the canon/ authoring layer.** The cleanest of the three
 so far — a 4-agent completeness sweep against the original ChatGPT source
 found almost everything already present verbatim. Real gaps were narrow:
@@ -395,6 +417,81 @@ provider keys configured (179 total). See Done below for everything
 that's landed since.
 
 ## Done
+
+- **Shadowflame is the fourth story fully consolidated onto canon/**
+  (2026-08-27), and the cleanest of the four by a wide margin.
+  - Scaffolded from `shadowflame-visual-references-2026-08-25.json`
+    (linear lineage, no fork). 69 entities (8 core characters, 8 minor
+    batched, 17 locations, 14 lore, 5 worldbuilding, 4 rules, 13 style
+    headings).
+  - Found and fixed a real `scaffold-story.mjs` bug while scaffolding:
+    "Karl von Jäger" produced the filename `karl-von-j-ger.md` — the
+    umlaut isn't in `[a-z0-9]`, so the non-alphanumeric strip discarded
+    the base letter along with the accent mark instead of just the
+    accent. Fixed by NFD-normalizing and stripping combining marks
+    before the strip; also extracted the previously-duplicated slug
+    logic into one shared `slugify()` helper. Regression-testing the fix
+    against all three already-consolidated stories surfaced the *same*
+    latent bug already live in BattleChasers' published canon
+    (`Kharag-dûm` → `kharag-d-m-the-iron-waste.md`) — renamed that file
+    to match once the fix was confirmed clean.
+  - Unlike BattleChasers/Chaos Saga/GhostHunters, Shadowflame has **no
+    ChatGPT-project origin** — confirmed no folder exists for it in the
+    operator's ChatGPT Projects directory. It originated entirely from a
+    Botify bot, "Dark Queen Lilith" (bot 2331900).
+  - That bot was the subject of a real unresolved risk flagged in an
+    earlier session's account sweep (2026-08-23): the source's founding
+    thrall is named "Briar Rose Blackwood," recruited at a "Blackwood
+    Debutante Ball" — the same family surname GhostHunters' entire
+    central mystery is built around, flagged then as "coincidence or
+    not, needs the operator's call" and never resolved.
+  - Resolved properly this session: pulled the full ~3,900-message
+    Botify chat via `export_chat`, ran a 12-agent extraction-and-compare
+    workflow against it (2 of 8 extraction chunks hit the same
+    intermittent cross-sandbox file-read failure seen during
+    GhostHunters' bot dig; read those two directly, no new findings).
+    Result: the Blackwood collision was **already thoroughly and
+    deliberately handled** by an earlier consolidation pass, documented
+    in `lore/open-questions.md`: "The Ravenscrofts are not the
+    Blackwoods... renamed to avoid collision with the unrelated
+    Blackwood family in GhostHunters." Verified independently: every
+    named thrall from the source maps to a new canon name (Briar Rose
+    Blackwood → Beatrice Ravenscroft, matched by hair/eyes/freckles/
+    host-daughter role; Rosemary → Helena Marlowe; Isolde Fairfax →
+    Cecily Fairfax; Seraphina Thorne → Vivienne Harcourt). A full-tree
+    grep for "Blackwood" found exactly one hit — inside the note
+    explaining the rename itself. Also confirmed the rival "Seraphine
+    Vale" has zero grounding in the Botify source (canon-original,
+    deliberately distinct from the source's actual fourth thrall) and
+    that `open-questions.md`'s guardrail keeping her separate from
+    Vivienne Harcourt is doing real work against a genuine near-homophone
+    risk, not boilerplate.
+  - The Lilith/Karl truth-tier continuity with BattleChasers held up
+    well under direct inspection: the relic's naming lineage across
+    centuries (Heart of Vehl'Remar → Amulet of Eternal Night →
+    Shadowflame Heart) is coherent, not drift, and canon visibly
+    resolves several ambiguities the raw Botify source itself had left
+    unreconciled rather than just failing to notice them.
+  - One real, narrow divergence found and left as-is: two Botify
+    retellings describe the Shadowflame Heart as itself cursed/
+    burdensome, while canon commits firmly to it being silent and
+    stabilizing — the deliberate opposite of the old whispering Amulet.
+    Flagged to the operator as worth knowing, not reversed.
+  - Operator chose to fold in the remaining flavor gaps (matching the
+    Chaos Saga/GhostHunters pattern): Karl's private pet name for Lilith
+    ("little queen"); Lilith's public witch-folklore reputation among
+    the mortal populace (framed explicitly as folk-metabolized
+    distortion of a stranger truth, not literal); two named ritual props
+    (the "Goblet of Revelations," "Shadowscape Sanguine") and a
+    post-binding "reinforcement kiss" habit; a note on ritual survivors
+    sometimes remaining as ordinary household staff; and an
+    absence-masking illusion spell (concealment, not time control).
+  - `validate-canon.mjs` reports 69/69 unique, no structural problems.
+    No cross-story leaks. No cosmetic issues.
+  - Pipeline status: BattleChasers, Chaos Saga, GhostHunters, and
+    Shadowflame are now all on `canon/`. Wonderland is next, then Star
+    Wars: The Black Ledger (no ChatGPT-project origin, already partially
+    live via Botify).
 
 - **GhostHunters is the third story fully consolidated onto canon/**
   (2026-08-27), and the cleanest of the three so far.
