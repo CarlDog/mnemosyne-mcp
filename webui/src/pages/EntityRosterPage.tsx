@@ -51,6 +51,10 @@ export default function EntityRosterPage() {
           <Link to="/">Stories</Link>
           <span className="crumb-sep">/</span>
           <span>{storyName}</span>
+          <span className="crumb-sep">/</span>
+          <Link to={`/stories/${storyId}/continue`} className="crumb-link">
+            Continue
+          </Link>
         </nav>
       </header>
       <main className="content">

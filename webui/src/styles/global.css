@@ -457,6 +457,239 @@ input {
   font-style: italic;
 }
 
+.continue-form {
+  max-width: 56rem;
+  margin: 0 auto var(--space-5);
+}
+
+.result-panel {
+  max-width: 56rem;
+  margin: 0 auto;
+}
+
+.panel-heading {
+  margin: 0 0 var(--space-4);
+}
+
+.panel-title {
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  margin: 0 0 var(--space-2);
+  line-height: 1.2;
+}
+
+.panel-subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+
+.field-label {
+  display: inline-block;
+  margin: 0 0 var(--space-1);
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.textarea,
+.select {
+  width: 100%;
+  margin-bottom: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--space-2) var(--space-2);
+  color: var(--ink);
+  font-family: var(--font-body);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.textarea {
+  resize: vertical;
+}
+
+.textarea:focus,
+.select:focus {
+  outline: none;
+  border-color: var(--amber);
+  box-shadow: 0 0 0 3px var(--amber-glow);
+}
+
+.select {
+  appearance: none;
+  cursor: pointer;
+  width: 14rem;
+}
+
+.field-pair {
+  margin-bottom: var(--space-3);
+}
+
+.field-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin-top: var(--space-2);
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  padding: 0.7rem 1rem;
+  border-radius: var(--radius);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: var(--surface);
+}
+
+.button:hover {
+  border-color: var(--amber);
+  background: var(--surface-raised);
+}
+
+.button.primary {
+  background: linear-gradient(90deg, rgba(217, 145, 59, 0.2), rgba(240, 171, 84, 0.08));
+  border-color: var(--amber);
+}
+
+.button.primary:hover {
+  background: linear-gradient(90deg, rgba(217, 145, 59, 0.28), rgba(240, 171, 84, 0.15));
+}
+
+.button.muted {
+  background: transparent;
+  border-color: var(--line-soft);
+}
+
+.button.muted:hover {
+  border-color: var(--amber);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.button[disabled] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: var(--space-4);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+.checkbox input[type="checkbox"] {
+  transform: translateY(-1px);
+}
+
+.result-meta {
+  margin: 0 0 var(--space-3);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.result-subhead {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  margin: var(--space-4) 0 var(--space-2);
+}
+
+.result-message,
+.result-warning {
+  padding: var(--space-2);
+  border-left: 3px solid var(--amber);
+  background: var(--amber-glow);
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+.result-warning {
+  border-left-color: var(--ember);
+  background: rgba(198, 85, 64, 0.16);
+  color: #ffd0c1;
+}
+
+.mini-dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+}
+
+.mini-dl div {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius);
+}
+
+.mini-dl dt {
+  margin: 0 0 0.25rem;
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.mini-dl dd {
+  margin: 0;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+}
+
+.inline-link {
+  color: var(--amber-bright);
+  text-decoration: underline;
+  text-underline-offset: 0.2rem;
+}
+
+.inline-link:hover {
+  color: var(--amber);
+}
+
+.result-list {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.issue-severity {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--cold);
+}
+
+.issue-text {
+  color: var(--ink-soft);
+  margin-top: 0.2rem;
+}
+
+.crumb-link {
+  color: var(--amber-bright);
+}
+
 /* ---------- misc chrome ---------- */
 
 .back-link {
