@@ -113,16 +113,52 @@ function mergeFork(baseMap, mergeMap, ancestorMap, sourceLabel) {
   return report;
 }
 
-// Splits a character's content into a leading "Label: value" header block
-// and the remaining Markdown body. Stops at the first blank line followed
-// by a `## ` heading, or the first `## ` heading if there's no blank line.
+// Matches a clean "Label: value" line -- the label is letters/spaces/slash
+// only (covers "Voice / Speech", "Sexual/Romantic Orientation", etc.) and
+// the value is non-empty. Shared by the per-line frontmatter pass and the
+// paragraph-level bare-section detection below.
+const FIELD_LINE_RE = /^([A-Za-z][A-Za-z /]*):\s*(.+)$/;
+
+// A label like "Birthday / Zodiac Sign" or "Sexual/Romantic Orientation"
+// would otherwise become the frontmatter key "birthday_/_zodiac_sign" --
+// valid YAML, but ugly enough to look broken. Collapse the slash (with any
+// surrounding spaces) into the same single underscore a space would get,
+// instead of preserving it as its own token.
+function fmKeyFromLabel(label) {
+  return label
+    .trim()
+    .toLowerCase()
+    .replace(/\s*\/\s*/g, "_")
+    .replace(/\s+/g, "_");
+}
+
+// Matches a "Label:" line with NOTHING after the colon -- a bare section
+// label. Wider label charset than FIELD_LINE_RE (digits, &, /, apostrophe,
+// parens, en/em dash) because a template's section titles run richer than
+// its single-value fields ("TATTOOS & INK:", "ARCHIVE BACKSTORY (excavated
+// from the raw transcripts):", "MOTORCYCLE CANON — MADDOX'S ANTIQUE INDIAN
+// SCOUT:").
+const BARE_LABEL_RE =
+  /^([A-Za-z][A-Za-z0-9 &/'()–—-]*):\s*$/;
+
+// Splits a character's content into a leading header block and the
+// remaining Markdown body. Stops at the first blank line followed by a
+// `## ` heading, or the first `## ` heading if there's no blank line.
 //
-// A header line that doesn't match the "Label: value" shape is NOT
-// dropped -- it's folded back onto the front of the body instead. Every
-// core character checked so far happens to have a clean header block, but
-// nothing guarantees the next story's does, and silently discarding a line
-// that didn't parse is exactly the kind of loss this whole tool exists to
-// prevent.
+// The header block is grouped into blank-line-delimited paragraphs before
+// parsing, because some stories' original templates (Chaos Saga, unlike
+// BattleChasers) use a flat "Label:\n<prose>" shape for whole multi-
+// paragraph sections (Backstory, Anchor Wound, Relationships, ...) instead
+// of this project's usual "## Heading" convention. A paragraph whose first
+// line is a bare label (FIELD_LINE_RE would need a value; this one has
+// none) with more content beneath it is exactly that shape, so it's
+// rendered as a real "## Label" section rather than flattened into an
+// undifferentiated blob alongside the simple one-line fields. Every other
+// paragraph is parsed line-by-line as before: a line matching "Label:
+// value" becomes a frontmatter field, anything else is folded onto the
+// front of the body verbatim rather than dropped -- silently discarding a
+// line that didn't parse is exactly the kind of loss this whole tool
+// exists to prevent.
 function splitHeaderBody(content) {
   const lines = content.split("\n");
   let splitAt = lines.length;
@@ -132,22 +168,42 @@ function splitHeaderBody(content) {
       break;
     }
   }
-  const headerLines = lines.slice(0, splitAt).filter((l) => l.trim() !== "");
+  const headerLines = lines.slice(0, splitAt);
   let body = lines.slice(splitAt).join("\n").trim();
 
+  const paragraphs = [];
+  let current = [];
+  for (const raw of headerLines) {
+    if (raw.trim() === "") {
+      if (current.length) paragraphs.push(current);
+      current = [];
+    } else {
+      current.push(raw);
+    }
+  }
+  if (current.length) paragraphs.push(current);
+
   const frontmatter = {};
-  const unparsed = [];
-  for (const line of headerLines) {
-    const m = line.match(/^([A-Za-z][A-Za-z /]*):\s*(.*)$/);
-    if (!m) {
-      unparsed.push(line);
+  const bodyParts = [];
+  for (const para of paragraphs) {
+    const bare = para[0].match(BARE_LABEL_RE);
+    if (bare && para.length > 1) {
+      bodyParts.push(`## ${bare[1].trim()}\n\n${para.slice(1).join("\n")}`);
       continue;
     }
-    const fmKey = m[1].trim().toLowerCase().replace(/\s+/g, "_");
-    frontmatter[fmKey] = m[2].trim();
+    const unparsed = [];
+    for (const line of para) {
+      const m = line.match(FIELD_LINE_RE);
+      if (m) {
+        frontmatter[fmKeyFromLabel(m[1])] = m[2].trim();
+      } else {
+        unparsed.push(line);
+      }
+    }
+    if (unparsed.length > 0) bodyParts.push(unparsed.join("\n"));
   }
-  if (unparsed.length > 0) {
-    body = `${unparsed.join("\n")}\n\n${body}`.trim();
+  if (bodyParts.length > 0) {
+    body = body ? `${bodyParts.join("\n\n")}\n\n${body}` : bodyParts.join("\n\n");
   }
   return { frontmatter, body };
 }
@@ -157,6 +213,8 @@ const HEADING_RENAMES = new Map([
   ["## interpersonal dynamics", "## Relationships"],
   ["## tattoos/piercings:", "## Tattoos / Piercings"],
   ["## tattoos/piercings", "## Tattoos / Piercings"],
+  ["## tattoos & ink:", "## Tattoos / Piercings"],
+  ["## tattoos & ink", "## Tattoos / Piercings"],
   ["## scene behavior & live hooks:", "## Hooks"],
   ["## scene behavior & live hooks", "## Hooks"],
 ]);
