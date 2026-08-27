@@ -51,7 +51,6 @@ live-verification status per provider. Related docs:
 - [docs/SEED_TEMPLATES.md](docs/SEED_TEMPLATES.md) — fill-in skeletons
   for seeding a new story (character, style guide, rules) via one
   import call
-
 ## Stack
 
 - TypeScript (Node 22+, ESM, `NodeNext` module resolution)
@@ -99,6 +98,11 @@ OC_URL=http://your-nas:18000/mcp \
 # message mnemo_continue would send it (context-gathering + keyphrase
 # folding) -- without needing the live-connected MCP server to already
 # know about GENERATOR_PROVIDER=kindroid.
+OC_URL=http://your-nas:18000/mcp \
+  node scripts/dump-kindroid-group-message.mjs <story_id> <group_id> "<user direction>" --scene-context-strategy query-ranked
+
+# Or keep this script aligned with the server default:
+MNEMO_SCENE_CONTEXT_STRATEGY=query-ranked \
 OC_URL=http://your-nas:18000/mcp \
   node scripts/dump-kindroid-group-message.mjs <story_id> <group_id> "<user direction>"
 ```
