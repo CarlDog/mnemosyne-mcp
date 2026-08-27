@@ -170,6 +170,15 @@ feel handled rather than catalogued. Establish as appropriate:
 An object need not symbolize something every time it appears. Ordinary use is
 what allows deeper meaning to emerge naturally.
 
+**Entity-type slot:** Mnemosyne's schema has no dedicated `object` entity
+type (`character` / `location` / `rule` / `style` / `scene` / `lore` /
+`worldbuilding` are the seven that exist). A curated object gets its own
+`lore` entity — not a bullet folded into a character's profile, and not
+`worldbuilding` (reserved for setting-level facts no single object
+embodies). This was inconsistently applied across the first five curated
+stories; treat `lore` as the settled answer going forward rather than
+re-deciding it per story.
+
 ## 6. Relationship and knowledge geometry
 
 Do not fill a relationship matrix merely because two characters exist in the
@@ -260,7 +269,11 @@ Examples from the current collection:
 - **Wonderland:** surreal transformation with intimate, traceable causes and
   lasting consequences—not arbitrary randomness;
 - **Shadowflame:** gothic power, memory, desire, agency, and political danger
-  with disciplined uncertainty.
+  with disciplined uncertainty;
+- **Star Wars: The Black Ledger:** post-Endor human-scale consequence — the
+  Force and wider mythology may exist but must not swallow the story's
+  criminal, intelligence, and military-remnant pressure, and its core crew
+  must not collapse into familiar franchise archetypes.
 
 Techniques may cross between stories. Facts, metaphysics, and implied
 crossovers may not cross without explicit canon.
@@ -371,6 +384,14 @@ to its tier**. A minor character is not penalized for lacking a protagonist's
 relationship map. Level 3 is reserved for high-leverage records; requiring it
 everywhere creates bloat and obscures what matters.
 
+**What counts as one dimension:** score at the level of a single named bullet
+within Sections 3–8's lists (e.g. Section 3.1's "fear, vulnerability, or
+meaningful limitation" is one dimension; "capabilities and boundaries" is a
+different one) — not the section as a whole. Scoring a whole section as one
+number is how two reviewers land on different scores for the same entity;
+scoring each named bullet separately is reproducible because each one has a
+concrete yes/no-ish answer against the entity's actual text.
+
 ## 13. Polish-pass workflow
 
 1. Preserve the source and create a derivative.
@@ -388,6 +409,13 @@ everywhere creates bloat and obscures what matters.
    accidental omniscience, and decorative excess.
 9. Run structural, asset, and import validation.
 10. Record provenance, counts, retcons, guardrails, and unresolved questions.
+11. Verify the provenance just recorded actually describes *this* pass: the
+    revision number appears by name somewhere in its own notes, the entity/
+    change lists name what this pass touched rather than repeating the
+    parent revision's lists unedited, and the block exists at all. Run
+    `node scripts/verify-provenance.mjs <export-file>` rather than eyeballing
+    it — the same mistake (a stale, carried-forward block) reached five of
+    five stories' most recent revisions before this step existed.
 
 ## Cross-story improvement rule
 
@@ -398,6 +426,9 @@ When comparing stories, transfer **craft patterns**, not canon:
 - Chaos Saga demonstrates lived relationships, rooms, and mundane aftermath.
 - Wonderland demonstrates stateful objects, locations, and transformation.
 - Shadowflame demonstrates truth tiers, agency guardrails, and canon promotion.
+- Star Wars: The Black Ledger demonstrates explicit anti-archetype guardrails —
+  naming exactly how each core character must not collapse into a familiar
+  genre stock type, rather than only asserting that they are deep.
 
 Use whichever technique strengthens the receiving story while preserving its
 genre sovereignty. A rising tide should raise all boats without tying them to
