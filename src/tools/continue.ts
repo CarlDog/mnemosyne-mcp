@@ -23,6 +23,7 @@ import {
   buildSystemPrompt,
   gatherContext,
   MODES,
+  SCENE_CONTEXT_STRATEGIES,
   type SceneContextStrategy,
 } from "../prompt.js";
 import { saveEntity, retagValidation } from "../entities.js";
@@ -78,6 +79,16 @@ export function registerContinueTool(
           .optional()
           .describe(
             `Engagement mode. participant=user plays a character; director=LLM performs all characters; audience=LLM narrates as storyteller. Default ${DEFAULT_MODE}.`,
+          ),
+        scene_context_strategy: z
+          .enum(SCENE_CONTEXT_STRATEGIES)
+          .optional()
+          .describe(
+            `When selecting RECENT SCENES for context, choose either ` +
+              "recency-first (project-scoped created-at order) or " +
+              "query-ranked (query-ranked memory_search). Overrides the " +
+              "server default MNEMO_SCENE_CONTEXT_STRATEGY for this call only. " +
+              "If unset, uses the server default.",
           ),
         max_tokens: z
           .number()
@@ -159,6 +170,7 @@ export function registerContinueTool(
       async (args: {
         direction: string;
         mode?: (typeof MODES)[number];
+        scene_context_strategy?: SceneContextStrategy;
         max_tokens?: number;
         temperature?: number;
         model?: string;
@@ -173,11 +185,13 @@ export function registerContinueTool(
         const mode = args.mode ?? DEFAULT_MODE;
 
         const gatherStart = Date.now();
+        const requestedSceneContextStrategy =
+          args.scene_context_strategy ?? sceneContextStrategy;
         const context = await gatherContext(
           oc,
           storyId,
           args.direction,
-          sceneContextStrategy,
+          requestedSceneContextStrategy,
         );
         const gatherMs = Date.now() - gatherStart;
         const systemPrompt = buildSystemPrompt(mode, context);

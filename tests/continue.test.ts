@@ -68,6 +68,18 @@ suite("Phase C-1 — continue (real OC + real Ollama)", () => {
     expect(ctx.characters.some((c) => c.includes("Aria Voss"))).toBe(true);
   });
 
+  it("can request a query-ranked scene ordering strategy per call", async () => {
+    const ctx = await gatherContext(
+      oc,
+      storyId,
+      "Aria walks into the tavern.",
+      "query-ranked",
+    );
+    expect(ctx.characters.length).toBeGreaterThanOrEqual(1);
+    expect(ctx.rules.length).toBeGreaterThanOrEqual(1);
+    expect(ctx.scenes.length).toBeLessThanOrEqual(5);
+  });
+
   it("builds a system prompt with the populated blocks", async () => {
     const ctx = await gatherContext(oc, storyId, "Aria walks into the tavern.");
     const prompt = buildSystemPrompt("director", ctx);
