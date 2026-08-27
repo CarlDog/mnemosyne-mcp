@@ -7,14 +7,53 @@
 //     node scripts/dump-prompt.mjs <project_id> "<user direction>"
 
 import { OcClient } from "../dist/oc-client.js";
-import { gatherContext, buildSystemPrompt } from "../dist/prompt.js";
+import {
+  DEFAULT_SCENE_CONTEXT_STRATEGY,
+  SCENE_CONTEXT_STRATEGIES,
+  gatherContext,
+  buildSystemPrompt,
+} from "../dist/prompt.js";
 
-const [, , projectId, ...directionParts] = process.argv;
+const args = process.argv.slice(2);
+let projectId;
+let directionParts = [];
+let sceneContextStrategy = process.env.MNEMO_SCENE_CONTEXT_STRATEGY;
+
+for (let i = 0; i < args.length; i++) {
+  const arg = args[i];
+  if (arg === "--scene-context-strategy" || arg.startsWith("--scene-context-strategy=")) {
+    const value = arg.startsWith("--scene-context-strategy=")
+      ? arg.slice("--scene-context-strategy=".length)
+      : args[++i];
+
+    if (!SCENE_CONTEXT_STRATEGIES.includes(value)) {
+      console.error(
+        `invalid --scene-context-strategy: ${value}. ` +
+          `Expected one of: ${SCENE_CONTEXT_STRATEGIES.join(", ")}`,
+      );
+      process.exit(2);
+    }
+    sceneContextStrategy = value;
+    continue;
+  }
+
+  if (projectId === undefined) {
+    projectId = arg;
+    continue;
+  }
+  directionParts.push(arg);
+}
+
 if (!projectId || directionParts.length === 0) {
-  console.error("usage: node scripts/dump-prompt.mjs <project_id> <direction>");
+  console.error(
+    "usage: node scripts/dump-prompt.mjs <project_id> <direction> " +
+      "[--scene-context-strategy recency-first|query-ranked]",
+  );
   process.exit(2);
 }
 const direction = directionParts.join(" ");
+const requestedSceneContextStrategy =
+  sceneContextStrategy ?? DEFAULT_SCENE_CONTEXT_STRATEGY;
 
 const ocUrl = process.env.OC_URL;
 if (!ocUrl) {
@@ -25,7 +64,12 @@ if (!ocUrl) {
 const oc = new OcClient(new URL(ocUrl));
 await oc.connect();
 
-const ctx = await gatherContext(oc, projectId, direction);
+const ctx = await gatherContext(
+  oc,
+  projectId,
+  direction,
+  requestedSceneContextStrategy,
+);
 console.log("=".repeat(78));
 console.log("CONTEXT BUNDLE COUNTS");
 console.log("=".repeat(78));

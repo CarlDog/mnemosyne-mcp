@@ -77,12 +77,22 @@ npm test               # vitest run
 # Dump the exact system prompt mnemo_continue would send to Ollama.
 # Triages "model ignored the rule" vs. "rule never reached the prompt".
 OC_URL=http://your-nas:18000/mcp \
+  node scripts/dump-prompt.mjs <story_id> "<user direction>" --scene-context-strategy query-ranked
+
+# Or keep the script using the same env-driven default as the server:
+MNEMO_SCENE_CONTEXT_STRATEGY=query-ranked \
+OC_URL=http://your-nas:18000/mcp \
   node scripts/dump-prompt.mjs <story_id> "<user direction>"
 
 # Run the validator pass against arbitrary content. Lets you A/B
 # validator prompts and models without going through Claude Desktop.
 OC_URL=http://your-nas:18000/mcp \
 OLLAMA_VALIDATOR_MODEL=mistral-nemo:12b \
+  node scripts/dump-validation.mjs <story_id> <content_file> --scene-context-strategy query-ranked
+
+# ...or set env once and use the default flag-free call:
+MNEMO_SCENE_CONTEXT_STRATEGY=query-ranked \
+OC_URL=http://your-nas:18000/mcp \
   node scripts/dump-validation.mjs <story_id> <content_file>
 
 # Bind a story's Kindroid target to a group chat and build the exact

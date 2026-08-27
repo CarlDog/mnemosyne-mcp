@@ -14,16 +14,55 @@
 import { readFile } from "node:fs/promises";
 import { OcClient } from "../dist/oc-client.js";
 import { OllamaProvider } from "../dist/llm.js";
-import { gatherContext } from "../dist/prompt.js";
+import {
+  DEFAULT_SCENE_CONTEXT_STRATEGY,
+  SCENE_CONTEXT_STRATEGIES,
+  gatherContext,
+} from "../dist/prompt.js";
 import { validateContent } from "../dist/validator.js";
 
-const [, , projectId, contentFile] = process.argv;
+const args = process.argv.slice(2);
+let projectId;
+let contentFile;
+let sceneContextStrategy = process.env.MNEMO_SCENE_CONTEXT_STRATEGY;
+
+for (let i = 0; i < args.length; i++) {
+  const arg = args[i];
+  if (arg === "--scene-context-strategy" || arg.startsWith("--scene-context-strategy=")) {
+    const value = arg.startsWith("--scene-context-strategy=")
+      ? arg.slice("--scene-context-strategy=".length)
+      : args[++i];
+
+    if (!SCENE_CONTEXT_STRATEGIES.includes(value)) {
+      console.error(
+        `invalid --scene-context-strategy: ${value}. ` +
+          `Expected one of: ${SCENE_CONTEXT_STRATEGIES.join(", ")}`,
+      );
+      process.exit(2);
+    }
+    sceneContextStrategy = value;
+    continue;
+  }
+
+  if (projectId === undefined) {
+    projectId = arg;
+    continue;
+  }
+  if (contentFile === undefined) {
+    contentFile = arg;
+    continue;
+  }
+}
+
 if (!projectId || !contentFile) {
   console.error(
-    "usage: node scripts/dump-validation.mjs <project_id> <content_file>",
+    "usage: node scripts/dump-validation.mjs <project_id> <content_file> " +
+      "[--scene-context-strategy recency-first|query-ranked]",
   );
   process.exit(2);
 }
+const requestedSceneContextStrategy =
+  sceneContextStrategy ?? DEFAULT_SCENE_CONTEXT_STRATEGY;
 
 const ocUrl = process.env.OC_URL;
 const ollamaUrl = process.env.OLLAMA_URL ?? "http://localhost:11434";
@@ -46,7 +85,12 @@ const validator = new OllamaProvider({
   defaultModel: validatorModel,
 });
 
-const ctx = await gatherContext(oc, projectId, content);
+const ctx = await gatherContext(
+  oc,
+  projectId,
+  content,
+  requestedSceneContextStrategy,
+);
 console.log("\n" + "=".repeat(78));
 console.log(`VALIDATION REPORT (model: ${validatorModel})`);
 console.log("=".repeat(78));
