@@ -1699,7 +1699,7 @@ that's landed since.
 | `mnemo_story_use(name_or_id, create_if_missing?)` | Set active story. Combined create+use. |
 | `mnemo_save_entity(type, name, content, pinned?)` | Write characters / rules / locations / style / lore / scenes to OC. Overwrites by name+type. |
 | `mnemo_recall(query?, type?, limit?)` | Semantic recall over the current story's memories. With no query, falls back to listing by type+recency. |
-| `mnemo_continue(direction, mode?, validate?)` | Pull context from OC → call generator LLM → save the resulting beat → optionally run validation pass. Auto-saves the beat. |
+| `mnemo_continue(direction, mode?, scene_context_strategy?, validate?, story?)` | Pull context from OC → call generator LLM → save the resulting beat → optionally run validation pass. `scene_context_strategy` lets this call pick `recency-first` vs `query-ranked` scene retrieval (for RECENT SCENES) without changing the server default. Auto-saves the beat. |
 
 ### Design choices (locked)
 
