@@ -1933,11 +1933,16 @@ real use and pressure points emerge:
   against the actual GitHub Actions runs (not a local proxy) on 2026-08-23.
 - No Dockerfile yet (deferred per scaffolding decision; confirmed still
   true 2026-08-23).
-- **Recent scenes ordering** — `gatherContext` pulls scenes via
-  `memory_search` ranked by relevance to the user's direction, not
-  strict recency. OC's `memory_search` exposes no `order_by` parameter
-  and `memory_list` isn't project-scoped. Workable for v0; revisit if
-  recency becomes a noticeable problem.
+- **Recent scenes ordering** — `gatherContext` now defaults to
+  `recency-first` (project-scoped `memory_list` + created-at sort),
+  with optional `query-ranked` via `MNEMO_SCENE_CONTEXT_STRATEGY` (query-
+  ranked `memory_search` as a fallback). This is intentional, not a
+  correctness bug.
+- **Dogfooding note for OC** — expose a first-class ordered scene query
+  API (or an explicit `order_by` in `memory_search`) so Mnemosyne can ask
+  OC for both recency and relevance scene ordering without fallback logic
+  and client-side tag filtering. This would remove the current split in
+  scene retrieval behavior and simplify `mnemo_continue` context selection.
 - **OC rate limit (120 RPM per IP)** — OC v3's `RateLimitMiddleware`
   defaults to 120 requests/minute per client (configurable via
   `OC_API_RATE_LIMIT_RPM`). Bursts from `gatherContext` (7 sequential
