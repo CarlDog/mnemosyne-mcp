@@ -20,6 +20,7 @@ import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
 import type { LlmProvider } from "../llm.js";
 import {
+  DEFAULT_SCENE_CONTEXT_STRATEGY,
   SCENE_CONTEXT_STRATEGIES,
   gatherContext,
   type SceneContextStrategy,
@@ -33,6 +34,7 @@ export function registerValidateTool(
   server: McpServer,
   oc: OcClient,
   validator: LlmProvider,
+  sceneContextStrategy: SceneContextStrategy = DEFAULT_SCENE_CONTEXT_STRATEGY,
 ): void {
   server.registerTool(
     "mnemo_validate",
@@ -74,6 +76,8 @@ export function registerValidateTool(
         story?: string;
       }) => {
         const storyId = await resolveStoryId(oc, args.story);
+        const requestedSceneContextStrategy =
+          args.scene_context_strategy ?? sceneContextStrategy;
         // Reuse continue's gatherContext so the validator sees the same
         // shape of context. The validator only consumes rules / style /
         // characters / locations; the rest of the bundle is harmlessly
@@ -82,7 +86,7 @@ export function registerValidateTool(
           oc,
           storyId,
           args.content,
-          args.scene_context_strategy,
+          requestedSceneContextStrategy,
         );
         // Guard the validator pass: a validator-LLM failure or non-JSON
         // output degrades to a structured error instead of a raw MCP tool

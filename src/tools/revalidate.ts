@@ -121,6 +121,7 @@ export function registerRevalidateTool(
   server: McpServer,
   oc: OcClient,
   validator: LlmProvider,
+  sceneContextStrategy: SceneContextStrategy = DEFAULT_SCENE_CONTEXT_STRATEGY,
 ): void {
   server.registerTool(
     "mnemo_revalidate_scenes",
@@ -154,7 +155,7 @@ export function registerRevalidateTool(
     }) => {
       const storyId = await resolveStoryId(oc, args.story);
       const requestedSceneContextStrategy =
-        args.scene_context_strategy ?? DEFAULT_SCENE_CONTEXT_STRATEGY;
+        args.scene_context_strategy ?? sceneContextStrategy;
       const result = await revalidateScenes(
         oc,
         validator,
