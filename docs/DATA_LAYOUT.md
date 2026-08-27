@@ -1,8 +1,13 @@
 # Data Directory Layout
 
-Ratified 2026-08-23. The organization and naming standard for everything
-under `<data dir>` (default `<repo>/data`, gitignored, `MNEMO_DATA_DIR`
-override — see `src/config.ts`). Two guiding principles:
+Ratified 2026-08-23; amended 2026-08-27 to add `canon/` and narrow
+`exports/` back to its original documented scope (see "Canon" and
+"Exports" below — `exports/` had drifted into holding hand-authored
+editorial-pass files under undocumented descriptive-suffix names, e.g.
+`<slug>-mature-<stamp>.json`, none of them actually produced by
+`mnemo_export_story`). The organization and naming standard for
+everything under `<data dir>` (default `<repo>/data`, gitignored,
+`MNEMO_DATA_DIR` override — see `src/config.ts`). Two guiding principles:
 
 1. **The entity model's `(type, name)` key maps deterministically onto
    the filesystem** — tooling can resolve an entity to its assets
@@ -16,8 +21,23 @@ data/
 ├── config.json                       # current-story pointer (global; server-written)
 └── stories/<slug>/                   # one subtree per storyline; slug = storySlug()
     ├── story.json                    # identity card (server-written; see below)
+    ├── canon/                        # human-editable authoring surface (operator/tooling-owned)
+    │   ├── characters/<slug>.md      #   one file per core/recurring character
+    │   ├── characters/_minor.md      #   batched compact tier, one heading per NPC
+    │   ├── locations/<slug>.md       #   one file per location
+    │   ├── lore/<slug>.md            #   one file per lore entity
+    │   ├── lore/objects/<slug>.md    #   material objects (still type: lore) -- a
+    │   │                             #   navigation folder, not a distinct schema type
+    │   ├── worldbuilding/<slug>.md   #   one file per topic
+    │   ├── rules.md                  #   ONE file, one `##` heading per rule entity
+    │   └── style.md                  #   ONE file, one `##` heading per style entity
     ├── exports/                      # story backups (server-written)
-    │   └── <slug>-<stamp>.json       #   stamp = UTC to the second, colons stripped
+    │   ├── <slug>-<stamp>.json       #   stamp = UTC to the second, colons stripped --
+    │   │                             #   no descriptive suffixes; a plain timestamp only
+    │   └── archive/                  #   pre-2026-08-27 hand-authored editorial-pass
+    │                                 #   files, retired once their content is scaffolded
+    │                                 #   into canon/ -- historical record, not a live
+    │                                 #   naming pattern to continue
     ├── references/                   # approved visual INPUTS (operator-curated)
     │   ├── characters/
     │   │   └── riley-quinn/          #   one folder per canonical entity
@@ -41,6 +61,50 @@ data/
         ├── 2026-08-23T0512-warehouse-confrontation-nano-banana-2-01.jpg
         └── 2026-08-23T0512-warehouse-confrontation-nano-banana-2-01.json
 ```
+
+## Canon — the human-editable authoring surface
+
+`canon/` is the permanent working layer for a story's narrative content —
+not a one-time pre-ratification staging area. New characters get added,
+existing canon gets revised, a story goes through this cycle repeatedly
+over its whole life, not once. `canon/` is the human-editable *source* of
+a story's canon; OpenChronicle is the *runtime* copy `mnemo_continue`
+actually reads from — the same relationship source code has to a running
+deployment. Edits happen here; a compile step (not yet built) renders
+`canon/` into the same entity shape already live in OC today and imports
+it, the same way a deploy pushes source to production.
+
+- **One file per character, location, or lore/worldbuilding entity.**
+  Confirmed against live per-story entity counts (roughly 10-65 named
+  characters, 10-30 locations depending on the story) — genuinely
+  browsable at one file each. `characters/_minor.md` batches the compact
+  minor/encounter tier (Living Canon Standard §3.3) into one file, one
+  `##` heading per NPC, rather than one file per two-sentence bit player.
+- **`rules.md` and `style.md` are each ONE file, one `##` heading per
+  entity.** The one deliberate exception to one-file-per-entity: a
+  story's rule/style entities run 15-21 per story at 200-1400 characters
+  apiece — too fine-grained for separate files, and it matches how the
+  original source material for these stories was itself organized (a
+  single style guide document with many named clauses).
+- **`lore/objects/` is a human-navigation folder, not a distinct schema
+  type.** Mnemosyne's entity model has no `object` type (Living Canon
+  Standard §5 settled that a material object is a `lore` entity); the
+  subfolder exists purely so an author browsing the tree finds "the
+  motorcycle" under Objects instead of mixed in with unrelated lore.
+- **Format: YAML frontmatter for flat identity/physical fields, Markdown
+  body for prose sections** — an editor-agnostic pattern (Obsidian, Hugo,
+  Jekyll all use it), and it resolves a real parsing ambiguity the prior
+  flat `Label: value` convention had (a colon inside a bulleted
+  relationship line is indistinguishable from a real field without a
+  frontmatter delimiter). This changes only the *authoring* format — the
+  compile step renders frontmatter fields back into the same flat-line
+  shape already live in OC, so nothing downstream (recall, the validator,
+  prompt assembly) changes.
+- **Owned by the operator/tooling, like `references/` and `art/`** — the
+  server never writes here directly. A (not yet built) `compile-story.mjs`
+  reads `canon/` and imports it to OC; a (not yet built) one-time
+  `scaffold-story.mjs` seeds `canon/` from a story's current OC/export
+  state the first time this layout is adopted for that story.
 
 ## References — curated inputs
 
@@ -185,5 +249,11 @@ this file wholesale.
   (`2026-08-23T051200` or the shorter `T0512` prefix form for art, where
   the seq suffix already disambiguates).
 - **The server only ever writes** `config.json`, `story.json`, and
-  `exports/`. `references/` and `art/` are operator/tooling territory —
-  the server reads them (future) but never mutates them.
+  `exports/`. `canon/`, `references/`, and `art/` are operator/tooling
+  territory — the server (a future compile step, for `canon/`) reads
+  them but never mutates them directly.
+- **`exports/` filenames are a plain `<slug>-<stamp>.json` timestamp,
+  never a descriptive suffix.** An editorial pass's working content
+  belongs in `canon/`, not in a hand-named `exports/` file — that drift
+  (`-mature-`, `-living-canon-`, `-remediation-`, etc.) is exactly what
+  the 2026-08-27 amendment retired into `exports/archive/`.
