@@ -296,6 +296,14 @@ misnamed, excused, or stripped of human consequence.
 
 ### Routing boundary
 
+**Status: architecture committed, implementation in development.** This
+section states the target contract mnemosyne is being built toward, not
+something already running today. See
+[docs/CONTENT_ROUTING_DESIGN.md](CONTENT_ROUTING_DESIGN.md) for the current
+proposal and its open decisions. Until it ships, routing is a manual
+operator responsibility (choosing an appropriate deployment/provider per
+story), not something mnemosyne enforces in code.
+
 Content capability belongs to Mnemosyne's operational routing layer, not to
 story censorship rules. Text and image generation must be routed independently
 to explicitly configured SFW or NSFW-capable models before generation begins.
