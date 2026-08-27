@@ -400,6 +400,37 @@ input {
   margin-top: var(--space-2);
 }
 
+.story-card-main {
+  display: block;
+  color: inherit;
+}
+
+.story-card-actions {
+  margin-top: var(--space-3);
+  border-top: 1px solid var(--line-soft);
+  padding-top: var(--space-2);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.story-card-action {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.story-card-action:hover {
+  color: var(--amber-bright);
+}
+
+.story-card-action + .story-card-action {
+  padding-left: var(--space-2);
+  border-left: 1px solid var(--line-soft);
+}
+
 /* ---------- entity detail ---------- */
 
 .detail-header {
@@ -536,6 +567,47 @@ input {
   gap: var(--space-2);
   align-items: center;
   margin-top: var(--space-2);
+}
+
+.field-grid {
+  margin-bottom: var(--space-4);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--space-3);
+}
+
+.input,
+.textarea,
+.select {
+  width: 100%;
+  margin-bottom: var(--space-1);
+}
+
+.input {
+  margin-top: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--space-2) var(--space-2);
+  color: var(--ink);
+  font-family: var(--font-body);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--amber);
+  box-shadow: 0 0 0 3px var(--amber-glow);
+}
+
+.field-hint {
+  color: var(--faint);
+  display: inline-block;
+  font-size: 0.7rem;
+  line-height: 1.35;
+  font-family: var(--font-mono);
 }
 
 .button {

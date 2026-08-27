@@ -12,6 +12,7 @@ import {
   SCENE_CONTEXT_STRATEGIES,
   type Mode,
   type SceneContextStrategy,
+  type ContinueRequest,
 } from "../api/types";
 import type { ApiError } from "../api/client";
 import Loading from "../components/Loading";
@@ -25,6 +26,9 @@ export default function ContinueScenePage() {
   const [mode, setMode] = useState<Mode>("director");
   const [strategy, setStrategy] = useState<SceneContextStrategy>("recency-first");
   const [validate, setValidate] = useState(false);
+  const [maxTokens, setMaxTokens] = useState("");
+  const [temperature, setTemperature] = useState("");
+  const [model, setModel] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<ContinueResponse | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
@@ -42,12 +46,16 @@ export default function ContinueScenePage() {
     setResult(null);
 
     try {
-      const response = await continueStory(storyId, {
+      const payload: ContinueRequest = {
         direction: direction.trim(),
         mode,
         scene_context_strategy: strategy,
         validate,
-      });
+      };
+      if (maxTokens.trim() !== "") payload.max_tokens = Number(maxTokens);
+      if (temperature.trim() !== "") payload.temperature = Number(temperature);
+      if (model.trim() !== "") payload.model = model.trim();
+      const response = await continueStory(storyId, payload);
       setResult(response);
     } catch (err) {
       setError(err as ApiError);
@@ -131,6 +139,66 @@ export default function ContinueScenePage() {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="field-grid">
+            <div>
+              <label className="field-label" htmlFor="max_tokens">
+                Max tokens
+              </label>
+              <input
+                id="max_tokens"
+                type="number"
+                min="1"
+                max="8192"
+                step="1"
+                value={maxTokens}
+                onChange={(event) => setMaxTokens(event.target.value)}
+                className="input"
+                placeholder="default"
+                aria-describedby="max-tokens-hint"
+              />
+              <span id="max-tokens-hint" className="field-hint">
+                Leave blank to use provider default.
+              </span>
+            </div>
+            <div>
+              <label className="field-label" htmlFor="temperature">
+                Temperature
+              </label>
+              <input
+                id="temperature"
+                type="number"
+                min="0"
+                max="2"
+                step="0.1"
+                value={temperature}
+                onChange={(event) => setTemperature(event.target.value)}
+                className="input"
+                placeholder="default"
+                aria-describedby="temp-hint"
+              />
+              <span id="temp-hint" className="field-hint">
+                Leave blank to preserve generator default.
+              </span>
+            </div>
+            <div>
+              <label className="field-label" htmlFor="model">
+                Model
+              </label>
+              <input
+                id="model"
+                type="text"
+                value={model}
+                onChange={(event) => setModel(event.target.value)}
+                className="input"
+                placeholder="Use default model"
+                aria-describedby="model-hint"
+              />
+              <span id="model-hint" className="field-hint">
+                Optional model override for this call.
+              </span>
+            </div>
           </div>
 
           <label className="checkbox">
