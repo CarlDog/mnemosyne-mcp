@@ -21,6 +21,7 @@ export function registerTools(
   generator: LlmProvider,
   validator: LlmProvider,
   sceneContextStrategy: SceneContextStrategy = DEFAULT_SCENE_CONTEXT_STRATEGY,
+  sceneContextFallbackStrategy: SceneContextStrategy = sceneContextStrategy,
 ): void {
   registerStoryTools(server, oc);
   registerEntityTools(server, oc);
@@ -32,7 +33,20 @@ export function registerTools(
     generator,
     validator,
     sceneContextStrategy,
+    sceneContextFallbackStrategy,
   );
-  registerValidateTool(server, oc, validator, sceneContextStrategy);
-  registerRevalidateTool(server, oc, validator, sceneContextStrategy);
+  registerValidateTool(
+    server,
+    oc,
+    validator,
+    sceneContextStrategy,
+    sceneContextFallbackStrategy,
+  );
+  registerRevalidateTool(
+    server,
+    oc,
+    validator,
+    sceneContextStrategy,
+    sceneContextFallbackStrategy,
+  );
 }

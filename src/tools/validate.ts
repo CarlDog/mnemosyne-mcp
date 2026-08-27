@@ -35,6 +35,7 @@ export function registerValidateTool(
   oc: OcClient,
   validator: LlmProvider,
   sceneContextStrategy: SceneContextStrategy = DEFAULT_SCENE_CONTEXT_STRATEGY,
+  sceneContextFallbackStrategy: SceneContextStrategy = sceneContextStrategy,
 ): void {
   server.registerTool(
     "mnemo_validate",
@@ -66,6 +67,13 @@ export function registerValidateTool(
               "server default MNEMO_SCENE_CONTEXT_STRATEGY for this call only. " +
               "If unset, uses the server default.",
           ),
+        scene_context_fallback_strategy: z
+          .enum(SCENE_CONTEXT_STRATEGIES)
+          .optional()
+          .describe(
+            "Optional fallback if the primary scene-context strategy yields no " +
+              "eligible scenes. If unset, no fallback occurs.",
+          ),
       },
     },
     withLogging(
@@ -73,11 +81,15 @@ export function registerValidateTool(
       async (args: {
         content: string;
         scene_context_strategy?: SceneContextStrategy;
+        scene_context_fallback_strategy?: SceneContextStrategy;
         story?: string;
       }) => {
         const storyId = await resolveStoryId(oc, args.story);
         const requestedSceneContextStrategy =
           args.scene_context_strategy ?? sceneContextStrategy;
+        const requestedSceneContextFallbackStrategy =
+          args.scene_context_fallback_strategy ??
+          sceneContextFallbackStrategy;
         // Reuse continue's gatherContext so the validator sees the same
         // shape of context. The validator only consumes rules / style /
         // characters / locations; the rest of the bundle is harmlessly
@@ -87,6 +99,7 @@ export function registerValidateTool(
           storyId,
           args.content,
           requestedSceneContextStrategy,
+          requestedSceneContextFallbackStrategy,
         );
         // Guard the validator pass: a validator-LLM failure or non-JSON
         // output degrades to a structured error instead of a raw MCP tool

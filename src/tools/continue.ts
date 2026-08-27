@@ -55,6 +55,7 @@ export function registerContinueTool(
   generator: LlmProvider,
   validator: LlmProvider,
   sceneContextStrategy: SceneContextStrategy = "recency-first",
+  sceneContextFallbackStrategy: SceneContextStrategy = sceneContextStrategy,
 ): void {
   server.registerTool(
     "mnemo_continue",
@@ -89,6 +90,13 @@ export function registerContinueTool(
               "query-ranked (query-ranked memory_search). Overrides the " +
               "server default MNEMO_SCENE_CONTEXT_STRATEGY for this call only. " +
               "If unset, uses the server default.",
+          ),
+        scene_context_fallback_strategy: z
+          .enum(SCENE_CONTEXT_STRATEGIES)
+          .optional()
+          .describe(
+            "Optional fallback if the primary scene-context strategy yields no " +
+              "eligible scenes. If unset, no fallback occurs.",
           ),
         max_tokens: z
           .number()
@@ -171,6 +179,7 @@ export function registerContinueTool(
         direction: string;
         mode?: (typeof MODES)[number];
         scene_context_strategy?: SceneContextStrategy;
+        scene_context_fallback_strategy?: SceneContextStrategy;
         max_tokens?: number;
         temperature?: number;
         model?: string;
@@ -187,11 +196,15 @@ export function registerContinueTool(
         const gatherStart = Date.now();
         const requestedSceneContextStrategy =
           args.scene_context_strategy ?? sceneContextStrategy;
+        const requestedSceneContextFallbackStrategy =
+          args.scene_context_fallback_strategy ??
+          sceneContextFallbackStrategy;
         const context = await gatherContext(
           oc,
           storyId,
           args.direction,
           requestedSceneContextStrategy,
+          requestedSceneContextFallbackStrategy,
         );
         const gatherMs = Date.now() - gatherStart;
         const systemPrompt = buildSystemPrompt(mode, context);
