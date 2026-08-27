@@ -133,6 +133,17 @@ A minor figure may remain compact. The minimum useful shape is:
 Add a secret only when it improves play. Do not manufacture hidden importance
 to justify a minor character's existence.
 
+**Deliberate measurements for characters who receive art.** Any core or
+recurring character who will receive portrait, body, or face image
+generation should include deliberate, specific physical measurements
+(height, build, proportions) as part of their physical and sensory
+presence — not only evocative prose. Concrete numeric anchors measurably
+improve image-generation consistency across separate generation sessions,
+independent of their literary register; do not remove one on style
+grounds alone. This does not extend to minor or encounter-tier characters
+with no art planned — adding measurements there would be exactly the kind
+of manufactured specificity Section 3.3 warns against.
+
 ## 4. Playable locations
 
 A location is more than an establishing shot. Detail should scale with expected
