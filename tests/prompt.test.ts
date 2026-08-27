@@ -144,8 +144,8 @@ describe("prompt — pullFilteredScenes", () => {
     expect(result).toHaveLength(4);
     expect(result[0]).toContain("Clean A");
     expect(result[1]).toContain("Clean B");
-    expect(result[2]).toContain("Untagged B");
-    expect(result[3]).toContain("Untagged A");
+    expect(result[2]).toContain("Untagged A");
+    expect(result[3]).toContain("Untagged B");
   });
 
   it("falls back to untagged scenes when there aren't enough clean ones to fill the cap", async () => {
