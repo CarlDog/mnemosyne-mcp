@@ -71,6 +71,7 @@ export interface ContinueResponse {
   beat_text: string;
   memory_id?: string;
   save_error?: string;
+  saved?: boolean;
   mode: Mode;
   context_summary: {
     rules: number;
