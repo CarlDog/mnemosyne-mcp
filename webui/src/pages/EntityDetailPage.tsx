@@ -30,6 +30,15 @@ export default function EntityDetailPage() {
           <span className="brand-mark">✦</span>
           Mnemosyne
         </div>
+        <nav className="crumbs">
+          <Link to="/">Stories</Link>
+          <span className="crumb-sep">/</span>
+          <Link to={`/stories/${storyId}`}>Story</Link>
+          <span className="crumb-sep">/</span>
+          <span>Entity</span>
+          <span className="crumb-sep">/</span>
+          <Link to={`/stories/${storyId}/continue`}>Continue</Link>
+        </nav>
       </header>
       <main className="content">
         <Link to={`/stories/${storyId}`} className="back-link">
