@@ -651,7 +651,13 @@ if (httpConfig.port === undefined) {
   // allowlist + bearer auth as /mcp -- /health and /mcp above both fully
   // end the request cycle on a match, so this never runs for either.
   app.use(apiSecurity(httpConfig));
-  app.use("/api", createApiRouter(oc));
+  app.use(
+    "/api",
+    createApiRouter(oc, {
+      validator,
+      sceneContextStrategy: SCENE_CONTEXT_STRATEGY,
+    }),
+  );
 
   // Static web UI (webui/, built separately -- see package.json's
   // build:webui script) plus a SPA-fallback route so a deep link survives
