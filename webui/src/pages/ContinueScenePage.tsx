@@ -13,6 +13,7 @@ import {
   type Mode,
   type SceneContextStrategy,
   type ContinueRequest,
+  type ValidationReport,
 } from "../api/types";
 import type { ApiError } from "../api/client";
 import Loading from "../components/Loading";
@@ -322,13 +323,22 @@ export default function ContinueScenePage() {
                 <p>{result.validation.summary}</p>
                 {result.validation.issues.length > 0 && (
                   <ul className="result-list">
-                    {result.validation.issues.map((issue, index) => (
-                      <li key={`${issue.rule}-${index}`}>
-                        <span className="issue-severity">{issue.severity}</span>{" "}
-                        {issue.rule}: {issue.violating_text}
-                        <div className="issue-text">{issue.explanation}</div>
-                      </li>
-                    ))}
+                    {result.validation.issues.map(
+                      (
+                        issue: ValidationReport["issues"][number],
+                        index: number,
+                      ) => (
+                        <li key={`${issue.rule}-${index}`}>
+                          <span className="issue-severity">
+                            {issue.severity}
+                          </span>{" "}
+                          {issue.rule}: {issue.violating_text}
+                          <div className="issue-text">
+                            {issue.explanation}
+                          </div>
+                        </li>
+                      ),
+                    )}
                   </ul>
                 )}
               </>
