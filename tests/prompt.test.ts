@@ -248,6 +248,57 @@ describe("prompt — pullFilteredScenes", () => {
     expect(result[2]).toContain("Newest scene");
     expect(result[3]).toContain("Oldly ranked scene");
   });
+
+  it("falls back to a secondary strategy when the primary returns only validation errors", async () => {
+    const queryRanked = [
+      sceneMemory("1", "Errors first", ["validation:errors"], "2026-01-01T10:00:00Z"),
+      sceneMemory("2", "Errors second", ["validation:errors"], "2026-01-01T10:10:00Z"),
+      sceneMemory("3", "Errors third", ["validation:errors"], "2026-01-01T10:05:00Z"),
+    ];
+    const recencyFallback = [
+      sceneMemory("4", "Clean fallback", ["validation:clean"], "2026-01-01T10:20:00Z"),
+      sceneMemory("5", "Untagged fallback", [], "2026-01-01T10:15:00Z"),
+      sceneMemory("6", "Older clean", ["validation:clean"], "2026-01-01T10:12:00Z"),
+    ];
+
+    const result = await pullFilteredScenes(
+      {
+        memoryList: async () => recencyFallback,
+        memorySearch: async () => queryRanked,
+      } as unknown as OcClient,
+      storyId,
+      "query",
+      "query-ranked",
+      "recency-first",
+    );
+    expect(result).toHaveLength(3);
+    expect(result[0]).toContain("Clean fallback");
+    expect(result[1]).toContain("Older clean");
+    expect(result[2]).toContain("Untagged fallback");
+  });
+
+  it("returns [] when both primary and fallback strategies only yield validation:errors", async () => {
+    const queryRanked = [
+      sceneMemory("1", "Errors first", ["validation:errors"]),
+      sceneMemory("2", "Errors second", ["validation:errors"]),
+    ];
+    const recencyFallback = [
+      sceneMemory("3", "Errors third", ["validation:errors"]),
+      sceneMemory("4", "Errors fourth", ["validation:errors"]),
+    ];
+
+    const result = await pullFilteredScenes(
+      {
+        memoryList: async () => recencyFallback,
+        memorySearch: async () => queryRanked,
+      } as unknown as OcClient,
+      storyId,
+      "query",
+      "query-ranked",
+      "recency-first",
+    );
+    expect(result).toEqual([]);
+  });
 });
 
 describe("prompt — neutralizeSectionDelimiters", () => {

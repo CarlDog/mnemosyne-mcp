@@ -71,6 +71,7 @@ export async function revalidateScenes(
   validator: LlmProvider,
   storyId: string,
   sceneContextStrategy: SceneContextStrategy = DEFAULT_SCENE_CONTEXT_STRATEGY,
+  sceneContextFallbackStrategy: SceneContextStrategy = sceneContextStrategy,
 ): Promise<RevalidateResult> {
   const scenes = await recall(oc, storyId, {
     type: "scene",
@@ -90,6 +91,7 @@ export async function revalidateScenes(
         storyId,
         scene.body,
         sceneContextStrategy,
+        sceneContextFallbackStrategy,
       );
       const report = await validateContent(validator, context, scene.body);
       const verdict = classifyVerdict(report);
@@ -122,6 +124,7 @@ export function registerRevalidateTool(
   oc: OcClient,
   validator: LlmProvider,
   sceneContextStrategy: SceneContextStrategy = DEFAULT_SCENE_CONTEXT_STRATEGY,
+  sceneContextFallbackStrategy: SceneContextStrategy = sceneContextStrategy,
 ): void {
   server.registerTool(
     "mnemo_revalidate_scenes",
@@ -140,6 +143,13 @@ export function registerRevalidateTool(
               "server default MNEMO_SCENE_CONTEXT_STRATEGY for this call only. " +
               "If unset, uses the server default.",
           ),
+        scene_context_fallback_strategy: z
+          .enum(SCENE_CONTEXT_STRATEGIES)
+          .optional()
+          .describe(
+            "Optional fallback if the primary scene-context strategy yields no " +
+              "eligible scenes. If unset, no fallback occurs.",
+          ),
         story: z
           .string()
           .min(1)
@@ -151,16 +161,21 @@ export function registerRevalidateTool(
     },
     withLogging("mnemo_revalidate_scenes", async (args: {
       scene_context_strategy?: SceneContextStrategy;
+      scene_context_fallback_strategy?: SceneContextStrategy;
       story?: string;
     }) => {
       const storyId = await resolveStoryId(oc, args.story);
       const requestedSceneContextStrategy =
         args.scene_context_strategy ?? sceneContextStrategy;
+      const requestedSceneContextFallbackStrategy =
+        args.scene_context_fallback_strategy ??
+        sceneContextFallbackStrategy;
       const result = await revalidateScenes(
         oc,
         validator,
         storyId,
         requestedSceneContextStrategy,
+        requestedSceneContextFallbackStrategy,
       );
       return asText(result);
     }),

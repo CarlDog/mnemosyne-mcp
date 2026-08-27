@@ -113,6 +113,19 @@ if (!SCENE_CONTEXT_STRATEGIES.includes(SCENE_CONTEXT_STRATEGY)) {
   process.exit(1);
 }
 
+const SCENE_CONTEXT_FALLBACK_STRATEGY = (
+  process.env.MNEMO_SCENE_CONTEXT_FALLBACK_STRATEGY?.trim().toLowerCase() ??
+  SCENE_CONTEXT_STRATEGY
+) as SceneContextStrategy;
+if (!SCENE_CONTEXT_STRATEGIES.includes(SCENE_CONTEXT_FALLBACK_STRATEGY)) {
+  log.error(
+    "startup",
+    `MNEMO_SCENE_CONTEXT_FALLBACK_STRATEGY must be one of: ${SCENE_CONTEXT_STRATEGIES.join(", ")}`,
+    { value: process.env.MNEMO_SCENE_CONTEXT_FALLBACK_STRATEGY },
+  );
+  process.exit(1);
+}
+
 let ocUrl: URL;
 try {
   ocUrl = new URL(OC_URL);
@@ -582,7 +595,8 @@ v0 surface:
 - mnemo_delete_entity(type, name, story?) — delete one entity from the
   active story by (type, name).
 - mnemo_continue(direction, mode?, max_tokens?, temperature?, model?,
-  kindroid_kin?, kindroid_group_id?, scene_context_strategy?, validate?, story?) — pull context
+  kindroid_kin?, kindroid_group_id?, scene_context_strategy?,
+  scene_context_fallback_strategy?, validate?, story?) — pull context
   from OC, generate the next beat via the generator LLM, auto-save the
   result as a scene entity. Mode defaults to 'director'. model overrides
   the generator's default model for this call (honored by every
@@ -591,13 +605,14 @@ v0 surface:
   the Kindroid target for this call only. With validate=true, runs an
   LLM second pass and attaches a verdict (issues + summary) to the
   response.
-- mnemo_validate(content, scene_context_strategy?, story?) — standalone validation pass over
+- mnemo_validate(content, scene_context_strategy?, scene_context_fallback_strategy?, story?) — standalone validation pass over
   arbitrary content (hand-written prose, previously-saved beats being
   re-audited). Same ValidationReport shape as mnemo_continue's
   validate=true mode.
-- mnemo_revalidate_scenes(scene_context_strategy?, story?) — re-run the
+- mnemo_revalidate_scenes(scene_context_strategy?, scene_context_fallback_strategy?, story?) — re-run the
   validator over every scene in the active story (using the selected
-  scene retrieval strategy for context) and retag validation:clean/errors.
+  scene retrieval strategy, then fallback if needed) and retag
+  validation:clean/errors.
 - mnemo_export_story(name_or_id?, out_path?) — serialize a story (every
   entity + its Kindroid binding, if any) to a versioned JSON document on
   disk. Defaults to the active story. Returns a manifest (path, per-type
@@ -625,6 +640,7 @@ function makeServer(): McpServer {
     generator,
     validator,
     SCENE_CONTEXT_STRATEGY,
+    SCENE_CONTEXT_FALLBACK_STRATEGY,
   );
   return server;
 }
@@ -657,6 +673,7 @@ if (httpConfig.port === undefined) {
       generator,
       validator,
       sceneContextStrategy: SCENE_CONTEXT_STRATEGY,
+      sceneContextFallbackStrategy: SCENE_CONTEXT_FALLBACK_STRATEGY,
     }),
   );
 

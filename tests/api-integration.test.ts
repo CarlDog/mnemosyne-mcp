@@ -216,6 +216,7 @@ suite("/api routes (real OC)", () => {
       body: JSON.stringify({
         content: "A test beat for query-ranked context pull.",
         scene_context_strategy: "query-ranked",
+        scene_context_fallback_strategy: "recency-first",
       }),
     });
     expect(res.status).toBe(200);
@@ -227,7 +228,10 @@ suite("/api routes (real OC)", () => {
     const res = await fetch(`${baseUrl}/stories/${storyId}/revalidate-scenes`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ scene_context_strategy: "query-ranked" }),
+      body: JSON.stringify({
+        scene_context_strategy: "query-ranked",
+        scene_context_fallback_strategy: "recency-first",
+      }),
     });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -263,6 +267,7 @@ suite("/api routes (real OC)", () => {
       body: JSON.stringify({
         direction: "A new signal lantern burns at the edge of the fog.",
         scene_context_strategy: "query-ranked",
+        scene_context_fallback_strategy: "recency-first",
         validate: true,
       }),
     });

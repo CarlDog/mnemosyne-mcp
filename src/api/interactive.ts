@@ -41,6 +41,9 @@ import { log } from "../log.js";
 const validateSchema = z.object({
   content: z.string().min(1),
   scene_context_strategy: z.enum(SCENE_CONTEXT_STRATEGIES).optional(),
+  scene_context_fallback_strategy: z
+    .enum(SCENE_CONTEXT_STRATEGIES)
+    .optional(),
 });
 
 const revalidateScenesSchema = z.object({
@@ -48,6 +51,9 @@ const revalidateScenesSchema = z.object({
     .enum(SCENE_CONTEXT_STRATEGIES)
     .optional()
     .default(DEFAULT_SCENE_CONTEXT_STRATEGY),
+  scene_context_fallback_strategy: z
+    .enum(SCENE_CONTEXT_STRATEGIES)
+    .optional(),
 });
 
 const DEFAULT_MODE: (typeof MODES)[number] = "director";
@@ -55,6 +61,9 @@ const continueSchema = z.object({
   direction: z.string().min(1),
   mode: z.enum(MODES).optional(),
   scene_context_strategy: z.enum(SCENE_CONTEXT_STRATEGIES).optional(),
+  scene_context_fallback_strategy: z
+    .enum(SCENE_CONTEXT_STRATEGIES)
+    .optional(),
   max_tokens: z.number().int().min(1).max(8192).optional(),
   temperature: z.number().min(0).max(2).optional(),
   model: z.string().optional(),
@@ -83,6 +92,7 @@ export function registerInteractiveRoutes(
   generator: LlmProvider,
   validator: LlmProvider,
   sceneContextStrategy: SceneContextStrategy = DEFAULT_SCENE_CONTEXT_STRATEGY,
+  sceneContextFallbackStrategy: SceneContextStrategy = sceneContextStrategy,
 ): void {
   router.post(
     "/stories/:storyId/continue",
@@ -112,6 +122,9 @@ export function registerInteractiveRoutes(
 
       const requestedSceneContextStrategy =
         parsedBody.data.scene_context_strategy ?? sceneContextStrategy;
+      const requestedSceneContextFallbackStrategy =
+        parsedBody.data.scene_context_fallback_strategy ??
+        sceneContextFallbackStrategy;
       const mode = parsedBody.data.mode ?? DEFAULT_MODE;
 
       const gatherStart = Date.now();
@@ -120,6 +133,7 @@ export function registerInteractiveRoutes(
         story.id,
         parsedBody.data.direction,
         requestedSceneContextStrategy,
+        requestedSceneContextFallbackStrategy,
       );
       const gatherMs = Date.now() - gatherStart;
       const systemPrompt = buildSystemPrompt(mode, context);
@@ -290,11 +304,15 @@ export function registerInteractiveRoutes(
 
       const requestedStrategy =
         parsedBody.data.scene_context_strategy ?? sceneContextStrategy;
+      const requestedFallbackStrategy =
+        parsedBody.data.scene_context_fallback_strategy ??
+        sceneContextFallbackStrategy;
       const context = await gatherContext(
         oc,
         story.id,
         parsedBody.data.content,
         requestedStrategy,
+        requestedFallbackStrategy,
       );
       const report = await validateContent(
         validator,
@@ -336,6 +354,8 @@ export function registerInteractiveRoutes(
         validator,
         story.id,
         parsedBody.data.scene_context_strategy ?? sceneContextStrategy,
+        parsedBody.data.scene_context_fallback_strategy ??
+          sceneContextFallbackStrategy,
       );
       res.json(result);
     }),
