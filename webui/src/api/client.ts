@@ -6,6 +6,8 @@
 import type {
   EntityDetail,
   EntitySummary,
+  ContinueRequest,
+  ContinueResponse,
   EntityType,
   StorySummary,
 } from "./types";
@@ -25,6 +27,19 @@ async function get<T>(path: string): Promise<T> {
   if (!res.ok) {
     const body = await res.json().catch(() => undefined);
     throw new ApiError(res.status, body);
+  }
+  return res.json() as Promise<T>;
+}
+
+async function post<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`/api${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const responseBody = await res.json().catch(() => undefined);
+    throw new ApiError(res.status, responseBody);
   }
   return res.json() as Promise<T>;
 }
@@ -63,5 +78,15 @@ export function getEntity(
 ): Promise<{ entity: EntityDetail }> {
   return get(
     `/stories/${encodeURIComponent(storyId)}/entities/${encodeURIComponent(memoryId)}`,
+  );
+}
+
+export function continueStory(
+  storyId: string,
+  body: ContinueRequest,
+): Promise<ContinueResponse> {
+  return post(
+    `/stories/${encodeURIComponent(storyId)}/continue`,
+    body,
   );
 }
