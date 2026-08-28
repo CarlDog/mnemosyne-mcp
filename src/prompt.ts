@@ -144,28 +144,28 @@ async function pullByType(
 //   only, no bodies) picks the winners, then only those few scenes are
 //   hydrated via memory_get. The old shape fetched every entity body in
 //   the project per call just to keep 5 scene strings.
-// - query-ranked: project-scoped semantic recall + OC query ranking,
-//   then query-order filtering to drop only hard-errored scenes.
+// - query-ranked: project-scoped semantic recall + OC query ranking.
 //
 // DOGFOODING NOTE: OpenChronicle currently exposes this as either generic
 // recall (query ranking) or list+local filtering. If OC adds an ordered,
 // tag-filtered scene-query endpoint that preserves ordering and tags in
 // one call, the recency path's scan-then-hydrate two-hop collapses to a
 // single call.
-// In both cases, validation:errors scenes are excluded. In recency-first,
-// validation:clean scenes are preferred over untagged.
+//
+// The validation filter is strategy-independent: validation:errors
+// scenes are hard-excluded and validation:clean scenes bucket ahead of
+// untagged ones, with the strategy's own ordering (recency or query
+// relevance) preserved within each bucket. This is the v0.1.3
+// validator-gated-inclusion contract -- a validated-clean scene is a
+// higher-confidence few-shot than an unvalidated one under either
+// retrieval order.
 //
 // Generic over {tags} so it can run on compact scan rows (pre-hydration)
 // and on full RecalledEntity pools alike -- one copy of the
 // clean/untagged/errors rule, not two.
 function applySceneValidationFilter<T extends { tags: string[] }>(
   pool: T[],
-  strategy: SceneContextStrategy,
 ): T[] {
-  if (strategy === "query-ranked") {
-    return pool.filter((e) => !e.tags.includes("validation:errors"));
-  }
-
   const clean = pool.filter((e) => e.tags.includes("validation:clean"));
   const untagged = pool.filter(
     (e) =>
@@ -212,10 +212,7 @@ async function pullRecencyScenes(
     .filter((row) => SCENE_TAGS.every((tag) => row.tags.includes(tag)))
     .sort(byCreatedAtDesc)
     .slice(0, SCENE_POOL_SIZE);
-  const winners = applySceneValidationFilter(rows, "recency-first").slice(
-    0,
-    TYPE_LIMITS.scene,
-  );
+  const winners = applySceneValidationFilter(rows).slice(0, TYPE_LIMITS.scene);
 
   // Sequential hydration -- see gatherContext's comment on OC's rate
   // limiter under parallel bursts.
@@ -241,10 +238,7 @@ async function pullScenesByStrategy(
       type: "scene",
       limit: SCENE_POOL_SIZE,
     });
-    return applySceneValidationFilter(pool, strategy).slice(
-      0,
-      TYPE_LIMITS.scene,
-    );
+    return applySceneValidationFilter(pool).slice(0, TYPE_LIMITS.scene);
   }
   return pullRecencyScenes(oc, storyId);
 }
