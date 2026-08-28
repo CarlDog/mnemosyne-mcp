@@ -13,7 +13,12 @@ Status lives in [STATUS.md](STATUS.md) — read it first. This section names
 only what is in flight; it must never restate STATUS.md's Done log. (When
 the two disagree, STATUS.md is newer.)
 
-**In flight (2026-08-28).** `canon/` is the permanent human-editable source
+**Nothing is in flight (2026-08-28).** The phase-end audit is closed, the
+`index.ts` stage is done, and the external-system research is triaged. The next
+direction is deliberately unset and will be shaped by live use. Read
+[STATUS.md](STATUS.md) first; the standing context below still applies.
+
+`canon/` is the permanent human-editable source
 for a story's narrative content ([docs/DATA_LAYOUT.md](docs/DATA_LAYOUT.md));
 OC stays canonical for *live* story state. Five stories are consolidated onto
 it; Star Wars: The Black Ledger is not, and is structurally unlike the others
@@ -57,6 +62,13 @@ assessments listed under "Layout" below.
 - `src/index.ts` — MCP server entry, env validation, `GENERATOR_PROVIDER`
   selection, tool registration. `makeServer()` factory + a stdio/HTTP
   mode switch on `MCP_PORT` (unset = stdio).
+- `src/generator-config.ts` — every environment variable the server reads,
+  the validation that rejects a bad one, and the `GeneratorConfig` provider
+  construction consumes. It decides *what* to build; `index.ts` builds it.
+  Importing it validates the environment and exits non-zero on a bad value,
+  which is why `index.ts` imports it before anything else.
+- `src/instructions.ts` — the MCP `instructions` string handed to every
+  `McpServer`.
 - `src/http-config.ts` — HTTP transport env config (`MCP_PORT`,
   `MCP_BIND_HOST`, `MCP_ALLOWED_HOSTS`, `MCP_AUTH_TOKEN`,
   `MCP_SESSION_IDLE_MS`).
@@ -139,6 +151,13 @@ assessments listed under "Layout" below.
   correctness still needs a human pass. Exits 0 only when the tree exists,
   is readable, and holds at least one entity; a missing, unreadable, or
   empty `canon/` exits 1.
+- `scripts/canon-frontmatter.mjs` — the canon frontmatter scalar format in one
+  place (`toCanonScalar`/`fromCanonScalar`), imported by both the writer and
+  the reader so they cannot disagree about quoting again.
+- `scripts/dist-preflight.mjs` — reports a missing `dist/` with a build hint.
+  Import it statically, then reach for `dist/` with `await import(...)`: ESM
+  resolves static imports before evaluating anything, so a static `dist/`
+  import fails during linking before any guard could run.
 - `scripts/verify-provenance.mjs` — checks reference/art images against
   their JSON sidecars.
 - `docs/ARCHITECTURE.md` — locked architectural decisions. Read this
@@ -202,6 +221,11 @@ assessments listed under "Layout" below.
   mapping playbook for a curated import, and the authoring templates.
 - `docs/ILLUSTRATION_INTEGRATION.md` — parked design for scene-tied image
   generation (out of scope per ARCHITECTURE.md §8; not reopened).
+- `SECURITY.md` — disclosure policy. Private vulnerability reporting is
+  enabled; the file lists the three known limitations (unconfined filesystem
+  authority by transport is now closed for HTTP, what Host/Origin + bearer auth
+  do and do not cover, unvalidated sibling-MCP results) so a reporter does not
+  rediscover them.
 - `.githooks/pre-commit` — gitleaks + PII pattern scan + author identity check.
 - `.gitleaks.toml` — secret-scanning config.
 - `vendor/atlascloud-cli` — [Atlas Cloud CLI](https://github.com/AtlasCloudAI/cli)
@@ -410,6 +434,13 @@ validator suites.
   npx distribution is ever wanted, drop the flag and add `"publishConfig":
   {"access": "public"}` — scoped packages default to private, so a first
   publish without it fails with a 402.
+- **Caller-supplied filesystem paths are refused over HTTP.**
+  `mnemo_export_story(out_path)` and `mnemo_import_story(file_path)` resolve a
+  path with the process's full authority, which is a local-operator capability;
+  the HTTP transport registers the same tool surface. `registerTools` takes
+  `allowFilesystemPaths`, defaulting **true** so stdio is unchanged, and
+  `index.ts` passes `httpConfig.port === undefined`. Do not add a new
+  path-bearing tool argument without the same guard.
 - **Companion-chat output conventions live in code, not here.** The
   outgoing provenance header (`MNEMO_USER_NAME`) is built in
   `src/companion-message.ts`; the asterisk-for-action / plain-dialogue
