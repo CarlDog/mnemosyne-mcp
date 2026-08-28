@@ -58,3 +58,7 @@ tmp/
 # Docker deployment can bind-mount it as persistent storage; override
 # with MNEMO_DATA_DIR.
 data/
+
+# Benchmark/report output (scripts/atlas-capability-benchmark.mjs --out default).
+# Evidence documents that should persist get written into docs/ by hand.
+reports/
