@@ -419,7 +419,20 @@ input {
   gap: var(--space-2);
 }
 
-.story-card-action {
+/* Shared action-link styling for story cards and entity cards -- the
+   two classes were rule-for-rule clones; only the containers' top
+   margin differs (kept above/below). */
+.card-actions {
+  margin-top: var(--space-2);
+  border-top: 1px solid var(--line-soft);
+  padding-top: var(--space-2);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.story-card-action,
+.card-action {
   font-family: var(--font-mono);
   font-size: 0.72rem;
   text-transform: uppercase;
@@ -432,28 +445,7 @@ input {
   color: var(--amber-bright);
 }
 
-.story-card-action + .story-card-action {
-  padding-left: var(--space-2);
-  border-left: 1px solid var(--line-soft);
-}
-
-.card-actions {
-  margin-top: var(--space-2);
-  border-top: 1px solid var(--line-soft);
-  padding-top: var(--space-2);
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.card-action {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-}
-
+.story-card-action + .story-card-action,
 .card-action + .card-action {
   padding-left: var(--space-2);
   border-left: 1px solid var(--line-soft);
@@ -554,10 +546,15 @@ input {
   text-transform: uppercase;
 }
 
+/* One rule group for all three form controls -- this section previously
+   held two cloned blocks whose later copy silently overrode the
+   earlier's margin-bottom and .select width; the merged values below
+   are the ones that actually rendered. */
+.input,
 .textarea,
 .select {
   width: 100%;
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-1);
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -573,17 +570,17 @@ input {
   resize: vertical;
 }
 
+.select {
+  appearance: none;
+  cursor: pointer;
+}
+
+.input:focus,
 .textarea:focus,
 .select:focus {
   outline: none;
   border-color: var(--amber);
   box-shadow: 0 0 0 3px var(--amber-glow);
-}
-
-.select {
-  appearance: none;
-  cursor: pointer;
-  width: 14rem;
 }
 
 .field-pair {
@@ -602,32 +599,6 @@ input {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
   gap: var(--space-3);
-}
-
-.input,
-.textarea,
-.select {
-  width: 100%;
-  margin-bottom: var(--space-1);
-}
-
-.input {
-  margin-top: 0;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: var(--space-2) var(--space-2);
-  color: var(--ink);
-  font-family: var(--font-body);
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
-}
-
-.input:focus {
-  outline: none;
-  border-color: var(--amber);
-  box-shadow: 0 0 0 3px var(--amber-glow);
 }
 
 .field-hint {

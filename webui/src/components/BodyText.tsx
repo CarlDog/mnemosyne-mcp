@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { ReactNode } from "react";
 
 // Mnemosyne's style guides mandate physical action in *asterisks*, dialogue
@@ -9,7 +10,11 @@ import type { ReactNode } from "react";
 // operator/LLM-authored prose, not sanitized HTML.
 const ASTERISK_SPAN = /\*([^*]+)\*/g;
 
-export default function BodyText({ text }: { text: string }) {
+// memo: the only prop is a string, and ContinueScenePage keeps a
+// (potentially very long) generated beat mounted next to a controlled
+// textarea -- without memo every keystroke re-runs the paragraph split
+// and regex parse over the whole beat.
+export default memo(function BodyText({ text }: { text: string }) {
   const paragraphs = text.split(/\n{2,}/);
 
   return (
@@ -28,4 +33,4 @@ export default function BodyText({ text }: { text: string }) {
       })}
     </>
   );
-}
+});
