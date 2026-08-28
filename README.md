@@ -76,6 +76,64 @@ live-verification status per provider. Related docs:
 - [docs/SEED_TEMPLATES.md](docs/SEED_TEMPLATES.md) — fill-in skeletons
   for seeding a new story (character, style guide, rules) via one
   import call
+## Setup
+
+Mnemosyne is a *client* of two services you run yourself. Neither is bundled,
+and the server exits at startup without the first:
+
+1. **[OpenChronicle](https://github.com/CarlDog/openchronicle-mcp)** — the
+   memory database every story's state lives in. Required.
+2. **A generator** — [Ollama](https://ollama.com) by default (local, free), or
+   one of the six alternatives behind `GENERATOR_PROVIDER`. The *validator*
+   pass always runs on Ollama regardless, so an Ollama endpoint is needed
+   either way.
+
+```bash
+npm install
+npm run build
+cp .env.example .env      # then edit -- see below
+```
+
+**Nothing auto-loads `.env`.** The server reads its configuration from the
+process environment, so pass it one of three ways:
+
+```bash
+node --env-file=.env dist/index.js   # Node 22+, manual run
+```
+
+…or export the vars into your shell before `npm run dev`, or — most commonly —
+put them in the `env` block of the server entry in your MCP client config:
+
+```json
+{
+  "mcpServers": {
+    "mnemosyne": {
+      "command": "node",
+      "args": ["/absolute/path/to/mnemosyne-mcp/dist/index.js"],
+      "env": {
+        "OC_URL": "http://your-oc-host:18000/mcp",
+        "OLLAMA_GENERATOR_MODEL": "mistral-nemo:12b"
+      }
+    }
+  }
+}
+```
+
+The minimum is `OC_URL` plus a generator model. [.env.example](.env.example)
+is the full reference and states what each provider additionally requires.
+
+**Transports.** With `MCP_PORT` unset the server speaks stdio — the default,
+and what an MCP client expects. Set `MCP_PORT` and it serves Streamable HTTP
+instead, plus a REST API and the web UI at that port. Read
+[HTTP Trust Boundary](#http-trust-boundary) before exposing that anywhere.
+
+**Web UI.** `npm run build` also builds the React app in `webui/` into
+`dist/webui/`, served automatically in HTTP mode. It covers the entity library
+and the continue/validate flow; entity editing and the remaining
+[WEBUI_NOTES](docs/WEBUI_NOTES.md) slices are not built. For UI development,
+`npm --prefix webui run dev` runs Vite with `/api/*` proxied to the server
+started by `npm run dev`.
+
 ## Stack
 
 - TypeScript (Node 22+, ESM, `NodeNext` module resolution)
@@ -104,8 +162,15 @@ npm run dev            # tsx src/index.ts
 npm run typecheck      # tsc -p tsconfig.typecheck.json (src + tests)
 npm run lint           # eslint .
 npm run format         # prettier --write .
+npm run format:check   # prettier --check . (CI gates on this -- run before pushing)
 npm test               # vitest run
 ```
+
+`npm test` green does **not** mean the integration surface ran. 62 of the 254
+tests are env-gated and skip unless their variables are exported **into the
+shell** — `vitest.config.ts` loads no dotenv, so a populated `.env` does not
+enable them. Use `OC_URL=...` for the OpenChronicle suites, adding
+`OLLAMA_GENERATOR_MODEL=...` for the validator suites.
 
 ## Diagnostic Scripts
 
