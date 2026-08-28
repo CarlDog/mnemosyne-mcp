@@ -320,9 +320,11 @@ misnamed, excused, or stripped of human consequence.
 
 ### Routing boundary
 
-**Status: architecture committed, implementation in development.** This
+**Status: proposed, not ratified; nothing is implemented.** This
 section states the target contract mnemosyne is being built toward, not
-something already running today. See
+something already running today. "In development" would overstate it: there is
+no routing code in `src/` at all, and the design it points to is itself an
+unratified proposal with open operator decisions. See
 [docs/CONTENT_ROUTING_DESIGN.md](CONTENT_ROUTING_DESIGN.md) for the current
 proposal and its open decisions. Until it ships, routing is a manual
 operator responsibility (choosing an appropriate deployment/provider per

@@ -1,5 +1,13 @@
 # Atlas Cloud capability benchmark
 
+**Status:** Evaluation protocol recorded 2026-08-27; the protocol and any route
+choices derived from it are unratified. This document does not schedule work,
+change locked architecture, or reopen deferred scope.
+[STATUS.md](../STATUS.md) remains the source of current priority. It describes
+how to *measure* Atlas Cloud routes — it certifies nothing on its own, and the
+content-routing layer it refers to is not built (see
+[CONTENT_ROUTING_DESIGN.md](CONTENT_ROUTING_DESIGN.md), still a proposal).
+
 This is the repeatable evaluation protocol for choosing Atlas Cloud routes for
 the Mnemosyne storylines. It is intentionally a capability test, not a prompt
 gallery and not a license to store generated adult media.
@@ -103,22 +111,42 @@ Use the matrix as a routing input:
 
 The runner uses the official `atlas` CLI, keeps secrets in the CLI's auth
 store/environment, and writes a JSON matrix. It does not require any Mnemosyne
-story state or OpenChronicle access.
+story state or OpenChronicle access. The CLI is resolved from `ATLAS_CLI_BIN`
+or `PATH`, and `--cli` overrides both. (`ATLAS_CLI_BIN` is read by this script
+only — the server never reads it, which is why it is absent from
+`.env.example`.) `--out` defaults under `reports/`, which is gitignored.
+
+**Each run rebuilds the whole matrix from the catalog and overwrites `--out`;
+it never merges with an existing file.** Point several modes at one path and
+only the last run's results survive — the earlier modes' probes are silently
+replaced by `not_run`. Give each mode its own output file:
 
 ```powershell
-node scripts/atlas-capability-benchmark.mjs --mode catalog --out reports/atlas-capability-matrix.json
-node scripts/atlas-capability-benchmark.mjs --mode chat --out reports/atlas-capability-matrix.json
-node scripts/atlas-capability-benchmark.mjs --mode media-schema --out reports/atlas-capability-matrix.json
+node scripts/atlas-capability-benchmark.mjs --mode catalog      --out reports/atlas-catalog.json
+node scripts/atlas-capability-benchmark.mjs --mode chat         --out reports/atlas-chat.json
+node scripts/atlas-capability-benchmark.mjs --mode media-schema --out reports/atlas-media-schema.json
 ```
 
 The billable media smoke step is opt-in and bounded:
 
 ```powershell
-node scripts/atlas-capability-benchmark.mjs --mode media-smoke --media-model-limit 6 --out reports/atlas-capability-matrix.json
+node scripts/atlas-capability-benchmark.mjs --mode media-smoke --media-model-limit 6 --out reports/atlas-media-smoke.json
+```
+
+To get every probe into one matrix in a single file, use `--mode all`. It
+includes the billable smoke step, so it requires `--media-model-limit` and is
+rejected at argument-parse time without one — before any paid call is made:
+
+```powershell
+node scripts/atlas-capability-benchmark.mjs --mode all --media-model-limit 6 --out reports/atlas-capability-matrix.json
 ```
 
 The runner never performs L4 explicit tests. Review the resulting JSON before
-using any model in `ATLASCLOUD_CONTENT_CAPABILITY=mature` routing.
+treating any model as mature-capable — and note that the routing layer itself
+is **not implemented**. `ATLASCLOUD_CONTENT_CAPABILITY` appears only in
+[CONTENT_ROUTING_DESIGN.md](CONTENT_ROUTING_DESIGN.md)'s proposal and in this
+document; nothing in `src/` reads it. Today this review feeds a manual operator
+choice of deployment/provider, not an enforced configuration.
 
 ### Current runner boundary
 

@@ -54,6 +54,18 @@ function parseArgs(argv) {
   if (!Number.isInteger(args.mediaModelLimit) || args.mediaModelLimit < 0) {
     throw new Error("--media-model-limit must be a non-negative integer");
   }
+  // Fail BEFORE any billable probe runs. This check used to live in main()'s
+  // runMedia block, which executes after the chat sweep and the schema probes
+  // -- so `--mode all` without a limit paid for a full chat sweep and then
+  // threw before writeFile, costing money and saving nothing.
+  if (
+    (args.mode === "media-smoke" || args.mode === "all") &&
+    args.mediaModelLimit === 0
+  ) {
+    throw new Error(
+      `--mode ${args.mode} requires --media-model-limit to bound billable jobs`,
+    );
+  }
   return args;
 }
 
@@ -317,6 +329,8 @@ async function main() {
     );
   }
   if (runMedia) {
+    // parseArgs already rejects this; kept as a belt-and-braces assertion so a
+    // future caller constructing args directly cannot start unbounded billing.
     if (args.mediaModelLimit === 0) {
       throw new Error(
         "media-smoke/all requires --media-model-limit to bound billable jobs",
