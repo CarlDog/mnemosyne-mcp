@@ -198,7 +198,7 @@ export function registerInteractiveRoutes(
             "The group handed the floor straight back to you -- no AI " +
             "turns were generated, so nothing was saved. Your direction " +
             "was already posted to the group; do not re-send it. Take " +
-            "the turn: call /stories/:storyId/continue again with what you say next.",
+            `the turn: call /stories/${story.id}/continue again with what you say next.`,
           mode,
           stages_ms: {
             gather_ms: gatherMs,

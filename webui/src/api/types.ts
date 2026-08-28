@@ -68,13 +68,17 @@ export interface ValidationReport {
 }
 
 export interface ContinueResponse {
-  beat_name: string;
+  // beat_name and context_summary are absent on the yielded_to_user
+  // response (a Kindroid group handing the floor straight back) -- the
+  // server sends only beat_text:"", saved:false, message, mode, and
+  // stages_ms in that case, so both must be optional here.
+  beat_name?: string;
   beat_text: string;
   memory_id?: string;
   save_error?: string;
   saved?: boolean;
   mode: Mode;
-  context_summary: {
+  context_summary?: {
     rules: number;
     style: number;
     characters: number;

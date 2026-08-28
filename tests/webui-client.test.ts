@@ -72,6 +72,31 @@ describe("web client api module", () => {
     expect(payload.model).toBe("gpt-mini");
   });
 
+  it("continueStory returns the yielded_to_user shape, which omits beat_name and context_summary", async () => {
+    // The server's group-yield response carries no beat_name or
+    // context_summary -- the client type must allow that (the result
+    // panel once crashed dereferencing context_summary on this shape).
+    const yieldedResponse = {
+      yielded_to_user: true,
+      beat_text: "",
+      saved: false,
+      message:
+        "The group handed the floor straight back to you -- do not re-send your direction.",
+      mode: "director" as const,
+      stages_ms: { gather_ms: 12, generate_ms: 34, save_ms: 0, validate_ms: 0 },
+    };
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      makeJsonResponse(yieldedResponse),
+    );
+
+    const result = await continueStory("story-abc", {
+      direction: "What happens next?",
+    });
+    expect(result).toEqual(yieldedResponse);
+    expect(result.context_summary).toBeUndefined();
+    expect(result.beat_name).toBeUndefined();
+  });
+
   it("continueStory converts HTTP errors into ApiError", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       makeJsonResponse(
