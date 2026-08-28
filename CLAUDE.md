@@ -19,6 +19,15 @@ OC stays canonical for *live* story state. Five stories are consolidated onto
 it; Star Wars: The Black Ledger is not, and is structurally unlike the others
 (ongoing, already partly live via Botify, no ChatGPT-project origin).
 
+**Draft scaffolds on disk (2026-08-27), documented nowhere else.** Four
+Botify-derived `canon/` trees exist and are validator-clean but appear in no
+ratified doc: `brass-and-nerve` (36 entities), `midnight-is-a-suggestion` (38),
+`the-adjustment-protocol` (38), `the-noctis-veil` (38). A fifth,
+`trigun-scarlet-mercy` (55), is tracked in
+[STORYLINE_RESEARCH_BACKLOG.md](docs/STORYLINE_RESEARCH_BACKLOG.md). None has
+been imported to OC. Their status is undecided — do not build on them or
+scaffold over them without asking.
+
 **Read `data/stories/` before trusting any story inventory.** `data/` is
 gitignored, so `git status` stays clean while story trees you have not read
 sit on disk — including draft scaffolds that no ratified doc covers. Verify
@@ -53,11 +62,13 @@ assessments listed under "Layout" below.
   `MCP_SESSION_IDLE_MS`).
 - `src/shared/http-transport.ts` — `mountMcpHttp()`: fleet-canonical
   Streamable HTTP transport (fresh `McpServer` per session, idle-session
-  eviction, Host/Origin allowlist, bearer auth) — a byte-verbatim copy
-  of kindroid-mcp's own `src/shared/http-transport.ts`.
+  eviction, Host/Origin allowlist, bearer auth) — a verbatim copy
+  of kindroid-mcp's own `src/shared/http-transport.ts` — bodies are identical; only the
+  4-line provenance header differs, since each repo records where its own
+  copy came from. Diff past line 4 when checking for fleet drift.
 - `src/api-security.ts` — `apiSecurity()`: the same Host/Origin allowlist
   + bearer-auth check as `shared/http-transport.ts`, reimplemented (not
-  imported — that file must stay byte-verbatim) as Express middleware
+  imported — that file's body must stay verbatim) as Express middleware
   protecting `/api/*` and the static web UI.
 - `src/api/` — the REST layer the web UI talks to: `index.ts`
   (`createApiRouter()`, mirrors `tools/index.ts`'s orchestrator shape),
@@ -231,7 +242,7 @@ Key architectural decisions (see ARCHITECTURE.md for full reasoning):
   unaffected.
 - **Two transports, one process.** `MCP_PORT` unset (every current
   deployment) runs stdio, unchanged. Set, it runs Streamable HTTP via
-  `shared/http-transport.ts` — a byte-verbatim copy of kindroid-mcp's
+  `shared/http-transport.ts` — a verbatim copy of kindroid-mcp's
   fleet-canonical module, chosen over a bespoke implementation because it
   provides the shared fleet baseline (fresh `McpServer` per session via a
   `createServer` factory, idle-session eviction, Host/Origin allowlisting

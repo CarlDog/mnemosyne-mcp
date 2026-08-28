@@ -46,7 +46,10 @@ Botify bot `2427847` (Trooper Cates / 75U1) supplied eight source memories plus 
 
 ## Gender-Swapped Trigun
 
-**Status:** Concept decision pinned; foundation work not yet begun.
+**Status:** Concept decision pinned. A draft `canon/` scaffold now exists at
+`data/stories/trigun-scarlet-mercy/` (55 entities, validator-clean) and has
+**not** been imported to OpenChronicle. The ruleset/inspiration decisions below
+remain open.
 
 **Working title:** *Trigun: Scarlet Mercy*
 
