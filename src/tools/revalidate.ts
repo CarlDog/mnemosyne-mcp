@@ -27,15 +27,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
 import type { LlmProvider } from "../llm.js";
-import {
-  DEFAULT_SCENE_CONTEXT_STRATEGY,
-  SCENE_CONTEXT_STRATEGIES,
-  SCENE_CONTEXT_STRATEGY_DESCRIPTION,
-  SCENE_CONTEXT_FALLBACK_DESCRIPTION,
-  type SceneContextStrategy,
-  gatherContext,
-  resolveSceneContextStrategies,
-} from "../prompt.js";
+import { gatherContext } from "../prompt.js";
 import { validateContent, classifyVerdict } from "../validator.js";
 import { recall, retagValidation, MAX_RECALL_LIMIT } from "../entities.js";
 import { resolveStoryId } from "../stories.js";
@@ -73,8 +65,6 @@ export async function revalidateScenes(
   oc: OcClient,
   validator: LlmProvider,
   storyId: string,
-  sceneContextStrategy: SceneContextStrategy = DEFAULT_SCENE_CONTEXT_STRATEGY,
-  sceneContextFallbackStrategy: SceneContextStrategy = sceneContextStrategy,
 ): Promise<RevalidateResult> {
   const scenes = await recall(oc, storyId, {
     type: "scene",
@@ -89,13 +79,14 @@ export async function revalidateScenes(
   // prompt.ts on why parallel OC access trips the rate limiter.
   for (const scene of scenes) {
     try {
-      const context = await gatherContext(
-        oc,
-        storyId,
-        scene.body,
-        sceneContextStrategy,
-        sceneContextFallbackStrategy,
-      );
+      // validationOnly: the validator's constraintsBlock never reads
+      // scenes/lore/worldbuilding, so gathering them here -- once per
+      // scene, with the scene pool being the bundle's most expensive
+      // fetch -- was pure waste (and the reason this tool once exposed
+      // scene_context_strategy params that could never affect output).
+      const context = await gatherContext(oc, storyId, scene.body, {
+        validationOnly: true,
+      });
       const report = await validateContent(validator, context, scene.body);
       const verdict = classifyVerdict(report);
       await retagValidation(oc, scene.memory_id, scene.tags, verdict);
@@ -126,8 +117,6 @@ export function registerRevalidateTool(
   server: McpServer,
   oc: OcClient,
   validator: LlmProvider,
-  sceneContextStrategy: SceneContextStrategy = DEFAULT_SCENE_CONTEXT_STRATEGY,
-  sceneContextFallbackStrategy: SceneContextStrategy = sceneContextStrategy,
 ): void {
   server.registerTool(
     "mnemo_revalidate_scenes",
@@ -136,14 +125,6 @@ export function registerRevalidateTool(
       description:
         "One-shot bulk validation pass over every scene in the active story. Re-runs the validator against each scene's own gathered context and retags it with a fresh validation:clean or validation:errors verdict. Fixes the bootstrap problem for scenes saved before v0.1.3's validator-gated scene inclusion existed (untagged scenes). Walks all scenes in the active story (or the story named by the optional `story` override), capped at 100 scenes per run (recall has no pagination); scenes_checked reflects what was actually walked. A single scene's validation failure is recorded in the response's failures list, not raised as an error, so one bad scene doesn't abort the walk.",
       inputSchema: {
-        scene_context_strategy: z
-          .enum(SCENE_CONTEXT_STRATEGIES)
-          .optional()
-          .describe(SCENE_CONTEXT_STRATEGY_DESCRIPTION),
-        scene_context_fallback_strategy: z
-          .enum(SCENE_CONTEXT_STRATEGIES)
-          .optional()
-          .describe(SCENE_CONTEXT_FALLBACK_DESCRIPTION),
         story: z
           .string()
           .min(1)
@@ -153,29 +134,9 @@ export function registerRevalidateTool(
           ),
       },
     },
-    withLogging("mnemo_revalidate_scenes", async (args: {
-      scene_context_strategy?: SceneContextStrategy;
-      scene_context_fallback_strategy?: SceneContextStrategy;
-      story?: string;
-    }) => {
+    withLogging("mnemo_revalidate_scenes", async (args: { story?: string }) => {
       const storyId = await resolveStoryId(oc, args.story);
-      const sceneStrategies = resolveSceneContextStrategies(
-        {
-          strategy: args.scene_context_strategy,
-          fallback: args.scene_context_fallback_strategy,
-        },
-        {
-          strategy: sceneContextStrategy,
-          fallback: sceneContextFallbackStrategy,
-        },
-      );
-      const result = await revalidateScenes(
-        oc,
-        validator,
-        storyId,
-        sceneStrategies.strategy,
-        sceneStrategies.fallback,
-      );
+      const result = await revalidateScenes(oc, validator, storyId);
       return asText(result);
     }),
   );

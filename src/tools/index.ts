@@ -35,18 +35,10 @@ export function registerTools(
     sceneContextStrategy,
     sceneContextFallbackStrategy,
   );
-  registerValidateTool(
-    server,
-    oc,
-    validator,
-    sceneContextStrategy,
-    sceneContextFallbackStrategy,
-  );
-  registerRevalidateTool(
-    server,
-    oc,
-    validator,
-    sceneContextStrategy,
-    sceneContextFallbackStrategy,
-  );
+  // Validate/revalidate take no strategy config: their contexts are
+  // validation-only (no scene pull -- see gatherContext's
+  // validationOnly), so scene-context strategy has nothing to control
+  // there.
+  registerValidateTool(server, oc, validator);
+  registerRevalidateTool(server, oc, validator);
 }

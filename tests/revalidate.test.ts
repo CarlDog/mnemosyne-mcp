@@ -80,18 +80,8 @@ suite("v0.1.3 step 4 — mnemo_revalidate_scenes (real OC + real Ollama)", () =>
     5 * 60 * 1000,
   );
 
-  it(
-    "accepts an explicit query-ranked scene context strategy",
-    async () => {
-      const result = await revalidateScenes(
-        oc,
-        validator,
-        storyId,
-        "query-ranked",
-      );
-      expect(result.scenes_checked).toBe(2);
-      expect(result.failures).toEqual([]);
-    },
-    5 * 60 * 1000,
-  );
+  // NOTE: revalidateScenes deliberately takes no scene-context strategy
+  // params (removed 2026-08-27): its per-scene contexts are gathered
+  // validationOnly -- the validator never reads scenes -- so a strategy
+  // knob here could never affect output, only cost.
 });

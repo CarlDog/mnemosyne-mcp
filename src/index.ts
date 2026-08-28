@@ -624,14 +624,14 @@ v0 surface:
   the Kindroid target for this call only. With validate=true, runs an
   LLM second pass and attaches a verdict (issues + summary) to the
   response.
-- mnemo_validate(content, scene_context_strategy?, scene_context_fallback_strategy?, story?) — standalone validation pass over
+- mnemo_validate(content, story?) — standalone validation pass over
   arbitrary content (hand-written prose, previously-saved beats being
   re-audited). Same ValidationReport shape as mnemo_continue's
-  validate=true mode.
-- mnemo_revalidate_scenes(scene_context_strategy?, scene_context_fallback_strategy?, story?) — re-run the
-  validator over every scene in the active story (using the selected
-  scene retrieval strategy, then fallback if needed) and retag
-  validation:clean/errors.
+  validate=true mode. No scene-context params: validation contexts pull
+  only rules/style/characters/locations (the validator never reads
+  scenes), so a scene strategy has nothing to control here.
+- mnemo_revalidate_scenes(story?) — re-run the validator over every
+  scene in the active story and retag validation:clean/errors.
 - mnemo_export_story(name_or_id?, out_path?) — serialize a story (every
   entity + its Kindroid binding, if any) to a versioned JSON document on
   disk. Defaults to the active story. Returns a manifest (path, per-type

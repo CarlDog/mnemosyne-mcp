@@ -19,15 +19,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
 import type { LlmProvider } from "../llm.js";
-import {
-  DEFAULT_SCENE_CONTEXT_STRATEGY,
-  SCENE_CONTEXT_STRATEGIES,
-  SCENE_CONTEXT_STRATEGY_DESCRIPTION,
-  SCENE_CONTEXT_FALLBACK_DESCRIPTION,
-  gatherContext,
-  resolveSceneContextStrategies,
-  type SceneContextStrategy,
-} from "../prompt.js";
+import { gatherContext } from "../prompt.js";
 import { validateContent } from "../validator.js";
 import { resolveStoryId } from "../stories.js";
 import { log } from "../log.js";
@@ -37,8 +29,6 @@ export function registerValidateTool(
   server: McpServer,
   oc: OcClient,
   validator: LlmProvider,
-  sceneContextStrategy: SceneContextStrategy = DEFAULT_SCENE_CONTEXT_STRATEGY,
-  sceneContextFallbackStrategy: SceneContextStrategy = sceneContextStrategy,
 ): void {
   server.registerTool(
     "mnemo_validate",
@@ -60,46 +50,23 @@ export function registerValidateTool(
           .describe(
             "Story name or OC project UUID. Overrides the active story for this call only; omit to use the active story (mnemo_story_use).",
           ),
-        scene_context_strategy: z
-          .enum(SCENE_CONTEXT_STRATEGIES)
-          .optional()
-          .describe(SCENE_CONTEXT_STRATEGY_DESCRIPTION),
-        scene_context_fallback_strategy: z
-          .enum(SCENE_CONTEXT_STRATEGIES)
-          .optional()
-          .describe(SCENE_CONTEXT_FALLBACK_DESCRIPTION),
       },
     },
     withLogging(
       "mnemo_validate",
-      async (args: {
-        content: string;
-        scene_context_strategy?: SceneContextStrategy;
-        scene_context_fallback_strategy?: SceneContextStrategy;
-        story?: string;
-      }) => {
+      async (args: { content: string; story?: string }) => {
         const storyId = await resolveStoryId(oc, args.story);
-        const sceneStrategies = resolveSceneContextStrategies(
-          {
-            strategy: args.scene_context_strategy,
-            fallback: args.scene_context_fallback_strategy,
-          },
-          {
-            strategy: sceneContextStrategy,
-            fallback: sceneContextFallbackStrategy,
-          },
-        );
         // Reuse continue's gatherContext so the validator sees the same
-        // shape of context. The validator only consumes rules / style /
-        // characters / locations; the rest of the bundle is harmlessly
-        // ignored by validateContent.
-        const context = await gatherContext(
-          oc,
-          storyId,
-          args.content,
-          sceneStrategies.strategy,
-          sceneStrategies.fallback,
-        );
+        // shape of context, but validation-only: validateContent's
+        // constraintsBlock consumes rules / style / characters /
+        // locations and never reads scenes / lore / worldbuilding, so
+        // those pulls (the scene pool being the most expensive fetch in
+        // the bundle) are skipped entirely. This is also why the tool
+        // exposes no scene_context_strategy params: with no scene pull,
+        // they would be knobs that control nothing.
+        const context = await gatherContext(oc, storyId, args.content, {
+          validationOnly: true,
+        });
         // Guard the validator pass: a validator-LLM failure or non-JSON
         // output degrades to a structured error instead of a raw MCP tool
         // error — symmetric with mnemo_continue's validation_error field.

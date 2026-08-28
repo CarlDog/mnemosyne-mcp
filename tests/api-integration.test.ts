@@ -209,7 +209,10 @@ suite("/api routes (real OC)", () => {
     expect(Array.isArray(body.issues)).toBe(true);
   });
 
-  it("POST /stories/:storyId/validate accepts scene_context_strategy override", async () => {
+  it("POST /stories/:storyId/validate tolerates legacy strategy fields (stripped, not rejected)", async () => {
+    // scene_context_strategy was removed from the validate surface
+    // (validation contexts pull no scenes), but an old client still
+    // sending the fields must not break -- zod strips unknown keys.
     const res = await fetch(`${baseUrl}/stories/${storyId}/validate`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -224,14 +227,11 @@ suite("/api routes (real OC)", () => {
     expect(body.summary).toContain("stubbed validator summary");
   });
 
-  it("POST /stories/:storyId/revalidate-scenes runs a revalidation pass and accepts strategy override", async () => {
+  it("POST /stories/:storyId/revalidate-scenes runs a revalidation pass", async () => {
     const res = await fetch(`${baseUrl}/stories/${storyId}/revalidate-scenes`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        scene_context_strategy: "query-ranked",
-        scene_context_fallback_strategy: "recency-first",
-      }),
+      body: JSON.stringify({}),
     });
     expect(res.status).toBe(200);
     const body = await res.json();

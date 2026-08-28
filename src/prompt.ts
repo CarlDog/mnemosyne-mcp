@@ -239,12 +239,26 @@ export async function pullFilteredScenes(
   return [];
 }
 
+export interface GatherContextOptions {
+  /** RECENT SCENES retrieval strategy. Default DEFAULT_SCENE_CONTEXT_STRATEGY. */
+  sceneStrategy?: SceneContextStrategy;
+  /** Optional second strategy tried when the primary yields no eligible
+   * scenes. Unset = no fallback. */
+  sceneFallbackStrategy?: SceneContextStrategy;
+  /** Validation contexts consume only rules/style/characters/locations
+   * (validator.ts's constraintsBlock never reads scenes/lore/
+   * worldbuilding), so validation callers skip those pulls entirely --
+   * under the recency-first default the scene pull is the single most
+   * expensive OC fetch in the bundle, and revalidateScenes gathers once
+   * per scene. The skipped fields come back as []. */
+  validationOnly?: boolean;
+}
+
 export async function gatherContext(
   oc: OcClient,
   storyId: string,
   query: string,
-  sceneContextStrategy: SceneContextStrategy = DEFAULT_SCENE_CONTEXT_STRATEGY,
-  sceneContextFallbackStrategy?: SceneContextStrategy,
+  options: GatherContextOptions = {},
 ): Promise<ContextBundle> {
   // Sequential per-type pulls. Parallel (Promise.all over 7 calls) trips
   // OC v3's rate limiter under burst load — same gap that bit Phase A's
@@ -256,12 +270,23 @@ export async function gatherContext(
   const style = await pullByType(oc, storyId, "style", query);
   const characters = await pullByType(oc, storyId, "character", query);
   const locations = await pullByType(oc, storyId, "location", query);
+  if (options.validationOnly) {
+    return {
+      rules,
+      style,
+      characters,
+      locations,
+      scenes: [],
+      lore: [],
+      worldbuilding: [],
+    };
+  }
   const scenes = await pullFilteredScenes(
     oc,
     storyId,
     query,
-    sceneContextStrategy,
-    sceneContextFallbackStrategy,
+    options.sceneStrategy ?? DEFAULT_SCENE_CONTEXT_STRATEGY,
+    options.sceneFallbackStrategy,
   );
   const lore = await pullByType(oc, storyId, "lore", query);
   const worldbuilding = await pullByType(oc, storyId, "worldbuilding", query);

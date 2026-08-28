@@ -73,7 +73,7 @@ suite("Phase C-1 — continue (real OC + real Ollama)", () => {
       oc,
       storyId,
       "Aria walks into the tavern.",
-      "query-ranked",
+      { sceneStrategy: "query-ranked" },
     );
     expect(ctx.characters.length).toBeGreaterThanOrEqual(1);
     expect(ctx.rules.length).toBeGreaterThanOrEqual(1);

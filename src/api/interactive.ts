@@ -39,23 +39,16 @@ import {
 import { asyncRoute } from "./helpers.js";
 import { log } from "../log.js";
 
+// The validate/revalidate bodies carry no scene_context_strategy params:
+// validation contexts are gathered validationOnly (no scene pull -- the
+// validator's constraintsBlock never reads scenes), so strategy knobs
+// here would control nothing. Unknown keys are stripped by zod, so old
+// clients still sending them keep working.
 const validateSchema = z.object({
   content: z.string().min(1),
-  scene_context_strategy: z.enum(SCENE_CONTEXT_STRATEGIES).optional(),
-  scene_context_fallback_strategy: z
-    .enum(SCENE_CONTEXT_STRATEGIES)
-    .optional(),
 });
 
-const revalidateScenesSchema = z.object({
-  // Plain .optional() like the sibling schemas -- a zod .default() here
-  // fills the value before the handler's `?? sceneContextStrategy` runs,
-  // which silently discards the server-configured strategy.
-  scene_context_strategy: z.enum(SCENE_CONTEXT_STRATEGIES).optional(),
-  scene_context_fallback_strategy: z
-    .enum(SCENE_CONTEXT_STRATEGIES)
-    .optional(),
-});
+const revalidateScenesSchema = z.object({});
 
 const DEFAULT_MODE: (typeof MODES)[number] = "director";
 const continueSchema = z.object({
@@ -134,13 +127,10 @@ export function registerInteractiveRoutes(
       const mode = parsedBody.data.mode ?? DEFAULT_MODE;
 
       const gatherStart = Date.now();
-      const context = await gatherContext(
-        oc,
-        story.id,
-        parsedBody.data.direction,
-        sceneStrategies.strategy,
-        sceneStrategies.fallback,
-      );
+      const context = await gatherContext(oc, story.id, parsedBody.data.direction, {
+        sceneStrategy: sceneStrategies.strategy,
+        sceneFallbackStrategy: sceneStrategies.fallback,
+      });
       const gatherMs = Date.now() - gatherStart;
       const systemPrompt = buildSystemPrompt(mode, context);
 
@@ -320,22 +310,11 @@ export function registerInteractiveRoutes(
         return;
       }
 
-      const sceneStrategies = resolveSceneContextStrategies(
-        {
-          strategy: parsedBody.data.scene_context_strategy,
-          fallback: parsedBody.data.scene_context_fallback_strategy,
-        },
-        {
-          strategy: sceneContextStrategy,
-          fallback: sceneContextFallbackStrategy,
-        },
-      );
       const context = await gatherContext(
         oc,
         story.id,
         parsedBody.data.content,
-        sceneStrategies.strategy,
-        sceneStrategies.fallback,
+        { validationOnly: true },
       );
       const report = await validateContent(
         validator,
@@ -372,23 +351,7 @@ export function registerInteractiveRoutes(
         return;
       }
 
-      const sceneStrategies = resolveSceneContextStrategies(
-        {
-          strategy: parsedBody.data.scene_context_strategy,
-          fallback: parsedBody.data.scene_context_fallback_strategy,
-        },
-        {
-          strategy: sceneContextStrategy,
-          fallback: sceneContextFallbackStrategy,
-        },
-      );
-      const result = await revalidateScenes(
-        oc,
-        validator,
-        story.id,
-        sceneStrategies.strategy,
-        sceneStrategies.fallback,
-      );
+      const result = await revalidateScenes(oc, validator, story.id);
       res.json(result);
     }),
   );

@@ -1,14 +1,16 @@
-// Pure unit tests for the interactive /api routes' strategy plumbing.
-// No real OC/Ollama -- a recording mock OcClient makes the strategy an
-// observable: query-ranked scene pulls go through memorySearch, while
-// recency-first goes through memoryList, so asserting which method ran
-// pins which strategy the route actually used.
+// Pure unit tests for the interactive /api routes. No real OC/Ollama --
+// a recording mock OcClient makes retrieval behavior observable:
+// query-ranked/validation pulls go through memorySearch, while the
+// recency-first scene pool goes through memoryList, so asserting which
+// method ran pins what the route actually fetched.
 //
-// Regression anchor: revalidateScenesSchema once carried a zod
-// .default(DEFAULT_SCENE_CONTEXT_STRATEGY) on scene_context_strategy,
-// which filled the value before the handler's `?? serverStrategy` could
-// run -- an empty POST body silently ignored the operator-configured
-// MNEMO_SCENE_CONTEXT_STRATEGY on this one route.
+// History: revalidateScenesSchema once carried a zod
+// .default(DEFAULT_SCENE_CONTEXT_STRATEGY) that silently discarded the
+// server-configured strategy; the strategy params were then removed from
+// the validate/revalidate surfaces entirely (2026-08-27) because their
+// contexts became validationOnly -- no scene pull, nothing for a
+// strategy to control. The memoryList assertion below now guards that
+// stronger property.
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import type { Server } from "node:http";
@@ -117,7 +119,7 @@ describe("interactive routes — scene-context strategy plumbing (mock OC)", () 
     });
   });
 
-  it("revalidate-scenes with an empty body honors the server-configured strategy", async () => {
+  it("revalidate-scenes gathers validation-only context: no scene-pool fetch at all", async () => {
     const res = await fetch(`${baseUrl}/stories/${STORY_ID}/revalidate-scenes`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -127,10 +129,11 @@ describe("interactive routes — scene-context strategy plumbing (mock OC)", () 
     const body = await res.json();
     expect(body.scenes_checked).toBe(1);
 
-    // Server strategy is query-ranked: every scene pull must be a
-    // memorySearch (scene-tagged), and the recency-first path's
-    // memoryList must never run. Before the .default() fix, zod filled
-    // "recency-first" into the empty body and memoryList fired here.
+    // The outer scene enumeration (which scenes to validate) is a
+    // scene-tagged memorySearch; the per-scene gatherContext runs
+    // validationOnly, so the recency-first scene pool's memoryList must
+    // never fire -- previously this route re-fetched the entire project
+    // once per scene for a context field the validator never reads.
     expect(recording.memoryListCalls).toBe(0);
     expect(recording.sceneSearchTags.length).toBeGreaterThanOrEqual(1);
   });

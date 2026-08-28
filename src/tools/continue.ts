@@ -198,13 +198,10 @@ export function registerContinueTool(
             fallback: sceneContextFallbackStrategy,
           },
         );
-        const context = await gatherContext(
-          oc,
-          storyId,
-          args.direction,
-          sceneStrategies.strategy,
-          sceneStrategies.fallback,
-        );
+        const context = await gatherContext(oc, storyId, args.direction, {
+          sceneStrategy: sceneStrategies.strategy,
+          sceneFallbackStrategy: sceneStrategies.fallback,
+        });
         const gatherMs = Date.now() - gatherStart;
         const systemPrompt = buildSystemPrompt(mode, context);
 
