@@ -30,7 +30,6 @@ import { registerTools } from "./tools/index.js";
 import {
   DEFAULT_SCENE_CONTEXT_STRATEGY,
   SCENE_CONTEXT_STRATEGIES,
-  type SceneContextStrategy,
 } from "./prompt.js";
 import { MNEMOSYNE_VERSION } from "./version.js";
 
@@ -53,17 +52,36 @@ const GENERATOR_PROVIDERS = [
 ] as const;
 type GeneratorProviderName = (typeof GENERATOR_PROVIDERS)[number];
 
-const GENERATOR_PROVIDER =
-  (process.env.GENERATOR_PROVIDER?.trim().toLowerCase() ||
-    "ollama") as GeneratorProviderName;
-if (!GENERATOR_PROVIDERS.includes(GENERATOR_PROVIDER)) {
-  log.error(
-    "startup",
-    `GENERATOR_PROVIDER must be one of: ${GENERATOR_PROVIDERS.join(", ")}`,
-    { value: process.env.GENERATOR_PROVIDER },
-  );
-  process.exit(1);
+// Enum-valued env var parsing, shared by GENERATOR_PROVIDER and the two
+// scene-context strategy vars. `|| undefined` (not `??`): an MCP host
+// injects "" for a blank config field, which must read as unset rather
+// than fail validation and crash-loop the container. Validates against
+// the allowed list BEFORE the value is trusted with the enum type. The
+// caller passes the raw process.env.<NAME> value so the env-schema drift
+// test still sees a literal reference per var.
+function parseEnvEnum<T extends string>(
+  name: string,
+  raw: string | undefined,
+  allowed: readonly T[],
+  fallback: T,
+): T {
+  const cleaned = raw?.trim().toLowerCase() || undefined;
+  if (cleaned === undefined) return fallback;
+  if (!(allowed as readonly string[]).includes(cleaned)) {
+    log.error("startup", `${name} must be one of: ${allowed.join(", ")}`, {
+      value: raw,
+    });
+    process.exit(1);
+  }
+  return cleaned as T;
 }
+
+const GENERATOR_PROVIDER = parseEnvEnum(
+  "GENERATOR_PROVIDER",
+  process.env.GENERATOR_PROVIDER,
+  GENERATOR_PROVIDERS,
+  "ollama" as GeneratorProviderName,
+);
 
 const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
 const OLLAMA_KEEP_ALIVE = process.env.OLLAMA_KEEP_ALIVE || "30m";
@@ -100,31 +118,19 @@ if (!OLLAMA_KEEP_ALIVE_CLEAN) {
   process.exit(1);
 }
 
-const SCENE_CONTEXT_STRATEGY = (
-  process.env.MNEMO_SCENE_CONTEXT_STRATEGY?.trim().toLowerCase() ??
-  DEFAULT_SCENE_CONTEXT_STRATEGY
-) as SceneContextStrategy;
-if (!SCENE_CONTEXT_STRATEGIES.includes(SCENE_CONTEXT_STRATEGY)) {
-  log.error(
-    "startup",
-    `MNEMO_SCENE_CONTEXT_STRATEGY must be one of: ${SCENE_CONTEXT_STRATEGIES.join(", ")}`,
-    { value: process.env.MNEMO_SCENE_CONTEXT_STRATEGY },
-  );
-  process.exit(1);
-}
+const SCENE_CONTEXT_STRATEGY = parseEnvEnum(
+  "MNEMO_SCENE_CONTEXT_STRATEGY",
+  process.env.MNEMO_SCENE_CONTEXT_STRATEGY,
+  SCENE_CONTEXT_STRATEGIES,
+  DEFAULT_SCENE_CONTEXT_STRATEGY,
+);
 
-const SCENE_CONTEXT_FALLBACK_STRATEGY = (
-  process.env.MNEMO_SCENE_CONTEXT_FALLBACK_STRATEGY?.trim().toLowerCase() ??
-  SCENE_CONTEXT_STRATEGY
-) as SceneContextStrategy;
-if (!SCENE_CONTEXT_STRATEGIES.includes(SCENE_CONTEXT_FALLBACK_STRATEGY)) {
-  log.error(
-    "startup",
-    `MNEMO_SCENE_CONTEXT_FALLBACK_STRATEGY must be one of: ${SCENE_CONTEXT_STRATEGIES.join(", ")}`,
-    { value: process.env.MNEMO_SCENE_CONTEXT_FALLBACK_STRATEGY },
-  );
-  process.exit(1);
-}
+const SCENE_CONTEXT_FALLBACK_STRATEGY = parseEnvEnum(
+  "MNEMO_SCENE_CONTEXT_FALLBACK_STRATEGY",
+  process.env.MNEMO_SCENE_CONTEXT_FALLBACK_STRATEGY,
+  SCENE_CONTEXT_STRATEGIES,
+  SCENE_CONTEXT_STRATEGY,
+);
 
 let ocUrl: URL;
 try {
