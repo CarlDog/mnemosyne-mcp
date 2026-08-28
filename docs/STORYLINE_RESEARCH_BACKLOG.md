@@ -15,22 +15,20 @@ fragments and unpromoted character/premise seeds belong in the
 
 - The user already has the principal crew in mind. Do not invent or replace that crew before receiving their profiles.
 - The intended setting is post-Endor.
-- A PDF copy of *Star Wars: Edge of the Empire* is available for later examination.
-- Later research should determine which parts of its ruleset can enrich the storyline and Mnemosyne records, including obligations, motivations, careers and specializations, dice-driven narrative consequences, equipment, vehicles, starships, encounters, and faction or underworld pressures.
+- Later research should determine which parts of the *Edge of the Empire* ruleset can enrich the storyline and Mnemosyne records, including obligations, motivations, careers and specializations, dice-driven narrative consequences, equipment, vehicles, starships, encounters, and faction or underworld pressures.
 - Separate reusable narrative machinery from tabletop bookkeeping. Preserve the useful pressure systems without forcing the eventual story to read like a game transcript.
-- Do not inspect, summarize, or incorporate the PDF until explicitly asked.
+- Do not inspect, summarize, or incorporate the source material until explicitly asked.
 
-### Verified local research sources
+### Local research sources
 
-The source folders below were verified on 2026-08-25. Their contents have not
-yet been opened or analyzed.
+The operator located and verified the relevant *Edge of the Empire* /
+*Age of Rebellion* source material locally on 2026-08-25. Its contents have not
+been opened or analyzed.
 
-- `C:\microSD\Dropbox\[RPG] Star Wars - Edge of the Empire\Core` — 8 PDF files; core *Edge of the Empire* and *Age of Rebellion* sourcebooks.
-- `C:\microSD\Dropbox\[RPG] Star Wars - Edge of the Empire\Character Sheets` — 3 PDF files.
-- `C:\microSD\Dropbox\[RPG] Star Wars - Edge of the Empire\Sheets` — 7 PDF files.
-
-These are operational research locations, not story canon. Inspect them only
-when the operator explicitly begins the deferred ruleset-research pass.
+Paths are deliberately not recorded here: they are machine-local, and this
+repository is public. Ask the operator for the location if and when the
+deferred ruleset-research pass actually begins — these are operational research
+locations, not story canon.
 
 ### Foundation now established
 
