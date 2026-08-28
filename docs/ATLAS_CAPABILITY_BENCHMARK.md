@@ -195,9 +195,15 @@ choice of deployment/provider, not an enforced configuration.
 Every Atlas CLI invocation runs under a bounded budget; a probe that overruns
 is killed (`SIGKILL`) and recorded as a distinct `timeout` result rather than a
 generic error, so a reviewer can tell "the model refused" from "we never heard
-back." Timeouts are tallied separately in `counts.<type>.timeouts`, and the
-budgets in force are written into the report's `budgets` block so a run stays
-auditable.
+back." The budgets in force are written into the report's `budgets` block so a
+run stays auditable.
+
+`counts.<type>` summarizes each probe type separately — `schemaPass` /
+`schemaErrors` / `schemaTimeouts` for the schema probe, and `completed` /
+`errors` / `timeouts` for the live probe. They deliberately do not sum to
+`eligible`: a probe the chosen mode never ran stays `not_run` and is counted
+nowhere, so a schema-only run correctly reports `completed: 0` without that
+reading as failure.
 
 | Budget | Flag | Default | Covers |
 |---|---|---|---|

@@ -413,22 +413,31 @@ async function main() {
 
   const counts = {};
   for (const row of matrix) {
+    // Counters are symmetric per probe type: the schema* trio summarizes
+    // schemaProbe, the completed/errors/timeouts trio summarizes liveProbe.
+    // They deliberately do not sum to `eligible` -- a probe a mode never ran
+    // stays "not_run" and is counted nowhere, which is the honest reading.
     counts[row.catalogType] ||= {
       total: 0,
       eligible: 0,
+      skipped: 0,
+      schemaPass: 0,
+      schemaErrors: 0,
+      schemaTimeouts: 0,
       completed: 0,
       errors: 0,
       timeouts: 0,
-      skipped: 0,
     };
     const count = counts[row.catalogType];
     count.total += 1;
     if (row.eligible) count.eligible += 1;
     else count.skipped += 1;
+    if (row.schemaProbe === "pass") count.schemaPass += 1;
+    if (row.schemaProbe === "error") count.schemaErrors += 1;
+    if (row.schemaProbe === "timeout") count.schemaTimeouts += 1;
     if (row.liveProbe === "completed") count.completed += 1;
     if (row.liveProbe === "error") count.errors += 1;
-    if (row.liveProbe === "timeout" || row.schemaProbe === "timeout")
-      count.timeouts += 1;
+    if (row.liveProbe === "timeout") count.timeouts += 1;
   }
   const report = {
     generatedAt: new Date().toISOString(),
