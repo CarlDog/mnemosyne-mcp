@@ -11,7 +11,6 @@ export default [
       "dist/**",
       ".serena/**",
       "node_modules/**",
-      "scripts/**",
       "tmp/**",
       // vendored git submodule (Atlas Cloud CLI) -- third-party CommonJS
       // code we don't lint. CI never sees it (checkout runs with
@@ -26,5 +25,16 @@ export default [
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    // scripts/ are plain Node ESM, not part of the TS program. They were
+    // ignored outright, which meant 1,700+ lines of operator tooling -- the
+    // billing-guarded Atlas runner among them -- was linted by nothing.
+    // Declaring the three globals they actually use is enough; no `globals`
+    // dependency needed for a list this short.
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      globals: { console: "readonly", process: "readonly", URL: "readonly" },
+    },
+  },
   prettierConfig,
 ];
