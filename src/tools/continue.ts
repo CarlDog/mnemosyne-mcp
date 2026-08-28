@@ -50,6 +50,12 @@ import {
 } from "../validator.js";
 import { log } from "../log.js";
 import { asText, withLogging } from "./helpers.js";
+import {
+  MAX_GENERATION_TOKENS,
+  MAX_TEMPERATURE,
+  MIN_GENERATION_TOKENS,
+  MIN_TEMPERATURE,
+} from "../llm.js";
 
 const DEFAULT_MODE: Mode = "director";
 
@@ -344,8 +350,8 @@ export function registerContinueTool(
         max_tokens: z
           .number()
           .int()
-          .min(1)
-          .max(8192)
+          .min(MIN_GENERATION_TOKENS)
+          .max(MAX_GENERATION_TOKENS)
           .optional()
           .describe(
             "Cap on generation length. Ollama defaults to 2048 when unset; " +
@@ -355,8 +361,8 @@ export function registerContinueTool(
           ),
         temperature: z
           .number()
-          .min(0)
-          .max(2)
+          .min(MIN_TEMPERATURE)
+          .max(MAX_TEMPERATURE)
           .optional()
           .describe(
             "Sampling temperature. Ollama defaults to 0.8 when unset; " +

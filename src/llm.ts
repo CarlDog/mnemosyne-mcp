@@ -119,6 +119,16 @@ const OLLAMA_TIMEOUT_MS = 5 * 60 * 1000;
 // provider-level fallback are one value, not two independently-owned
 // "30m" literals that drift.
 export const DEFAULT_KEEP_ALIVE = "30m";
+
+// Sampling bounds shared by every surface that accepts them. The MCP tool and
+// the REST route validated the same three numbers independently, which is the
+// drift the group-turn constants in kindroid-provider.ts already exist to
+// prevent. (webui keeps its own copies: it is a separate package and cannot
+// import server modules.)
+export const MIN_GENERATION_TOKENS = 1;
+export const MAX_GENERATION_TOKENS = 8192;
+export const MIN_TEMPERATURE = 0;
+export const MAX_TEMPERATURE = 2;
 const DEFAULT_TEMPERATURE = 0.8;
 const DEFAULT_MAX_TOKENS = 2048;
 const WARMUP_TOKENS = 4;
