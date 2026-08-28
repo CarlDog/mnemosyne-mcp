@@ -30,6 +30,8 @@ const SAFE_MEDIA_PROBE =
 // "we never heard back". Ordinary calls (catalog, schema, chat) are quick;
 // `generate wait` blocks on a real image/video render and gets its own,
 // larger budget.
+const MODES = ["catalog", "chat", "media-schema", "media-smoke", "all"];
+
 const DEFAULT_PROBE_TIMEOUT_MS = 120_000;
 const DEFAULT_MEDIA_TIMEOUT_MS = 900_000;
 
@@ -60,12 +62,23 @@ function parseArgs(argv) {
     else if (arg === "--max-spend") args.maxSpendUsd = Number(argv[++i]);
     else if (arg === "--help" || arg === "-h") {
       console.log(
-        "Usage: atlas-capability-benchmark.mjs [--mode catalog|chat|media-schema|media-smoke|all] [--out PATH] [--media-model-limit N] [--timeout-ms MS] [--media-timeout-ms MS] [--max-spend USD]",
+        `Usage: atlas-capability-benchmark.mjs [--mode ${MODES.join("|")}] [--out PATH] [--media-model-limit N] [--timeout-ms MS] [--media-timeout-ms MS] [--max-spend USD]`,
       );
       process.exit(0);
     } else {
       throw new Error(`Unknown argument: ${arg}`);
     }
+  }
+  // An unrecognized --mode used to be accepted silently: main() derives
+  // runChat/runSchema/runMedia by === against the known modes, so a typo made
+  // all three false, probed nothing, wrote a report whose every row said
+  // "not_run", and exited 0 with the typo recorded as the mode. Exit 0 on a
+  // report that measured nothing is the one output an evidence runner must
+  // never produce.
+  if (!MODES.includes(args.mode)) {
+    throw new Error(
+      `--mode must be one of: ${MODES.join(", ")} (got ${JSON.stringify(args.mode)})`,
+    );
   }
   if (!Number.isInteger(args.mediaModelLimit) || args.mediaModelLimit < 0) {
     throw new Error("--media-model-limit must be a non-negative integer");
