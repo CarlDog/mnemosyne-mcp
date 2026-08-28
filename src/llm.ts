@@ -172,7 +172,16 @@ export class OllamaProvider implements LlmProvider {
 
   constructor(private readonly config: OllamaConfig) {}
 
-  async generate(opts: LlmGenerateOptions): Promise<GeneratedBeat> {
+  // numCtxOverride is warmup plumbing: it pins num_ctx instead of sizing
+  // it to the (tiny) warmup prompt, so the preloaded runner matches the
+  // window real large-story requests will ask for. Ollama reloads the
+  // model when a later request wants a bigger num_ctx than it was loaded
+  // with -- a warmup at the computeNumCtx floor (MIN_NUM_CTX) would leave
+  // the first real call paying the full cold start anyway.
+  async generate(
+    opts: LlmGenerateOptions,
+    numCtxOverride?: number,
+  ): Promise<GeneratedBeat> {
     const model = opts.model ?? this.config.defaultModel;
     const url = new URL("/api/chat", this.config.url);
 
@@ -182,7 +191,8 @@ export class OllamaProvider implements LlmProvider {
       numPredict,
       this.config.maxContextWindow,
     );
-    if (ctxPlan.capped) {
+    const numCtx = numCtxOverride ?? ctxPlan.numCtx;
+    if (numCtxOverride === undefined && ctxPlan.capped) {
       log.warn("ollama", "prompt likely exceeds context window cap", {
         model,
         est_prompt_tokens: ctxPlan.estPromptTokens,
@@ -198,11 +208,15 @@ export class OllamaProvider implements LlmProvider {
         { role: "user", content: opts.userMessage },
       ],
       stream: false,
+      // keep_alive is a TOP-LEVEL /api/chat field, sibling of options --
+      // nested inside options Ollama silently ignores it (verified live
+      // 2026-08-27: options.keep_alive left the server default expiry
+      // untouched; top-level keep_alive moved it).
+      keep_alive: this.config.keepAlive ?? DEFAULT_KEEP_ALIVE,
       options: {
         temperature: opts.temperature ?? DEFAULT_TEMPERATURE,
         num_predict: numPredict,
-        num_ctx: ctxPlan.numCtx,
-        keep_alive: this.config.keepAlive ?? DEFAULT_KEEP_ALIVE,
+        num_ctx: numCtx,
       },
     };
 
@@ -211,7 +225,7 @@ export class OllamaProvider implements LlmProvider {
       model,
       system_chars: opts.systemPrompt.length,
       user_chars: opts.userMessage.length,
-      num_ctx: ctxPlan.numCtx,
+      num_ctx: numCtx,
       est_prompt_tokens: ctxPlan.estPromptTokens,
       keep_alive: this.config.keepAlive ?? DEFAULT_KEEP_ALIVE,
     });
@@ -267,10 +281,16 @@ export class OllamaProvider implements LlmProvider {
   }
 
   async warmup(): Promise<void> {
-    await this.generate({
-      systemPrompt: "",
-      userMessage: "ready",
-      maxTokens: WARMUP_TOKENS,
-    });
+    // Pin num_ctx to the configured window (not the tiny warmup prompt's
+    // computed floor) so the runner Ollama loads here is the same one
+    // real requests will hit -- see the numCtxOverride note on generate.
+    await this.generate(
+      {
+        systemPrompt: "",
+        userMessage: "ready",
+        maxTokens: WARMUP_TOKENS,
+      },
+      this.config.maxContextWindow ?? DEFAULT_MAX_NUM_CTX,
+    );
   }
 }
