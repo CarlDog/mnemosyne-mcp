@@ -15,29 +15,18 @@ import {
   MODES,
   SCENE_CONTEXT_STRATEGIES,
   gatherContext,
-  buildSystemPrompt,
   resolveSceneContextStrategies,
   type SceneContextStrategy,
 } from "../prompt.js";
-import { saveEntity, retagValidation } from "../entities.js";
-import {
-  combineKindroidTarget,
-  findStory,
-  type KindroidTarget,
-} from "../stories.js";
+import { combineKindroidTarget, findStory, type KindroidTarget } from "../stories.js";
 import {
   MIN_GROUP_MAX_TURNS,
   MAX_GROUP_MAX_TURNS,
-  resolveKindroidTarget,
 } from "../kindroid-provider.js";
+import { continueScene } from "../tools/continue.js";
 import { revalidateScenes } from "../tools/revalidate.js";
-import {
-  validateContent,
-  classifyVerdict,
-  type ValidationReport,
-} from "../validator.js";
+import { validateContent } from "../validator.js";
 import { asyncRoute } from "./helpers.js";
-import { log } from "../log.js";
 
 // The validate/revalidate bodies carry no scene_context_strategy params:
 // validation contexts are gathered validationOnly (no scene pull -- the
@@ -50,7 +39,6 @@ const validateSchema = z.object({
 
 const revalidateScenesSchema = z.object({});
 
-const DEFAULT_MODE: (typeof MODES)[number] = "director";
 const continueSchema = z.object({
   direction: z.string().min(1),
   mode: z.enum(MODES).optional(),
@@ -124,15 +112,6 @@ export function registerInteractiveRoutes(
           fallback: sceneContextFallbackStrategy,
         },
       );
-      const mode = parsedBody.data.mode ?? DEFAULT_MODE;
-
-      const gatherStart = Date.now();
-      const context = await gatherContext(oc, story.id, parsedBody.data.direction, {
-        sceneStrategy: sceneStrategies.strategy,
-        sceneFallbackStrategy: sceneStrategies.fallback,
-      });
-      const gatherMs = Date.now() - gatherStart;
-      const systemPrompt = buildSystemPrompt(mode, context);
 
       // combineKindroidTarget throws on kindroid_kin + kindroid_group_id
       // both set -- a client input error the zod schema can't express
@@ -150,137 +129,26 @@ export function registerInteractiveRoutes(
           .json(requestErrorBody("invalid_body", (err as Error).message));
         return;
       }
-      let storyTarget: KindroidTarget | undefined;
-      if (explicitTarget === undefined && generator.name === "kindroid") {
-        storyTarget = story.kindroid_target;
-      }
-      const kindroidTarget = resolveKindroidTarget(
-        explicitTarget,
-        generator.name,
-        storyTarget,
-      );
 
-      const generateStart = Date.now();
-      const beat = await generator.generate({
-        systemPrompt,
-        userMessage: parsedBody.data.direction,
-        temperature: parsedBody.data.temperature,
+      const result = await continueScene(oc, generator, validator, story.id, {
+        direction: parsedBody.data.direction,
+        mode: parsedBody.data.mode,
+        sceneStrategy: sceneStrategies.strategy,
+        sceneFallbackStrategy: sceneStrategies.fallback,
         maxTokens: parsedBody.data.max_tokens,
+        temperature: parsedBody.data.temperature,
         model: parsedBody.data.model,
-        context,
-        kindroidTarget,
+        explicitKindroidTarget: explicitTarget,
+        // findStory already ran for the 404 check above -- hand its
+        // binding over so continueScene doesn't re-fetch the marker.
+        storyKindroidTarget: story.kindroid_target,
+        storyKindroidTargetPrefetched: true,
         groupMaxTurns: parsedBody.data.group_max_turns,
         allowUser: parsedBody.data.allow_user,
+        validate: parsedBody.data.validate,
+        reinvokeHint: `call /stories/${story.id}/continue again`,
       });
-      const generateMs = Date.now() - generateStart;
-      const beatText = beat.text;
-      const groupMeta = {
-        ...(beat.groupEnded !== undefined && { group_ended: beat.groupEnded }),
-        ...(beat.groupTurns !== undefined && { group_turns: beat.groupTurns }),
-      };
-
-      if (beatText.trim() === "") {
-        res.json({
-          yielded_to_user: true,
-          beat_text: "",
-          saved: false,
-          message:
-            "The group handed the floor straight back to you -- no AI " +
-            "turns were generated, so nothing was saved. Your direction " +
-            "was already posted to the group; do not re-send it. Take " +
-            `the turn: call /stories/${story.id}/continue again with what you say next.`,
-          mode,
-          stages_ms: {
-            gather_ms: gatherMs,
-            generate_ms: generateMs,
-            save_ms: 0,
-            validate_ms: 0,
-          },
-          ...groupMeta,
-        });
-        return;
-      }
-
-      const saveStart = Date.now();
-      const beatName = `Scene ${new Date().toISOString()}`;
-      let memoryId: string | undefined;
-      let savedTags: string[] | undefined;
-      let saveError: string | undefined;
-      try {
-        const saved = await saveEntity(oc, story.id, {
-          type: "scene",
-          name: beatName,
-          body: beatText,
-        });
-        memoryId = saved.memory_id;
-        savedTags = saved.tags;
-      } catch (err) {
-        saveError = (err as Error).message;
-        log.warn("api:continue", "scene save failed", { msg: saveError });
-      }
-      const saveMs = Date.now() - saveStart;
-
-      let validateMs = 0;
-      let validation: ValidationReport | undefined;
-      let validationError: string | undefined;
-      if (parsedBody.data.validate) {
-        const validateStart = Date.now();
-        try {
-          validation = await validateContent(validator, context, beatText);
-        } catch (err) {
-          validationError = (err as Error).message;
-          log.warn("api:continue", "validation pass failed", {
-            msg: validationError,
-          });
-        } finally {
-          validateMs = Date.now() - validateStart;
-        }
-      }
-
-      if (
-        memoryId !== undefined &&
-        savedTags !== undefined &&
-        validation !== undefined
-      ) {
-        try {
-          await retagValidation(
-            oc,
-            memoryId,
-            savedTags,
-            classifyVerdict(validation),
-          );
-        } catch (err) {
-          log.warn("api:continue", "validation retag failed", {
-            msg: (err as Error).message,
-          });
-        }
-      }
-
-      res.json({
-        beat_name: beatName,
-        beat_text: beatText,
-        ...(memoryId !== undefined && { memory_id: memoryId }),
-        ...(saveError !== undefined && { save_error: saveError }),
-        mode,
-        context_summary: {
-          rules: context.rules.length,
-          style: context.style.length,
-          characters: context.characters.length,
-          locations: context.locations.length,
-          scenes: context.scenes.length,
-          lore: context.lore.length,
-          worldbuilding: context.worldbuilding.length,
-        },
-        ...(validation !== undefined && { validation }),
-        ...(validationError !== undefined && { validation_error: validationError }),
-        stages_ms: {
-          gather_ms: gatherMs,
-          generate_ms: generateMs,
-          save_ms: saveMs,
-          validate_ms: validateMs,
-        },
-        ...groupMeta,
-      });
+      res.json(result);
     }),
   );
 
