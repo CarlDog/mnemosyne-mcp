@@ -1,6 +1,8 @@
 dist
 node_modules
 .serena
+# vendored git submodule (third-party code, not ours to format)
+vendor
 package-lock.json
 
 # Hand-crafted markdown — keep current formatting
