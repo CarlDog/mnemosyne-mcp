@@ -13,6 +13,16 @@ All recommendations remain research-only until separately ratified. The
 current local verification baseline is 192 passing and 62 skipped tests (254
 total), with typecheck and lint green.
 
+**Current engineering checkpoint (2026-08-28): the Atlas capability runner is
+hardened and L0-L3 evidence is on record.** Five real defects were found and
+fixed by running it — an unbounded subprocess wait, a summary that hid schema
+failures, generated media written into the repo against the runner's own
+no-raw-output contract, a `--media-model-limit` that took a prefix instead of
+sampling both media types, and a job-count "budget" that bounds nothing when
+unit prices span 22x. Evidence for every level is in
+[the dated results doc](docs/ATLAS_CAPABILITY_RESULTS_2026-08-28.md). Routing
+state is unchanged: no Atlas model is certified mature/NSFW-capable.
+
 **Previous engineering checkpoint (2026-08-27): the
 scene-context/continue feature series passed an adversarial review, all 11
 confirmed findings are remediated, and CI's Test workflow is green again** —
@@ -517,6 +527,69 @@ Typecheck and lint are green. Historical counts below remain attached to the
 milestones at which they were measured.
 
 ## Done
+
+- **Atlas capability runner hardened, and L0-L3 coverage recorded**
+  (2026-08-28, twelve Atlas commits between `c176669` and `d213b62`). The protocol landed the day
+  before as documentation; actually running it found five defects, each fixed
+  the same day and each verified against the live CLI rather than by
+  inspection.
+  - **Unbounded subprocess wait.** Every probe waited indefinitely, which the
+    protocol itself named as the reason it was unsafe to schedule. Bounded in
+    `runJson`, the single chokepoint all six call sites pass through, with
+    separate budgets for ordinary probes (120 s) and `generate wait` (900 s),
+    and a timeout recorded as a *distinct* result rather than folded into
+    "error". This stopped being theoretical during the chat sweep:
+    `bytedance/doubao-seed-2.1-pro-260628` consumed its full budget and was
+    killed while the run still completed — the exact long-tail latency that
+    halted the 2026-08-27 sweep.
+  - **`--mode all` charged and saved nothing.** The `--media-model-limit`
+    requirement was enforced *after* the billable chat sweep, so a run without
+    it paid for inference and then threw before writing. Moved to
+    argument-parse time.
+  - **The summary hid schema failures.** `errors`/`completed` were computed
+    from `liveProbe` alone, so a schema-only run reported zero errors while a
+    real failure sat in the rows. Counters are now symmetric per probe type.
+  - **Generated media was written into the repository.** The smoke run left
+    three PNGs in the repo root while the report claimed
+    `rawOutputsStored: false` and CLAUDE.md claimed the script never stores raw
+    output. Benign here — the probe prompt is non-graphic — but the contract
+    exists so a widened probe cannot drop generated adult media into a git
+    repo. Fixed with `--no-download`.
+  - **A job count is not a cost bound.** Eligible video prices span 22x
+    ($0.34-$7.56 measured), and targets are chosen by catalog order, which is
+    uncorrelated with price — so a limit of 6 would have cost roughly $14. The
+    limit now interleaves image and video rather than taking a prefix, and
+    `--max-spend` quotes every target through the non-billable cost endpoint,
+    prints the itemization, and refuses to submit if the total exceeds the
+    ceiling. On the one run where it mattered, quoted $1.2525 vs actual $1.25.
+  - **Coverage:** L0 catalog (385 models, machine-derived), L1 schema (85/85
+    eligible media), L2 chat (60/60 eligible), L3 bounded smoke across both
+    media types. L4 explicit review stays deliberately un-automated. Two
+    upstream findings worth carrying forward: **10 of 385 catalogued models are
+    advertised but not callable** (one image route 404s on `models get`, nine
+    chat models reject any completion with `http_400`, both reproduced outside
+    the runner), and `alibaba/wan-3.0/text-to-video` quotes **$4.80** today
+    against the $0.08 recorded on 2026-08-27 — that figure is not a safe basis
+    for estimating. Total spend for the day: **$1.45**.
+  - The vendored `vendor/atlascloud-cli` submodule turned out to be an
+    installer, not a binary; four docs referenced it without saying how to get
+    a runnable `atlas`. Documented, including the Windows `.cmd` spawn hazard
+    that `ATLAS_CLI_BIN` sidesteps.
+
+- **CLAUDE.md's duplicated status collapsed, and two correctness fixes**
+  (2026-08-28, `ad591ef` and `2905bf7`). CLAUDE.md's "Current Sprint" had grown
+  to 129 lines restating this file, which the project's own documentation
+  discipline forbids — and it had already drifted, still listing GhostHunters
+  at 105 entities where the validator reports 101. Collapsed to a pointer after
+  verifying every specific detail was already recorded here; five downstream
+  contradictions went with it. Separately, `scripts/validate-canon.mjs` exited
+  **0** on a `canon/` directory that does not exist, because every `readdir`
+  swallowed its own `ENOENT` — so the tool that would verify a restore could
+  not distinguish an intact tree from a lost one. Bare catches now treat only
+  ENOENT as "absent"; anything else fails loudly. `package.json` also gained
+  `private: true` (later scoped to `@carldog/mnemosyne-mcp`): the unscoped npm
+  name belongs to an unrelated package, so `bin` + `files` advertised a
+  distribution path that could never work.
 
 - **NemoClaw comparative research documented** (2026-08-28). Audited the
   canonical NVIDIA NemoClaw repository at `b7261ff` (clean local clone,
