@@ -34,7 +34,7 @@ async function captureRequestBody(keepAlive?: string): Promise<Captured> {
 
   const provider = new OllamaProvider({
     url: "http://stub:11434",
-    model: "test-model",
+    defaultModel: "test-model",
     ...(keepAlive === undefined ? {} : { keepAlive }),
   });
   await provider.generate({ systemPrompt: "sys", userMessage: "usr" });

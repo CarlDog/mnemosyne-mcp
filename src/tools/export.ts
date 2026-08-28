@@ -8,9 +8,13 @@ import type { OcClient } from "../oc-client.js";
 import { requireCurrentStoryId } from "../config.js";
 import { exportStory } from "../export.js";
 import { findStory } from "../stories.js";
-import { asText, withLogging } from "./helpers.js";
+import { asText, assertFilesystemPathAllowed, withLogging } from "./helpers.js";
 
-export function registerExportTool(server: McpServer, oc: OcClient): void {
+export function registerExportTool(
+  server: McpServer,
+  oc: OcClient,
+  allowFilesystemPaths: boolean,
+): void {
   server.registerTool(
     "mnemo_export_story",
     {
@@ -44,6 +48,9 @@ export function registerExportTool(server: McpServer, oc: OcClient): void {
     withLogging(
       "mnemo_export_story",
       async (args: { name_or_id?: string; out_path?: string }) => {
+        if (args.out_path !== undefined) {
+          assertFilesystemPathAllowed(allowFilesystemPaths, "out_path");
+        }
         const nameOrId = args.name_or_id ?? (await requireCurrentStoryId());
         const story = await findStory(oc, nameOrId);
         if (!story) {

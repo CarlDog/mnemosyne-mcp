@@ -63,3 +63,32 @@ export function withLogging<A extends ToolArgs>(
     }
   };
 }
+
+/**
+ * Refuses a caller-supplied filesystem path when the server is not reachable
+ * only by its local operator.
+ *
+ * `mnemo_export_story(out_path)` and `mnemo_import_story(file_path)` resolve
+ * whatever they are given and read or write it with the server process's full
+ * authority. Under stdio that is a local operator capability and is fine. The
+ * HTTP transport registers the SAME tool surface, so without this an HTTP
+ * caller could read or write anywhere the process can.
+ *
+ * Deliberately a flat rejection rather than an allowed-root facility: the
+ * assessment that raised this (docs/NEMOCLAW_ADOPTION_ASSESSMENT.md §1) argues
+ * a confinement facility is both larger and easier to get subtly wrong, and
+ * nothing needs caller-chosen paths over HTTP. The server-owned default
+ * destinations still work on both transports, as does import's `entities`
+ * mode -- only the path-bearing variants are refused.
+ */
+export function assertFilesystemPathAllowed(
+  allowFilesystemPaths: boolean,
+  field: string,
+): void {
+  if (allowFilesystemPaths) return;
+  throw new Error(
+    `\`${field}\` is refused over the HTTP transport: it resolves to a path on the ` +
+      "server's filesystem, which is a local-operator capability. Omit it to use the " +
+      "server-owned default location, or run the server over stdio.",
+  );
+}

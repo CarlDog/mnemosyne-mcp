@@ -20,9 +20,13 @@ import {
   type ImportRecord,
 } from "../import.js";
 import { findStory } from "../stories.js";
-import { asText, withLogging } from "./helpers.js";
+import { asText, assertFilesystemPathAllowed, withLogging } from "./helpers.js";
 
-export function registerImportTool(server: McpServer, oc: OcClient): void {
+export function registerImportTool(
+  server: McpServer,
+  oc: OcClient,
+  allowFilesystemPaths: boolean,
+): void {
   server.registerTool(
     "mnemo_import_story",
     {
@@ -94,6 +98,9 @@ export function registerImportTool(server: McpServer, oc: OcClient): void {
         on_conflict?: "skip" | "overwrite" | "error";
         story?: string;
       }) => {
+        if (args.file_path !== undefined) {
+          assertFilesystemPathAllowed(allowFilesystemPaths, "file_path");
+        }
         if (!args.entities === !args.file_path) {
           throw new Error(
             "Pass exactly one of `entities` or `file_path` — they are mutually exclusive input modes.",
