@@ -43,6 +43,52 @@ export const SCENE_CONTEXT_STRATEGIES = ["recency-first", "query-ranked"] as con
 export type SceneContextStrategy = (typeof SCENE_CONTEXT_STRATEGIES)[number];
 export const DEFAULT_SCENE_CONTEXT_STRATEGY: SceneContextStrategy = "recency-first";
 
+// Shared schema-description strings for the per-call strategy params.
+// Every surface that exposes the params (three MCP tools, three API
+// routes' docs) must describe the SAME semantics, and those semantics
+// live in resolveSceneContextStrategies below -- keeping the words next
+// to the code stops the copies drifting into contradiction again.
+export const SCENE_CONTEXT_STRATEGY_DESCRIPTION =
+  "When selecting RECENT SCENES for context, choose either recency-first " +
+  "(project-scoped created-at order) or query-ranked (query-ranked " +
+  "memory_search). Overrides the server default " +
+  "MNEMO_SCENE_CONTEXT_STRATEGY for this call only. If unset, the server " +
+  "default applies.";
+export const SCENE_CONTEXT_FALLBACK_DESCRIPTION =
+  "Optional fallback strategy tried when the primary yields no eligible " +
+  "scenes. If unset while scene_context_strategy IS set on this call, no " +
+  "fallback occurs (the chosen strategy runs pure); if both are unset, " +
+  "the server's MNEMO_SCENE_CONTEXT_FALLBACK_STRATEGY applies.";
+
+// The one place per-call strategy overrides meet the server-configured
+// defaults. Contract (documented in the strings above):
+// - an explicit per-call fallback always wins;
+// - a per-call PRIMARY with no per-call fallback means NO fallback --
+//   the caller opted into that strategy's pure semantics, and silently
+//   inheriting a mismatched server fallback would contaminate it;
+// - neither set: the server pair applies (a server fallback equal to the
+//   server primary collapses to "no fallback").
+export function resolveSceneContextStrategies(
+  perCall: {
+    strategy?: SceneContextStrategy;
+    fallback?: SceneContextStrategy;
+  },
+  server: {
+    strategy: SceneContextStrategy;
+    fallback: SceneContextStrategy;
+  },
+): { strategy: SceneContextStrategy; fallback?: SceneContextStrategy } {
+  const strategy = perCall.strategy ?? server.strategy;
+  let fallback: SceneContextStrategy | undefined;
+  if (perCall.fallback !== undefined) {
+    fallback = perCall.fallback;
+  } else if (perCall.strategy === undefined) {
+    fallback = server.fallback;
+  }
+  if (fallback === strategy) fallback = undefined;
+  return { strategy, ...(fallback !== undefined && { fallback }) };
+}
+
 // Per-type pull caps. Rules and style are typically small and important —
 // pull all (OC's pinned-always-surface bias gives us all pinned rules
 // regardless of these limits, but the cap matters for non-pinned). Other

@@ -5,6 +5,7 @@ import {
   buildSystemPrompt,
   neutralizeSectionDelimiters,
   pullFilteredScenes,
+  resolveSceneContextStrategies,
   type ContextBundle,
 } from "../src/prompt.js";
 import type { OcClient, OcMemory } from "../src/oc-client.js";
@@ -298,6 +299,64 @@ describe("prompt — pullFilteredScenes", () => {
       "recency-first",
     );
     expect(result).toEqual([]);
+  });
+});
+
+describe("prompt — resolveSceneContextStrategies", () => {
+  const server = {
+    strategy: "recency-first",
+    fallback: "recency-first",
+  } as const;
+  const serverWithDistinctFallback = {
+    strategy: "recency-first",
+    fallback: "query-ranked",
+  } as const;
+
+  it("neither set: server pair applies, same-as-primary fallback collapses to none", () => {
+    expect(resolveSceneContextStrategies({}, server)).toEqual({
+      strategy: "recency-first",
+    });
+    expect(resolveSceneContextStrategies({}, serverWithDistinctFallback)).toEqual({
+      strategy: "recency-first",
+      fallback: "query-ranked",
+    });
+  });
+
+  it("per-call primary with no per-call fallback runs pure -- no inherited server fallback", () => {
+    // The documented contract: a caller opting into one strategy must not
+    // silently get a second pass with the server's (different) fallback.
+    expect(
+      resolveSceneContextStrategies({ strategy: "query-ranked" }, server),
+    ).toEqual({ strategy: "query-ranked" });
+    expect(
+      resolveSceneContextStrategies(
+        { strategy: "recency-first" },
+        serverWithDistinctFallback,
+      ),
+    ).toEqual({ strategy: "recency-first" });
+  });
+
+  it("an explicit per-call fallback always wins", () => {
+    expect(
+      resolveSceneContextStrategies(
+        { strategy: "query-ranked", fallback: "recency-first" },
+        server,
+      ),
+    ).toEqual({ strategy: "query-ranked", fallback: "recency-first" });
+    // Per-call fallback without a per-call primary pairs with the server
+    // primary.
+    expect(
+      resolveSceneContextStrategies({ fallback: "query-ranked" }, server),
+    ).toEqual({ strategy: "recency-first", fallback: "query-ranked" });
+  });
+
+  it("a fallback equal to the resolved primary collapses to none", () => {
+    expect(
+      resolveSceneContextStrategies(
+        { strategy: "query-ranked", fallback: "query-ranked" },
+        server,
+      ),
+    ).toEqual({ strategy: "query-ranked" });
   });
 });
 

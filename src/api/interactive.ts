@@ -16,6 +16,7 @@ import {
   SCENE_CONTEXT_STRATEGIES,
   gatherContext,
   buildSystemPrompt,
+  resolveSceneContextStrategies,
   type SceneContextStrategy,
 } from "../prompt.js";
 import { saveEntity, retagValidation } from "../entities.js";
@@ -120,11 +121,16 @@ export function registerInteractiveRoutes(
         return;
       }
 
-      const requestedSceneContextStrategy =
-        parsedBody.data.scene_context_strategy ?? sceneContextStrategy;
-      const requestedSceneContextFallbackStrategy =
-        parsedBody.data.scene_context_fallback_strategy ??
-        sceneContextFallbackStrategy;
+      const sceneStrategies = resolveSceneContextStrategies(
+        {
+          strategy: parsedBody.data.scene_context_strategy,
+          fallback: parsedBody.data.scene_context_fallback_strategy,
+        },
+        {
+          strategy: sceneContextStrategy,
+          fallback: sceneContextFallbackStrategy,
+        },
+      );
       const mode = parsedBody.data.mode ?? DEFAULT_MODE;
 
       const gatherStart = Date.now();
@@ -132,8 +138,8 @@ export function registerInteractiveRoutes(
         oc,
         story.id,
         parsedBody.data.direction,
-        requestedSceneContextStrategy,
-        requestedSceneContextFallbackStrategy,
+        sceneStrategies.strategy,
+        sceneStrategies.fallback,
       );
       const gatherMs = Date.now() - gatherStart;
       const systemPrompt = buildSystemPrompt(mode, context);
@@ -302,17 +308,22 @@ export function registerInteractiveRoutes(
         return;
       }
 
-      const requestedStrategy =
-        parsedBody.data.scene_context_strategy ?? sceneContextStrategy;
-      const requestedFallbackStrategy =
-        parsedBody.data.scene_context_fallback_strategy ??
-        sceneContextFallbackStrategy;
+      const sceneStrategies = resolveSceneContextStrategies(
+        {
+          strategy: parsedBody.data.scene_context_strategy,
+          fallback: parsedBody.data.scene_context_fallback_strategy,
+        },
+        {
+          strategy: sceneContextStrategy,
+          fallback: sceneContextFallbackStrategy,
+        },
+      );
       const context = await gatherContext(
         oc,
         story.id,
         parsedBody.data.content,
-        requestedStrategy,
-        requestedFallbackStrategy,
+        sceneStrategies.strategy,
+        sceneStrategies.fallback,
       );
       const report = await validateContent(
         validator,
@@ -349,13 +360,22 @@ export function registerInteractiveRoutes(
         return;
       }
 
+      const sceneStrategies = resolveSceneContextStrategies(
+        {
+          strategy: parsedBody.data.scene_context_strategy,
+          fallback: parsedBody.data.scene_context_fallback_strategy,
+        },
+        {
+          strategy: sceneContextStrategy,
+          fallback: sceneContextFallbackStrategy,
+        },
+      );
       const result = await revalidateScenes(
         oc,
         validator,
         story.id,
-        parsedBody.data.scene_context_strategy ?? sceneContextStrategy,
-        parsedBody.data.scene_context_fallback_strategy ??
-          sceneContextFallbackStrategy,
+        sceneStrategies.strategy,
+        sceneStrategies.fallback,
       );
       res.json(result);
     }),
