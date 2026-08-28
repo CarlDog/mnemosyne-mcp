@@ -12,11 +12,14 @@
 // needing to escape it on the command line).
 
 import { readFile } from "node:fs/promises";
-import { OcClient } from "../dist/oc-client.js";
-import { OllamaProvider } from "../dist/llm.js";
-import { gatherContext } from "../dist/prompt.js";
-import { validateContent } from "../dist/validator.js";
+import "./dist-preflight.mjs";
 
+// dist/ imports are dynamic so the preflight above can report a missing
+// build: a static import fails during ESM linking, before any code runs.
+const { OcClient } = await import("../dist/oc-client.js");
+const { OllamaProvider } = await import("../dist/llm.js");
+const { gatherContext } = await import("../dist/prompt.js");
+const { validateContent } = await import("../dist/validator.js");
 // No --scene-context-strategy flag here (removed 2026-08-27): the
 // validation context is gathered validationOnly, matching mnemo_validate
 // -- the validator never reads scenes, so a strategy flag on this script
@@ -45,8 +48,24 @@ console.log("CONTENT BEING VALIDATED");
 console.log("=".repeat(78));
 console.log(content);
 
-const oc = new OcClient(new URL(ocUrl));
-await oc.connect();
+let ocUrlParsed;
+try {
+  ocUrlParsed = new URL(ocUrl);
+} catch {
+  console.error(`dump-validation: OC_URL is not a valid URL: ${ocUrl}`);
+  process.exit(1);
+}
+const oc = new OcClient(ocUrlParsed);
+try {
+  await oc.connect();
+} catch (err) {
+  // Naming OC explicitly matters: the raw failure is a bare "fetch failed"
+  // plus undici frames that never mention which service was unreachable.
+  console.error(
+    `dump-validation: could not reach OpenChronicle at ${ocUrl} -- ${err.message}`,
+  );
+  process.exit(1);
+}
 const validator = new OllamaProvider({
   url: ollamaUrl,
   defaultModel: validatorModel,

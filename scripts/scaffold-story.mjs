@@ -419,4 +419,7 @@ async function main() {
   }
 }
 
-await main();
+await main().catch((err) => {
+  console.error(`scaffold-story: ${err.message}`);
+  process.exit(1);
+});

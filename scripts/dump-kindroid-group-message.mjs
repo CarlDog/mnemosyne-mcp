@@ -14,15 +14,18 @@
 //   OC_URL=http://your-nas:18000/mcp \
 //     node scripts/dump-kindroid-group-message.mjs <story_id> <group_id> "<direction>"
 
-import { OcClient } from "../dist/oc-client.js";
-import { findStory, setKindroidTarget } from "../dist/stories.js";
-import {
+import "./dist-preflight.mjs";
+
+// dist/ imports are dynamic so the preflight above can report a missing
+// build: a static import fails during ESM linking, before any code runs.
+const { OcClient } = await import("../dist/oc-client.js");
+const { findStory, setKindroidTarget } = await import("../dist/stories.js");
+const {
   DEFAULT_SCENE_CONTEXT_STRATEGY,
   SCENE_CONTEXT_STRATEGIES,
   gatherContext,
-} from "../dist/prompt.js";
-import { buildKindroidMessage } from "../dist/kindroid-provider.js";
-
+} = await import("../dist/prompt.js");
+const { buildKindroidMessage } = await import("../dist/kindroid-provider.js");
 const args = process.argv.slice(2);
 let storyId;
 let groupId;
@@ -91,8 +94,26 @@ if (!ocUrl) {
   process.exit(2);
 }
 
-const oc = new OcClient(new URL(ocUrl));
-await oc.connect();
+let ocUrlParsed;
+try {
+  ocUrlParsed = new URL(ocUrl);
+} catch {
+  console.error(
+    `dump-kindroid-group-message: OC_URL is not a valid URL: ${ocUrl}`,
+  );
+  process.exit(1);
+}
+const oc = new OcClient(ocUrlParsed);
+try {
+  await oc.connect();
+} catch (err) {
+  // Naming OC explicitly matters: the raw failure is a bare "fetch failed"
+  // plus undici frames that never mention which service was unreachable.
+  console.error(
+    `dump-kindroid-group-message: could not reach OpenChronicle at ${ocUrl} -- ${err.message}`,
+  );
+  process.exit(1);
+}
 
 const story = await findStory(oc, storyId);
 if (!story) {
