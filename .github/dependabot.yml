@@ -41,3 +41,30 @@ updates:
         update-types: [minor, patch]
       npm-major:
         update-types: [major]
+
+  # ── npm (webui/ is a separate package, not a workspace) ───────────
+  # The root package.json declares no `workspaces`, so Dependabot never reads
+  # webui/package.json from the block above -- its 19 dependencies had zero
+  # update coverage while being shipped code (src/index.ts serves the built
+  # bundle). Group names MUST match the root block: the fleet auto-merge
+  # script parses them out of the branch ref, not the directory.
+  - package-ecosystem: npm
+    directory: /webui
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - npm
+    groups:
+      npm-dev:
+        dependency-type: development
+        update-types: [minor, patch]
+      npm-runtime:
+        dependency-type: production
+        update-types: [minor, patch]
+      npm-major:
+        update-types: [major]
