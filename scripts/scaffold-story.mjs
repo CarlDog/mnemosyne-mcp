@@ -30,6 +30,7 @@
 
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
+import { toCanonScalar } from "./canon-frontmatter.mjs";
 
 function parseArgs(argv) {
   const [slug, ...rest] = argv;
@@ -230,20 +231,11 @@ function normalizeHeadings(body) {
     .join("\n");
 }
 
-function toYamlScalar(v) {
-  // Must start with a word character specifically, not just any char in the
-  // allowed set -- a leading "-", quote, or space is a YAML plain-scalar
-  // indicator and would be ambiguous left unquoted (e.g. "- test" reads as
-  // a block-sequence item, not a string starting with a hyphen).
-  if (/^\w[\w' -]*$/.test(v) && !v.includes(": ")) return v;
-  return JSON.stringify(v);
-}
-
 function renderFrontmatter(fields) {
   const lines = ["---"];
   for (const [k, v] of Object.entries(fields)) {
     if (v === undefined || v === null || v === "") continue;
-    lines.push(`${k}: ${toYamlScalar(v)}`);
+    lines.push(`${k}: ${toCanonScalar(v)}`);
   }
   lines.push("---");
   return lines.join("\n");
@@ -290,7 +282,7 @@ async function appendMinorCharacter(minorLines, entity) {
 async function writeSimpleEntity(outDir, subdir, entity) {
   const slug = slugify(entity.name);
   const file = path.join(outDir, subdir, `${slug}.md`);
-  const rendered = `---\nname: ${toYamlScalar(entity.name)}\n---\n\n${entity.content.trim()}\n`;
+  const rendered = `---\nname: ${toCanonScalar(entity.name)}\n---\n\n${entity.content.trim()}\n`;
   await writeFile(file, rendered, "utf8");
   return file;
 }
