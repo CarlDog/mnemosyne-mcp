@@ -254,7 +254,7 @@ function slugify(name) {
     .replace(/^-+|-+$/g, "");
 }
 
-async function writeCoreCharacter(outDir, entity, threshold) {
+async function writeCoreCharacter(outDir, entity) {
   const { frontmatter, body } = splitHeaderBody(entity.content);
   frontmatter.name ??= entity.name;
   const slug = slugify(entity.name);
@@ -334,9 +334,7 @@ async function main() {
   for (const entity of baseMap.values()) {
     if (entity.type === "character") {
       if (entity.content.length >= opts.coreThreshold) {
-        written.core.push(
-          await writeCoreCharacter(opts.out, entity, opts.coreThreshold),
-        );
+        written.core.push(await writeCoreCharacter(opts.out, entity));
       } else {
         await appendMinorCharacter(minorLines, entity);
         written.minor++;

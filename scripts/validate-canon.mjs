@@ -77,6 +77,7 @@ async function walkEntityFiles(dir, subdir) {
     if (err.code === "ENOENT") return [];
     throw new Error(
       `${full}: cannot read directory (${err.code ?? err.message})`,
+      { cause: err },
     );
   }
   const files = [];
@@ -113,10 +114,12 @@ async function main() {
     if (err.code === "ENOENT") {
       throw new Error(
         `${dir}: canon directory does not exist (story "${slug}" has no canon/ tree)`,
+        { cause: err },
       );
     }
     throw new Error(
       `${dir}: cannot stat canon directory (${err.code ?? err.message})`,
+      { cause: err },
     );
   }
   if (!dirStat.isDirectory()) {
@@ -180,7 +183,10 @@ async function main() {
       // Absent is fine -- not every story batches minor characters, and
       // rules/style may not exist yet. Unreadable is not.
       if (err.code === "ENOENT") continue;
-      throw new Error(`${full}: cannot read file (${err.code ?? err.message})`);
+      throw new Error(
+        `${full}: cannot read file (${err.code ?? err.message})`,
+        { cause: err },
+      );
     }
     const headings = extractHeadings(content);
     if (headings.length === 0) {

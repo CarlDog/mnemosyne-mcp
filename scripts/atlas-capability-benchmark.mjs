@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-/* global console */
 
 /**
  * Atlas Cloud capability benchmark.
