@@ -51,9 +51,13 @@ live-verification status per provider. Related docs:
 - [docs/NEMOCLAW_ADOPTION_ASSESSMENT.md](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md)
   — pinned NemoClaw security, readiness, and MCP-boundary comparison;
   research recommendations only, not ratified architecture
-- [docs/ATLAS_CAPABILITY_BENCHMARK.md](docs/ATLAS_CAPABILITY_BENCHMARK.md) /
-  [dated results](docs/ATLAS_CAPABILITY_RESULTS_2026-08-27.md) — bounded,
-  evidence-only Atlas Cloud route evaluation protocol and its initial run
+- [docs/ATLAS_CAPABILITY_BENCHMARK.md](docs/ATLAS_CAPABILITY_BENCHMARK.md) —
+  bounded, evidence-only Atlas Cloud route evaluation protocol, with dated
+  results per run:
+  [2026-08-27](docs/ATLAS_CAPABILITY_RESULTS_2026-08-27.md) (initial live
+  check) and
+  [2026-08-28](docs/ATLAS_CAPABILITY_RESULTS_2026-08-28.md) (first full
+  catalog run through the CLI runner)
 - [docs/HOOK_VAULT.md](docs/HOOK_VAULT.md) — non-canon development register
   for promising story and character seeds that are not ready for promotion
 - [docs/STORYLINE_RESEARCH_BACKLOG.md](docs/STORYLINE_RESEARCH_BACKLOG.md) —
