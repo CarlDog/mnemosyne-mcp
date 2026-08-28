@@ -2218,7 +2218,9 @@ listed in README/CLAUDE and registered in `src/tools/index.ts`.
   over Streamable HTTP. Mnemosyne is a first-class MCP client to OC.
 - **Local config:** `<repo>/data/config.json` (gitignored; override:
   `MNEMO_DATA_DIR`) — repo-local so a Docker deployment can bind-mount
-  `data/` as persistent storage. Exports default to `data/exports/`.
+  `data/` as persistent storage. Exports default to
+  `data/stories/<slug>/exports/` (`src/export.ts`), not a shared
+  `data/exports/` — see docs/DATA_LAYOUT.md.
   The legacy OS config dir (`%APPDATA%\mnemosyne-mcp` /
   `~/.config/mnemosyne-mcp`, override `MNEMOSYNE_CONFIG_DIR`) is
   auto-migrated — copied, not moved — on first read. v0 holds

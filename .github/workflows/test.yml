@@ -42,7 +42,9 @@ jobs:
         run: npm run build
 
       - name: Test
-        # Integration tests require OC_URL (OpenChronicle) and OLLAMA_URL.
+        # Integration tests require OC_URL (OpenChronicle); the generator/validator
+        # suites additionally require OLLAMA_GENERATOR_MODEL. OLLAMA_URL is NOT a
+        # gate -- it defaults to http://localhost:11434.
         # Without them (the default in CI), those suites skip via skipIf,
         # and the unit suites still run. The vitest run validates that the
         # test infra wires up correctly across all three platforms.

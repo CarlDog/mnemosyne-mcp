@@ -9,132 +9,31 @@ into this file, MEMORY.md, or Serena memories — reference STATUS.md.
 
 ## Current Sprint
 
-See [STATUS.md](STATUS.md). The curated-import campaign is complete
-(2026-08-23) — five live stories, ~369 entities, all four original
-ChatGPT projects plus a new fifth story (Shadowflame).
+Status lives in [STATUS.md](STATUS.md) — read it first. This section names
+only what is in flight; it must never restate STATUS.md's Done log. (When
+the two disagree, STATUS.md is newer.)
 
-**A `canon/` authoring-layer standard replaces the single-JSON-export
-workflow, and BattleChasers is the first story fully consolidated onto
-it** (2026-08-26) — `data/stories/<slug>/canon/` (one Markdown file per
-character/location/lore/worldbuilding entity, YAML frontmatter for
-structured fields, documented in [docs/DATA_LAYOUT.md](docs/DATA_LAYOUT.md))
-is now the permanent human-editable source of a story's content; OC stays
-canonical for *live* story state exactly as before. Two new scripts do the
-migration and checking: `scripts/scaffold-story.mjs` (export → canon/,
-with a generic merge for sibling revision forks) and
-`scripts/validate-canon.mjs` (structural check only — no duplicate
-entities, no empty bodies; content correctness still needs a human pass).
-BattleChasers is fully migrated (143 entities, verified complete against
-both its own export lineage and the original ChatGPT source, one
-Shadowflame truth-tier leak fixed, a cosmetic polish pass done). **Chaos
-Saga is the second story fully consolidated** (2026-08-27, 62 entities) —
-fixing the script's header/body splitter for its flat `Label:`-only
-template (no Markdown headings at all, unlike BattleChasers) also caught
-a real latent bug that had silently dropped three BattleChasers
-characters' `Voice` content, now restored. A 7-agent completeness sweep
-against the original ChatGPT source found detail-level gaps (missing
-locations, missing mechanical rules, compressed-out narrative anecdotes,
-one internal rules.md/style.md contradiction) which were restored/
-resolved per operator direction; `validate-canon.mjs` reports it clean.
-**GhostHunters is the third** (2026-08-27, 105
-entities) — a 4-agent sweep found the large majority of content already
-present verbatim; real gaps were narrow (a second Interpersonal Dynamics
-list for Carl's corgi Max, a missing group-chat message-format system in
-a new `worldbuilding/group-chat.md`, the Chapter Lock Trigger Clause, and
-one unilateral judgment call re-adding sensory/craft intimacy guidance as
-craft advice rather than a censorship-era relic). The same content-rating
-liberalization pattern (PG-13/implication-only → Mature/hard-R explicit)
-holds consistently across every consolidated story. **Shadowflame is the
-fourth, and the cleanest by a wide margin** (2026-08-27, 69 entities) — it
-has no ChatGPT-project origin at all, coming entirely from a Botify bot
-("Dark Queen Lilith"). That bot's source material named its founding
-thrall "Briar Rose Blackwood" — colliding with GhostHunters' central
-mystery family — but a 12-agent extraction sweep of the full ~3,900-
-message source chat confirmed an earlier pass had already handled this
-properly (`lore/open-questions.md` documents the deliberate Ravenscroft
-rename; a full-tree grep found "Blackwood" exactly once, inside that
-note). The Lilith/Karl truth-tier continuity with BattleChasers held up
-well on direct inspection. A real `scaffold-story.mjs` diacritic bug
-(`Karl von Jäger` → a mangled filename) was found and fixed, which also
-caught the same latent bug already live in BattleChasers' canon
-(`Kharag-dûm`). **Wonderland is the fifth story, and the last of the five
-original curated-import stories** (2026-08-27, 76 entities) — its
-ChatGPT-project source was unusually sparse (just Project Instructions +
-Style Guide, no character/location files), so the real depth came from a
-Botify bot ("Alice Grimm," bot 3197891, found only via a private chat-list
-search). A 10-agent extraction sweep of its ~24,000-line export hit the
-worst intermittent file-read failure rate yet (2 of 6 chunks succeeded),
-compensated with direct grep/manual verification. Found a second
-scaffold-script bug in the same family as the diacritic fix — a rule/style
-entity with its own internal `##` sub-headings wasn't demoted before being
-folded into `rules.md`/`style.md` — fixed, and regression-checking found
-the identical bug already live in Chaos Saga's `rules.md` and
-GhostHunters' `style.md`; both fixed by hand. Six real source divergences
-were found and, in every case but one blend (cinnamon-scented mushrooms
-layered onto canon's morel visual), the operator ruled to keep canon's
-more mysterious version over the source's more-explicit one — the
-Wrong-Song Child stays unnamed, the mechanical lantern stays unexplained,
-the Vorpal Blade stays masterless, the Market Below's location stays
-unresolved. Real narrative-color gaps (Alice's pre-Wonderland childhood,
-a Carl survival-promise exchange, a washbasin-as-hat moment) were folded
-in; one source-grounded gap (Carl's hunting background) was deliberately
-skipped because his own file cautions against inventing unestablished
-civilian-life specifics. **All five original curated-import stories are
-now fully consolidated onto `canon/`; only Star Wars: The Black Ledger
-remains** — a different shape entirely (no ChatGPT-project origin, already
-partially live via Botify, an ongoing story rather than a completed-arc
-consolidation). Nothing in any story's `canon/` has been imported to live
-OC; per standing instruction, nothing gets "locked in" as canon until
-explicitly told to. Full detail in STATUS.md's dated Done entry.
+**In flight (2026-08-28).** `canon/` is the permanent human-editable source
+for a story's narrative content ([docs/DATA_LAYOUT.md](docs/DATA_LAYOUT.md));
+OC stays canonical for *live* story state. Five stories are consolidated onto
+it; Star Wars: The Black Ledger is not, and is structurally unlike the others
+(ongoing, already partly live via Botify, no ChatGPT-project origin).
 
-**Outgoing companion-chat messages carry a provenance header, and
-in-fiction narration follows one asterisk/bracket convention everywhere**
-(2026-08-23) — every Kindroid/Botify direction now opens with
-`[Mnemosyne — automated scene direction, not Carl typing]`
-(`MNEMO_USER_NAME`), and every mode directive in `prompt.ts` states the
-same asterisk-for-action / plain-dialogue rule so the five direct-LLM
-providers' output stays visually consistent with it. Grounded in real
-research, not invented: Kindroid's and AI Dungeon's own docs plus Reddit
-community convention, then confirmed live against a real Botify bot and
-cross-checked against r/botify_ai — a bracketed direction read as a
-scene event, not Carl typing, and asterisk-for-action came back
-unprompted, though two active regression threads mean Botify's own team
-was mid-fix on that exact mechanism at the time.
+**Read `data/stories/` before trusting any story inventory.** `data/` is
+gitignored, so `git status` stays clean while story trees you have not read
+sit on disk — including draft scaffolds that no ratified doc covers. Verify
+counts with `node scripts/validate-canon.mjs <slug>`; note it exits 0 on a
+*missing* `canon/` directory, so a pass does not prove a tree exists.
 
-**The web UI exists** (2026-08-23) — its entity library and interactive
-continue flow have shipped: browse stories, filter/search a story's entities,
-view one entity in full, and generate/validate the next beat through the
-shared continue core. A new `/api/*` REST layer
-(`src/api/`, thin adapters over the same domain functions the MCP tools
-already wrap) plus a real React + Vite SPA (`webui/`, its own package,
-built and served by the same Express app slice 0 added — see "Layout"
-below). Verified twice over: 220 automated tests passing, and an actual
-browser walkthrough against real production data with zero console
-errors at the original entity-library milestone. Entity edit/delete UI,
-mode-specific postures and control planes, the assembly panel, Docker
-deployment, media, and watch parties remain unbuilt.
+**Nothing in any story's `canon/` has been imported to live OC.** Per
+standing operator instruction, nothing is locked in as canon until
+explicitly directed.
 
-This landed on top of two same-day prerequisites: **slice 0**
-(`resolveStoryId()`'s per-call `story` override generalized across every
-story-touching tool, plus real Streamable HTTP transport via a
-byte-verbatim copy of kindroid-mcp's fleet-canonical `mountMcpHttp()`)
-and **`mnemo_list_entities`** (the complete/unranked entity-listing
-primitive, previously export-only plumbing, now a real tool). Both grew
-out of a pre-build review of [docs/WEBUI_NOTES.md](docs/WEBUI_NOTES.md)
-(paired senior-sde feasibility review + senior-ui-ux-designer critique)
-that found the doc's original build order had no working prerequisite
-at all. See STATUS.md's Done log for the full writeup of every stage.
-
-**The Living Canon Standard is ratified, and story references moved to
-per-entity folders** (2026-08-24/25) —
-[docs/LIVING_CANON_STANDARD.md](docs/LIVING_CANON_STANDARD.md) is now
-the editorial quality contract for curated story references and export
-derivatives (character depth, playable locations, material objects,
-relationship/knowledge geometry, hook ecology, truth tiers, provenance,
-mature-content routing); `references/` moved from flat `<slug>.jpg`
-files to one folder per entity per
-[docs/DATA_LAYOUT.md](docs/DATA_LAYOUT.md), with a new `objects/`
-category alongside `characters/`/`locations/`.
+Written down but **not ratified** — design input, not specification:
+[WEBUI_NOTES.md](docs/WEBUI_NOTES.md),
+[CONTENT_ROUTING_DESIGN.md](docs/CONTENT_ROUTING_DESIGN.md),
+[HOOK_VAULT.md](docs/HOOK_VAULT.md), and the four external-system adoption
+assessments listed under "Layout" below.
 
 ## Stack
 
@@ -210,10 +109,25 @@ category alongside `characters/`/`locations/`.
   `atlascloud` (and any compatible host via `OPENAI_BASE_URL`).
 - `src/tools/*.ts` — tool registrations (one file per tool surface).
 - `src/log.ts` — structured stderr logger.
-- `tests/` — vitest, real OC + real Ollama (env-gated).
-- `scripts/dump-prompt.mjs`, `scripts/dump-validation.mjs` —
-  command-line diagnostics. Used during v0.1.2 dogfooding to pin the
-  few-shot-vs-rule cause without going through Claude Desktop.
+- `src/mcp-result.ts` — unwraps a sibling MCP server's tool result;
+  throws an `isError` result's real message rather than returning error
+  prose as a reply. Shared by the OC/Kindroid/Botify clients.
+- `src/version.ts` — package version, surfaced in the server banner.
+- `tests/` — vitest, real OC + real Ollama (env-gated — see "Common
+  Commands" for which vars enable which suites).
+- `scripts/dump-prompt.mjs`, `scripts/dump-validation.mjs`,
+  `scripts/dump-kindroid-group-message.mjs` — command-line diagnostics.
+  Used during v0.1.2 dogfooding to pin the few-shot-vs-rule cause
+  without going through Claude Desktop. They import from `dist/`, so
+  rebuild first (a long-running MCP server holds the old `dist/`).
+- `scripts/scaffold-story.mjs` — one-time export-JSON → `canon/` seeding
+  for a story adopting the authoring layer.
+- `scripts/validate-canon.mjs <slug>` — structural check of a story's
+  `canon/` tree (no duplicate entities, no empty bodies). Content
+  correctness still needs a human pass, and it exits 0 when `canon/` is
+  missing entirely.
+- `scripts/verify-provenance.mjs` — checks reference/art images against
+  their JSON sidecars.
 - `docs/ARCHITECTURE.md` — locked architectural decisions. Read this
   first to understand project shape, state model, validation strategy,
   provider strategy, and build sequence.
@@ -270,6 +184,11 @@ category alongside `characters/`/`locations/`.
   lessons learned, and anti-patterns from the v2 OpenChronicle
   storytelling plugin. v2 code is NOT being ported; this doc is the
   bridge that captures the durable informational value.
+- `docs/IMPORT_EXPORT_DESIGN.md`, `docs/IMPORT_PLAYBOOK.md`,
+  `docs/SEED_TEMPLATES.md` — the ratified import/export design, the
+  mapping playbook for a curated import, and the authoring templates.
+- `docs/ILLUSTRATION_INTEGRATION.md` — parked design for scene-tied image
+  generation (out of scope per ARCHITECTURE.md §8; not reopened).
 - `.githooks/pre-commit` — gitleaks + PII pattern scan + author identity check.
 - `.gitleaks.toml` — secret-scanning config.
 - `vendor/atlascloud-cli` — [Atlas Cloud CLI](https://github.com/AtlasCloudAI/cli)
@@ -287,11 +206,13 @@ its v2 storytelling code; Mnemosyne is the new home for that capability.
 
 Key architectural decisions (see ARCHITECTURE.md for full reasoning):
 
-- **MCP server first, web UI on the roadmap.** The web UI is required
+- **MCP server plus a web UI (shipped, partial).** The web UI is required
   for uncensored ("spicy") storytelling because Claude Desktop's host
   LLM sits in the response path and triggers content-policy refusals on
   tool outputs containing graphic content. SFW use works fine in
-  Claude Desktop / Claude Code via the MCP.
+  Claude Desktop / Claude Code via the MCP. The entity library and the
+  continue/validate flow are built; see ARCHITECTURE.md §4/§7 and
+  "Layout" below for what remains.
 - **OC is canonical for story state.** Characters, scenes, rules,
   style, lore — all live as OC memories with structured tags. Local
   config holds one operational field only: the current-story pointer.
@@ -439,8 +360,16 @@ npm run dev            # tsx src/index.ts
 npm run typecheck      # tsc -p tsconfig.typecheck.json (src + tests)
 npm run lint           # eslint .
 npm run format         # prettier --write .
-npm test               # vitest run
+npm run format:check   # prettier --check . (CI gates on this -- run before pushing)
+npm test               # vitest run (62 of 254 tests are env-gated; see below)
 ```
+
+`npm test` green does **not** mean the integration surface ran. Every
+real-OC, Ollama-validator, Kindroid, and cloud-provider suite is skipped
+unless its env vars are exported **into the shell** — `vitest.config.ts`
+loads no dotenv, so a populated `.env` does not enable them. Use
+`OC_URL=...` for the OC suites and add `OLLAMA_GENERATOR_MODEL=...` for the
+validator suites.
 
 ## Conventions
 
@@ -456,6 +385,19 @@ npm test               # vitest run
   safety net.
 - Author identity must be a GitHub noreply alias. The pre-commit
   hook enforces this (rejects personal-domain emails).
+- **`package.json` is `private: true` — do not remove it.** The unscoped
+  npm name `mnemosyne-mcp` is owned by an unrelated package (Anckur
+  Singh's "Agent-First Knowledge Database", first published 2026-08-10),
+  so this project can never publish under it. Nothing here is distributed
+  via npm — `bin`/`files` exist for local `npm link` only. If npx
+  distribution is ever wanted, rename to a scope you own
+  (`@<npm-user>/mnemosyne-mcp`) and drop the flag; the repo, OC project,
+  and docs keep the `mnemosyne-mcp` name either way.
+- **Companion-chat output conventions live in code, not here.** The
+  outgoing provenance header (`MNEMO_USER_NAME`) is built in
+  `src/companion-message.ts`; the asterisk-for-action / plain-dialogue
+  rule and its cross-platform sourcing are documented at
+  `src/prompt.ts` alongside the mode directives.
 
 ## Relationship to OpenChronicle
 
@@ -484,6 +426,10 @@ git -C D:\GitHub\openchronicle-mcp worktree remove \
 
 ## Out of Scope (v0)
 
-Per ARCHITECTURE.md §8: game mechanics, multi-user, visual UI elements,
-auto-regen on validation failure, voice, image generation, cross-story
-memory bleed. To be revisited only after v0 ships and gets real use.
+Per ARCHITECTURE.md §8: game mechanics, multi-user/auth/cloud,
+auto-regen on validation failure, voice, image generation tied to
+scenes, cross-story memory bleed — plus portrait-driven layouts, scene
+trees, and other richer visual controls in the Web UI (the shipped
+entity and continue surfaces stay text-first). To be revisited only
+after v0 ships and gets real use. Quote §8 rather than paraphrasing it;
+this list has drifted from the source before.
