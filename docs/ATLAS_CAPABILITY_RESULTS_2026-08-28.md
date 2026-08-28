@@ -7,8 +7,10 @@ This is the **first catalog run through the CLI runner** — the run the
 installed and authenticated, so L0 coverage is complete and machine-derived
 rather than read off a display-truncated listing.
 
-Nothing here certifies any model. This run performed **catalog discovery only**
-— three `models list` calls, no inference, no generation, no spend.
+Nothing here certifies any model. Two non-billable runs are recorded: catalog
+discovery (`--mode catalog`, three `models list` calls) and media schema
+probing (`--mode media-schema`, one `models get` per eligible media model).
+No inference, no generation, no spend.
 
 ## Run environment
 
@@ -219,6 +221,30 @@ xai/grok-imagine-video-v1.5/text-to-video
 xai/grok-imagine-video/text-to-video
 ```
 
+## Media schema probe (L1)
+
+`--mode media-schema` resolved every eligible media model through
+`atlas models get`, confirming the route is actually addressable rather than
+merely listed. 85 probes in 16.9 s, concurrency 4, zero timeouts.
+
+| Catalog type | Probed | `pass` | `error` |
+|---|---:|---:|---:|
+| image | 42 | 41 | 1 |
+| video | 43 | 43 | 0 |
+| **all** | **85** | **84** | **1** |
+
+### One catalog entry is a ghost
+
+`baidu/ERNIE-Image-Turbo/text-to-image` is **listed** by
+`models list --type image` — with full metadata (vendor, name, pricing) — but
+`models get` on that exact id returns `http_404: 404 page not found`. Verified
+independently of the runner: the direct CLI call reproduces it and exits 2,
+while a known-good id exits 0. So this is an upstream catalog inconsistency,
+not a runner fault, and it is precisely what an L1 schema probe exists to
+catch: a model that discovery advertises but that is not addressable.
+
+Treat catalog membership as a claim to verify, not as proof a route exists.
+
 ## Runner verification performed in this session
 
 The timeout bounding added in `bd050dd` was exercised against the real binary,
@@ -235,15 +261,16 @@ not only against synthetic processes:
 | Level | Coverage | Status |
 |---|---|---|
 | L0 catalog | 65 chat, 121 image, 199 video — machine-derived, complete | **complete** (was partial/truncated on 2026-08-27) |
-| L1 schema | 2 representative models (2026-08-27) | partial — unchanged |
+| L1 schema | 85 of 85 eligible media models (42 image, 43 video) | **complete** — 84 addressable, 1 upstream ghost |
 | L2 chat | 2 retained evidence rows (2026-08-27) | partial — unchanged |
 | L3 safe media smoke | 1 image, 1 video (2026-08-27) | controlled smoke only — unchanged |
 | L4 explicit review | 0 | intentionally not automated |
 
 ## Conclusion
 
-L0 is now settled and reproducible. **The routing conclusion is unchanged from
-2026-08-27:** no Atlas model is certified `mature`/NSFW-capable, and the only
+L0 and L1 are now settled and reproducible: the catalog is machine-derived,
+and every eligible media route has been confirmed addressable (bar the one
+ghost entry above). **The routing conclusion is unchanged from 2026-08-27:** no Atlas model is certified `mature`/NSFW-capable, and the only
 defensible routing state remains `unknown`. Catalog eligibility is a statement
 about a model's *workflow type*, not about its content policy — and the
 routing layer that would consume such a verdict is still unbuilt (see
