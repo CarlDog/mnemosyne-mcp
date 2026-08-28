@@ -7,7 +7,59 @@ import type {
   RequestHandler,
   Response,
 } from "express";
+import type { z } from "zod";
+import type { OcClient } from "../oc-client.js";
+import { findStory, type MnemoStory } from "../stories.js";
 import { log } from "../log.js";
+
+/**
+ * Resolve a story or write the 404 -- the not-found payload is part of
+ * the web client's contract (ApiError surfaces body.message), so the
+ * one copy here is what keeps every route's 404 identical. Returns
+ * undefined after writing the response; callers return immediately on
+ * undefined.
+ */
+export async function requireStory(
+  oc: OcClient,
+  storyId: string,
+  res: Response,
+): Promise<MnemoStory | undefined> {
+  const story = await findStory(oc, storyId);
+  if (!story) {
+    res.status(404).json({
+      error: "story_not_found",
+      message: `No story matches "${storyId}".`,
+    });
+    return undefined;
+  }
+  return story;
+}
+
+/**
+ * safeParse a request body/query or write the 400 with the joined zod
+ * issues -- one copy of the issue formatting (and of the `value ?? {}`
+ * normalization for requests with no JSON body), so every endpoint's
+ * validation-error payload stays the same shape. Returns undefined
+ * after writing the response.
+ */
+export function parseOr400<Schema extends z.ZodType>(
+  schema: Schema,
+  value: unknown,
+  res: Response,
+  errorName = "invalid_body",
+): z.infer<Schema> | undefined {
+  const parsed = schema.safeParse(value ?? {});
+  if (!parsed.success) {
+    res.status(400).json({
+      error: errorName,
+      message: parsed.error.issues
+        .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+        .join("; "),
+    });
+    return undefined;
+  }
+  return parsed.data as z.infer<Schema>;
+}
 
 /**
  * Express 4 has no built-in handling for a rejected promise thrown from an

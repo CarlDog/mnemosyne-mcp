@@ -11,14 +11,13 @@ import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
 import type { LlmProvider } from "../llm.js";
 import {
-  DEFAULT_SCENE_CONTEXT_STRATEGY,
   MODES,
   SCENE_CONTEXT_STRATEGIES,
   gatherContext,
   resolveSceneContextStrategies,
   type SceneContextStrategy,
 } from "../prompt.js";
-import { combineKindroidTarget, findStory, type KindroidTarget } from "../stories.js";
+import { combineKindroidTarget, type KindroidTarget } from "../stories.js";
 import {
   MIN_GROUP_MAX_TURNS,
   MAX_GROUP_MAX_TURNS,
@@ -26,7 +25,7 @@ import {
 import { continueScene } from "../tools/continue.js";
 import { revalidateScenes } from "../tools/revalidate.js";
 import { validateContent } from "../validator.js";
-import { asyncRoute } from "./helpers.js";
+import { asyncRoute, parseOr400, requireStory } from "./helpers.js";
 
 // The validate/revalidate bodies carry no scene_context_strategy params:
 // validation contexts are gathered validationOnly (no scene pull -- the
@@ -68,44 +67,31 @@ function requestErrorBody(name: string, error: string): {
   return { error: name, message: error };
 }
 
+// The strategy pair is required, not defaulted: createApiRouter (the one
+// caller) resolves the defaults itself, and dead defaults on inner
+// layers are where hardcoded copies drift.
 export function registerInteractiveRoutes(
   router: Router,
   oc: OcClient,
   generator: LlmProvider,
   validator: LlmProvider,
-  sceneContextStrategy: SceneContextStrategy = DEFAULT_SCENE_CONTEXT_STRATEGY,
-  sceneContextFallbackStrategy: SceneContextStrategy = sceneContextStrategy,
+  sceneContextStrategy: SceneContextStrategy,
+  sceneContextFallbackStrategy: SceneContextStrategy,
 ): void {
   router.post(
     "/stories/:storyId/continue",
     asyncRoute(async (req, res) => {
       const { storyId } = req.params as { storyId: string };
-      const story = await findStory(oc, storyId);
-      if (!story) {
-        res.status(404).json({
-          error: "story_not_found",
-          message: `No story matches "${storyId}".`,
-        });
-        return;
-      }
+      const story = await requireStory(oc, storyId, res);
+      if (!story) return;
 
-      const parsedBody = continueSchema.safeParse(req.body ?? {});
-      if (!parsedBody.success) {
-        res.status(400).json(
-          requestErrorBody(
-            "invalid_body",
-            parsedBody.error.issues
-              .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
-              .join("; "),
-          ),
-        );
-        return;
-      }
+      const body = parseOr400(continueSchema, req.body, res);
+      if (!body) return;
 
       const sceneStrategies = resolveSceneContextStrategies(
         {
-          strategy: parsedBody.data.scene_context_strategy,
-          fallback: parsedBody.data.scene_context_fallback_strategy,
+          strategy: body.scene_context_strategy,
+          fallback: body.scene_context_fallback_strategy,
         },
         {
           strategy: sceneContextStrategy,
@@ -120,8 +106,8 @@ export function registerInteractiveRoutes(
       let explicitTarget: KindroidTarget | undefined;
       try {
         explicitTarget = combineKindroidTarget(
-          parsedBody.data.kindroid_kin,
-          parsedBody.data.kindroid_group_id,
+          body.kindroid_kin,
+          body.kindroid_group_id,
         );
       } catch (err) {
         res
@@ -131,21 +117,21 @@ export function registerInteractiveRoutes(
       }
 
       const result = await continueScene(oc, generator, validator, story.id, {
-        direction: parsedBody.data.direction,
-        mode: parsedBody.data.mode,
+        direction: body.direction,
+        mode: body.mode,
         sceneStrategy: sceneStrategies.strategy,
         sceneFallbackStrategy: sceneStrategies.fallback,
-        maxTokens: parsedBody.data.max_tokens,
-        temperature: parsedBody.data.temperature,
-        model: parsedBody.data.model,
+        maxTokens: body.max_tokens,
+        temperature: body.temperature,
+        model: body.model,
         explicitKindroidTarget: explicitTarget,
         // findStory already ran for the 404 check above -- hand its
         // binding over so continueScene doesn't re-fetch the marker.
         storyKindroidTarget: story.kindroid_target,
         storyKindroidTargetPrefetched: true,
-        groupMaxTurns: parsedBody.data.group_max_turns,
-        allowUser: parsedBody.data.allow_user,
-        validate: parsedBody.data.validate,
+        groupMaxTurns: body.group_max_turns,
+        allowUser: body.allow_user,
+        validate: body.validate,
         reinvokeHint: `call /stories/${story.id}/continue again`,
       });
       res.json(result);
@@ -156,39 +142,16 @@ export function registerInteractiveRoutes(
     "/stories/:storyId/validate",
     asyncRoute(async (req, res) => {
       const { storyId } = req.params as { storyId: string };
-      const story = await findStory(oc, storyId);
-      if (!story) {
-        res.status(404).json({
-          error: "story_not_found",
-          message: `No story matches "${storyId}".`,
-        });
-        return;
-      }
+      const story = await requireStory(oc, storyId, res);
+      if (!story) return;
 
-      const parsedBody = validateSchema.safeParse(req.body);
-      if (!parsedBody.success) {
-        res.status(400).json(
-          requestErrorBody(
-            "invalid_body",
-            parsedBody.error.issues
-              .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
-              .join("; "),
-          ),
-        );
-        return;
-      }
+      const body = parseOr400(validateSchema, req.body, res);
+      if (!body) return;
 
-      const context = await gatherContext(
-        oc,
-        story.id,
-        parsedBody.data.content,
-        { validationOnly: true },
-      );
-      const report = await validateContent(
-        validator,
-        context,
-        parsedBody.data.content,
-      );
+      const context = await gatherContext(oc, story.id, body.content, {
+        validationOnly: true,
+      });
+      const report = await validateContent(validator, context, body.content);
       res.json(report);
     }),
   );
@@ -197,27 +160,11 @@ export function registerInteractiveRoutes(
     "/stories/:storyId/revalidate-scenes",
     asyncRoute(async (req, res) => {
       const { storyId } = req.params as { storyId: string };
-      const story = await findStory(oc, storyId);
-      if (!story) {
-        res.status(404).json({
-          error: "story_not_found",
-          message: `No story matches "${storyId}".`,
-        });
-        return;
-      }
+      const story = await requireStory(oc, storyId, res);
+      if (!story) return;
 
-      const parsedBody = revalidateScenesSchema.safeParse(req.body ?? {});
-      if (!parsedBody.success) {
-        res.status(400).json(
-          requestErrorBody(
-            "invalid_body",
-            parsedBody.error.issues
-              .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
-              .join("; "),
-          ),
-        );
-        return;
-      }
+      const body = parseOr400(revalidateScenesSchema, req.body, res);
+      if (!body) return;
 
       const result = await revalidateScenes(oc, validator, story.id);
       res.json(result);

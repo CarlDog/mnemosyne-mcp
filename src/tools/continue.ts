@@ -293,13 +293,16 @@ export async function continueScene(
   };
 }
 
+// The strategy pair is required, not defaulted: registerTools (the one
+// caller) always passes both, and a dead default here is exactly where a
+// hardcoded literal once drifted from DEFAULT_SCENE_CONTEXT_STRATEGY.
 export function registerContinueTool(
   server: McpServer,
   oc: OcClient,
   generator: LlmProvider,
   validator: LlmProvider,
-  sceneContextStrategy: SceneContextStrategy = "recency-first",
-  sceneContextFallbackStrategy: SceneContextStrategy = sceneContextStrategy,
+  sceneContextStrategy: SceneContextStrategy,
+  sceneContextFallbackStrategy: SceneContextStrategy,
 ): void {
   server.registerTool(
     "mnemo_continue",

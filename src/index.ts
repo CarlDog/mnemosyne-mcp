@@ -11,7 +11,11 @@ import { apiSecurity } from "./api-security.js";
 import { createApiRouter } from "./api/index.js";
 import { log } from "./log.js";
 import { OcClient } from "./oc-client.js";
-import { OllamaProvider, type LlmProvider } from "./llm.js";
+import {
+  DEFAULT_KEEP_ALIVE,
+  OllamaProvider,
+  type LlmProvider,
+} from "./llm.js";
 import { DEFAULT_TIMEOUT_MS, KindroidClient } from "./kindroid-client.js";
 import {
   DEFAULT_GROUP_MAX_TURNS,
@@ -84,7 +88,7 @@ const GENERATOR_PROVIDER = parseEnvEnum(
 );
 
 const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
-const OLLAMA_KEEP_ALIVE = process.env.OLLAMA_KEEP_ALIVE || "30m";
+const OLLAMA_KEEP_ALIVE = process.env.OLLAMA_KEEP_ALIVE || DEFAULT_KEEP_ALIVE;
 
 // Operator display name for the companion-chat providers' outgoing-message
 // provenance header (e.g. "[Mnemosyne -- automated scene direction, not

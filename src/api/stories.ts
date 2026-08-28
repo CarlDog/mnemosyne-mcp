@@ -5,8 +5,8 @@
 
 import type { Router } from "express";
 import type { OcClient } from "../oc-client.js";
-import { findStory, listStories, toStorySummary } from "../stories.js";
-import { asyncRoute } from "./helpers.js";
+import { listStories, toStorySummary } from "../stories.js";
+import { asyncRoute, requireStory } from "./helpers.js";
 
 export function registerStoryRoutes(router: Router, oc: OcClient): void {
   router.get(
@@ -22,14 +22,8 @@ export function registerStoryRoutes(router: Router, oc: OcClient): void {
     "/stories/:storyId",
     asyncRoute(async (req, res) => {
       const { storyId } = req.params as { storyId: string };
-      const story = await findStory(oc, storyId);
-      if (!story) {
-        res.status(404).json({
-          error: "story_not_found",
-          message: `No story matches "${storyId}".`,
-        });
-        return;
-      }
+      const story = await requireStory(oc, storyId, res);
+      if (!story) return;
       res.json({ story: toStorySummary(story) });
     }),
   );
