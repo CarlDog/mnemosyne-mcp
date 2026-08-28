@@ -227,6 +227,9 @@ function makeServer(): McpServer {
     validator,
     SCENE_CONTEXT_STRATEGY,
     SCENE_CONTEXT_FALLBACK_STRATEGY,
+    // stdio is a local-operator channel; HTTP is not. Same tool surface, so
+    // the path-bearing export/import variants are refused when serving HTTP.
+    httpConfig.port === undefined,
   );
   return server;
 }

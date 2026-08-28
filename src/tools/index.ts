@@ -22,11 +22,15 @@ export function registerTools(
   validator: LlmProvider,
   sceneContextStrategy: SceneContextStrategy = DEFAULT_SCENE_CONTEXT_STRATEGY,
   sceneContextFallbackStrategy: SceneContextStrategy = sceneContextStrategy,
+  // Caller-supplied filesystem paths are a local-operator capability. Default
+  // true keeps stdio -- every current deployment -- unchanged; index.ts passes
+  // false when serving HTTP.
+  allowFilesystemPaths = true,
 ): void {
   registerStoryTools(server, oc);
   registerEntityTools(server, oc);
-  registerExportTool(server, oc);
-  registerImportTool(server, oc);
+  registerExportTool(server, oc, allowFilesystemPaths);
+  registerImportTool(server, oc, allowFilesystemPaths);
   registerContinueTool(
     server,
     oc,
