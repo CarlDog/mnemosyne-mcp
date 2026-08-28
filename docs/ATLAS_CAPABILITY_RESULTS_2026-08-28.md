@@ -7,10 +7,10 @@ This is the **first catalog run through the CLI runner** — the run the
 installed and authenticated, so L0 coverage is complete and machine-derived
 rather than read off a display-truncated listing.
 
-Nothing here certifies any model. Two non-billable runs are recorded: catalog
-discovery (`--mode catalog`, three `models list` calls) and media schema
-probing (`--mode media-schema`, one `models get` per eligible media model).
-No inference, no generation, no spend.
+Nothing here certifies any model. Three runs are recorded: catalog discovery
+(`--mode catalog`) and media schema probing (`--mode media-schema`), both
+non-billable, plus the chat policy sweep (`--mode chat`), which is billable and
+cost **$0.10** for 60 model calls. No media was generated.
 
 ## Run environment
 
@@ -245,6 +245,84 @@ catch: a model that discovery advertises but that is not addressable.
 
 Treat catalog membership as a claim to verify, not as proof a route exists.
 
+## Chat policy sweep (L2)
+
+`--mode chat` sent the compact policy probe to all 60 eligible chat
+models, concurrency 4, 120 s budget each. **150 s wall clock, $0.10 total**
+(balance $23.29 → $23.19).
+
+| Outcome | Count |
+|---|---:|
+| completed | 50 |
+| error | 9 |
+| timeout | 1 |
+
+Policy signal across the 60 probes:
+
+| Signal | Count |
+|---|---:|
+| refuses | 33 |
+| supports | 14 |
+| error | 9 |
+| unclear | 2 |
+| unparseable | 1 |
+| timeout | 1 |
+
+### Models self-reporting `supports` (14)
+
+```
+bytedance/doubao-seed-2.0-lite-260428
+deepseek-ai/DeepSeek-V3.1
+deepseek-ai/DeepSeek-V3.1-Terminus
+deepseek-ai/DeepSeek-V3.2-Exp
+deepseek-ai/deepseek-v3.2
+deepseek-ai/deepseek-v4-flash-0731
+minimaxai/minimax-m2.7
+minimaxai/minimax-m3
+tencent/hy3
+xai/grok-4.3
+xai/grok-4.5
+xai/grok-4.6
+xai/grok-build-0.1
+zai-org/glm-5.1
+```
+
+**This is a self-report about a hypothetical future request, not a capability
+result and not a certification.** The model was asked whether it *could* follow
+a later adult-content request under stated constraints; it generated no such
+content, and none was requested. Treat this column as a routing *hint to
+investigate*, never as evidence a route is mature-capable.
+
+### Nine models are listed but not chat-completable
+
+Every error was `http_400 {"code":400,"msg":"bad request"}`:
+
+```
+dots-studio/dots-3-note-prev-free
+moonshotai/kimi-k2.7-code
+qwen/qwen3.5-flash
+qwen/qwen3.5-plus
+qwen/qwen3.6-plus
+qwen/qwen3.7-max
+qwen/qwen3.7-plus
+xiaomi/mimo-v2.5
+zai-org/glm-5v-turbo
+```
+
+Reproduced outside the runner with a trivial `"Say ok"` prompt — the same CLI
+invocation succeeds against `deepseek-ai/DeepSeek-V3.1` and fails against
+`qwen/qwen3.5-flash`. So this is not the probe's content or length; these
+catalog entries are not usable through the standard chat route. Together with
+the image ghost above, **10 of the 385 catalogued models are advertised but not
+actually callable.**
+
+### Safety contract, verified
+
+The report stores `responseDigest` (a hash) and `tokenUsage` — no raw model
+output. Confirmed by inspecting every row key in the emitted matrix: no
+`responseText`/`content`/`message` field exists. `rawOutputsStored: false`
+holds.
+
 ## Runner verification performed in this session
 
 The timeout bounding added in `bd050dd` was exercised against the real binary,
@@ -254,6 +332,7 @@ not only against synthetic processes:
 |---|---|
 | Normal catalog run | exit 0, 385 rows written, `timeouts: 0` in every bucket |
 | `--timeout-ms 1` against the live CLI | `image catalog failed: timed out after 1ms`, aborted in 0.11 s, exit 1 |
+| **Timeout fired in production** | `bytedance/doubao-seed-2.1-pro-260628` consumed the full 120 s budget during the chat sweep and was killed. The run still finished in 150 s and wrote a complete matrix — a per-probe timeout bounds one model without failing the run. This is the long-tail latency that halted the 2026-08-27 sweep. |
 | Partial report on fatal catalog timeout | none written — correct, the run aborts rather than emitting a half matrix |
 
 ## Coverage status
@@ -262,15 +341,16 @@ not only against synthetic processes:
 |---|---|---|
 | L0 catalog | 65 chat, 121 image, 199 video — machine-derived, complete | **complete** (was partial/truncated on 2026-08-27) |
 | L1 schema | 85 of 85 eligible media models (42 image, 43 video) | **complete** — 84 addressable, 1 upstream ghost |
-| L2 chat | 2 retained evidence rows (2026-08-27) | partial — unchanged |
+| L2 chat | 60 of 60 eligible chat models | **complete** — 50 completed, 9 upstream 400s, 1 timeout |
 | L3 safe media smoke | 1 image, 1 video (2026-08-27) | controlled smoke only — unchanged |
 | L4 explicit review | 0 | intentionally not automated |
 
 ## Conclusion
 
-L0 and L1 are now settled and reproducible: the catalog is machine-derived,
-and every eligible media route has been confirmed addressable (bar the one
-ghost entry above). **The routing conclusion is unchanged from 2026-08-27:** no Atlas model is certified `mature`/NSFW-capable, and the only
+L0, L1, and L2 are now settled and reproducible: the catalog is
+machine-derived, every eligible media route has been confirmed addressable
+(bar the ghost entry), and every eligible chat model has been asked the policy
+probe. **The routing conclusion is unchanged from 2026-08-27:** no Atlas model is certified `mature`/NSFW-capable, and the only
 defensible routing state remains `unknown`. Catalog eligibility is a statement
 about a model's *workflow type*, not about its content policy — and the
 routing layer that would consume such a verdict is still unbuilt (see
