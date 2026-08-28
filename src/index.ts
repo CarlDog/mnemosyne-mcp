@@ -562,16 +562,29 @@ function warmupProvider(provider: LlmProvider, label: string): void {
     });
 }
 
-if (generatorConfig.provider === "ollama") {
-  warmupProvider(generator, "ollama generator");
-  if (
-    ollamaGeneratorModel !== undefined &&
-    ollamaGeneratorModel !== ollamaValidatorModel
-  ) {
+// Warmup is HTTP-mode-only by default: an HTTP deployment is one
+// long-lived server where preloading pays off, while stdio servers are
+// spawned fresh per host session -- a Claude Desktop session that only
+// browses entities would still pin generator+validator models in RAM for
+// the whole keep_alive window. MNEMO_WARMUP=true opts a stdio deployment
+// in ("" reads as unset, like every other env flag here).
+const warmupRequested = (process.env.MNEMO_WARMUP ?? "").trim().toLowerCase();
+const warmupEnabled =
+  httpConfig.port !== undefined ||
+  warmupRequested === "true" ||
+  warmupRequested === "1";
+if (warmupEnabled) {
+  if (generatorConfig.provider === "ollama") {
+    warmupProvider(generator, "ollama generator");
+    if (
+      ollamaGeneratorModel !== undefined &&
+      ollamaGeneratorModel !== ollamaValidatorModel
+    ) {
+      warmupProvider(validator, "ollama validator");
+    }
+  } else {
     warmupProvider(validator, "ollama validator");
   }
-} else {
-  warmupProvider(validator, "ollama validator");
 }
 
 const INSTRUCTIONS = `MCP server for long-form storytelling on top of OpenChronicle (OC) memory.
