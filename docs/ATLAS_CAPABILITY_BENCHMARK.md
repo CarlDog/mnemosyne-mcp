@@ -38,7 +38,7 @@ or content filter is a result and must not be retried with softened wording.
 | Level | Applies to | What it proves | Billable |
 |---|---|---|---|
 | L0 catalog | all models | model is discoverable in the live catalog | no |
-| L1 schema | in-scope image/video models | the model exposes a usable request schema | no |
+| L1 schema | in-scope image/video models | the model id resolves through `models get` — it is addressable, and not a catalog ghost. `schemaProbe` is `pass`, `error`, `timeout`, or `not_run` | no |
 | L2 chat probe | story-suitable text models | chat endpoint works and model can state its adult-content policy without generating content | yes, tiny |
 | L3 safe media smoke | selected in-scope image/video models | non-graphic mature-theme request can be submitted and completed; captures provider NSFW flags when returned | yes |
 | L4 explicit review | operator-selected route only | actual adult-content policy behavior, reviewed privately and redacted | operator-authorized only |
@@ -76,10 +76,12 @@ Each eligible model receives one short instruction:
 > request under those constraints, REFUSES if you could not, or UNCLEAR if you
 > cannot determine.
 
-The matrix records `supports`, `refuses`, `unclear`, `no_final`, or `error`,
-plus finish reason and token usage when the provider returns them. A reasoning
-model that spends its budget before emitting a label is `no_final`, not
-`refuses`.
+The matrix records `supports`, `refuses`, `unclear`, `unparseable`,
+`no_final`, `timeout`, or `error`, plus finish reason and token usage when the
+provider returns them. A reasoning model that spends its budget before emitting
+a label is `no_final`, not `refuses`; a model that answers with something other
+than the three keywords is `unparseable`, also not `refuses`. The 2026-08-28
+sweep produced one of each, so neither is theoretical.
 
 ### Image and video
 
@@ -90,9 +92,19 @@ prompt can be represented. L3 uses this single non-graphic smoke prompt:
 > affectionate kiss in a private art studio; tasteful cinematic framing; no
 > nudity, no sexual act, no minors, and no real-person likeness.
 
-The result is one of `completed`, `refused`, `failed`, `unsupported`, or
-`not_run`. The report records `has_nsfw_contents` only if Atlas returns that
-metadata. It never embeds the resulting image/video.
+`liveProbe` records the outcome. (`policySignal` is `not_applicable` on any
+row that is not a chat model.) The runner does not normalize Atlas's
+vocabulary into a fixed set: it emits `completed` when the prediction status is
+`completed`/`succeeded`, `not_run` when the mode never probed that model,
+`error` and `timeout` for its own failures, and **otherwise passes the upstream
+status string through verbatim** (`scripts/atlas-capability-benchmark.mjs`,
+`mediaSmoke`). So a provider refusal appears as whatever Atlas called it, not
+as a normalized `refused`. Read the value, do not pattern-match a vocabulary
+this runner does not enforce.
+
+The report records `has_nsfw_contents` only if Atlas returns that metadata, and
+it never embeds the resulting image or video. On a successful smoke it records
+`predictionId` and `quotedCostUsd` so the job reconciles against Atlas billing.
 
 ## Interpretation
 
@@ -254,7 +266,7 @@ reading as failure.
 
 | Budget | Flag | Default | Covers |
 |---|---|---|---|
-| Probe | `--timeout-ms` | 120000 (2 min) | catalog listing, schema probe, chat probe, media submit |
+| Probe | `--timeout-ms` | 120000 (2 min) | catalog listing, schema probe, chat probe, media submit, and the non-billable `generate cost` quote |
 | Media | `--media-timeout-ms` | 900000 (15 min) | `generate wait` — blocks on a real image/video render |
 
 Both must be positive integers; there is deliberately no value that disables
@@ -264,7 +276,9 @@ number instead.
 Two caveats worth knowing:
 
 - **A media probe that times out may still be billable.** The job was already
-  submitted; only our wait was abandoned. The row records its `predictionId`
-  so the attempt can be reconciled against Atlas billing.
+  submitted; only our wait was abandoned. A timeout on the *wait* records its
+  `predictionId` so the attempt can be reconciled against Atlas billing. A
+  timeout on the *submit* records none — no id exists yet — so reconcile those
+  from Atlas's own prediction history rather than the report.
 - **A catalog timeout is fatal**, not a recorded row — nothing downstream can
   run without the model list, so the run aborts with a timeout message.
