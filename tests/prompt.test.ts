@@ -247,13 +247,17 @@ describe("prompt — pullFilteredScenes", () => {
     expect(memoryGetIds).toHaveLength(5);
   });
 
-  it("supports query-ranked scene lookup strategy when configured", async () => {
+  it("query-ranked keeps relevance order within the clean and untagged buckets", async () => {
     const pool = [
       sceneMemory("1", "Old scene", ["validation:clean"], "2026-01-01T10:00:00Z"),
       sceneMemory("2", "Middle scene", [], "2026-01-01T10:10:00Z"),
       sceneMemory("3", "Oldly ranked scene", ["validation:clean"], "2026-01-01T10:05:00Z"),
       sceneMemory("4", "Newest scene", [], "2026-01-01T10:20:00Z"),
     ];
+    // OC relevance order: Middle, Old, Newest, Oldly ranked. The
+    // validation filter is strategy-independent: clean scenes bucket
+    // first (in relevance order), untagged follow (in relevance order)
+    // -- created_at is irrelevant to this strategy.
     const ranked = [pool[1]!, pool[0]!, pool[3]!, pool[2]!];
     const result = await pullFilteredScenes(
       mockOcWithScenes(pool, ranked).oc,
@@ -262,10 +266,10 @@ describe("prompt — pullFilteredScenes", () => {
       "query-ranked",
     );
     expect(result).toHaveLength(4);
-    expect(result[0]).toContain("Middle scene");
-    expect(result[1]).toContain("Old scene");
-    expect(result[2]).toContain("Newest scene");
-    expect(result[3]).toContain("Oldly ranked scene");
+    expect(result[0]).toContain("Old scene");
+    expect(result[1]).toContain("Oldly ranked scene");
+    expect(result[2]).toContain("Middle scene");
+    expect(result[3]).toContain("Newest scene");
   });
 
   it("falls back to a secondary strategy when the primary returns only validation errors", async () => {
