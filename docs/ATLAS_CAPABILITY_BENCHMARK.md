@@ -175,6 +175,37 @@ The billable media smoke step is opt-in and bounded:
 node scripts/atlas-capability-benchmark.mjs --mode media-smoke --media-model-limit 6 --out reports/atlas-media-smoke.json
 ```
 
+### Cost bounding
+
+**A job count is a weak cost bound.** Eligible video prices span more than 20x
+(measured 2026-08-28: $0.34 to $7.56 per generation), and targets are chosen by
+catalog order, which is uncorrelated with price — so `--media-model-limit 6`
+can mean anything from about $2 to about $14.
+
+`--max-spend USD` closes that gap. Before any paid call, the runner quotes every
+selected target through `atlas generate cost` (not billable), prints the
+itemization, and aborts if the total exceeds the ceiling — nothing is submitted
+and no report is written:
+
+```powershell
+node scripts/atlas-capability-benchmark.mjs --mode media-smoke --media-model-limit 2 --max-spend 0.50 --out reports/atlas-media-smoke.json
+```
+
+```
+media smoke quote (2 job(s)):
+     $0.0525  alibaba/qwen-image/text-to-image-max
+     $1.2000  alibaba/happyhorse-1.0/text-to-video
+  quoted total: $1.2525
+quoted $1.2525 exceeds --max-spend $0.5; nothing was submitted.
+```
+
+The itemized quote prints whether or not a ceiling is set, so an unbounded run
+still shows its cost before spending. A target that cannot be priced aborts the
+run when `--max-spend` is set — an unpriceable job cannot be bounded — and
+raises a warning that the total is a floor when it is not. The quote and the
+ceiling are both recorded in the report's `budgets` block, and each row carries
+its `quotedCostUsd`.
+
 `--media-model-limit` bounds the **total** number of billable jobs, and the
 models it selects are round-robin interleaved across image and video, so a
 small limit still covers both types: `3` gives 2 image + 1 video, `6` gives

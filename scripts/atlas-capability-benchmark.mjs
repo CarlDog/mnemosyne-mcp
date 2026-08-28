@@ -45,6 +45,7 @@ function parseArgs(argv) {
     mediaModelLimit: 0,
     timeoutMs: DEFAULT_PROBE_TIMEOUT_MS,
     mediaTimeoutMs: DEFAULT_MEDIA_TIMEOUT_MS,
+    maxSpendUsd: undefined,
   };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -56,9 +57,10 @@ function parseArgs(argv) {
     else if (arg === "--timeout-ms") args.timeoutMs = Number(argv[++i]);
     else if (arg === "--media-timeout-ms")
       args.mediaTimeoutMs = Number(argv[++i]);
+    else if (arg === "--max-spend") args.maxSpendUsd = Number(argv[++i]);
     else if (arg === "--help" || arg === "-h") {
       console.log(
-        "Usage: atlas-capability-benchmark.mjs [--mode catalog|chat|media-schema|media-smoke|all] [--out PATH] [--media-model-limit N] [--timeout-ms MS] [--media-timeout-ms MS]",
+        "Usage: atlas-capability-benchmark.mjs [--mode catalog|chat|media-schema|media-smoke|all] [--out PATH] [--media-model-limit N] [--timeout-ms MS] [--media-timeout-ms MS] [--max-spend USD]",
       );
       process.exit(0);
     } else {
@@ -90,6 +92,12 @@ function parseArgs(argv) {
     throw new Error(
       `--mode ${args.mode} requires --media-model-limit to bound billable jobs`,
     );
+  }
+  if (
+    args.maxSpendUsd !== undefined &&
+    (!Number.isFinite(args.maxSpendUsd) || args.maxSpendUsd <= 0)
+  ) {
+    throw new Error("--max-spend must be a positive number of USD");
   }
   return args;
 }
@@ -301,6 +309,28 @@ function predictionId(value) {
   );
 }
 
+// Quotes one media job through the CLI's own cost endpoint. Non-billable, and
+// deliberately uses the exact prompt the smoke will send so the quote matches
+// what is actually generated.
+async function priceMedia(cli, row, timeoutMs) {
+  const kind = row.catalogType === "image" ? "image" : "video";
+  const result = await runJson(
+    cli,
+    ["generate", "cost", kind, row.modelId, "-p", SAFE_MEDIA_PROBE, "--json"],
+    timeoutMs,
+  );
+  if (!result.ok) {
+    return { modelId: row.modelId, price: null, error: compactError(result) };
+  }
+  const raw = result.value?.price ?? result.value?.data?.price;
+  const price = Number(raw);
+  return {
+    modelId: row.modelId,
+    price: Number.isFinite(price) ? price : null,
+    error: Number.isFinite(price) ? undefined : "no price in cost response",
+  };
+}
+
 async function mediaSmoke(cli, row, timeoutMs, mediaTimeoutMs) {
   const command = row.catalogType === "image" ? "image" : "video";
   const start = await runJson(
@@ -421,6 +451,7 @@ async function main() {
       Object.assign(byId.get(eligibleMedia[index].modelId), result),
     );
   }
+  let quotedMediaCostUsd = null;
   if (runMedia) {
     // parseArgs already rejects this; kept as a belt-and-braces assertion so a
     // future caller constructing args directly cannot start unbounded billing.
@@ -429,6 +460,51 @@ async function main() {
         "media-smoke/all requires --media-model-limit to bound billable jobs",
       );
     }
+
+    // Job COUNT is a poor cost bound: eligible video prices span 22x
+    // ($0.34-$7.56 observed 2026-08-28), and targets are chosen by catalog
+    // order, which is uncorrelated with price. So quote every target first --
+    // the cost endpoint is not billable -- print the itemization, and enforce
+    // --max-spend before a single paid call is made.
+    const quotes = await mapWithConcurrency(mediaTargets, 4, (row) =>
+      priceMedia(args.cli, row, args.timeoutMs),
+    );
+    const unpriced = quotes.filter((q) => q.price === null);
+    quotedMediaCostUsd = quotes.reduce((sum, q) => sum + (q.price ?? 0), 0);
+
+    console.error(`media smoke quote (${mediaTargets.length} job(s)):`);
+    for (const q of quotes) {
+      const cell = q.price === null ? "UNPRICED" : `$${q.price.toFixed(4)}`;
+      console.error(`  ${cell.padStart(10)}  ${q.modelId}`);
+    }
+    console.error(`  quoted total: $${quotedMediaCostUsd.toFixed(4)}`);
+
+    for (const q of quotes) {
+      const row = byId.get(q.modelId);
+      if (row && q.price !== null) row.quotedCostUsd = q.price;
+    }
+
+    if (args.maxSpendUsd !== undefined) {
+      // An unpriceable target cannot be bounded, so refuse rather than gamble
+      // that it is cheap.
+      if (unpriced.length > 0) {
+        throw new Error(
+          `--max-spend is set but ${unpriced.length} target(s) could not be priced ` +
+            `(${unpriced.map((q) => q.modelId).join(", ")}); refusing to submit unbounded jobs`,
+        );
+      }
+      if (quotedMediaCostUsd > args.maxSpendUsd) {
+        throw new Error(
+          `quoted $${quotedMediaCostUsd.toFixed(4)} exceeds --max-spend $${args.maxSpendUsd}; ` +
+            `nothing was submitted. Lower --media-model-limit or raise --max-spend.`,
+        );
+      }
+    } else if (unpriced.length > 0) {
+      console.error(
+        `  WARNING: ${unpriced.length} target(s) could not be priced; the total above is a floor, not the real cost`,
+      );
+    }
+
     const results = await mapWithConcurrency(mediaTargets, 2, (row) =>
       mediaSmoke(args.cli, row, args.timeoutMs, args.mediaTimeoutMs),
     );
@@ -473,6 +549,8 @@ async function main() {
       probeTimeoutMs: args.timeoutMs,
       mediaTimeoutMs: args.mediaTimeoutMs,
       mediaModelLimit: args.mediaModelLimit,
+      maxSpendUsd: args.maxSpendUsd ?? null,
+      quotedMediaCostUsd,
     },
     safety: {
       explicitAdultGenerationAutomated: false,

@@ -387,6 +387,40 @@ not a safety result — the probe prompt is deliberately non-graphic, so a clean
 response says the route works, not that the model would refuse or permit
 anything else.
 
+## Media pricing survey — why a job count is not a cost bound
+
+Quoted via `atlas generate cost` (non-billable) for the first 14 eligible models
+of each type, using the exact smoke prompt.
+
+**Video — 14 models, $0.34 to $7.56 (22x spread):**
+
+| Price | Model |
+|---:|---|
+| $7.56 | `alibaba/wan-3.0-prime/text-to-video` |
+| $4.8 | `alibaba/wan-3.0/text-to-video` |
+| $1.514799 | `bytedance/seedance-2.5/text-to-video` |
+| $1.21968 | `bytedance/seedance-2.0/text-to-video` |
+| $1.2 | `alibaba/happyhorse-1.0/text-to-video` |
+| $0.9 | `alibaba/happyhorse-1.1/text-to-video` |
+| $0.780595 | `bytedance/seedance-2.0-fast/text-to-video` |
+| $0.75 | `alibaba/wan-2.7/text-to-video` |
+| $0.525 | `alibaba/wan-2.5/text-to-video` |
+| $0.426888 | `bytedance/seedance-2.0-mini/text-to-video` |
+| $0.357 | `alibaba/wan-2.5/text-to-video-fast` |
+| $0.35 | `alibaba/wan-2.6/text-to-video` |
+| $0.34 | `atlascloud/van-2.5/text-to-video` |
+| $0.34 | `atlascloud/van-2.6/text-to-video` |
+
+**Image — 14 models, $0.0 to $0.09.** Images are
+negligible; video is where the money is.
+
+Two consequences. First, the 2026-08-27 note records
+`alibaba/wan-3.0/text-to-video` completing for $0.08; it quotes **$4.80** today,
+so that figure is not a safe basis for estimating. Second, because targets are
+selected by catalog order — which is uncorrelated with price — a limit of 6
+would have drawn in `wan-3.0-prime` ($7.56) and `wan-3.0` ($4.80) for roughly
+$14 against a $23.09 balance. That is what motivated `--max-spend`.
+
 ## Runner verification performed in this session
 
 The timeout bounding added in `bd050dd` was exercised against the real binary,
