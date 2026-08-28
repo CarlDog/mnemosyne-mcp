@@ -1,8 +1,12 @@
 # Status
 
 **Last updated:** 2026-08-27 (**The scene-context/continue feature series
-passed an adversarial review, and all 11 confirmed findings are
-remediated.** An 8-angle review of `fa90ba2..HEAD` (scene-context
+passed an adversarial review, all 11 confirmed findings are remediated,
+and CI's Test workflow is green again** — the long-red `lint + format`
+job was unformatted files (prettier `--check`), fixed in
+`711dcbd..f94a355` along with excluding the `vendor/` submodule from
+local eslint/prettier runs; verified against the actual runs at
+`f8f8c5a`/`f94a355`. An 8-angle review of `fa90ba2..HEAD` (scene-context
 strategies with fallback, the REST continue surface + web-UI continue
 flow, Ollama warmup/keep-alive) confirmed 10 findings, and the fix work
 surfaced an 11th: `keep_alive` sat inside the Ollama request's `options`
@@ -498,6 +502,23 @@ provider keys configured (179 total). See Done below for everything
 that's landed since.
 
 ## Done
+
+- **CI's Test workflow is green again — the red was prettier, not the
+  code** (2026-08-27, commits `711dcbd..f94a355`). The `lint + format`
+  job's `prettier --check .` step had been failing since before the
+  remediation series (baseline `7602711`), flagging 17 committed
+  unformatted files from the feature-series work; all three OS matrix
+  legs (typecheck/build/test) were passing the whole time. Fixed by
+  prettier-formatting the flagged files — plus two more
+  (`src/api/entities.ts`, `tests/api-interactive-unit.test.ts`) that the
+  older CI log didn't list because they only went stale during the
+  remediation commits; the miss was caught by re-checking against the
+  *latest* failing run rather than trusting the first log read.
+  Separately, a local-only `npm run lint` failure (51 errors) traced to
+  the `vendor/atlascloud-cli` submodule — third-party CommonJS that CI
+  never sees (checkout runs `submodules: false`) — now excluded in both
+  `eslint.config.js` and `.prettierignore`. Verified green against the
+  actual runs at `f8f8c5a` and `f94a355`, not local proxies.
 
 - **Adversarial review + full remediation of the scene-context/continue
   feature series** (2026-08-27, commits `60051cd..f709be0`).
