@@ -306,11 +306,15 @@ async function mediaSmoke(cli, row, timeoutMs, mediaTimeoutMs) {
     };
   const id = predictionId(start.value);
   if (!id) return { liveProbe: "error", error: "no prediction id" };
-  // A submitted job may still be billable even though we stopped waiting --
-  // record the id so the operator can reconcile it against Atlas billing.
+  // --no-download is REQUIRED, not an optimization. Without it the CLI writes
+  // every generated file into the process CWD (the repo root), which breaks
+  // this runner's documented contract that it never stores raw generated
+  // output -- and would drop generated adult media into a git repo the moment
+  // anyone widened the probe. URLs are still returned, so outputCount is
+  // unaffected.
   const result = await runJson(
     cli,
-    ["generate", "wait", id, "--json"],
+    ["generate", "wait", id, "--no-download", "--json"],
     mediaTimeoutMs,
   );
   if (!result.ok)
@@ -325,6 +329,7 @@ async function mediaSmoke(cli, row, timeoutMs, mediaTimeoutMs) {
   const flags =
     result.value?.has_nsfw_contents || result.value?.data?.has_nsfw_contents;
   return {
+    predictionId: id,
     liveProbe:
       status === "completed" || status === "succeeded"
         ? "completed"
