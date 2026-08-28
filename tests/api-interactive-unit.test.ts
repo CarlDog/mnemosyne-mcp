@@ -134,4 +134,20 @@ describe("interactive routes — scene-context strategy plumbing (mock OC)", () 
     expect(recording.memoryListCalls).toBe(0);
     expect(recording.sceneSearchTags.length).toBeGreaterThanOrEqual(1);
   });
+
+  it("continue with both kindroid_kin and kindroid_group_id returns 400, not 500", async () => {
+    const res = await fetch(`${baseUrl}/stories/${STORY_ID}/continue`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        direction: "A beat that should never generate.",
+        kindroid_kin: "kin-1",
+        kindroid_group_id: "group-1",
+      }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("invalid_body");
+    expect(body.message).toContain("at most one");
+  });
 });

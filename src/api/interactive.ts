@@ -144,10 +144,22 @@ export function registerInteractiveRoutes(
       const gatherMs = Date.now() - gatherStart;
       const systemPrompt = buildSystemPrompt(mode, context);
 
-      const explicitTarget = combineKindroidTarget(
-        parsedBody.data.kindroid_kin,
-        parsedBody.data.kindroid_group_id,
-      );
+      // combineKindroidTarget throws on kindroid_kin + kindroid_group_id
+      // both set -- a client input error the zod schema can't express
+      // (no cross-field rule), so map it to a 400 with the explanatory
+      // message instead of letting asyncRoute surface an opaque 500.
+      let explicitTarget: KindroidTarget | undefined;
+      try {
+        explicitTarget = combineKindroidTarget(
+          parsedBody.data.kindroid_kin,
+          parsedBody.data.kindroid_group_id,
+        );
+      } catch (err) {
+        res
+          .status(400)
+          .json(requestErrorBody("invalid_body", (err as Error).message));
+        return;
+      }
       let storyTarget: KindroidTarget | undefined;
       if (explicitTarget === undefined && generator.name === "kindroid") {
         storyTarget = story.kindroid_target;
