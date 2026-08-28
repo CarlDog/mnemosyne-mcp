@@ -24,6 +24,9 @@ import {
   gatherContext,
   MODES,
   SCENE_CONTEXT_STRATEGIES,
+  SCENE_CONTEXT_STRATEGY_DESCRIPTION,
+  SCENE_CONTEXT_FALLBACK_DESCRIPTION,
+  resolveSceneContextStrategies,
   type SceneContextStrategy,
 } from "../prompt.js";
 import { saveEntity, retagValidation } from "../entities.js";
@@ -84,20 +87,11 @@ export function registerContinueTool(
         scene_context_strategy: z
           .enum(SCENE_CONTEXT_STRATEGIES)
           .optional()
-          .describe(
-            `When selecting RECENT SCENES for context, choose either ` +
-              "recency-first (project-scoped created-at order) or " +
-              "query-ranked (query-ranked memory_search). Overrides the " +
-              "server default MNEMO_SCENE_CONTEXT_STRATEGY for this call only. " +
-              "If unset, uses the server default.",
-          ),
+          .describe(SCENE_CONTEXT_STRATEGY_DESCRIPTION),
         scene_context_fallback_strategy: z
           .enum(SCENE_CONTEXT_STRATEGIES)
           .optional()
-          .describe(
-            "Optional fallback if the primary scene-context strategy yields no " +
-              "eligible scenes. If unset, no fallback occurs.",
-          ),
+          .describe(SCENE_CONTEXT_FALLBACK_DESCRIPTION),
         max_tokens: z
           .number()
           .int()
@@ -194,17 +188,22 @@ export function registerContinueTool(
         const mode = args.mode ?? DEFAULT_MODE;
 
         const gatherStart = Date.now();
-        const requestedSceneContextStrategy =
-          args.scene_context_strategy ?? sceneContextStrategy;
-        const requestedSceneContextFallbackStrategy =
-          args.scene_context_fallback_strategy ??
-          sceneContextFallbackStrategy;
+        const sceneStrategies = resolveSceneContextStrategies(
+          {
+            strategy: args.scene_context_strategy,
+            fallback: args.scene_context_fallback_strategy,
+          },
+          {
+            strategy: sceneContextStrategy,
+            fallback: sceneContextFallbackStrategy,
+          },
+        );
         const context = await gatherContext(
           oc,
           storyId,
           args.direction,
-          requestedSceneContextStrategy,
-          requestedSceneContextFallbackStrategy,
+          sceneStrategies.strategy,
+          sceneStrategies.fallback,
         );
         const gatherMs = Date.now() - gatherStart;
         const systemPrompt = buildSystemPrompt(mode, context);

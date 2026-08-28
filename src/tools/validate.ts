@@ -22,7 +22,10 @@ import type { LlmProvider } from "../llm.js";
 import {
   DEFAULT_SCENE_CONTEXT_STRATEGY,
   SCENE_CONTEXT_STRATEGIES,
+  SCENE_CONTEXT_STRATEGY_DESCRIPTION,
+  SCENE_CONTEXT_FALLBACK_DESCRIPTION,
   gatherContext,
+  resolveSceneContextStrategies,
   type SceneContextStrategy,
 } from "../prompt.js";
 import { validateContent } from "../validator.js";
@@ -60,20 +63,11 @@ export function registerValidateTool(
         scene_context_strategy: z
           .enum(SCENE_CONTEXT_STRATEGIES)
           .optional()
-          .describe(
-            `When selecting RECENT SCENES for validation context, choose either ` +
-              "recency-first (project-scoped created-at order) or " +
-              "query-ranked (query-ranked memory_search). Overrides the " +
-              "server default MNEMO_SCENE_CONTEXT_STRATEGY for this call only. " +
-              "If unset, uses the server default.",
-          ),
+          .describe(SCENE_CONTEXT_STRATEGY_DESCRIPTION),
         scene_context_fallback_strategy: z
           .enum(SCENE_CONTEXT_STRATEGIES)
           .optional()
-          .describe(
-            "Optional fallback if the primary scene-context strategy yields no " +
-              "eligible scenes. If unset, no fallback occurs.",
-          ),
+          .describe(SCENE_CONTEXT_FALLBACK_DESCRIPTION),
       },
     },
     withLogging(
@@ -85,11 +79,16 @@ export function registerValidateTool(
         story?: string;
       }) => {
         const storyId = await resolveStoryId(oc, args.story);
-        const requestedSceneContextStrategy =
-          args.scene_context_strategy ?? sceneContextStrategy;
-        const requestedSceneContextFallbackStrategy =
-          args.scene_context_fallback_strategy ??
-          sceneContextFallbackStrategy;
+        const sceneStrategies = resolveSceneContextStrategies(
+          {
+            strategy: args.scene_context_strategy,
+            fallback: args.scene_context_fallback_strategy,
+          },
+          {
+            strategy: sceneContextStrategy,
+            fallback: sceneContextFallbackStrategy,
+          },
+        );
         // Reuse continue's gatherContext so the validator sees the same
         // shape of context. The validator only consumes rules / style /
         // characters / locations; the rest of the bundle is harmlessly
@@ -98,8 +97,8 @@ export function registerValidateTool(
           oc,
           storyId,
           args.content,
-          requestedSceneContextStrategy,
-          requestedSceneContextFallbackStrategy,
+          sceneStrategies.strategy,
+          sceneStrategies.fallback,
         );
         // Guard the validator pass: a validator-LLM failure or non-JSON
         // output degrades to a structured error instead of a raw MCP tool
