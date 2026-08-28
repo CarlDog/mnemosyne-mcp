@@ -107,6 +107,48 @@ Use the matrix as a routing input:
 - Results are timestamped because Atlas availability, upstream policies,
   model aliases, and prices change.
 
+## Installing the CLI
+
+`vendor/atlascloud-cli` is a git submodule pinned to a known upstream version
+(`VERSION` records it). It is the **installer**, not the CLI: the upstream repo
+carries no Go source and no committed binary, so a fresh clone has nothing
+runnable. On a cold clone, fetch the submodule first:
+
+```bash
+git submodule update --init vendor/atlascloud-cli
+```
+
+Then install the binary by one of two routes. Both download a release archive
+from GitHub and verify it against upstream's `checksums.txt`.
+
+```powershell
+# Windows -- installs atlas.exe to %LOCALAPPDATA%\AtlasCloud\bin and adds it
+# to the user PATH (open a new terminal afterwards).
+powershell -ExecutionPolicy Bypass -File vendor/atlascloud-cli/install.ps1
+```
+
+```bash
+# macOS / Linux -- installs to /usr/local/bin (sudo) unless --prefix is given.
+sh vendor/atlascloud-cli/install.sh --prefix="$HOME/.local"
+```
+
+The npm wrapper (`npm install` inside `vendor/atlascloud-cli/npm/`) is a third
+route; its postinstall downloads the same archive into `npm/vendor/`.
+
+**On Windows, prefer the `install.ps1` route or set `ATLAS_CLI_BIN`.** The npm
+wrapper exposes `atlas` as a `.cmd` shim, and Node refuses to spawn `.cmd`
+without a shell (the CVE-2024-27980 hardening), so this runner would fail with
+`EINVAL` against it. Pointing `ATLAS_CLI_BIN` (or `--cli`) directly at the real
+executable sidesteps that entirely and works for every install route:
+
+```powershell
+$env:ATLAS_CLI_BIN = "$env:LOCALAPPDATA\AtlasCloud\bin\atlas.exe"
+```
+
+Verify before benchmarking: `atlas version` (or `& $env:ATLAS_CLI_BIN version`)
+should print a version. `spawn atlas ENOENT` from the runner means the CLI is
+not installed or not on PATH — not a runner fault.
+
 ## Running it
 
 The runner uses the official `atlas` CLI, keeps secrets in the CLI's auth
