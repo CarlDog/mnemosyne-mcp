@@ -120,6 +120,26 @@ const OLLAMA_TIMEOUT_MS = 5 * 60 * 1000;
 // "30m" literals that drift.
 export const DEFAULT_KEEP_ALIVE = "30m";
 
+/**
+ * Ollama's `keep_alive` accepts a duration STRING ("30m", "90s", "0") or a
+ * NUMBER of seconds -- but it rejects the string "-1" outright with HTTP 400,
+ * while the number -1 (pin indefinitely) is accepted. Verified live against
+ * Ollama 2026-08-28: `"keep_alive":"-1"` -> 400, `"keep_alive":-1` -> 200,
+ * with "0"/"30m"/"90s" all fine as strings.
+ *
+ * That matters because .env.example documents `OLLAMA_KEEP_ALIVE=-1` as the
+ * way to pin a model indefinitely, and env vars are always strings -- so
+ * following the documentation produced a server that 400s on every
+ * generation.
+ *
+ * Any wholly numeric value is therefore sent as a number; everything else
+ * passes through as the duration string Ollama expects.
+ */
+export function normalizeKeepAlive(value: string): string | number {
+  const trimmed = value.trim();
+  return /^-?\d+$/.test(trimmed) ? Number(trimmed) : trimmed;
+}
+
 // Sampling bounds shared by every surface that accepts them. The MCP tool and
 // the REST route validated the same three numbers independently, which is the
 // drift the group-turn constants in kindroid-provider.ts already exist to
@@ -223,7 +243,9 @@ export class OllamaProvider implements LlmProvider {
       // nested inside options Ollama silently ignores it (verified live
       // 2026-08-27: options.keep_alive left the server default expiry
       // untouched; top-level keep_alive moved it).
-      keep_alive: this.config.keepAlive ?? DEFAULT_KEEP_ALIVE,
+      keep_alive: normalizeKeepAlive(
+        this.config.keepAlive ?? DEFAULT_KEEP_ALIVE,
+      ),
       options: {
         temperature: opts.temperature ?? DEFAULT_TEMPERATURE,
         num_predict: numPredict,
@@ -238,7 +260,9 @@ export class OllamaProvider implements LlmProvider {
       user_chars: opts.userMessage.length,
       num_ctx: numCtx,
       est_prompt_tokens: ctxPlan.estPromptTokens,
-      keep_alive: this.config.keepAlive ?? DEFAULT_KEEP_ALIVE,
+      keep_alive: normalizeKeepAlive(
+        this.config.keepAlive ?? DEFAULT_KEEP_ALIVE,
+      ),
     });
 
     const controller = new AbortController();
