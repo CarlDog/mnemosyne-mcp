@@ -47,10 +47,10 @@ const validateSchema = z.object({
 });
 
 const revalidateScenesSchema = z.object({
-  scene_context_strategy: z
-    .enum(SCENE_CONTEXT_STRATEGIES)
-    .optional()
-    .default(DEFAULT_SCENE_CONTEXT_STRATEGY),
+  // Plain .optional() like the sibling schemas -- a zod .default() here
+  // fills the value before the handler's `?? sceneContextStrategy` runs,
+  // which silently discards the server-configured strategy.
+  scene_context_strategy: z.enum(SCENE_CONTEXT_STRATEGIES).optional(),
   scene_context_fallback_strategy: z
     .enum(SCENE_CONTEXT_STRATEGIES)
     .optional(),

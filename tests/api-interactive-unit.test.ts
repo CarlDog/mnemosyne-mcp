@@ -1,0 +1,137 @@
+// Pure unit tests for the interactive /api routes' strategy plumbing.
+// No real OC/Ollama -- a recording mock OcClient makes the strategy an
+// observable: query-ranked scene pulls go through memorySearch, while
+// recency-first goes through memoryList, so asserting which method ran
+// pins which strategy the route actually used.
+//
+// Regression anchor: revalidateScenesSchema once carried a zod
+// .default(DEFAULT_SCENE_CONTEXT_STRATEGY) on scene_context_strategy,
+// which filled the value before the handler's `?? serverStrategy` could
+// run -- an empty POST body silently ignored the operator-configured
+// MNEMO_SCENE_CONTEXT_STRATEGY on this one route.
+
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import type { Server } from "node:http";
+import express from "express";
+import { createApiRouter } from "../src/api/index.js";
+import type { OcClient, OcMemory } from "../src/oc-client.js";
+import type { LlmProvider } from "../src/llm.js";
+
+const STORY_ID = "11111111-2222-4333-8444-555555555555";
+
+function markerMemory(): OcMemory {
+  return {
+    id: "marker-1",
+    content: "[Mnemosyne Story] Unit Story\nCreated: 2026-01-01T00:00:00Z",
+    project_id: STORY_ID,
+    tags: ["mnemosyne", "story-marker"],
+    pinned: true,
+    created_at: "2026-01-01T00:00:00Z",
+  };
+}
+
+function sceneMemory(): OcMemory {
+  return {
+    id: "scene-1",
+    content: "[Scene] Unit scene\n\nA quiet beat for the unit test.",
+    project_id: STORY_ID,
+    tags: ["mnemosyne", "story", "scene"],
+    pinned: false,
+    created_at: "2026-01-02T00:00:00Z",
+  };
+}
+
+interface RecordingOc {
+  oc: OcClient;
+  memoryListCalls: number;
+  sceneSearchTags: string[][];
+}
+
+function makeRecordingOc(): RecordingOc {
+  const state: RecordingOc = {
+    oc: undefined as unknown as OcClient,
+    memoryListCalls: 0,
+    sceneSearchTags: [],
+  };
+  state.oc = {
+    memorySearch: async (opts: { tags?: string[] }) => {
+      if (opts.tags?.includes("story-marker")) return [markerMemory()];
+      if (opts.tags?.includes("scene")) {
+        state.sceneSearchTags.push(opts.tags);
+        return [sceneMemory()];
+      }
+      return [];
+    },
+    memoryList: async () => {
+      state.memoryListCalls += 1;
+      return [sceneMemory()];
+    },
+    memoryUpdate: async () => sceneMemory(),
+  } as unknown as OcClient;
+  return state;
+}
+
+const stubValidator: LlmProvider = {
+  name: "stub-validator",
+  generate: async () => ({
+    text: JSON.stringify({ issues: [], summary: "clean" }),
+  }),
+};
+
+const stubGenerator: LlmProvider = {
+  name: "stub-generator",
+  generate: async () => ({ text: "A generated beat." }),
+};
+
+describe("interactive routes — scene-context strategy plumbing (mock OC)", () => {
+  let recording: RecordingOc;
+  let httpServer: Server;
+  let baseUrl: string;
+
+  beforeAll(async () => {
+    recording = makeRecordingOc();
+    const app = express();
+    app.use(express.json());
+    app.use(
+      "/api",
+      createApiRouter(recording.oc, {
+        generator: stubGenerator,
+        validator: stubValidator,
+        sceneContextStrategy: "query-ranked",
+        sceneContextFallbackStrategy: "query-ranked",
+      }),
+    );
+    httpServer = await new Promise((resolve) => {
+      const s = app.listen(0, "127.0.0.1", () => resolve(s));
+    });
+    const address = httpServer.address();
+    if (address === null || typeof address === "string") {
+      throw new Error("expected AddressInfo");
+    }
+    baseUrl = `http://127.0.0.1:${address.port}/api`;
+  });
+
+  afterAll(async () => {
+    await new Promise<void>((resolve, reject) => {
+      httpServer.close((err) => (err ? reject(err) : resolve()));
+    });
+  });
+
+  it("revalidate-scenes with an empty body honors the server-configured strategy", async () => {
+    const res = await fetch(`${baseUrl}/stories/${STORY_ID}/revalidate-scenes`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.scenes_checked).toBe(1);
+
+    // Server strategy is query-ranked: every scene pull must be a
+    // memorySearch (scene-tagged), and the recency-first path's
+    // memoryList must never run. Before the .default() fix, zod filled
+    // "recency-first" into the empty body and memoryList fired here.
+    expect(recording.memoryListCalls).toBe(0);
+    expect(recording.sceneSearchTags.length).toBeGreaterThanOrEqual(1);
+  });
+});
