@@ -1,6 +1,41 @@
 # Status
 
-**Last updated:** 2026-08-27 (**Wonderland is the fifth story fully
+**Last updated:** 2026-08-27 (**The scene-context/continue feature series
+passed an adversarial review, and all 11 confirmed findings are
+remediated.** An 8-angle review of `fa90ba2..HEAD` (scene-context
+strategies with fallback, the REST continue surface + web-UI continue
+flow, Ollama warmup/keep-alive) confirmed 10 findings, and the fix work
+surfaced an 11th: `keep_alive` sat inside the Ollama request's `options`
+object where Ollama silently ignores it (live-verified — it belongs
+top-level), so the entire keep-alive feature had been inert. Remediation
+landed as 13 commits (`60051cd..f709be0`): empty-string enum env vars now
+read as unset instead of crash-looping startup; the revalidate API
+route's zod `.default()` no longer discards the server-configured
+strategy; a single `resolveSceneContextStrategies()` makes the documented
+"per-call primary override ⇒ no inherited fallback" contract true on
+every surface; the kin+group conflict maps to a 400; warmup preloads at
+the real configured num_ctx (a 4096-floor warmup just forced a reload on
+the first big-story call) and runs HTTP-mode-only by default
+(`MNEMO_WARMUP=true` opts stdio in); the web UI no longer crashes on the
+group-yield response and defaults to the server's strategy instead of
+silently overriding it. Efficiency: validation contexts gather only the
+four types the validator actually reads — the scene/lore/worldbuilding
+pulls (including revalidate's up-to-100× full-project re-fetch) were
+discarded work, so `mnemo_validate`/`mnemo_revalidate_scenes` and their
+API routes lost their scene-strategy params outright (operator-approved:
+with no scene pull they were knobs controlling nothing) — and the
+recency-first scene pool switched to a compact scan-then-hydrate two-hop
+(tags+created_at rows, then `memory_get` on ≤5 winners) instead of
+transferring every entity body in the project per continue. Structure:
+`continueScene()` extracted so the MCP tool and REST route share one
+continue core (the route was a drifting ~170-line copy); shared
+`requireStory()`/`parseOr400()` API helpers; query-ranked regained the
+clean-over-untagged scene preference the refactor had silently dropped.
+An OC dogfooding note was filed (memory_list lacks a tags filter,
+memory_search lacks order_by — the reason the two-hop exists). Verified:
+192 unit tests + 32 live-OC integration tests green, webui builds, dump
+scripts smoke-tested against real OC including the empty/invalid env
+cases.) Earlier (2026-08-27): (**Wonderland is the fifth story fully
 consolidated onto the canon/ authoring layer — and the last of the five
 original curated-import stories.** 76 entities (10 core characters — every
 named character was rich enough to classify core, no batched `_minor.md` —
@@ -463,6 +498,84 @@ provider keys configured (179 total). See Done below for everything
 that's landed since.
 
 ## Done
+
+- **Adversarial review + full remediation of the scene-context/continue
+  feature series** (2026-08-27, commits `60051cd..f709be0`).
+  - An 8-angle adversarial review (line-by-line, removed-behavior,
+    cross-file tracing, reuse/simplification/efficiency/altitude/
+    conventions) of `fa90ba2..HEAD` — the scene-context strategy +
+    fallback plumbing, the REST `/continue`/`/validate`/
+    `/revalidate-scenes` surface, the web-UI continue flow, and Ollama
+    warmup/keep-alive — confirmed 10 findings; fixing them surfaced an
+    11th, live-verified against the NAS's Ollama: `keep_alive` was
+    nested inside the request's `options` object, where Ollama silently
+    ignores it (it is a top-level field), so the shipped keep-alive
+    feature was entirely inert.
+  - Correctness fixes: empty-string enum env vars (`MNEMO_SCENE_*`,
+    via a shared `parseEnvEnum` also covering `GENERATOR_PROVIDER`)
+    read as unset instead of `process.exit(1)`-crash-looping a
+    container; the revalidate API route's zod
+    `.default(DEFAULT_SCENE_CONTEXT_STRATEGY)` no longer pre-fills the
+    body and dead-ends the `?? serverStrategy` fallthrough (regression
+    test proven to fail against the bug); one
+    `resolveSceneContextStrategies()` resolver makes the schema docs'
+    "if fallback unset while primary is set, no fallback occurs" true
+    on all surfaces (previously a per-call query-ranked override
+    silently inherited the server's recency-first fallback — exactly
+    poisoning A/B strategy comparisons); kindroid kin+group conflicts
+    on the REST route return 400 with the message instead of an opaque
+    500; the misplaced `allowUser` rationale pasted into
+    `groupMaxTurns`' docblock (self-refuting, contradicted CLAUDE.md,
+    and instructed future editors not to fix it) is deleted.
+  - Warmup: preloads at the configured `maxContextWindow` instead of
+    the computeNumCtx 4096 floor (which made the first big-story call
+    reload the model anyway while logs claimed warmup succeeded), and
+    runs by default only in HTTP mode — a stdio spawn per desktop
+    session was pinning generator+validator models for the keep-alive
+    window even for browse-only sessions; `MNEMO_WARMUP=true` opts
+    stdio in.
+  - Efficiency: `gatherContext` gained an options object with
+    `validationOnly` — validator.ts's constraintsBlock reads only
+    rules/style/characters/locations, so validation paths no longer
+    fetch scenes/lore/worldbuilding at all (revalidateScenes had been
+    re-fetching the entire project once per scene, up to 100×, for a
+    field the validator never reads). Consequently
+    `mnemo_validate`/`mnemo_revalidate_scenes` and the API
+    validate/revalidate routes **lost their
+    scene_context_strategy/fallback params** (operator-approved: with
+    no scene pull they were knobs that could never affect output; old
+    clients still sending them keep working — zod strips unknown
+    keys). The recency-first scene pool (the default) switched from an
+    unbounded full-body `memory_list` of the whole project to a
+    compact scan (`memoryListCompact` — row shape verified live) +
+    `memory_get` hydration of only the ≤5 winners.
+  - Structure: `continueScene()` extracted from the tool handler
+    (revalidateScenes precedent) so the MCP tool and REST route share
+    one continue core — the route had been a ~170-line near-verbatim
+    copy already drifting (its yield message contained a literal
+    un-substituted `:storyId`); `requireStory()`/`parseOr400()` in
+    api/helpers.ts replace five hand-typed 404 blocks and four zod-400
+    blocks; the strategy pair is required (not defaulted) through the
+    register chain, deleting a hardcoded `"recency-first"` literal that
+    had drifted from the constant; `DEFAULT_KEEP_ALIVE` has one owner;
+    the dump scripts validate `MNEMO_SCENE_CONTEXT_STRATEGY` from the
+    environment instead of silently misbehaving on a typo.
+  - Semantics restored: the query-ranked strategy regained the
+    clean-over-untagged scene bucketing the refactor had silently
+    dropped (the validation filter is now strategy-independent —
+    errors excluded, clean first, strategy order within buckets);
+    the web UI's strategy select gained a default "Server default"
+    option that omits the field (it had been hardcoding and always
+    sending recency-first, overriding operator config from every
+    web continue).
+  - Filed an OC dogfooding note (openchronicle-mcp project,
+    `cfb53e7c`): `memory_list` has no tags filter and `memory_search`
+    has no order_by, so "N most recent tag-X memories" needs the
+    two-hop; either addition collapses it to one call.
+  - Verified: 192 unit tests green, 32 real-OC integration tests green
+    (exercising the compact scan against the live deployment), webui
+    `tsc -b` + vite build clean, dump scripts smoke-tested against
+    real OC with unset/empty/mixed-case/invalid strategy env values.
 
 - **Wonderland is the fifth story fully consolidated onto canon/**
   (2026-08-27) — the last of the five original curated-import stories.
