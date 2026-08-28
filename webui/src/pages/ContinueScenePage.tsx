@@ -293,35 +293,18 @@ export default function ContinueScenePage() {
             {result.context_summary && (
               <>
                 <h3 className="result-subhead">Context summary</h3>
+                {/* Mapped rather than hand-written: a new context type on
+                    the server now surfaces here automatically instead of
+                    being silently omitted. */}
                 <dl className="mini-dl">
-                  <div>
-                    <dt>rules</dt>
-                    <dd>{result.context_summary.rules}</dd>
-                  </div>
-                  <div>
-                    <dt>style</dt>
-                    <dd>{result.context_summary.style}</dd>
-                  </div>
-                  <div>
-                    <dt>characters</dt>
-                    <dd>{result.context_summary.characters}</dd>
-                  </div>
-                  <div>
-                    <dt>locations</dt>
-                    <dd>{result.context_summary.locations}</dd>
-                  </div>
-                  <div>
-                    <dt>scenes</dt>
-                    <dd>{result.context_summary.scenes}</dd>
-                  </div>
-                  <div>
-                    <dt>lore</dt>
-                    <dd>{result.context_summary.lore}</dd>
-                  </div>
-                  <div>
-                    <dt>worldbuilding</dt>
-                    <dd>{result.context_summary.worldbuilding}</dd>
-                  </div>
+                  {Object.entries(result.context_summary).map(
+                    ([label, count]) => (
+                      <div key={label}>
+                        <dt>{label}</dt>
+                        <dd>{count}</dd>
+                      </div>
+                    ),
+                  )}
                 </dl>
               </>
             )}
