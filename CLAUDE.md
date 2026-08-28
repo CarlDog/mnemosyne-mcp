@@ -101,17 +101,18 @@ scene event, not Carl typing, and asterisk-for-action came back
 unprompted, though two active regression threads mean Botify's own team
 was mid-fix on that exact mechanism at the time.
 
-**The web UI exists** (2026-08-23) — WEBUI_NOTES §9 slice 1 (entity
-library, read-only: browse stories, filter/search a story's entities,
-view one entity in full) shipped end to end: a new `/api/*` REST layer
+**The web UI exists** (2026-08-23) — its entity library and interactive
+continue flow have shipped: browse stories, filter/search a story's entities,
+view one entity in full, and generate/validate the next beat through the
+shared continue core. A new `/api/*` REST layer
 (`src/api/`, thin adapters over the same domain functions the MCP tools
 already wrap) plus a real React + Vite SPA (`webui/`, its own package,
 built and served by the same Express app slice 0 added — see "Layout"
 below). Verified twice over: 220 automated tests passing, and an actual
 browser walkthrough against real production data with zero console
-errors. Entity edit/delete UI, Docker deployment, and every other
-WEBUI_NOTES §9 slice (director/participant/audience modes, the assembly
-panel, watch parties) are explicitly not started yet.
+errors at the original entity-library milestone. Entity edit/delete UI,
+mode-specific postures and control planes, the assembly panel, Docker
+deployment, media, and watch parties remain unbuilt.
 
 This landed on top of two same-day prerequisites: **slice 0**
 (`resolveStoryId()`'s per-call `story` override generalized across every
@@ -160,11 +161,12 @@ category alongside `characters/`/`locations/`.
   protecting `/api/*` and the static web UI.
 - `src/api/` — the REST layer the web UI talks to: `index.ts`
   (`createApiRouter()`, mirrors `tools/index.ts`'s orchestrator shape),
-  `stories.ts`, `entities.ts` (route handlers — thin JSON adapters over
-  the same domain functions the MCP tools wrap), `helpers.ts`
-  (`asyncRoute()`, error middleware).
-- `webui/` — the actual web UI (WEBUI_NOTES §9 slice 1: entity library,
-  read-only). A separate npm package — React 19 + Vite + react-router,
+  `stories.ts`, `entities.ts`, and `interactive.ts` (route handlers — thin
+  JSON adapters over the same domain functions the MCP tools wrap),
+  `helpers.ts` (`asyncRoute()`, input/error handling).
+- `webui/` — the actual web UI: entity-library browse/detail plus the
+  interactive continue/validate flow. A separate npm package — React 19 +
+  Vite + react-router,
   its own tsconfig (browser/JSX target, incompatible with the server's
   `NodeNext`/no-DOM config) and its own eslint config (pinned to eslint 9;
   `eslint-plugin-react-hooks`'s peer range doesn't reach 10 yet). `npm run
@@ -215,6 +217,34 @@ category alongside `characters/`/`locations/`.
 - `docs/ARCHITECTURE.md` — locked architectural decisions. Read this
   first to understand project shape, state model, validation strategy,
   provider strategy, and build sequence.
+- `docs/OLLAMA_ADOPTION_ASSESSMENT.md` — research-only audit of Ollama's
+  native API, runtime behavior, capabilities, and operational boundary against
+  Mnemosyne's existing integration. Records integrity/privacy findings,
+  bounded adaptations, acceptance proof, and explicit non-adoptions. It is
+  not ratified architecture or an implementation commitment.
+- `docs/OPENCLAW_ADOPTION_ASSESSMENT.md` — research-only comparison of
+  OpenClaw against Mnemosyne's demonstrated needs. Records the narrow
+  patterns worth considering, evidence and acceptance criteria, conditional
+  ideas, and explicit non-adoptions. It is not ratified architecture or an
+  implementation commitment.
+- `docs/OPEN_WEBUI_ADOPTION_ASSESSMENT.md` — research-only comparison of
+  Open WebUI as an optional host and pattern library. Records provider
+  telemetry, recoverable-run, alternatives, and accessibility findings while
+  rejecting a frontend/provider/memory-platform transplant.
+- `docs/NEMOCLAW_ADOPTION_ASSESSMENT.md` — research-only comparison of
+  NemoClaw's authority, MCP-contract, readiness, and endpoint patterns against
+  Mnemosyne's demonstrated boundaries. It is not ratified architecture or an
+  implementation commitment.
+- `docs/ATLAS_CAPABILITY_BENCHMARK.md` and the dated results documents —
+  bounded, evidence-only Atlas Cloud route evaluation; the accompanying
+  `scripts/atlas-capability-benchmark.mjs` never automates explicit-content
+  generation or stores raw generated output.
+- `docs/HOOK_VAULT.md` — non-canon development register for promising story
+  and character seeds. Promotion requires an explicit creative decision and a
+  canon-first scaffold.
+- `docs/STORYLINE_RESEARCH_BACKLOG.md` — operator-selected deferred research
+  and follow-up work for concepts with a deliberate direction or existing
+  story foundation; raw salvage remains in the Hook Vault.
 - `docs/DATA_LAYOUT.md` — the data-directory organization and naming
   standard: per-story `references/` and `art/` conventions, generation
   sidecars, and the server-written `story.json` identity card.
@@ -224,10 +254,11 @@ category alongside `characters/`/`locations/`.
   knowledge geometry, hook ecology, truth tiers, current-state extraction,
   provenance, mature-content/routing separation, and cross-story improvement
   without forced canon connections.
-- `docs/WEBUI_NOTES.md` — design input for the planned web UI (explicitly
-  not ratified): mode-adaptive layout, the storyline control plane, the
-  retrieval-assembly panel, media in the beat flow, plex-companion watch
-  parties, and a parked graphic-novel reading format.
+- `docs/WEBUI_NOTES.md` — design input for the shipped-but-incomplete web UI
+  (explicitly not ratified beyond implemented slices): mode-adaptive layout,
+  the storyline control plane, the retrieval-assembly panel, media in the beat
+  flow, plex-companion watch parties, and a parked graphic-novel reading
+  format.
 - `docs/CONTENT_ROUTING_DESIGN.md` — proposal (not yet ratified) for
   implementing Living Canon Standard §10's SFW/NSFW routing boundary: a
   story-level content-rating declaration on the story marker, a
@@ -242,9 +273,11 @@ category alongside `characters/`/`locations/`.
 - `.githooks/pre-commit` — gitleaks + PII pattern scan + author identity check.
 - `.gitleaks.toml` — secret-scanning config.
 - `vendor/atlascloud-cli` — [Atlas Cloud CLI](https://github.com/AtlasCloudAI/cli)
-  (credit: AtlasCloudAI), vendored as a git submodule. Manual dev/ops tool
-  only (shell-side balance/model/connectivity checks) — the `atlascloud`
-  generator provider talks to the API directly and does not use it.
+  (credit: AtlasCloudAI), vendored as a git submodule. Development/operations
+  and research tool for shell-side balance/model/connectivity checks;
+  `scripts/atlas-capability-benchmark.mjs` consumes a compatible CLI via
+  `ATLAS_CLI_BIN` or `PATH`. The runtime `atlascloud` generator provider talks
+  to the API directly and does not use the CLI.
 
 ## Architecture Overview
 
@@ -261,15 +294,15 @@ Key architectural decisions (see ARCHITECTURE.md for full reasoning):
   Claude Desktop / Claude Code via the MCP.
 - **OC is canonical for story state.** Characters, scenes, rules,
   style, lore — all live as OC memories with structured tags. Local
-  config holds operational state only (current story pointer, turn
-  scratchpad).
+  config holds one operational field only: the current-story pointer.
 - **A story is chosen per call, not per connection.** Every story-touching
   tool accepts an optional `story` (name or OC project UUID) that
   overrides the active-story pointer for that one call — `resolveStoryId()`
   in `stories.ts`, generalizing the pattern `mnemo_export_story` always
   used. Deliberately not session-scoped server state: the HTTP transport
   (below) evicts idle sessions, which would silently drop a session-bound
-  "active story" mid-use, so a caller that cares (a future web UI) just
+  "active story" mid-use, so a caller that cares (including the current web
+  UI) just
   passes `story` explicitly on every call instead. Omitting it falls back
   to the pointer with zero OC calls, so every existing stdio caller is
   unaffected.
@@ -277,10 +310,12 @@ Key architectural decisions (see ARCHITECTURE.md for full reasoning):
   deployment) runs stdio, unchanged. Set, it runs Streamable HTTP via
   `shared/http-transport.ts` — a byte-verbatim copy of kindroid-mcp's
   fleet-canonical module, chosen over a bespoke implementation because it
-  already closes every hardening gap a fleet survey found scattered
-  across other servers (fresh `McpServer` per session via a `createServer`
-  factory, idle-session eviction, Host/Origin allowlist against DNS
-  rebinding, bearer auth). `oc`/`generator`/`validator` stay singletons
+  provides the shared fleet baseline (fresh `McpServer` per session via a
+  `createServer` factory, idle-session eviction, Host/Origin allowlisting
+  against DNS rebinding, and bearer auth). The OpenClaw and NemoClaw
+  assessments record the remaining gates before non-loopback or third-party
+  host exposure, including filesystem path authority. `oc`/`generator`/
+  `validator` stay singletons
   shared across every HTTP session; only the `McpServer` instance and its
   tool registrations are rebuilt per session.
 - **Validation is an LLM second pass.** Mnemosyne pulls relevant rules
@@ -339,9 +374,10 @@ Key architectural decisions (see ARCHITECTURE.md for full reasoning):
   (`KINDROID_STORYTELLING_KIN` or `KINDROID_STORYTELLING_GROUP`). The
   story-marker lookup is skipped entirely unless both conditions hold, so
   an Ollama-generated story pays no extra OC round trip for a field it'll
-  never use. `model` stays Ollama-only (an Ollama model tag) — it no
-  longer doubles as a Kindroid override, since a Kindroid target needs a
-  type (ai vs group), not just a bare id.
+  never use. `model` overrides the configured model for every direct provider
+  (`ollama`, `anthropic`, `openai`, `gemini`, `atlascloud`) and is ignored by
+  companion providers. It no longer doubles as a Kindroid override, since a
+  Kindroid target needs a type (ai vs group), not just a bare id.
 - **Group targets drive kindroid-mcp's turn loop, not a single reply.**
   `KindroidProvider.generate()` against a group target calls
   `KindroidClient.advanceGroup()` (→ kindroid-mcp's `kindroid_advance_group`
@@ -398,7 +434,7 @@ Key architectural decisions (see ARCHITECTURE.md for full reasoning):
 
 ```bash
 npm install            # install deps
-npm run build          # tsc → dist/
+npm run build          # compile server + build/copy Web UI into dist/
 npm run dev            # tsx src/index.ts
 npm run typecheck      # tsc -p tsconfig.typecheck.json (src + tests)
 npm run lint           # eslint .

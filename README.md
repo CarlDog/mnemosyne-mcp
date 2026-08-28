@@ -17,10 +17,11 @@ mother of the Muses — the force by which memory becomes story.
 
 ## Status
 
-**v0.1.3 shipped** — ten tools (`mnemo_story_list`, `mnemo_story_use`,
-`mnemo_save_entity`, `mnemo_recall`, `mnemo_delete_entity`,
+**The current v0.1.3 codebase exposes eleven tools** —
+`mnemo_story_list`, `mnemo_story_use`, `mnemo_save_entity`,
+`mnemo_recall`, `mnemo_list_entities`, `mnemo_delete_entity`,
 `mnemo_continue`, `mnemo_validate`, `mnemo_revalidate_scenes`,
-`mnemo_export_story`, `mnemo_import_story`).
+`mnemo_export_story`, and `mnemo_import_story`.
 `mnemo_continue(validate=true)` now tags scenes with their validation
 verdict, and the RECENT SCENES prompt block filters on it — the fix for
 the few-shot-vs-rule diagnostic where present-tense example scenes drowned
@@ -38,6 +39,26 @@ live-verification status per provider. Related docs:
   what's done, what's next
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — locked architectural
   decisions and the reasoning behind them
+- [docs/OLLAMA_ADOPTION_ASSESSMENT.md](docs/OLLAMA_ADOPTION_ASSESSMENT.md)
+  — pinned source/API/runtime comparison of Ollama against Mnemosyne's
+  existing integration; research recommendations only, not ratified architecture
+- [docs/OPENCLAW_ADOPTION_ASSESSMENT.md](docs/OPENCLAW_ADOPTION_ASSESSMENT.md)
+  — dated comparison of OpenClaw patterns against Mnemosyne's demonstrated
+  needs; research recommendations only, not ratified architecture
+- [docs/OPEN_WEBUI_ADOPTION_ASSESSMENT.md](docs/OPEN_WEBUI_ADOPTION_ASSESSMENT.md)
+  — pinned Open WebUI comparison covering optional-host interoperability,
+  provider telemetry, recoverable runs, and UI patterns; research only
+- [docs/NEMOCLAW_ADOPTION_ASSESSMENT.md](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md)
+  — pinned NemoClaw security, readiness, and MCP-boundary comparison;
+  research recommendations only, not ratified architecture
+- [docs/ATLAS_CAPABILITY_BENCHMARK.md](docs/ATLAS_CAPABILITY_BENCHMARK.md) /
+  [dated results](docs/ATLAS_CAPABILITY_RESULTS_2026-08-27.md) — bounded,
+  evidence-only Atlas Cloud route evaluation protocol and its initial run
+- [docs/HOOK_VAULT.md](docs/HOOK_VAULT.md) — non-canon development register
+  for promising story and character seeds that are not ready for promotion
+- [docs/STORYLINE_RESEARCH_BACKLOG.md](docs/STORYLINE_RESEARCH_BACKLOG.md) —
+  operator-selected deferred research and follow-ups for directed or founded
+  story concepts
 - [docs/V2_RETROSPECTIVE.md](docs/V2_RETROSPECTIVE.md) — schemas, prompt
   templates, and lessons mined from the v2 OC storytelling plugin
   (preserved for informational value; not being ported)
@@ -58,11 +79,23 @@ live-verification status per provider. Related docs:
 - `zod` for tool input schemas
 - `vitest` for tests
 
+## HTTP Trust Boundary
+
+The default stdio transport treats explicit import/export paths as local
+operator capabilities. The HTTP server currently exposes the same tool
+schemas, including `mnemo_import_story(file_path)` and
+`mnemo_export_story(out_path)`. Until transport-specific path confinement is
+implemented, do not give an untrusted or third-party HTTP host the unrestricted
+tool surface. Loopback binding, Host/Origin checks, and bearer authentication
+reduce who can connect; they do not turn arbitrary server-side paths into a
+safe remote capability. See the
+[NemoClaw assessment](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md#1-constrain-filesystem-authority-by-transport).
+
 ## Common Commands
 
 ```bash
 npm install            # install deps
-npm run build          # tsc → dist/
+npm run build          # compile server + build/copy Web UI into dist/
 npm run dev            # tsx src/index.ts
 npm run typecheck      # tsc -p tsconfig.typecheck.json (src + tests)
 npm run lint           # eslint .
@@ -87,11 +120,6 @@ OC_URL=http://your-nas:18000/mcp \
 # validator prompts and models without going through Claude Desktop.
 OC_URL=http://your-nas:18000/mcp \
 OLLAMA_VALIDATOR_MODEL=mistral-nemo:12b \
-  node scripts/dump-validation.mjs <story_id> <content_file> --scene-context-strategy query-ranked
-
-# ...or set env once and use the default flag-free call:
-MNEMO_SCENE_CONTEXT_STRATEGY=query-ranked \
-OC_URL=http://your-nas:18000/mcp \
   node scripts/dump-validation.mjs <story_id> <content_file>
 
 # Bind a story's Kindroid target to a group chat and build the exact
@@ -111,11 +139,12 @@ OC_URL=http://your-nas:18000/mcp \
 
 - **[Atlas Cloud CLI](https://github.com/AtlasCloudAI/cli)** (vendored as a
   git submodule at `vendor/atlascloud-cli`) — credit to AtlasCloudAI. A
-  manual dev/ops tool for checking Atlas Cloud account balance, model
-  availability, and API connectivity from the shell; mnemosyne's own
-  `atlascloud` generator provider (`src/openai-compat-provider.ts`) talks
-  to the Atlas Cloud API directly and does not call this CLI. After
-  cloning, run `git submodule update --init --recursive` to pull it in.
+  development/operations and research tool for shell-side account, model, and
+  connectivity checks; `scripts/atlas-capability-benchmark.mjs` also consumes
+  a compatible CLI through `ATLAS_CLI_BIN` or `PATH`. Mnemosyne's runtime
+  `atlascloud` generator provider (`src/openai-compat-provider.ts`) talks to
+  the Atlas Cloud API directly and does not call the CLI. After cloning, run
+  `git submodule update --init --recursive` to pull it in.
 
 ## License
 

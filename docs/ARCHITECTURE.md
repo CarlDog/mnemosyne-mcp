@@ -1,11 +1,16 @@
 # Mnemosyne — Architecture
 
-**Status:** Locked (initial scope). Updated 2026-05-11.
+**Status:** Locked decisions; implementation-state refresh 2026-08-28.
+
+This document preserves the initial architectural decisions while describing
+their current implementation. [STATUS.md](../STATUS.md) remains authoritative
+for current priorities and chronology; comparative adoption assessments do not
+change a locked decision by themselves.
 
 Mnemosyne is a storytelling MCP server built on top of OpenChronicle (OC).
 It owns narrative logic; OC owns memory. Together they form the substrate
-for long-form, persistent, context-aware storytelling sessions — initially
-text-chat in MCP-capable hosts, eventually a dedicated web UI.
+for long-form, persistent, context-aware storytelling sessions through both
+MCP-capable hosts and the shipped React Web UI.
 
 The name honors Mnemosyne, Greek personification of remembering and mother
 of the Muses — the force by which memory becomes story. Short form: `mnemo`.
@@ -18,10 +23,11 @@ of the Muses — the force by which memory becomes story. Short form: `mnemo`.
 host (Claude Desktop, Claude Code, Cursor, Cline, LM Studio, etc.) and
 exposes storytelling tools the host's LLM can call.
 
-**Secondary surface (planned): Web UI.** A standalone web frontend will
-follow. It is on the roadmap, not hypothetical — see §4 for the trigger.
+**Secondary surface: Web UI.** A standalone React frontend now ships from the
+same HTTP process. It supports story/entity browsing and the interactive
+continue/validate flow; later mode-specific controls remain design input.
 
-**Both consume the same engine.** The MCP server and the future web UI
+**Both consume the same engine.** The MCP server and Web UI
 share Mnemosyne's internal libraries (entity stores, prompt builders,
 validator orchestration). No code is duplicated; the two surfaces are
 thin adapters over the same core.
@@ -50,30 +56,35 @@ Everything story-meaningful lives as OC memories, tagged by type:
 - `type:style` — tone, POV, voice conventions
 - `type:location` — world/setting facts
 - `type:lore` — background world-building
+- `type:worldbuilding` — reusable setting systems and structures
 - (additional tags as needed)
 
 Each story is one OC project. Story ownership = project ownership.
 
 ### Local (operational only)
 
-A small config holds the things OC's shape doesn't fit:
+A small config holds one thing OC's shape does not fit:
 
-- **Current story pointer** — which OC project ID is active
-- **Turn scratchpad** — last-N turns for immediate context window
-  assembly (regenerated from OC on session start; not authoritative)
-- **Per-user runtime config** — LLM provider, validation toggles, etc.
+- **Current story pointer** — which OC project ID is active.
 
-That's it. No local database in v0. If structured per-turn state pressure
+Provider/runtime configuration remains environment-driven, and immediate
+context is gathered from OC per operation rather than persisted in a local
+scratchpad. No local database exists. If structured per-turn state pressure
 shows up later (game mechanics, scene ordering issues), revisit then.
 
 ### Import / Export
 
 Tooling, not storage. Mnemosyne provides:
 
-- `mnemo_export_story` — serialize an OC project's story content to a
-  portable format (JSON, possibly YAML)
-- `mnemo_import_story` — ingest a portable file, populate a new OC project
-- `mnemo_seed_from_template` — bootstrap a new story from a template file
+- `mnemo_export_story` — serialize one story to the versioned
+  `mnemosyne_export: 1` JSON interchange format;
+- `mnemo_import_story` — write already-classified inline entities or restore a
+  versioned export document into a selected story, with dry-run and explicit
+  conflict policy.
+
+The proposed `mnemo_seed_from_template` tool was deliberately retired. Seed
+templates are documentation consumed through the same typed import operation,
+so there is one write contract instead of a second template subsystem.
 
 **Template imports are one-shot copies, not live links.** If you import
 "Fantasy Starter Pack v2" and the pack later updates to v3, your story
@@ -116,10 +127,9 @@ ConsistencyChecker — abandoned). Instead, Mnemosyne:
 - User-in-the-loop is correct for creative work
 - This is a knob, not an architecture commitment — easy to change later
 
-**Validation is skippable per-turn.** Most turns probably don't need it.
-Triggers can be: explicit request, scene/chapter boundary, or "active
-rules exist for this entity" heuristic. Default: only run when explicitly
-requested or when pinned rules are in scope.
+**Validation is skippable per-turn.** `mnemo_continue(validate=true)` opts in;
+`mnemo_validate` and `mnemo_revalidate_scenes` expose explicit standalone and
+bulk review paths. Validation never auto-regenerates prose.
 
 ---
 
@@ -142,12 +152,12 @@ the content itself.
 | Use case | Surface | Notes |
 |---|---|---|
 | SFW storytelling | MCP in Claude Desktop / Claude Code / etc. | Works fine, host LLM is in the loop |
-| NSFW storytelling | Web UI (planned) OR MCP in non-Anthropic host | Web UI bypasses host LLM entirely |
+| NSFW storytelling | Web UI OR MCP in a non-Anthropic host | Web UI bypasses the host LLM entirely |
 | Power-user NSFW | MCP in Cline / LM Studio / Ollama-based hosts | Works without web UI |
 
-The web UI is therefore not a "later if needed" project — it's a planned
-deliverable for the NSFW path. SFW MCP work ships first; web UI follows
-once the MCP engine stabilizes.
+The Web UI therefore was not a "later if needed" project. Its initial entity
+and continuation surfaces have shipped; later mode-specific controls remain
+separately scoped work.
 
 ---
 
@@ -156,17 +166,22 @@ once the MCP engine stabilizes.
 **Provider-pluggable from day one.** Don't hard-code one model or
 one API.
 
-### Required initial providers
+### Implemented generator providers
 
-- **Ollama** — local uncensored models for NSFW work
-- **Botify MCP** — alternate uncensored route (already in user's stack)
-- **Anthropic API** — for SFW work where Claude is appropriate
+- **Direct inference:** Ollama, Anthropic, OpenAI-compatible, Gemini, and Atlas
+  Cloud.
+- **Companion conversations:** Kindroid MCP and Botify MCP.
 
-### Validator can differ from generator
+One generator is selected at startup. Direct providers honor a per-call model
+override; companion providers retain their service-specific target and
+side-effect semantics.
 
-The validation pass can use a smaller/cheaper model than the generator.
-Provider config is per-role (`generator_provider`, `validator_provider`),
-not global.
+### Validator differs from the generator when needed
+
+The validator always uses Ollama. This keeps the second pass local and gives it
+a structured-generation-capable route even when the generator is a companion
+chat or cloud provider. A separate validator-provider abstraction remains
+unnecessary without a demonstrated bottleneck.
 
 ### Configuration
 
@@ -197,23 +212,19 @@ auth, no user model. Just don't make those choices impossible later.
 
 ## 7. Build Sequence
 
-1. **Architecture lockdown** ← (this document) ✓
-2. **v2 archive retrospective** — see V2_RETROSPECTIVE.md
-3. **Repo scaffold** — TypeScript, McpServer SDK, zod, tests, pre-commit
-   hooks per security rules (gitleaks + PII patterns + author-email check)
-4. **v0 tool surface design** — small tool set informed by retro doc
-   findings. Likely ~5-8 tools to start.
-5. **v0 build** — implement tools, wire to OC and first LLM provider
-6. **SFW dogfooding** — use Mnemosyne in Claude Desktop for real
-   storytelling sessions, fix what hurts
-7. **Second LLM provider** — add Ollama or Botify, validate the
-   provider-pluggable architecture holds
-8. **Web UI v0** — minimal chat interface that bypasses host LLM,
-   targets NSFW use case
-9. **Iterate**
+This is the original sequence, now annotated with implementation state:
 
-Steps 1-2 are research/writing. Step 3 commits the project. Steps 4-9
-are iterative engineering with checkpoints.
+1. **Architecture lockdown** — complete.
+2. **v2 archive retrospective** — complete; see V2_RETROSPECTIVE.md.
+3. **Repo scaffold and security hooks** — complete.
+4. **v0 tool surface** — complete and expanded to eleven tools.
+5. **OC + first-provider build** — complete.
+6. **SFW dogfooding and validator remediation** — complete and ongoing as a
+   practice.
+7. **Provider-pluggability proof** — complete; seven generators ship.
+8. **Web UI v0** — partially complete: entity library and interactive continue
+   flow ship; later design slices remain unbuilt.
+9. **Iterate from observed use** — current standing approach.
 
 ---
 
@@ -225,8 +236,8 @@ real use:
 - Game mechanics (StatBlock, dice, HP, inventory) — v2 had these in
   Phase 4; defer until a real session demands them
 - Multi-user / auth / cloud
-- Visual UI elements in the web frontend (character portraits, scene
-  trees) — text chat first
+- Portrait-driven layouts, scene trees, and other richer visual controls in
+  the Web UI—the current entity and continue surfaces remain text-first
 - Auto-regeneration on validation failure
 - Voice or audio interfaces
 - Image generation tied to scenes — still out of scope, not reopened by
@@ -242,11 +253,11 @@ real use:
 
 | Decision | Choice | Why |
 |---|---|---|
-| Project shape | MCP server, web UI on roadmap | Daily driver is MCP; NSFW needs web bypass |
+| Project shape | MCP server plus Web UI | MCP remains a primary integration; NSFW needs a host-model bypass |
 | State location | OC-canonical hybrid | OC is the substrate; local is operational only |
 | External configs | None | OC + import/export tooling replaces them |
 | Validation strategy | LLM second pass, surface to user | Fuzzy by nature; user owns the call |
 | Validation default | Skippable per-turn | Most turns don't need it |
 | Archive approach | Read for context, write fresh | v2 assumptions don't fit v3 architecture |
-| Provider strategy | Pluggable, multi-provider, per-role | Required for NSFW + cost control |
+| Provider strategy | Seven pluggable generators; Ollama validator | Required for content/cost choice while keeping validation local |
 | Cloud future | Don't build for it; don't preclude it | Cheap design hints only |

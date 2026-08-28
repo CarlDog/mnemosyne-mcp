@@ -3,7 +3,13 @@
 **Status: input, not specification.** Captured 2026-08-23 from a review of
 Botify AI and Kindroid, plus what the first real import campaign taught us
 about where mnemosyne actually hurts. Nothing here is ratified. It exists so
-the thinking survives until the web UI phase starts. **Updated same day** with
+the thinking survives as the Web UI grows. **Implementation-state refresh
+2026-08-28:** §0's transport, per-call story scope, and access-control baseline
+have shipped; entity browse/search/detail and the shared interactive continue
+flow have shipped. Entity edit/delete, differentiated mode postures and control
+planes, the assembly panel, media, and watch parties remain unbuilt. The
+original feasibility reasoning below is retained as historical design input.
+**Updated same day** with
 findings from a live browser pass on both reference apps' actual screens (not
 just feature descriptions), plus a paired senior-ui-ux-designer critique and a
 senior-sde pre-build feasibility review — see §0 for the headline change: this
@@ -17,14 +23,17 @@ document is about what it should be.
 
 ---
 
-## 0. Prerequisites — what has to exist before any slice in §9
+## 0. Historical prerequisites — shipped before slice 1
 
-A pre-build review (senior-sde, 2026-08-23) found that §9's slices all assume
-a foundation that doesn't exist yet. None of this is a slice-9 problem to
-discover later — it blocks slice 1.
+A pre-build review (senior-sde, 2026-08-23) found that §9's slices all assumed
+a foundation that did not exist at the time. The implementation subsequently
+shipped all three prerequisites: Streamable HTTP plus REST, per-call `story`
+scope, and the Host/Origin + bearer baseline. The bullets preserve why those
+changes had to precede the UI.
 
-- **Mnemosyne has no way for a browser to reach it.** `src/index.ts` connects
-  over stdio only — mnemosyne is an MCP *client* to OC/Kindroid/Botify, all
+- **At review time, Mnemosyne had no way for a browser to reach it.**
+  `src/index.ts` connected over stdio only — mnemosyne was an MCP *client* to
+  OC/Kindroid/Botify, all
   over Streamable HTTP, but exposes nothing a browser can talk to itself.
   stdio is a parent-process pipe; only a co-located host (Claude Desktop,
   Claude Code) can spawn and talk to it. Adding Streamable HTTP transport is
@@ -36,7 +45,8 @@ discover later — it blocks slice 1.
   layer adds streaming or turn-by-turn polling. ARCHITECTURE.md already
   anticipates a second surface ("thin adapters over the same core") — that
   adapter is the missing slice 0, not an assumed given.
-- **The active-story pointer is global, single-writer, file-backed state.**
+- **The active-story pointer remains global, but callers no longer depend on
+  mutating it.**
   `src/config.ts`'s `current_story_id` is one JSON file read by every entity
   and generation tool, with no scoping by session or caller —
   `requireCurrentStoryId()` throws if it's unset, and nothing distinguishes
@@ -47,8 +57,10 @@ discover later — it blocks slice 1.
   stories... discovery is a solved problem when the whole corpus fits on one
   screen") is impossible against a single global pointer without either racy
   repeated `mnemo_story_use` calls or new per-call story-id parameters. Solve
-  this once, generically, before slice 1 — not piecemeal in §7.
-- **Once the HTTP layer exists, it needs a real access-control story.**
+  this once, generically, before slice 1 — not piecemeal in §7. That became
+  `resolveStoryId()` plus the optional per-call `story` argument on every
+  story-touching operation.
+- **The HTTP layer needed a real access-control baseline.**
   ARCHITECTURE.md is explicit that this UI's entire reason to exist is
   serving unmoderated NSFW output with no host LLM in the path — the
   highest-stakes surface in this whole system. Binding to loopback is not
@@ -56,8 +68,8 @@ discover later — it blocks slice 1.
   the fleet's own `docker-deployments.md` guidance calls for a Host/Origin
   allowlist. Scope this into slice 0, not as a retrofit after the fact.
 
-Everything below this line is still the design target. It's just not
-buildable until the three things above are.
+Everything below this line remains design input. Shipped slices are labeled in
+§9; the remaining ideas still require their own review and ratification.
 
 ---
 
@@ -588,22 +600,22 @@ naming explicitly as things to avoid, not just omit by silence:
 
 ## 9. If we build it in slices
 
-**Prerequisite to all of the below: §0.** None of these are buildable against
-the current stdio-only, single-global-story-pointer server.
+**Prerequisite §0 is shipped.** The list below now distinguishes implemented
+foundations from remaining design work.
 
-1. **Entity library** — browse, search, edit, delete across all stories.
-   Highest value, and it retires the patch-script workflow the imports ran
-   on — but "zero generation risk" undersells the real prerequisite work
-   (code review, 2026-08-23): it needs §0's story-pointer fix before anything
-   else, plus a genuinely complete, sortable listing — `listAllEntities()`
-   already exists (built for export, to avoid `memory_search`'s ranked
-   100-result cap silently truncating) but isn't a registered tool yet.
+1. **Entity library — partially shipped.** Browse, search, and full detail
+   across all stories are live; edit/delete remain unbuilt. The implementation
+   uses the now-registered `mnemo_list_entities`, backed by the complete,
+   unranked `listAllEntities()` path rather than `memory_search`'s ranked
+   100-result cap.
    **Browsing must be strictly inert** — no entity click may fire a beat or
    spend context (see §8's anti-patterns). Audience mode (next) needs this
    same complete/sortable listing for chronological scene order, so plan the
    two together rather than as independent slices.
-2. **Audience mode** — the reader we already have, plus Continue. Shares
-   slice 1's listing prerequisite (see above).
+2. **Audience-mode foundation — partially shipped.** The shared Continue page
+   exposes `audience`, `director`, and `participant` as live generation modes.
+   A distinct low-chrome reader posture and chronological reading surface
+   remain unbuilt.
 3. **The assembly panel** (§4) — not pure instrumentation as originally
    scoped; see §4's reality check for what's actually free versus what needs
    backend restructuring. Prove it out against a single-character
@@ -617,8 +629,8 @@ the current stdio-only, single-global-story-pointer server.
 6. **Media in flow** (§6) — late, because it spends money and wants the
    art/sidecar plumbing exercised first.
 7. **Watch parties** (§7) — last, and the only slice with another service in
-   the path. Needs the per-call story selector first (subsumed into §0's
-   story-pointer fix); wants director mode and media already working, since a
+   the path. The per-call story selector prerequisite is shipped; the slice
+   still wants director mode and media already working, since a
    watch party is a `mnemo_continue` someone else triggered. Mode doing
    nothing against companion providers (§3) is most visible here — resolve
    that before this slice, or the mode control in a watch party is decorative.

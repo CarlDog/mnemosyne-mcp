@@ -2,6 +2,11 @@
 
 Persistent notes for story concepts that have been discussed but not yet developed. Entries here are intentionally not canon until their storyline receives a proper foundation pass.
 
+This backlog records operator-selected deferred research and follow-up work for
+concepts with a deliberate direction or an existing foundation. Raw salvage
+fragments and unpromoted character/premise seeds belong in the
+[Hook Vault](HOOK_VAULT.md) instead.
+
 ## Star Wars — Post-Endor
 
 **Status:** Initial story foundation established in Mnemosyne on 2026-08-25; ruleset research remains deferred.
