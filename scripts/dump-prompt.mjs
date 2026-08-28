@@ -6,14 +6,17 @@
 //   OC_URL=http://your-nas:18000/mcp \
 //     node scripts/dump-prompt.mjs <project_id> "<user direction>"
 
-import { OcClient } from "../dist/oc-client.js";
-import {
+import "./dist-preflight.mjs";
+
+// dist/ imports are dynamic so the preflight above can report a missing
+// build: a static import fails during ESM linking, before any code runs.
+const { OcClient } = await import("../dist/oc-client.js");
+const {
   DEFAULT_SCENE_CONTEXT_STRATEGY,
   SCENE_CONTEXT_STRATEGIES,
   gatherContext,
   buildSystemPrompt,
-} from "../dist/prompt.js";
-
+} = await import("../dist/prompt.js");
 const args = process.argv.slice(2);
 let projectId;
 let directionParts = [];
@@ -79,8 +82,24 @@ if (!ocUrl) {
   process.exit(2);
 }
 
-const oc = new OcClient(new URL(ocUrl));
-await oc.connect();
+let ocUrlParsed;
+try {
+  ocUrlParsed = new URL(ocUrl);
+} catch {
+  console.error(`dump-prompt: OC_URL is not a valid URL: ${ocUrl}`);
+  process.exit(1);
+}
+const oc = new OcClient(ocUrlParsed);
+try {
+  await oc.connect();
+} catch (err) {
+  // Naming OC explicitly matters: the raw failure is a bare "fetch failed"
+  // plus undici frames that never mention which service was unreachable.
+  console.error(
+    `dump-prompt: could not reach OpenChronicle at ${ocUrl} -- ${err.message}`,
+  );
+  process.exit(1);
+}
 
 const ctx = await gatherContext(oc, projectId, direction, {
   sceneStrategy: requestedSceneContextStrategy,
