@@ -6,10 +6,15 @@
 // quality) -- that needs a human or an adversarial review pass, the same
 // way the Living Canon Audit did it. This only validates structure.
 //
+// Exit contract: 0 only when the canon/ tree EXISTS, is readable, holds at
+// least one entity, and has no structural problems. A missing directory, an
+// unreadable one, or an empty one exits 1 -- so a sweep over every slug can be
+// trusted as a restore/integrity check.
+//
 // Usage:
 //   node scripts/validate-canon.mjs <slug> [--dir <canon-dir>]
 
-import { readFile, readdir } from "node:fs/promises";
+import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 // Normalizes CRLF to LF so a file saved by a Windows-native editor doesn't
@@ -63,8 +68,15 @@ async function walkEntityFiles(dir, subdir) {
   let entries;
   try {
     entries = await readdir(full, { withFileTypes: true });
-  } catch {
-    return [];
+  } catch (err) {
+    // An absent category folder is legitimate -- not every story has
+    // locations/ or worldbuilding/. Anything else (permissions, I/O error,
+    // a corrupted directory entry) must NOT read as "empty": that is how a
+    // damaged tree passes validation.
+    if (err.code === "ENOENT") return [];
+    throw new Error(
+      `${full}: cannot read directory (${err.code ?? err.message})`,
+    );
   }
   const files = [];
   for (const e of entries) {
@@ -87,6 +99,29 @@ function extractHeadings(text) {
 
 async function main() {
   const { slug, dir } = parseArgs(process.argv.slice(2));
+
+  // A missing canon/ tree must FAIL, not pass vacuously. Before this guard the
+  // script printed "OK -- no structural problems found" and exited 0 against a
+  // directory that did not exist, because every readdir below swallowed its
+  // ENOENT and returned []. That made a pass useless as a restore check: it
+  // could not tell an intact tree from a lost one.
+  let dirStat;
+  try {
+    dirStat = await stat(dir);
+  } catch (err) {
+    if (err.code === "ENOENT") {
+      throw new Error(
+        `${dir}: canon directory does not exist (story "${slug}" has no canon/ tree)`,
+      );
+    }
+    throw new Error(
+      `${dir}: cannot stat canon directory (${err.code ?? err.message})`,
+    );
+  }
+  if (!dirStat.isDirectory()) {
+    throw new Error(`${dir}: exists but is not a directory`);
+  }
+
   const problems = [];
   const seen = new Map(); // (type,name) -> first file that claimed it
   let entityCount = 0;
@@ -140,8 +175,11 @@ async function main() {
     let content;
     try {
       content = normalizeNewlines(await readFile(full, "utf8"));
-    } catch {
-      continue;
+    } catch (err) {
+      // Absent is fine -- not every story batches minor characters, and
+      // rules/style may not exist yet. Unreadable is not.
+      if (err.code === "ENOENT") continue;
+      throw new Error(`${full}: cannot read file (${err.code ?? err.message})`);
     }
     const headings = extractHeadings(content);
     if (headings.length === 0) {
@@ -161,6 +199,12 @@ async function main() {
     }
   }
 
+  if (entityCount === 0) {
+    problems.push(
+      `${dir}: canon directory exists but contains no entities at all`,
+    );
+  }
+
   console.log(`Validated ${slug} -> ${dir}`);
   console.log(`  total entities claimed: ${entityCount}`);
   console.log(`  unique (type, name) keys: ${seen.size}`);
@@ -174,4 +218,7 @@ async function main() {
   }
 }
 
-await main();
+await main().catch((err) => {
+  console.error(`validate-canon: ${err.message}`);
+  process.exit(1);
+});
