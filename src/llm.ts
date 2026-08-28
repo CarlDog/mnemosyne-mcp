@@ -52,14 +52,7 @@ export interface LlmGenerateOptions {
    * (1-8, mirroring kindroid_advance_group's own bound). Meaningless for a
    * single-AI target, which always produces exactly one reply, and ignored
    * by every non-Kindroid provider. Overrides KINDROID_GROUP_MAX_TURNS for
-   * this call only.
-   *
-   * Deliberately per-call ONLY, with no KINDROID_* env counterpart, unlike
-   * groupMaxTurns above: this is a property of the *caller*, not of the
-   * deployment. A conversational host can take the turn; a scheduled or
-   * webhook-driven caller cannot, and both may hit the same server. A
-   * server-wide default of true would hand the floor to a caller that
-   * isn't there. Don't "fix" the inconsistency. */
+   * this call only. */
   groupMaxTurns?: number;
   /** Let a Kindroid GROUP turn loop hand the floor back to the user
    * (default false -- AI-only turns). When true the loop stops as soon as
