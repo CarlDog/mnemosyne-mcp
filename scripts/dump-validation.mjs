@@ -14,55 +14,22 @@
 import { readFile } from "node:fs/promises";
 import { OcClient } from "../dist/oc-client.js";
 import { OllamaProvider } from "../dist/llm.js";
-import {
-  DEFAULT_SCENE_CONTEXT_STRATEGY,
-  SCENE_CONTEXT_STRATEGIES,
-  gatherContext,
-} from "../dist/prompt.js";
+import { gatherContext } from "../dist/prompt.js";
 import { validateContent } from "../dist/validator.js";
 
+// No --scene-context-strategy flag here (removed 2026-08-27): the
+// validation context is gathered validationOnly, matching mnemo_validate
+// -- the validator never reads scenes, so a strategy flag on this script
+// could never change its output.
 const args = process.argv.slice(2);
-let projectId;
-let contentFile;
-let sceneContextStrategy = process.env.MNEMO_SCENE_CONTEXT_STRATEGY;
-
-for (let i = 0; i < args.length; i++) {
-  const arg = args[i];
-  if (arg === "--scene-context-strategy" || arg.startsWith("--scene-context-strategy=")) {
-    const value = arg.startsWith("--scene-context-strategy=")
-      ? arg.slice("--scene-context-strategy=".length)
-      : args[++i];
-
-    if (!SCENE_CONTEXT_STRATEGIES.includes(value)) {
-      console.error(
-        `invalid --scene-context-strategy: ${value}. ` +
-          `Expected one of: ${SCENE_CONTEXT_STRATEGIES.join(", ")}`,
-      );
-      process.exit(2);
-    }
-    sceneContextStrategy = value;
-    continue;
-  }
-
-  if (projectId === undefined) {
-    projectId = arg;
-    continue;
-  }
-  if (contentFile === undefined) {
-    contentFile = arg;
-    continue;
-  }
-}
+const [projectId, contentFile] = args;
 
 if (!projectId || !contentFile) {
   console.error(
-    "usage: node scripts/dump-validation.mjs <project_id> <content_file> " +
-      "[--scene-context-strategy recency-first|query-ranked]",
+    "usage: node scripts/dump-validation.mjs <project_id> <content_file>",
   );
   process.exit(2);
 }
-const requestedSceneContextStrategy =
-  sceneContextStrategy ?? DEFAULT_SCENE_CONTEXT_STRATEGY;
 
 const ocUrl = process.env.OC_URL;
 const ollamaUrl = process.env.OLLAMA_URL ?? "http://localhost:11434";
@@ -85,12 +52,9 @@ const validator = new OllamaProvider({
   defaultModel: validatorModel,
 });
 
-const ctx = await gatherContext(
-  oc,
-  projectId,
-  content,
-  requestedSceneContextStrategy,
-);
+const ctx = await gatherContext(oc, projectId, content, {
+  validationOnly: true,
+});
 console.log("\n" + "=".repeat(78));
 console.log(`VALIDATION REPORT (model: ${validatorModel})`);
 console.log("=".repeat(78));

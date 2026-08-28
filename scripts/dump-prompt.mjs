@@ -17,7 +17,22 @@ import {
 const args = process.argv.slice(2);
 let projectId;
 let directionParts = [];
-let sceneContextStrategy = process.env.MNEMO_SCENE_CONTEXT_STRATEGY;
+// Same normalization + allowlist the server applies: ""/whitespace reads
+// as unset, an invalid value exits loudly instead of silently behaving
+// as recency-first (this script exists to pin causes -- mislabeling the
+// dumped context's strategy would defeat it).
+let sceneContextStrategy =
+  process.env.MNEMO_SCENE_CONTEXT_STRATEGY?.trim().toLowerCase() || undefined;
+if (
+  sceneContextStrategy !== undefined &&
+  !SCENE_CONTEXT_STRATEGIES.includes(sceneContextStrategy)
+) {
+  console.error(
+    `invalid MNEMO_SCENE_CONTEXT_STRATEGY: ${process.env.MNEMO_SCENE_CONTEXT_STRATEGY}. ` +
+      `Expected one of: ${SCENE_CONTEXT_STRATEGIES.join(", ")}`,
+  );
+  process.exit(2);
+}
 
 for (let i = 0; i < args.length; i++) {
   const arg = args[i];
@@ -64,12 +79,9 @@ if (!ocUrl) {
 const oc = new OcClient(new URL(ocUrl));
 await oc.connect();
 
-const ctx = await gatherContext(
-  oc,
-  projectId,
-  direction,
-  requestedSceneContextStrategy,
-);
+const ctx = await gatherContext(oc, projectId, direction, {
+  sceneStrategy: requestedSceneContextStrategy,
+});
 console.log("=".repeat(78));
 console.log("CONTEXT BUNDLE COUNTS");
 console.log("=".repeat(78));

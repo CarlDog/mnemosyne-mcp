@@ -27,7 +27,21 @@ const args = process.argv.slice(2);
 let storyId;
 let groupId;
 let directionParts = [];
-let sceneContextStrategy = process.env.MNEMO_SCENE_CONTEXT_STRATEGY;
+// Same normalization + allowlist the server applies: ""/whitespace reads
+// as unset, an invalid value exits loudly instead of silently behaving
+// as recency-first.
+let sceneContextStrategy =
+  process.env.MNEMO_SCENE_CONTEXT_STRATEGY?.trim().toLowerCase() || undefined;
+if (
+  sceneContextStrategy !== undefined &&
+  !SCENE_CONTEXT_STRATEGIES.includes(sceneContextStrategy)
+) {
+  console.error(
+    `invalid MNEMO_SCENE_CONTEXT_STRATEGY: ${process.env.MNEMO_SCENE_CONTEXT_STRATEGY}. ` +
+      `Expected one of: ${SCENE_CONTEXT_STRATEGIES.join(", ")}`,
+  );
+  process.exit(2);
+}
 
 for (let i = 0; i < args.length; i++) {
   const arg = args[i];
@@ -98,12 +112,9 @@ console.log(
   ),
 );
 
-const ctx = await gatherContext(
-  oc,
-  storyId,
-  direction,
-  requestedSceneContextStrategy,
-);
+const ctx = await gatherContext(oc, storyId, direction, {
+  sceneStrategy: requestedSceneContextStrategy,
+});
 console.log("\n" + "=".repeat(78));
 console.log("CONTEXT BUNDLE COUNTS");
 console.log("=".repeat(78));
