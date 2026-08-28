@@ -17,6 +17,7 @@ export default function EntityTypeFilter({
       <button
         type="button"
         className={`rail-tab${active === undefined ? " active" : ""}`}
+        aria-pressed={active === undefined}
         onClick={() => onSelect(undefined)}
       >
         All <span className="rail-count">{total}</span>
@@ -26,6 +27,7 @@ export default function EntityTypeFilter({
           key={type}
           type="button"
           className={`rail-tab${active === type ? " active" : ""}`}
+          aria-pressed={active === type}
           onClick={() => onSelect(type)}
         >
           {type} <span className="rail-count">{counts[type] ?? 0}</span>
