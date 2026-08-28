@@ -18,7 +18,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
-import type { LlmProvider } from "../llm.js";
+import type { GeneratedBeat, LlmProvider } from "../llm.js";
 import {
   buildSystemPrompt,
   gatherContext,
@@ -27,6 +27,7 @@ import {
   SCENE_CONTEXT_STRATEGY_DESCRIPTION,
   SCENE_CONTEXT_FALLBACK_DESCRIPTION,
   resolveSceneContextStrategies,
+  type Mode,
   type SceneContextStrategy,
 } from "../prompt.js";
 import { saveEntity, retagValidation } from "../entities.js";
@@ -50,7 +51,247 @@ import {
 import { log } from "../log.js";
 import { asText, withLogging } from "./helpers.js";
 
-const DEFAULT_MODE: (typeof MODES)[number] = "director";
+const DEFAULT_MODE: Mode = "director";
+
+export interface ContinueSceneOptions {
+  direction: string;
+  mode?: Mode;
+  sceneStrategy: SceneContextStrategy;
+  sceneFallbackStrategy?: SceneContextStrategy;
+  maxTokens?: number;
+  temperature?: number;
+  model?: string;
+  /** Already-combined per-call Kindroid override. Combining (and its
+   * kin+group conflict throw) stays at the surface, where each caller
+   * maps the error its own way (tool: bubbled message; route: 400). */
+  explicitKindroidTarget?: KindroidTarget;
+  /** The story's own bound Kindroid target, when the surface has already
+   * fetched the story marker (the API route fetches it for its 404
+   * check). With storyKindroidTargetPrefetched=false, continueScene
+   * lazily fetches the marker itself -- and only when it could matter
+   * (kindroid generator, no explicit override). */
+  storyKindroidTarget?: KindroidTarget;
+  storyKindroidTargetPrefetched?: boolean;
+  groupMaxTurns?: number;
+  allowUser?: boolean;
+  validate?: boolean;
+  /** Surface-specific re-invoke wording for the group-yield message,
+   * e.g. "call mnemo_continue again" vs "call /stories/<id>/continue
+   * again". */
+  reinvokeHint: string;
+}
+
+export interface ContinueSceneResult {
+  yielded_to_user?: true;
+  message?: string;
+  saved?: false;
+  beat_name?: string;
+  beat_text: string;
+  memory_id?: string;
+  save_error?: string;
+  mode: Mode;
+  context_summary?: {
+    rules: number;
+    style: number;
+    characters: number;
+    locations: number;
+    scenes: number;
+    lore: number;
+    worldbuilding: number;
+  };
+  validation?: ValidationReport;
+  validation_error?: string;
+  stages_ms: {
+    gather_ms: number;
+    generate_ms: number;
+    save_ms: number;
+    validate_ms: number;
+  };
+  group_ended?: GeneratedBeat["groupEnded"];
+  group_turns?: number;
+}
+
+/**
+ * The shared continue core: gather context -> resolve the Kindroid
+ * target -> generate -> group-yield detection -> save-first scene
+ * persist -> optional validation -> verdict retag -> response assembly
+ * (with per-stage timings). Both the mnemo_continue tool and the
+ * POST /stories/:id/continue route call this, so the subtle rules --
+ * save-first persistence, the empty-beat yield contract, retag only when
+ * save AND validation both produced results -- live in exactly one
+ * place (same pattern as revalidateScenes in revalidate.ts).
+ */
+export async function continueScene(
+  oc: OcClient,
+  generator: LlmProvider,
+  validator: LlmProvider,
+  storyId: string,
+  opts: ContinueSceneOptions,
+): Promise<ContinueSceneResult> {
+  const mode = opts.mode ?? DEFAULT_MODE;
+
+  const gatherStart = Date.now();
+  const context = await gatherContext(oc, storyId, opts.direction, {
+    sceneStrategy: opts.sceneStrategy,
+    sceneFallbackStrategy: opts.sceneFallbackStrategy,
+  });
+  const gatherMs = Date.now() - gatherStart;
+  const systemPrompt = buildSystemPrompt(mode, context);
+
+  // Only fetch the story marker (an extra OC round trip) when it could
+  // actually matter: no explicit override, a story-bound target is
+  // meaningless to any generator but Kindroid, and the surface didn't
+  // already fetch it.
+  let storyTarget = opts.storyKindroidTarget;
+  if (
+    !opts.storyKindroidTargetPrefetched &&
+    opts.explicitKindroidTarget === undefined &&
+    generator.name === "kindroid"
+  ) {
+    const story = await findStory(oc, storyId);
+    storyTarget = story?.kindroid_target;
+  }
+  const kindroidTarget = resolveKindroidTarget(
+    opts.explicitKindroidTarget,
+    generator.name,
+    storyTarget,
+  );
+
+  const generateStart = Date.now();
+  const beat = await generator.generate({
+    systemPrompt,
+    userMessage: opts.direction,
+    temperature: opts.temperature,
+    maxTokens: opts.maxTokens,
+    model: opts.model,
+    context,
+    kindroidTarget,
+    groupMaxTurns: opts.groupMaxTurns,
+    allowUser: opts.allowUser,
+  });
+  const generateMs = Date.now() - generateStart;
+  const beatText = beat.text;
+  const groupMeta = {
+    ...(beat.groupEnded !== undefined && { group_ended: beat.groupEnded }),
+    ...(beat.groupTurns !== undefined && { group_turns: beat.groupTurns }),
+  };
+
+  // A group can hand the floor back before anyone speaks (allow_user:
+  // true only). Nothing was generated, so there is no beat to save --
+  // saving an empty scene would poison both recall and the validator.
+  // The direction itself HAS already been posted to the group by
+  // advanceGroup, so say so: the caller must continue the scene, not
+  // re-send, or the group sees it twice.
+  if (beatText.trim() === "") {
+    return {
+      yielded_to_user: true,
+      beat_text: "",
+      saved: false,
+      message:
+        "The group handed the floor straight back to you -- no AI " +
+        "turns were generated, so nothing was saved. Your direction " +
+        "was already posted to the group; do not re-send it. Take " +
+        `the turn: ${opts.reinvokeHint} with what you say next.`,
+      mode,
+      stages_ms: {
+        gather_ms: gatherMs,
+        generate_ms: generateMs,
+        save_ms: 0,
+        validate_ms: 0,
+      },
+      ...groupMeta,
+    };
+  }
+
+  // Guard the save: the beat is an expensive LLM generation, and a
+  // transient OC write failure must not discard it. On save error,
+  // still return the beat text with a save_error field so the user
+  // can retry the persist (e.g., via mnemo_save_entity) without
+  // regenerating.
+  const saveStart = Date.now();
+  const beatName = `Scene ${new Date().toISOString()}`;
+  let memoryId: string | undefined;
+  let savedTags: string[] | undefined;
+  let saveError: string | undefined;
+  try {
+    const saved = await saveEntity(oc, storyId, {
+      type: "scene",
+      name: beatName,
+      body: beatText,
+    });
+    memoryId = saved.memory_id;
+    savedTags = saved.tags;
+  } catch (err) {
+    saveError = (err as Error).message;
+    log.warn("continueScene", "scene save failed", { msg: saveError });
+  }
+  const saveMs = Date.now() - saveStart;
+
+  let validateMs = 0;
+  let validation: ValidationReport | undefined;
+  let validationError: string | undefined;
+  if (opts.validate) {
+    const validateStart = Date.now();
+    try {
+      validation = await validateContent(validator, context, beatText);
+    } catch (err) {
+      validationError = (err as Error).message;
+      log.warn("continueScene", "validation pass failed", {
+        msg: validationError,
+      });
+    } finally {
+      validateMs = Date.now() - validateStart;
+    }
+  }
+
+  // Tag the saved scene with its validation verdict (v0.1.3
+  // validator-gated inclusion — see STATUS.md). Only when both the
+  // save succeeded and a verdict was actually produced: no memoryId
+  // means nothing to tag, no validation means no verdict to classify
+  // (validate=false, or the validator pass itself failed). Best-effort
+  // metadata — must never fail the call for an already-saved beat.
+  if (
+    memoryId !== undefined &&
+    savedTags !== undefined &&
+    validation !== undefined
+  ) {
+    try {
+      await retagValidation(oc, memoryId, savedTags, classifyVerdict(validation));
+    } catch (err) {
+      log.warn("continueScene", "validation retag failed", {
+        msg: (err as Error).message,
+      });
+    }
+  }
+
+  return {
+    beat_name: beatName,
+    beat_text: beatText,
+    ...(memoryId !== undefined && { memory_id: memoryId }),
+    ...(saveError !== undefined && { save_error: saveError }),
+    mode,
+    context_summary: {
+      rules: context.rules.length,
+      style: context.style.length,
+      characters: context.characters.length,
+      locations: context.locations.length,
+      scenes: context.scenes.length,
+      lore: context.lore.length,
+      worldbuilding: context.worldbuilding.length,
+    },
+    ...(validation !== undefined && { validation }),
+    ...(validationError !== undefined && {
+      validation_error: validationError,
+    }),
+    stages_ms: {
+      gather_ms: gatherMs,
+      generate_ms: generateMs,
+      save_ms: saveMs,
+      validate_ms: validateMs,
+    },
+    ...groupMeta,
+  };
+}
 
 export function registerContinueTool(
   server: McpServer,
@@ -185,9 +426,6 @@ export function registerContinueTool(
         story?: string;
       }) => {
         const storyId = await resolveStoryId(oc, args.story);
-        const mode = args.mode ?? DEFAULT_MODE;
-
-        const gatherStart = Date.now();
         const sceneStrategies = resolveSceneContextStrategies(
           {
             strategy: args.scene_context_strategy,
@@ -198,176 +436,29 @@ export function registerContinueTool(
             fallback: sceneContextFallbackStrategy,
           },
         );
-        const context = await gatherContext(oc, storyId, args.direction, {
-          sceneStrategy: sceneStrategies.strategy,
-          sceneFallbackStrategy: sceneStrategies.fallback,
-        });
-        const gatherMs = Date.now() - gatherStart;
-        const systemPrompt = buildSystemPrompt(mode, context);
 
-        // Throws on a genuine kindroid_kin + kindroid_group_id conflict.
+        // Throws on a genuine kindroid_kin + kindroid_group_id conflict;
+        // the message reaches the MCP caller as the tool error.
         const explicitTarget = combineKindroidTarget(
           args.kindroid_kin,
           args.kindroid_group_id,
         );
 
-        // Only fetch the story marker (an extra OC round trip) when it
-        // could actually matter: no explicit override, and a story-bound
-        // target is meaningless to any generator but Kindroid.
-        let storyTarget: KindroidTarget | undefined;
-        if (explicitTarget === undefined && generator.name === "kindroid") {
-          const story = await findStory(oc, storyId);
-          storyTarget = story?.kindroid_target;
-        }
-        const kindroidTarget = resolveKindroidTarget(
-          explicitTarget,
-          generator.name,
-          storyTarget,
-        );
-
-        const generateStart = Date.now();
-        const beat = await generator.generate({
-          systemPrompt,
-          userMessage: args.direction,
-          temperature: args.temperature,
+        const result = await continueScene(oc, generator, validator, storyId, {
+          direction: args.direction,
+          mode: args.mode,
+          sceneStrategy: sceneStrategies.strategy,
+          sceneFallbackStrategy: sceneStrategies.fallback,
           maxTokens: args.max_tokens,
+          temperature: args.temperature,
           model: args.model,
-          context,
-          kindroidTarget,
+          explicitKindroidTarget: explicitTarget,
           groupMaxTurns: args.group_max_turns,
           allowUser: args.allow_user,
+          validate: args.validate,
+          reinvokeHint: "call mnemo_continue again",
         });
-        const generateMs = Date.now() - generateStart;
-        const beatText = beat.text;
-        const groupMeta = {
-          ...(beat.groupEnded !== undefined && {
-            group_ended: beat.groupEnded,
-          }),
-          ...(beat.groupTurns !== undefined && {
-            group_turns: beat.groupTurns,
-          }),
-        };
-
-        // A group can hand the floor back before anyone speaks (allow_user:
-        // true only). Nothing was generated, so there is no beat to save --
-        // saving an empty scene would poison both recall and the validator.
-        // The direction itself HAS already been posted to the group by
-        // advanceGroup, so say so: the caller must continue the scene, not
-        // re-send, or the group sees it twice.
-        if (beatText.trim() === "") {
-          return asText({
-            yielded_to_user: true,
-            beat_text: "",
-            saved: false,
-            message:
-              "The group handed the floor straight back to you -- no AI " +
-              "turns were generated, so nothing was saved. Your direction " +
-              "was already posted to the group; do not re-send it. Take " +
-              "the turn: call mnemo_continue again with what you say next.",
-            mode,
-            stages_ms: {
-              gather_ms: gatherMs,
-              generate_ms: generateMs,
-              save_ms: 0,
-              validate_ms: 0,
-            },
-            ...groupMeta,
-          });
-        }
-
-        // Guard the save: the beat is an expensive LLM generation, and a
-        // transient OC write failure must not discard it. On save error,
-        // still return the beat text with a save_error field so the user
-        // can retry the persist (e.g., via mnemo_save_entity) without
-        // regenerating.
-        const saveStart = Date.now();
-        const beatName = `Scene ${new Date().toISOString()}`;
-        let memoryId: string | undefined;
-        let savedTags: string[] | undefined;
-        let saveError: string | undefined;
-        try {
-          const saved = await saveEntity(oc, storyId, {
-            type: "scene",
-            name: beatName,
-            body: beatText,
-          });
-          memoryId = saved.memory_id;
-          savedTags = saved.tags;
-        } catch (err) {
-          saveError = (err as Error).message;
-          log.warn("mnemo_continue", "scene save failed", { msg: saveError });
-        }
-        const saveMs = Date.now() - saveStart;
-
-        let validateMs = 0;
-        let validation: ValidationReport | undefined;
-        let validationError: string | undefined;
-        if (args.validate) {
-          const validateStart = Date.now();
-          try {
-            validation = await validateContent(validator, context, beatText);
-          } catch (err) {
-            validationError = (err as Error).message;
-            log.warn("mnemo_continue", "validation pass failed", {
-              msg: validationError,
-            });
-          } finally {
-            validateMs = Date.now() - validateStart;
-          }
-        }
-
-        // Tag the saved scene with its validation verdict (v0.1.3
-        // validator-gated inclusion — see STATUS.md). Only when both the
-        // save succeeded and a verdict was actually produced: no memoryId
-        // means nothing to tag, no validation means no verdict to classify
-        // (validate=false, or the validator pass itself failed). Best-effort
-        // metadata — must never fail the tool call for an already-saved beat.
-        if (
-          memoryId !== undefined &&
-          savedTags !== undefined &&
-          validation !== undefined
-        ) {
-          try {
-            await retagValidation(
-              oc,
-              memoryId,
-              savedTags,
-              classifyVerdict(validation),
-            );
-          } catch (err) {
-            log.warn("mnemo_continue", "validation retag failed", {
-              msg: (err as Error).message,
-            });
-          }
-        }
-
-        return asText({
-          beat_name: beatName,
-          beat_text: beatText,
-          ...(memoryId !== undefined && { memory_id: memoryId }),
-          ...(saveError !== undefined && { save_error: saveError }),
-          mode,
-          context_summary: {
-            rules: context.rules.length,
-            style: context.style.length,
-            characters: context.characters.length,
-            locations: context.locations.length,
-            scenes: context.scenes.length,
-            lore: context.lore.length,
-            worldbuilding: context.worldbuilding.length,
-          },
-          ...(validation !== undefined && { validation }),
-          ...(validationError !== undefined && {
-            validation_error: validationError,
-          }),
-          stages_ms: {
-            gather_ms: gatherMs,
-            generate_ms: generateMs,
-            save_ms: saveMs,
-            validate_ms: validateMs,
-          },
-          ...groupMeta,
-        });
+        return asText(result);
       },
     ),
   );
