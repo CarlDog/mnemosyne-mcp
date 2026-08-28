@@ -32,7 +32,12 @@ export function registerEntityRoutes(router: Router, oc: OcClient): void {
       const story = await requireStory(oc, storyId, res);
       if (!story) return;
 
-      const query = parseOr400(rosterQuerySchema, req.query, res, "invalid_query");
+      const query = parseOr400(
+        rosterQuerySchema,
+        req.query,
+        res,
+        "invalid_query",
+      );
       if (!query) return;
 
       const result = await listAllEntities(

@@ -120,11 +120,14 @@ describe("interactive routes — scene-context strategy plumbing (mock OC)", () 
   });
 
   it("revalidate-scenes gathers validation-only context: no scene-pool fetch at all", async () => {
-    const res = await fetch(`${baseUrl}/stories/${STORY_ID}/revalidate-scenes`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({}),
-    });
+    const res = await fetch(
+      `${baseUrl}/stories/${STORY_ID}/revalidate-scenes`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({}),
+      },
+    );
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.scenes_checked).toBe(1);
