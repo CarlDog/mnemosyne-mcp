@@ -1,8 +1,22 @@
 # Status
 
-**Last updated:** 2026-08-27 (**The scene-context/continue feature series
-passed an adversarial review, all 11 confirmed findings are remediated,
-and CI's Test workflow is green again** — the long-red `lint + format`
+**Last updated:** 2026-08-28.
+
+**Current documentation checkpoint:** the external-system research set is now
+durable and cross-linked: Ollama, OpenClaw, Open WebUI, and NemoClaw adoption
+assessments; the Atlas Cloud capability protocol and initial evidence; and the
+Hook Vault. The NemoClaw review contributed three genuinely new candidate
+boundaries—transport-specific filesystem authority, runtime validation plus
+required-tool discovery for sibling MCP services, and semantic dependency
+readiness—while explicitly rejecting an OpenShell/control-plane transplant.
+All recommendations remain research-only until separately ratified. The
+current local verification baseline is 192 passing and 62 skipped tests (254
+total), with typecheck and lint green.
+
+**Previous engineering checkpoint (2026-08-27): the
+scene-context/continue feature series passed an adversarial review, all 11
+confirmed findings are remediated, and CI's Test workflow is green again** —
+the long-red `lint + format`
 job was unformatted files (prettier `--check`), fixed in
 `711dcbd..f94a355` along with excluding the `vendor/` submodule from
 local eslint/prettier runs; verified against the actual runs at
@@ -39,7 +53,7 @@ An OC dogfooding note was filed (memory_list lacks a tags filter,
 memory_search lacks order_by — the reason the two-hop exists). Verified:
 192 unit tests + 32 live-OC integration tests green, webui builds, dump
 scripts smoke-tested against real OC including the empty/invalid env
-cases.) Earlier (2026-08-27): (**Wonderland is the fifth story fully
+cases. Earlier (2026-08-27): (**Wonderland is the fifth story fully
 consolidated onto the canon/ authoring layer — and the last of the five
 original curated-import stories.** 76 entities (10 core characters — every
 named character was rich enough to classify core, no batched `_minor.md` —
@@ -435,9 +449,10 @@ target via `resolveKindroidTarget()`: the per-call override wins, then the
 active story's bound target (only relevant when the generator actually is
 Kindroid), then `KindroidProvider`'s configured `defaultTarget`
 (`KINDROID_STORYTELLING_KIN` or the new `KINDROID_STORYTELLING_GROUP`,
-mutually exclusive at startup). `model` is now Ollama-only — it no longer
-doubles as a Kindroid override, since a Kindroid target needs a type (ai
-vs group), not just a bare id. Against a group, `KindroidProvider.generate()`
+mutually exclusive at startup). At this milestone, `model` stopped doubling
+as a Kindroid override and remained Ollama-only; the direct providers added
+later now honor it, while Kindroid and Botify ignore it. A Kindroid target
+needs a type (ai vs group), not just a bare id. Against a group, `KindroidProvider.generate()`
 drives kindroid-mcp's turn loop via the new `KindroidClient.advanceGroup()`
 (`allowUser: false` forced — mnemosyne is generating a beat, not waiting on
 a live human's real turn; `maxTurns` defaults to 4, matching kindroid-mcp's
@@ -496,12 +511,82 @@ Dovecoast smoke test against `nous-hermes2-mixtral` + `phi4:14b`:
 
 37/37 tests passed at the time.
 
-Current count: 138 passing, 41 integration tests skipping cleanly
-without `OC_URL`/`OLLAMA_GENERATOR_MODEL`/`KINDROID_MCP_URL`/cloud
-provider keys configured (179 total). See Done below for everything
-that's landed since.
+Current local count (2026-08-28): 192 passing, 62 integration/live-provider
+tests skipping cleanly without their external-service environment (254 total).
+Typecheck and lint are green. Historical counts below remain attached to the
+milestones at which they were measured.
 
 ## Done
+
+- **NemoClaw comparative research documented** (2026-08-28). Audited the
+  canonical NVIDIA NemoClaw repository at `b7261ff` (clean local clone,
+  package `0.1.0`, Apache-2.0) against Mnemosyne's current HTTP, filesystem,
+  sibling-MCP, provider, readiness, and deployment boundaries. The resulting
+  [adoption assessment](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md) identifies three
+  genuinely new candidate contracts: reject or confine caller-selected
+  import/export paths by transport; runtime-validate OC/Kindroid/Botify
+  results and discover required tool names without mutation; and separate
+  cheap liveness from protected semantic readiness. Endpoint/redirect
+  hygiene and an optional external-host spike are bounded follow-ups. The
+  assessment explicitly rejects importing OpenShell, sandbox orchestration,
+  credential brokering, a generic inference router, checkpoint machinery,
+  plugins, schedulers, multi-agent infrastructure, or a second memory layer.
+  Research only: nothing is ratified or scheduled, and no NemoClaw code was
+  incorporated.
+
+- **Open WebUI comparative research documented** (2026-08-27). Audited
+  `open-webui/open-webui@d3e8bf3` as both a separately deployed optional host
+  and a pattern library. The
+  [assessment](docs/OPEN_WEBUI_ADOPTION_ASSESSMENT.md) records a bounded native
+  MCP/Pipe compatibility experiment, provider usage normalization,
+  recoverable Web UI runs, stale-aware alternatives, and four concrete
+  accessibility fixes. It rejects replacing Mnemosyne's React UI, treating
+  Open WebUI chat history as canon, importing its provider gateway/vector
+  stores/task platform, or copying current licensed components. No live
+  compatibility claim was made and no Open WebUI code was incorporated.
+
+- **Atlas Cloud capability protocol and initial evidence recorded**
+  (2026-08-27). [The benchmark contract](docs/ATLAS_CAPABILITY_BENCHMARK.md)
+  defines catalog, schema, tiny chat-policy, controlled non-graphic media, and
+  operator-only explicit-review levels. The accompanying
+  [`atlas-capability-benchmark.mjs`](scripts/atlas-capability-benchmark.mjs)
+  never automates explicit-content generation or persists raw model output.
+  [The dated result](docs/ATLAS_CAPABILITY_RESULTS_2026-08-27.md) records 65
+  text, 121 image, and 196 video catalog entries; two partial chat probes; and
+  one bounded image plus one bounded video smoke. No route was certified
+  mature/NSFW-capable: the defensible state remains `unknown`. The runner
+  bounds concurrency and billable media count but currently relies on the
+  Atlas CLI to terminate each subprocess, so it is not an unattended job.
+
+- **Hook Vault and durable visual-workflow lessons recorded** (2026-08-27).
+  [HOOK_VAULT.md](docs/HOOK_VAULT.md) is now the non-canon development register
+  for promising premises and characters that are not ready for promotion.
+  The ratified [data-layout](docs/DATA_LAYOUT.md) and
+  [Living Canon](docs/LIVING_CANON_STANDARD.md) standards now require
+  geometry-aware aspect ratios, preservation of native subject proportions,
+  and dual durable-lesson capture: update the governing repository document
+  and save the cross-session OpenChronicle rationale without creating near-
+  duplicate memories. Existing Hook Vault and geometry-remediation memories
+  remain the retrieval bridge for those two additions.
+
+- **Ollama comparative research documented** (2026-08-27). Audited the
+  canonical Ollama repository at `f96e7aa` and read-only local daemon metadata
+  against Mnemosyne's generator, validator, context, warmup, and save paths.
+  The resulting
+  [adoption assessment](docs/OLLAMA_ADOPTION_ASSESSMENT.md) identifies concrete
+  completion-integrity, validator-locality, structured-output, context, request
+  contract, residency, and telemetry improvements; it also records conditional
+  triggers, test proof, licensing constraints, and explicit non-adoptions. It
+  is research only: no recommendation is ratified or scheduled, and no Ollama
+  code was incorporated.
+
+- **OpenClaw comparative research documented** (2026-08-27). Audited the
+  canonical OpenClaw repository at `f1e9960` against Mnemosyne's actual
+  architecture, code paths, roadmap, and OpenChronicle boundary. The resulting
+  [adoption assessment](docs/OPENCLAW_ADOPTION_ASSESSMENT.md) records narrow
+  patterns worth considering, acceptance criteria, conditional ideas, and
+  explicit non-adoptions. It is research only: no recommendation is ratified
+  or scheduled, and no OpenClaw code was incorporated.
 
 - **CI's Test workflow is green again — the red was prettier, not the
   code** (2026-08-27, commits `711dcbd..f94a355`). The `lint + format`
@@ -1711,9 +1796,10 @@ that's landed since.
   override wins, then the active story's bound target, then
   `KindroidProvider`'s configured `defaultTarget`
   (`KINDROID_STORYTELLING_KIN` or the new `KINDROID_STORYTELLING_GROUP`,
-  mutually exclusive at startup). `model` became Ollama-only — it no
-  longer doubles as a Kindroid override, since a Kindroid target needs a
-  type (ai vs group), not just a bare id. Against a group,
+  mutually exclusive at startup). At this milestone, `model` stopped
+  doubling as a Kindroid override and remained Ollama-only; the direct
+  providers added later now honor it, while Kindroid and Botify ignore it.
+  A Kindroid target needs a type (ai vs group), not just a bare id. Against a group,
   `KindroidProvider.generate()` drives kindroid-mcp's turn loop via the
   new `KindroidClient.advanceGroup()` (`allowUser: false` forced;
   `maxTurns` defaults to 4, matching kindroid-mcp's own default) and
@@ -2089,9 +2175,13 @@ that's landed since.
   Verified: lint, typecheck, tests, format:check. Runtime majors stay
   deferred per the closed npm-major PR.
 
-## v0 Contract (locked)
+## Original v0 Contract (historical)
 
-### Tools (5)
+This section records the five-tool contract that launched the project. It is
+not the current API inventory; the current codebase exposes eleven tools, as
+listed in README/CLAUDE and registered in `src/tools/index.ts`.
+
+### Original tools (5)
 
 | Tool | Purpose |
 |---|---|
@@ -2157,41 +2247,23 @@ that's landed since.
 
 ## What's next (post-v0)
 
-These are not yet planned; they're the natural follow-ups when v0 gets
-real use and pressure points emerge:
+This section preserves the original post-v0 candidates and labels the items
+that have since shipped. The remaining entries are unratified follow-ups to
+consider only when real use exposes the corresponding pressure:
 
-- **`stages` timing field in `mnemo_continue` response (v0.1.4 candidate).**
-  Per-phase elapsed time so the host LLM can report timings without
-  greasing the user into the log file. Phases: `gather_ms`,
-  `generate_ms`, `save_ms`, `validate_ms`. Surfaced 2026-05-11 when a
-  v0.1.2 test exceeded Claude Desktop's ~4-minute MCP tool timeout
-  even though Mnemosyne completed in 5:24 — generator took 2:23,
-  validator took 2:57. With per-phase timing in the response, the
-  user (and the host LLM) can see immediately which phase dominated
-  without diffing log timestamps.
-- **Ollama warmup + extended keep-alive (v0.1.4 candidate).** First
-  `mnemo_continue` after Ollama idle pays a cold start while the model
-  reloads into VRAM (Ollama unloads after default 5min idle). Two-part
-  fix, both server-side; no client background process needed (that
-  would duplicate what Ollama already exposes):
-  1. Add `keep_alive` to the OllamaProvider request body. Default
-     `"30m"`, env-overridable via `OLLAMA_KEEP_ALIVE`. Each
-     `mnemo_continue` refreshes the timer, so active sessions never
-     evict. `OLLAMA_KEEP_ALIVE=-1` pins the model permanently for
-     users who want zero cold start (trade-off: 7-26GB VRAM held).
-  2. Add a `warmup()` method on `OllamaProvider` that sends a 4-token
-     generation to force model load. Call `void generator.warmup()`
-     and `void validator.warmup()` (when they differ) after MCP init,
-     fire-and-forget. Doesn't block server startup; happens in
-     parallel with Claude Desktop's own init work.
-  Skipped intentionally: a client-side heartbeat process. Pure
-  duplication of `keep_alive`'s server-side timer; adds complexity
-  without benefit.
-- **Web UI.** Per ARCHITECTURE.md §1+§4, the standalone web frontend
-  is the bypass for Claude Desktop's content-policy refusals on
-  uncensored content. Daily-driver SFW use through Claude Desktop
-  works now via the MCP; NSFW use requires either a non-Anthropic MCP
-  host (Cline, LM Studio, etc.) or the web UI.
+- ~~**`stages` timing field in `mnemo_continue`.**~~ **Shipped.** Responses
+  include `gather_ms`, `generate_ms`, `save_ms`, and `validate_ms`; the Web UI
+  displays them.
+- ~~**Ollama warmup + extended keep-alive.**~~ **Shipped and remediated.**
+  `keep_alive` is a top-level Ollama request field, warmup uses the configured
+  context ceiling, and automatic warmup defaults to HTTP mode while
+  `MNEMO_WARMUP=true` opts stdio in. A client heartbeat remains deliberately
+  rejected as duplication.
+- **Web UI — partially shipped.** The standalone React frontend now provides
+  story/entity browse/detail and a shared continue/validate flow, bypassing a
+  host LLM for direct browser use. Entity edit/delete, differentiated
+  participant/director/audience postures, assembly inspection, media, and
+  watch parties remain unbuilt design input.
   Design input, captured 2026-08-23 and explicitly not ratified:
   [docs/WEBUI_NOTES.md](docs/WEBUI_NOTES.md) — three modes as three
   postures, a storyline control plane alongside the character one,
@@ -2204,24 +2276,20 @@ real use and pressure points emerge:
   validator stays on Ollama for all of them (a `VALIDATOR_PROVIDER`
   selection for the JSON-capable cloud providers is the natural cheap
   follow-up if local validation ever becomes the bottleneck).
-- **Per-call story selector on `mnemo_continue`.** Today it operates on
-  the *active* story, and that pointer is machine-local config mutated
-  globally by `mnemo_story_use`. Fine for an interactive session; wrong
-  for a programmatic caller, which must not stomp the pointer a
-  concurrent Claude session is using. Surfaced 2026-08-23 while designing
-  the plex-companion passthrough (docs/WEBUI_NOTES.md §7) — the only new
-  API that integration needs on our side. Not urgent until a
-  non-interactive caller actually exists.
-- **Recent-scenes-by-recency** — see Known Gaps; needs OC API
-  improvement or client-side workaround.
+- ~~**Per-call story selector on `mnemo_continue`.**~~ **Shipped and
+  generalized.** Every story-touching tool accepts an optional `story`
+  override without mutating the machine-local active-story pointer.
+- **Recent-scenes-by-recency** — the compact scan-and-hydrate client workaround
+  has shipped. The remaining gap is a first-class ordered/tag-filtered OC query;
+  see Known Gaps.
 - **Game mechanics** (StatBlock, dice, HP, inventory) — v2 Phase 4
   territory; deferred to ARCHITECTURE.md §8 unless a real session
   demands them.
-- **Import / export tooling — design ratified 2026-08-21, build
-  underway.** The portability use case arrived: importing the operator's
+- **Import / export tooling — complete.** The portability use case arrived:
+  importing the operator's
   original ChatGPT storytelling projects (the OpenChronicle template
   system's ancestors). Full design record in
-  [docs/IMPORT_EXPORT_DESIGN.md](IMPORT_EXPORT_DESIGN.md) — core
+  [docs/IMPORT_EXPORT_DESIGN.md](docs/IMPORT_EXPORT_DESIGN.md) — core
   decision: classification happens caller-side in the host conversation;
   the server is a typed batch writer that never guesses. Build order:
   `mnemo_export_story` (versioned JSON interchange schema — the riskiest
@@ -2264,7 +2332,7 @@ real use and pressure points emerge:
   (a new `src/atlascloud-client.ts` Streamable HTTP MCP client,
   `ATLASCLOUD_MCP_URL` + `ATLASCLOUD_MCP_AUTH_TOKEN` config) against
   [atlascloud-mcp](https://github.com/CarlDog/atlascloud-mcp) — **not
-  currently deployed.** It was live on the NAS (`http://carldog-nas:3010/mcp`,
+  currently deployed.** It was live on the NAS (`http://your-nas:3010/mcp`,
   Portainer stack 171) as of 2026-08-05 but has since been decommissioned
   (confirmed 2026-08-25: no stack, no container). This repo's `.mcp.json`
   had a matching `atlascloud` HTTP entry pointing at that dead endpoint —
@@ -2306,7 +2374,7 @@ real use and pressure points emerge:
   Open questions, unresolved: where the pointer lives (local
   operational state like the current-story pointer, or an OC-canonical
   marker the way the Kindroid target binding works — probably the
-  latter, since a future web UI caller needs to read/set it too);
+  latter, since the Web UI/API caller needs to read/set it too);
   whether advancing position is an explicit tool call or inferred from
   generated prose; and how to represent travel/duration between two
   locations if that distance ever matters. Design not started — this
@@ -2322,10 +2390,38 @@ real use and pressure points emerge:
 
 ## Open Decisions
 
-- **HTTP transport.** Out of scope for v0 (stdio only). Add when a
-  deployment scenario needs it (e.g., the planned web UI).
+- No open decision is currently ratified here. Streamable HTTP and the Web UI
+  have shipped; the research findings below remain unratified candidates, not
+  decisions.
 
 ## Known Gaps
+
+- **HTTP import/export paths exceed the remote story-operation boundary.**
+  The same MCP tool schemas are registered for stdio and HTTP, while
+  `mnemo_export_story(out_path)` can overwrite any process-writable location
+  and `mnemo_import_story(file_path)` can read any process-readable valid
+  export. Default loopback reduces exposure, but this must be rejected or
+  confined by transport before non-loopback or third-party agent-host use.
+  Research and acceptance proof:
+  [NEMOCLAW_ADOPTION_ASSESSMENT.md](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md#1-constrain-filesystem-authority-by-transport).
+- **Sibling MCP results are compile-time-cast, not runtime-validated.**
+  `extractStructuredOrParsed<T>` trusts `structuredContent` or parsed text as
+  `T`; OC, Kindroid, and Botify do not discover their required tool sets.
+  Runtime schemas plus bounded, non-mutating `tools/list` discovery are an
+  unratified P1 candidate. Research and acceptance proof:
+  [NEMOCLAW_ADOPTION_ASSESSMENT.md](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md#2-validate-external-mcp-contracts-and-discover-required-tools).
+- **`/health` is liveness only.** It always returns process `ok` and cannot
+  report a dropped/incompatible OC connection, unavailable generator, or
+  missing validator model. Keep it cheap; add protected semantic readiness
+  only through a separately ratified slice. Research and acceptance proof:
+  [NEMOCLAW_ADOPTION_ASSESSMENT.md](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md#3-separate-liveness-from-semantic-readiness).
+- **Credential-bearing endpoint diagnostics need a single safe boundary.**
+  URL parsing currently permits embedded userinfo/query/fragment shapes,
+  direct-provider fetch follows redirects by default, and logs lack final-sink
+  URL/secret redaction. Private/loopback endpoints must remain supported; this
+  is targeted hygiene, not blanket SSRF blocking. Research and acceptance
+  proof:
+  [NEMOCLAW_ADOPTION_ASSESSMENT.md](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md#4-endpoint-redirect-error-body-and-logging-hygiene).
 
 - ~~No CI yet~~ — stale. CI has existed since 2026-07-23 (`test.yml`,
   typecheck/build/test matrixed across ubuntu/windows/macos) and 2026-08-01

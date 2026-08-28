@@ -145,8 +145,34 @@ it, the same way a deploy pushes source to production.
 ### Reference composition and generation defaults
 
 - Character portrait and body images use **3:4**. Face studies use **1:1**.
-  Location, room, and primary object plates use **16:9** unless an established
-  reference set gives the subject a different deliberate ratio.
+  Location and room establishing plates normally use **16:9** because a scene
+  can extend naturally through foreground, middle distance, and horizon.
+- **Object and in-use plates use a geometry-aware ratio rather than a blanket
+  16:9 default.** Use **16:9** for intrinsically long horizontal subjects such
+  as vehicles, rifles, deployed weapons, and broad machinery; **4:3** or
+  **1:1** for compact or roughly square equipment; and **3:4** for tall objects
+  such as mirrors, staffs, standing reliquaries, and upright machines. A
+  complete human figure in a landscape action plate normally uses **4:3** or
+  **3:2**. Reserve **16:9** for genuinely wide staging or a deliberate
+  knee-up/waist-up crop, not a complete person plus a complete oversized prop.
+- Aspect ratio follows the visual question answered by the variant. Different
+  variants in one entity folder may therefore use different deliberate ratios;
+  family consistency means stable identity, materials, scale, and composition
+  roles, not forcing every image onto the same canvas shape.
+- For every bounded subject, preserve its native height-to-width ratio and
+  natural anatomical or mechanical proportions. Never scale the subject
+  differently along the horizontal and vertical axes, broaden it, flatten it,
+  shorten it, compress it, or stretch it to fill the canvas. Fit it by moving
+  the camera, choosing a more suitable ratio, or extending the background.
+  Unused width is acceptable negative space.
+- Do not combine all three constraints—complete bounded subject, complete
+  oversized prop, and generous margins—inside a shallow 16:9 frame. Relax the
+  crop, change the ratio, or create separate object and in-use variants.
+- When an edit input uses a different ratio from the intended output, state
+  that the source controls both design and native proportions. Recompose or
+  outpaint by adding background around the unchanged subject; never treat
+  “recompose; do not crop” as permission to reshape the source to the new
+  canvas.
 - `openai/gpt-image-2` uses **medium quality by default**. Medium is the
   cost-conscious production baseline and has proved sufficient for reference
   faces, clothing, environments, and object detail. High quality is an

@@ -369,7 +369,13 @@ sidecar rules in [DATA_LAYOUT.md](DATA_LAYOUT.md). In particular:
   attempts, and superseded art;
 - approved older imagery is reused as reference input when it already contains
   the controlling likeness or object design;
-- aspect ratio and composition remain consistent across a reference family;
+- aspect ratio and composition are deliberate for each variant and follow the
+  geometry-aware rules in `DATA_LAYOUT.md`; reference-family consistency
+  preserves identity, materials, relative scale, and each variant's visual
+  role rather than imposing one canvas ratio on every subject;
+- bounded people and objects retain natural anatomical or mechanical
+  proportions; background space expands to fit the chosen canvas instead of
+  horizontally stretching or vertically compressing the subject;
 - medium generation quality is the cost-conscious default; high quality
   requires a specific visual need rather than prestige alone;
 - rejected or retired imagery remains recoverable but cannot silently continue
@@ -427,6 +433,27 @@ concrete yes/no-ish answer against the entity's actual text.
     `node scripts/verify-provenance.mjs <export-file>` rather than eyeballing
     it — the same mistake (a stale, carried-forward block) reached five of
     five stories' most recent revisions before this step existed.
+
+## 14. Durable lesson capture
+
+When an observed failure produces a reusable fix, finishing the immediate
+artifact is not enough. Preserve the lesson at both persistence layers:
+
+- update the repository document that governs the affected workflow with the
+  durable rule, its scope, and any important exception;
+- save an OpenChronicle project memory recording the symptom, root cause,
+  rejected approach, tested resolution, and relevant document or asset paths;
+- pin the memory only when it is a standing convention that should surface in
+  future work, rather than a one-time milestone or forensic record;
+- update an existing memory instead of creating a near-duplicate when the new
+  result refines an earlier rule;
+- preserve failed or superseded artifacts with sidecars when they remain useful
+  for provenance, comparison, or design identity, and explicitly prevent them
+  from acting as current canon references.
+
+Documentation is the authoritative operational rule; OpenChronicle is the
+cross-session retrieval bridge that explains why the rule exists. A lesson is
+fully captured only when both agree.
 
 ## Cross-story improvement rule
 
