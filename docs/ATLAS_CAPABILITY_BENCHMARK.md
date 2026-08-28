@@ -148,10 +148,28 @@ is **not implemented**. `ATLASCLOUD_CONTENT_CAPABILITY` appears only in
 document; nothing in `src/` reads it. Today this review feeds a manual operator
 choice of deployment/provider, not an enforced configuration.
 
-### Current runner boundary
+### Probe timeouts
 
-Each probe currently waits for the invoked Atlas CLI process to exit; the
-runner does not impose its own subprocess timeout. That is acceptable for an
-operator-supervised benchmark, but it is not yet safe to treat this as an
-unattended or scheduled certification job. Add a bounded timeout and record a
-distinct timeout result before automating longer runs.
+Every Atlas CLI invocation runs under a bounded budget; a probe that overruns
+is killed (`SIGKILL`) and recorded as a distinct `timeout` result rather than a
+generic error, so a reviewer can tell "the model refused" from "we never heard
+back." Timeouts are tallied separately in `counts.<type>.timeouts`, and the
+budgets in force are written into the report's `budgets` block so a run stays
+auditable.
+
+| Budget | Flag | Default | Covers |
+|---|---|---|---|
+| Probe | `--timeout-ms` | 120000 (2 min) | catalog listing, schema probe, chat probe, media submit |
+| Media | `--media-timeout-ms` | 900000 (15 min) | `generate wait` — blocks on a real image/video render |
+
+Both must be positive integers; there is deliberately no value that disables
+them, since an unbounded probe is exactly the hazard this bounds. Raise the
+number instead.
+
+Two caveats worth knowing:
+
+- **A media probe that times out may still be billable.** The job was already
+  submitted; only our wait was abandoned. The row records its `predictionId`
+  so the attempt can be reconciled against Atlas billing.
+- **A catalog timeout is fatal**, not a recorded row — nothing downstream can
+  run without the model list, so the run aborts with a timeout message.
