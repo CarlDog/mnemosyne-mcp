@@ -45,6 +45,10 @@ coverage/
 # so this is intentionally per-machine.
 .mcp.json
 
+# Codex CLI's MCP server config -- same hazard as .mcp.json above: it bakes in
+# absolute clone paths and personal infrastructure URLs (the NAS OC endpoint).
+.codex/
+
 # Per-developer tool / session state (Claude Code agent state,
 # Serena MCP project memories). Tool-specific, not portable.
 .claude/
