@@ -1,7 +1,12 @@
-// LLM provider abstraction. v0 ships Ollama only. Adding Botify or
-// Anthropic later is a new class implementing LlmProvider — and a
-// runtime selection mechanism (env var) will appear naturally then.
-// Don't pre-build it.
+// LLM provider abstraction, plus the Ollama implementation.
+//
+// Seven generators now implement LlmProvider behind GENERATOR_PROVIDER:
+// ollama (default), the companion-chat pair kindroid/botify, and the
+// direct-API cloud four anthropic/openai/gemini/atlascloud. The validator
+// role always stays on Ollama regardless of the generator — a companion-chat
+// model is a poor fit for structured JSON, and keeping validation local keeps
+// it free — so OLLAMA_VALIDATOR_MODEL is required for every non-ollama
+// generator.
 
 import { log } from "./log.js";
 import type { ContextBundle } from "./prompt.js";
