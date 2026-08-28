@@ -1,8 +1,0 @@
-[mcp_servers.mnemosyne]
-command = "node"
-args = ["D:/GitHub/mnemosyne-mcp/dist/index.js"]
-
-[mcp_servers.mnemosyne.env]
-OC_URL = "http://carldog-nas:18000/mcp"
-OLLAMA_GENERATOR_MODEL = "mistral-nemo:12b"
-OLLAMA_VALIDATOR_MODEL = "mistral-nemo:12b"
