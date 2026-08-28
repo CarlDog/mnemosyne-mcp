@@ -349,6 +349,33 @@ coverage is therefore still only the single 2026-08-27 clip.** A limit that
 samples across catalog types would be needed to cover both in one bounded run;
 today the limit is a prefix, not a sample.
 
+### The smoke run violated the runner's own no-raw-output contract
+
+**Found during this run and fixed the same day.** The three generations left
+real PNGs (~6.5 MB) in the process CWD — the repo root — while the report
+emitted `rawOutputsStored: false` and `CLAUDE.md` claimed the script "never
+… stores raw generated output". Both claims were false in practice: the runner
+put no image data in its JSON, but the `atlas` CLI it invokes downloads
+outputs by default, and `generate wait` was called without `--no-download`.
+
+Benign here (the probe prompt is deliberately non-graphic), but the contract
+exists precisely so that a widened probe cannot drop generated adult media
+into a git repository.
+
+Fixed by passing `--no-download` on the `generate wait` call. Verified for
+free by replaying an already-completed prediction rather than generating new
+media — without the flag one file is written, with it zero, and `outputs` is
+still returned so `outputCount` is unaffected:
+
+| Invocation | Files written | `outputs` returned |
+|---|---:|---|
+| `generate wait <id> --json` (old) | 1 | yes |
+| `generate wait <id> --no-download --json` (new) | 0 | yes (count 1) |
+
+The stray files were moved out of the repository. The same commit also records
+`predictionId` on a **successful** smoke, not only on failure — a completed job
+is exactly what gets reconciled against a billing line.
+
 ### No NSFW flag was reported
 
 None of the three responses carried `has_nsfw_contents`. Absence of a flag is
