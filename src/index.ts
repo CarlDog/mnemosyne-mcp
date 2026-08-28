@@ -740,6 +740,30 @@ if (httpConfig.port === undefined) {
     }
   });
 
+  // Bind failures arrive as an 'error' event, not a throw, and land AFTER every
+  // startup check and oc.connect() have already passed. With no listener Node
+  // rethrows as an unhandled 'error' event -- a raw EADDRINUSE/EADDRNOTAVAIL
+  // stack. Under `restart: unless-stopped` that is a crash-loop whose cause is
+  // only visible by reading a stack trace out of container logs.
+  httpServer.on("error", (err: NodeJS.ErrnoException) => {
+    log.error("server", "failed to bind HTTP listener", {
+      bind: `${httpConfig.bindHost}:${httpConfig.port}`,
+      code: err.code ?? "unknown",
+      error: err.message,
+    });
+    // Exit non-zero immediately. Two alternatives were tried and rejected:
+    // awaiting dispose() before exiting still aborts libuv on Windows
+    // ("Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)") because
+    // warmup fires an Ollama fetch at module load whenever MCP_PORT is set;
+    // and setting only process.exitCode hangs the process indefinitely (the
+    // loop never drains). A prompt non-zero exit after a legible error beats
+    // both a hang and a silent stack trace. The libuv assertion may still
+    // print AFTER the message above -- noise, not the diagnosis.
+    // The real fix is to start warmup only after a successful bind; that
+    // means moving a module-level block and is queued separately.
+    process.exit(1);
+  });
+
   const shutdown = async (signal: string): Promise<void> => {
     log.info("server", "shutting down", { signal });
     await mcp.dispose();
