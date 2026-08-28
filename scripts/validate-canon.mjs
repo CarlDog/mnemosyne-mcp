@@ -16,6 +16,7 @@
 
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
+import { fromCanonScalar } from "./canon-frontmatter.mjs";
 
 // Normalizes CRLF to LF so a file saved by a Windows-native editor doesn't
 // fail the frontmatter check purely on line-ending grounds.
@@ -161,7 +162,7 @@ async function main() {
           : subdir === "locations"
             ? "location"
             : subdir;
-      claim(type, parsed.fields.name.replace(/^"|"$/g, ""), rel);
+      claim(type, fromCanonScalar(parsed.fields.name), rel);
     }
   }
 
