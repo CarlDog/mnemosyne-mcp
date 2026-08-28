@@ -26,6 +26,12 @@ import { continueScene } from "../tools/continue.js";
 import { revalidateScenes } from "../tools/revalidate.js";
 import { validateContent } from "../validator.js";
 import { asyncRoute, parseOr400, requireStory } from "./helpers.js";
+import {
+  MAX_GENERATION_TOKENS,
+  MAX_TEMPERATURE,
+  MIN_GENERATION_TOKENS,
+  MIN_TEMPERATURE,
+} from "../llm.js";
 
 // The validate/revalidate bodies carry no scene_context_strategy params:
 // validation contexts are gathered validationOnly (no scene pull -- the
@@ -43,8 +49,13 @@ const continueSchema = z.object({
   mode: z.enum(MODES).optional(),
   scene_context_strategy: z.enum(SCENE_CONTEXT_STRATEGIES).optional(),
   scene_context_fallback_strategy: z.enum(SCENE_CONTEXT_STRATEGIES).optional(),
-  max_tokens: z.number().int().min(1).max(8192).optional(),
-  temperature: z.number().min(0).max(2).optional(),
+  max_tokens: z
+    .number()
+    .int()
+    .min(MIN_GENERATION_TOKENS)
+    .max(MAX_GENERATION_TOKENS)
+    .optional(),
+  temperature: z.number().min(MIN_TEMPERATURE).max(MAX_TEMPERATURE).optional(),
   model: z.string().optional(),
   kindroid_kin: z.string().optional(),
   kindroid_group_id: z.string().optional(),
