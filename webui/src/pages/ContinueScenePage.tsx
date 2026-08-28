@@ -2,11 +2,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useParams } from "react-router";
 import { useApi } from "../hooks/useApi";
-import {
-  continueStory,
-  getStory,
-  type ContinueResponse,
-} from "../api/client";
+import { continueStory, getStory, type ContinueResponse } from "../api/client";
 import {
   MODES,
   SCENE_CONTEXT_STRATEGIES,
@@ -42,7 +38,8 @@ export default function ContinueScenePage() {
   const [result, setResult] = useState<ContinueResponse | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const storyName = storyState.status === "ready" ? storyState.data.story.name : "…";
+  const storyName =
+    storyState.status === "ready" ? storyState.data.story.name : "…";
 
   const disabled = direction.trim().length === 0 || submitting;
 
@@ -95,7 +92,9 @@ export default function ContinueScenePage() {
       </header>
       <main className="content">
         {storyState.status === "loading" && <Loading label="Opening story…" />}
-        {storyState.status === "error" && <ErrorBanner error={storyState.error} />}
+        {storyState.status === "error" && (
+          <ErrorBanner error={storyState.error} />
+        )}
         <form className="continue-form card" onSubmit={onSubmit}>
           <div className="panel-heading">
             <h1 className="panel-title">Continue Scene</h1>
@@ -251,7 +250,11 @@ export default function ContinueScenePage() {
           </label>
 
           <div className="field-row">
-            <button type="submit" className="button primary" disabled={disabled}>
+            <button
+              type="submit"
+              className="button primary"
+              disabled={disabled}
+            >
               {submitting ? "Generating…" : "Generate beat"}
             </button>
             <Link to={`/stories/${storyId}`} className="button muted">
@@ -280,8 +283,9 @@ export default function ContinueScenePage() {
                 <span>Fallback strategy: {fallbackStrategy}</span>
               )}
               <span>
-                Gather / generate / save / validate: {result.stages_ms.gather_ms}ms /{" "}
-                {result.stages_ms.generate_ms}ms / {result.stages_ms.save_ms}ms /{" "}
+                Gather / generate / save / validate:{" "}
+                {result.stages_ms.gather_ms}ms / {result.stages_ms.generate_ms}
+                ms / {result.stages_ms.save_ms}ms /{" "}
                 {result.stages_ms.validate_ms}ms
               </span>
             </div>
@@ -347,9 +351,7 @@ export default function ContinueScenePage() {
                             {issue.severity}
                           </span>{" "}
                           {issue.rule}: {issue.violating_text}
-                          <div className="issue-text">
-                            {issue.explanation}
-                          </div>
+                          <div className="issue-text">{issue.explanation}</div>
                         </li>
                       ),
                     )}
@@ -358,7 +360,9 @@ export default function ContinueScenePage() {
               </>
             )}
             {result.validation_error && (
-              <p className="result-warning">Validation failed: {result.validation_error}</p>
+              <p className="result-warning">
+                Validation failed: {result.validation_error}
+              </p>
             )}
           </section>
         )}

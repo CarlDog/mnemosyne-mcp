@@ -256,7 +256,12 @@ export async function continueScene(
     validation !== undefined
   ) {
     try {
-      await retagValidation(oc, memoryId, savedTags, classifyVerdict(validation));
+      await retagValidation(
+        oc,
+        memoryId,
+        savedTags,
+        classifyVerdict(validation),
+      );
     } catch (err) {
       log.warn("continueScene", "validation retag failed", {
         msg: (err as Error).message,

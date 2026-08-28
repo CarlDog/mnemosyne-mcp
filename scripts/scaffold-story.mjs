@@ -138,8 +138,7 @@ function fmKeyFromLabel(label) {
 // its single-value fields ("TATTOOS & INK:", "ARCHIVE BACKSTORY (excavated
 // from the raw transcripts):", "MOTORCYCLE CANON — MADDOX'S ANTIQUE INDIAN
 // SCOUT:").
-const BARE_LABEL_RE =
-  /^([A-Za-z][A-Za-z0-9 &/'()–—-]*):\s*$/;
+const BARE_LABEL_RE = /^([A-Za-z][A-Za-z0-9 &/'()–—-]*):\s*$/;
 
 // Splits a character's content into a leading header block and the
 // remaining Markdown body. Stops at the first blank line followed by a
@@ -203,7 +202,9 @@ function splitHeaderBody(content) {
     if (unparsed.length > 0) bodyParts.push(unparsed.join("\n"));
   }
   if (bodyParts.length > 0) {
-    body = body ? `${bodyParts.join("\n\n")}\n\n${body}` : bodyParts.join("\n\n");
+    body = body
+      ? `${bodyParts.join("\n\n")}\n\n${body}`
+      : bodyParts.join("\n\n");
   }
   return { frontmatter, body };
 }

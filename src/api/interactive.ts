@@ -42,9 +42,7 @@ const continueSchema = z.object({
   direction: z.string().min(1),
   mode: z.enum(MODES).optional(),
   scene_context_strategy: z.enum(SCENE_CONTEXT_STRATEGIES).optional(),
-  scene_context_fallback_strategy: z
-    .enum(SCENE_CONTEXT_STRATEGIES)
-    .optional(),
+  scene_context_fallback_strategy: z.enum(SCENE_CONTEXT_STRATEGIES).optional(),
   max_tokens: z.number().int().min(1).max(8192).optional(),
   temperature: z.number().min(0).max(2).optional(),
   model: z.string().optional(),
@@ -60,7 +58,10 @@ const continueSchema = z.object({
   validate: z.boolean().optional(),
 });
 
-function requestErrorBody(name: string, error: string): {
+function requestErrorBody(
+  name: string,
+  error: string,
+): {
   error: string;
   message: string;
 } {

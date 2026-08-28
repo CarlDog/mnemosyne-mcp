@@ -39,9 +39,13 @@ const MODE_DIRECTIVES: Record<Mode, string> = {
     "You are a narrator telling a story. The user is your audience. Write vivid, immersive narrative prose. Perform all characters with distinct voices. Advance the plot naturally. The user may offer light guidance but is primarily here to enjoy the story.",
 };
 
-export const SCENE_CONTEXT_STRATEGIES = ["recency-first", "query-ranked"] as const;
+export const SCENE_CONTEXT_STRATEGIES = [
+  "recency-first",
+  "query-ranked",
+] as const;
 export type SceneContextStrategy = (typeof SCENE_CONTEXT_STRATEGIES)[number];
-export const DEFAULT_SCENE_CONTEXT_STRATEGY: SceneContextStrategy = "recency-first";
+export const DEFAULT_SCENE_CONTEXT_STRATEGY: SceneContextStrategy =
+  "recency-first";
 
 // Shared schema-description strings for the per-call strategy params.
 // Every surface that exposes the params (three MCP tools, three API

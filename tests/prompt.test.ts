@@ -249,9 +249,19 @@ describe("prompt — pullFilteredScenes", () => {
 
   it("query-ranked keeps relevance order within the clean and untagged buckets", async () => {
     const pool = [
-      sceneMemory("1", "Old scene", ["validation:clean"], "2026-01-01T10:00:00Z"),
+      sceneMemory(
+        "1",
+        "Old scene",
+        ["validation:clean"],
+        "2026-01-01T10:00:00Z",
+      ),
       sceneMemory("2", "Middle scene", [], "2026-01-01T10:10:00Z"),
-      sceneMemory("3", "Oldly ranked scene", ["validation:clean"], "2026-01-01T10:05:00Z"),
+      sceneMemory(
+        "3",
+        "Oldly ranked scene",
+        ["validation:clean"],
+        "2026-01-01T10:05:00Z",
+      ),
       sceneMemory("4", "Newest scene", [], "2026-01-01T10:20:00Z"),
     ];
     // OC relevance order: Middle, Old, Newest, Oldly ranked. The
@@ -274,14 +284,39 @@ describe("prompt — pullFilteredScenes", () => {
 
   it("falls back to a secondary strategy when the primary returns only validation errors", async () => {
     const queryRanked = [
-      sceneMemory("1", "Errors first", ["validation:errors"], "2026-01-01T10:00:00Z"),
-      sceneMemory("2", "Errors second", ["validation:errors"], "2026-01-01T10:10:00Z"),
-      sceneMemory("3", "Errors third", ["validation:errors"], "2026-01-01T10:05:00Z"),
+      sceneMemory(
+        "1",
+        "Errors first",
+        ["validation:errors"],
+        "2026-01-01T10:00:00Z",
+      ),
+      sceneMemory(
+        "2",
+        "Errors second",
+        ["validation:errors"],
+        "2026-01-01T10:10:00Z",
+      ),
+      sceneMemory(
+        "3",
+        "Errors third",
+        ["validation:errors"],
+        "2026-01-01T10:05:00Z",
+      ),
     ];
     const recencyFallback = [
-      sceneMemory("4", "Clean fallback", ["validation:clean"], "2026-01-01T10:20:00Z"),
+      sceneMemory(
+        "4",
+        "Clean fallback",
+        ["validation:clean"],
+        "2026-01-01T10:20:00Z",
+      ),
       sceneMemory("5", "Untagged fallback", [], "2026-01-01T10:15:00Z"),
-      sceneMemory("6", "Older clean", ["validation:clean"], "2026-01-01T10:12:00Z"),
+      sceneMemory(
+        "6",
+        "Older clean",
+        ["validation:clean"],
+        "2026-01-01T10:12:00Z",
+      ),
     ];
 
     const result = await pullFilteredScenes(
@@ -332,7 +367,9 @@ describe("prompt — resolveSceneContextStrategies", () => {
     expect(resolveSceneContextStrategies({}, server)).toEqual({
       strategy: "recency-first",
     });
-    expect(resolveSceneContextStrategies({}, serverWithDistinctFallback)).toEqual({
+    expect(
+      resolveSceneContextStrategies({}, serverWithDistinctFallback),
+    ).toEqual({
       strategy: "recency-first",
       fallback: "query-ranked",
     });
