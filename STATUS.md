@@ -9,11 +9,21 @@ Hook Vault. The NemoClaw review contributed three genuinely new candidate
 boundaries—transport-specific filesystem authority, runtime validation plus
 required-tool discovery for sibling MCP services, and semantic dependency
 readiness—while explicitly rejecting an OpenShell/control-plane transplant.
-All recommendations remain research-only until separately ratified. The
-current local verification baseline is 192 passing and 62 skipped tests (254
-total), with typecheck and lint green.
+All recommendations remain research-only until separately ratified; the set
+was read end-to-end and triaged on 2026-08-28 (see the Done entry below), and
+three of its items have since shipped. The current local verification baseline
+is **213 passing and 62 skipped tests (275 total)**, with typecheck, lint, and
+prettier green, and CI green on all three OS legs.
 
-**Current engineering checkpoint (2026-08-28): the Atlas capability runner is
+**Session close (2026-08-28).** A phase-end audit was run over the whole repo
+and all 28 findings are resolved, deliberately-not-flagged, or overtaken by
+events; `src/index.ts` was split 774 to 343 lines as its own stage; and the
+external-system research set was read end-to-end and reduced to a decision
+queue, with the three highest-value items shipped. Nothing is in flight.
+**The next direction is deliberately unset** -- development pauses here and
+will be shaped by live use rather than by a backlog.
+
+**Previous engineering checkpoint (2026-08-28): the Atlas capability runner is
 hardened and L0-L3 evidence is on record.** Five real defects were found and
 fixed by running it — an unbounded subprocess wait, a summary that hid schema
 failures, generated media written into the repo against the runner's own
@@ -527,6 +537,101 @@ Typecheck and lint are green. Historical counts below remain attached to the
 milestones at which they were measured.
 
 ## Done
+
+- **External-system research read end-to-end, triaged, and three items
+  shipped** (2026-08-28, `32e027f`, `ebb6d36`, `9be11f3`, `a12e992`). The five
+  documents (3,128 lines) had never been read in full since landing, and
+  nothing in them was ratified. Reading them produced a decision queue of
+  **20 live proposals against roughly 60 explicit non-adoptions** -- four
+  independent audits of much larger systems (OpenClaw 34,426 files, NemoClaw
+  6,008, Open WebUI 5,059, against this repo's 135) proposed **no new
+  feature**, only boundary and integrity fixes. Six of their
+  "already implemented" claims verified true in code; five drift items were
+  found, and the Atlas ones were fixed the same day -- that doc specified L3
+  result vocabularies the runner never emits, omitted two the live sweep
+  actually produced, and overstated what the L1 probe proves. Three items
+  shipped:
+  - **`OLLAMA_KEEP_ALIVE=-1` produced an HTTP 400 on every generation.**
+    Reproduced live: `"keep_alive":"-1"` returns 400, numeric `-1` returns
+    200, while `"0"`/`"30m"`/`"90s"` are fine as strings. `.env.example`
+    documented exactly `"-1"`, and env vars are always strings, so following
+    the documentation broke the server. Numeric values are now sent as
+    numbers, and `tests/ollama-keep-alive.test.ts` pins both the value shape
+    and the top-level placement that `fa90ba2` got wrong silently once
+    already; confirmed non-vacuous by reintroducing the old nesting (3 of 9
+    fail).
+  - **Caller-supplied filesystem paths are refused over HTTP** (NemoClaw
+    section 1, previously a Known Gap). One `makeServer()` factory serves both
+    transports, so an HTTP caller could read or write anywhere the process
+    can. A flat rejection rather than an allowed-root facility, per the
+    assessment's own argument. stdio -- every current deployment -- is
+    unchanged. Verified on a live server: over HTTP an `out_path` write is
+    refused and no file appears; over stdio the identical call still writes a
+    129,864-byte export.
+  - **Four keyboard and screen-reader defects** in the web UI, including a
+    `.card:focus-visible` rule that could never match because `.card` is a
+    non-focusable `<article>`.
+
+  Deliberately **not** taken: the per-story run registry (its own document
+  states no incident proves users have hit the race) and both host spikes
+  (blocked, and Open WebUI's own analysis predicts a structural failure). The
+  roughly 60 rejections are recorded as the set's most durable output -- no
+  second memory store beside OC, no automatic retry after a billable or
+  externally-mutating call, no fork or frontend transplant, no plugin/skills
+  runtime, canon never promoted by recurrence, and a safe pass never a
+  capability certification.
+
+- **Phase-end audit: 28 findings, all resolved** (2026-08-28, `41fc26b`
+  through `417d18e`). Run as a discrete pass with the punch list surfaced
+  before any fix, per the audit's own procedure. The baseline was already
+  strong: no test has ever been deleted from history, gitleaks over all 176
+  commits found nothing, and this repo's pre-commit hook is *ahead* of the
+  fleet canonical version. Findings clustered in two places -- the repo's
+  public face, and gate coverage at the edges.
+  - **Public-repo leaks.** `.codex/config.toml` was tracked and published the
+    internal NAS endpoint on a public repo; `.gitignore` already excluded
+    `.mcp.json` for exactly that reason, but Codex's equivalent never got the
+    same treatment. `STORYLINE_RESEARCH_BACKLOG.md` listed machine-local paths
+    to commercial RPG PDFs. Neither was catchable by the PII hook, whose
+    patterns cover home paths and personal email domains.
+  - **`SECURITY.md` added and private vulnerability reporting enabled.** A
+    public repo documenting its own HTTP trust boundary had no disclosure
+    channel but a public issue. Written honestly: no SLA, upstreams scoped
+    out, and the three known limitations listed so a reporter does not spend
+    effort rediscovering them.
+  - **Gate coverage.** `scripts/` (1,724 lines, including the billing-guarded
+    Atlas runner) was linted by nothing; webui lint ran in no CI job; the
+    webui build used `npm install` while the same workflow pinned `npm ci` at
+    root; and Dependabot watched neither `webui/` (18 dependencies, ten a full
+    major behind) nor the GitHub Actions.
+  - **Real defects.** A canon frontmatter writer and reader that disagreed
+    about quoting, corrupting any entity name containing a quote across 55
+    files; an HTTP bind failure that threw an unhandled error after every
+    startup check had passed; `--mode` typos that wrote an all-`not_run`
+    report and exited **0**; and script diagnostics that turned every
+    misconfiguration into a stack trace.
+  - Documented as correctly absent rather than fixed: CHANGELOG (this Done log
+    already is one), CONTRIBUTING, CODE_OF_CONDUCT, and issue templates for a
+    repo with no contributors.
+
+- **`src/index.ts` split 774 to 343 lines** (2026-08-28, `82364e8`,
+  `417d18e`). Queued by the audit as its own stage rather than a drive-by. Env
+  parsing and validation for seven providers moved to
+  `src/generator-config.ts` -- it decides *what* to build, `index.ts` builds
+  it -- and the instructions blob to `src/instructions.ts`. Exports are
+  individual bindings rather than one config object specifically so that no
+  call site had to change, which was the lesson from an earlier refactor the
+  same day that broke three test files by renaming wholesale. Verified
+  behaviorally across four startup paths, not only by typecheck.
+
+  The paired warmup fix **corrected a diagnosis recorded earlier that day**.
+  Warmup had been blamed for a libuv abort on bind failure, but deferring it
+  past a successful bind left the assertion unchanged, with no warmup line in
+  the log to blame. The actual holder is the OpenChronicle client:
+  `oc.connect()` has already succeeded when a bind error arrives, so its
+  transport is live and exiting on top of it aborts libuv. Closing it first
+  fixes it, and a bind failure now exits 1 with a legible error and no
+  assertion.
 
 - **Atlas capability runner hardened, and L0-L3 coverage recorded**
   (2026-08-28, twelve Atlas commits between `c176669` and `d213b62`). The protocol landed the day
