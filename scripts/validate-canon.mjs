@@ -17,6 +17,7 @@
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { fromCanonScalar } from "./canon-frontmatter.mjs";
+import { fileURLToPath } from "node:url";
 
 // Normalizes CRLF to LF so a file saved by a Windows-native editor doesn't
 // fail the frontmatter check purely on line-ending grounds.
@@ -35,7 +36,15 @@ function parseArgs(argv) {
       "usage: node scripts/validate-canon.mjs <slug> [--dir <canon-dir>]",
     );
   }
-  return { slug, dir: dir ?? `data/stories/${slug}/canon` };
+  // Resolved against this script's location, not the cwd. A cwd-relative
+  // default made a run from the wrong directory report "canon directory does
+  // not exist" for every slug -- so an all-slug sweep, which CLAUDE.md sells
+  // as a trustworthy integrity check, would claim all eleven stories had lost
+  // their canon. An explicit --dir is still honored as given.
+  const defaultDir = fileURLToPath(
+    new URL(`../data/stories/${slug}/canon`, import.meta.url),
+  );
+  return { slug, dir: dir ?? defaultDir };
 }
 
 function parseFrontmatter(content, file) {

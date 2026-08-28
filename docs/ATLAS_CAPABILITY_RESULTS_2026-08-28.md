@@ -250,7 +250,7 @@ Treat catalog membership as a claim to verify, not as proof a route exists.
 
 `--mode chat` sent the compact policy probe to all 60 eligible chat
 models, concurrency 4, 120 s budget each. **150 s wall clock, $0.10 total**
-(balance $23.29 → $23.19).
+The cost is the delta; the account balance is not recorded here.
 
 | Outcome | Count |
 |---|---:|
@@ -336,7 +336,7 @@ full schema pass, which reproduced the earlier result exactly (41 image pass /
 | `alibaba/qwen-image/text-to-image-plus` | completed | 1 | none reported |
 | `alibaba/wan-2.5/text-to-image` | completed | 1 | none reported |
 
-**Cost: $0.10 actual** (balance $23.19 → $23.09) against **$0.0945 quoted** by
+**Cost: $0.10 actual** against **$0.0945 quoted** by
 `atlas generate cost` beforehand — $0.0525 + $0.021 + $0.021. Pricing the run
 before spending is worth doing; the quote held to within a rounding cent.
 
@@ -391,7 +391,7 @@ first run left open.
 | `alibaba/qwen-image/text-to-image-max` | image | completed | $0.0525 | `3f93c3e44fb84a6d805d4ffcd54d13df` | 1 | none reported |
 | `alibaba/happyhorse-1.0/text-to-video` | video | completed | $1.2 | `7a137d0f1ea34dfd92e250f06b21ac66` | 1 | none reported |
 
-**Quoted $1.2525, actual $1.25** (balance $23.09 → $21.84) — the pre-flight
+**Quoted $1.2525, actual $1.25** — the pre-flight
 quote was accurate to a quarter-cent, which is the evidence that
 `--max-spend` bounds real spend rather than an approximation.
 
@@ -444,7 +444,7 @@ Two consequences. First, the 2026-08-27 note records
 so that figure is not a safe basis for estimating. Second, because targets are
 selected by catalog order — which is uncorrelated with price — a limit of 6
 would have drawn in `wan-3.0-prime` ($7.56) and `wan-3.0` ($4.80) for roughly
-$14 against a $23.09 balance. That is what motivated `--max-spend`.
+$14 in a single bounded-looking run. That is what motivated `--max-spend`.
 
 ## Runner verification performed in this session
 
