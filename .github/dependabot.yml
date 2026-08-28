@@ -20,6 +20,22 @@
 
 version: 2
 updates:
+  # ── github-actions (workflows present) ────────────────────────────
+  # Tag refs float within a major only, so a pinned @v4 never becomes @v7 on
+  # its own. Review the gitleaks-action bump deliberately rather than
+  # auto-merging it: gitleaks.yml calls it the fleet's universal CI floor.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - github-actions
+
   # ── npm (package.json present) ────────────────────────────────────
   - package-ecosystem: npm
     directory: /

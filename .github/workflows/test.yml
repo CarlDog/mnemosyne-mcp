@@ -72,5 +72,14 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # webui/ is a separate package: the root eslint config ignores it and no
+      # job ran its own. Its react-hooks rules were configured but never
+      # enforced, so a dependency-array violation could reach main green.
+      - name: Install webui dependencies
+        run: npm ci --prefix webui
+
+      - name: Lint webui
+        run: npm run lint --prefix webui
+
       - name: Format check
         run: npm run format:check
