@@ -25,7 +25,10 @@ export interface StorySummary {
 
 export const MODES = ["participant", "director", "audience"] as const;
 export type Mode = (typeof MODES)[number];
-export const SCENE_CONTEXT_STRATEGIES = ["recency-first", "query-ranked"] as const;
+export const SCENE_CONTEXT_STRATEGIES = [
+  "recency-first",
+  "query-ranked",
+] as const;
 export type SceneContextStrategy = (typeof SCENE_CONTEXT_STRATEGIES)[number];
 
 export interface EntitySummary {

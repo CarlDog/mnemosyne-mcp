@@ -630,12 +630,20 @@ input {
 }
 
 .button.primary {
-  background: linear-gradient(90deg, rgba(217, 145, 59, 0.2), rgba(240, 171, 84, 0.08));
+  background: linear-gradient(
+    90deg,
+    rgba(217, 145, 59, 0.2),
+    rgba(240, 171, 84, 0.08)
+  );
   border-color: var(--amber);
 }
 
 .button.primary:hover {
-  background: linear-gradient(90deg, rgba(217, 145, 59, 0.28), rgba(240, 171, 84, 0.15));
+  background: linear-gradient(
+    90deg,
+    rgba(217, 145, 59, 0.28),
+    rgba(240, 171, 84, 0.15)
+  );
 }
 
 .button.muted {

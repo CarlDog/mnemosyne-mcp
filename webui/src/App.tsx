@@ -10,7 +10,10 @@ export default function App() {
       <Routes>
         <Route path="/" element={<StoryListPage />} />
         <Route path="/stories/:storyId" element={<EntityRosterPage />} />
-        <Route path="/stories/:storyId/continue" element={<ContinueScenePage />} />
+        <Route
+          path="/stories/:storyId/continue"
+          element={<ContinueScenePage />}
+        />
         <Route
           path="/stories/:storyId/entities/:memoryId"
           element={<EntityDetailPage />}

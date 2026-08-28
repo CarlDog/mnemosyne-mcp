@@ -87,8 +87,5 @@ export function continueStory(
   storyId: string,
   body: ContinueRequest,
 ): Promise<ContinueResponse> {
-  return post(
-    `/stories/${encodeURIComponent(storyId)}/continue`,
-    body,
-  );
+  return post(`/stories/${encodeURIComponent(storyId)}/continue`, body);
 }

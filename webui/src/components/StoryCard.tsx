@@ -18,19 +18,25 @@ export default function StoryCard({ story }: { story: StorySummary }) {
 
   return (
     <article className="card story-card">
-      <Link to={`/stories/${story.id}`} className="story-card-main card-title-link">
-      <div className="card-type">Story</div>
-      <h2 className="card-name">{story.name}</h2>
-      <div className="card-meta">
-        <span>Opened {formatDate(story.created_at)}</span>
-        {bound && <span className="tag">{bound} bound</span>}
-      </div>
+      <Link
+        to={`/stories/${story.id}`}
+        className="story-card-main card-title-link"
+      >
+        <div className="card-type">Story</div>
+        <h2 className="card-name">{story.name}</h2>
+        <div className="card-meta">
+          <span>Opened {formatDate(story.created_at)}</span>
+          {bound && <span className="tag">{bound} bound</span>}
+        </div>
       </Link>
       <div className="story-card-actions">
         <Link to={`/stories/${story.id}`} className="story-card-action">
           Open roster
         </Link>
-        <Link to={`/stories/${story.id}/continue`} className="story-card-action">
+        <Link
+          to={`/stories/${story.id}/continue`}
+          className="story-card-action"
+        >
           Continue
         </Link>
       </div>

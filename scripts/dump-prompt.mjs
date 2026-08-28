@@ -36,7 +36,10 @@ if (
 
 for (let i = 0; i < args.length; i++) {
   const arg = args[i];
-  if (arg === "--scene-context-strategy" || arg.startsWith("--scene-context-strategy=")) {
+  if (
+    arg === "--scene-context-strategy" ||
+    arg.startsWith("--scene-context-strategy=")
+  ) {
     const value = arg.startsWith("--scene-context-strategy=")
       ? arg.slice("--scene-context-strategy=".length)
       : args[++i];
