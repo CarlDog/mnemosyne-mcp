@@ -9,8 +9,9 @@ rather than read off a display-truncated listing.
 
 Nothing here certifies any model. Three runs are recorded: catalog discovery
 (`--mode catalog`) and media schema probing (`--mode media-schema`), both
-non-billable, plus the chat policy sweep (`--mode chat`), which is billable and
-cost **$0.10** for 60 model calls. No media was generated.
+non-billable, plus two billable runs: the chat policy sweep (`--mode chat`,
+**$0.10** for 60 model calls) and a bounded media smoke
+(`--mode media-smoke --media-model-limit 3`, **$0.10** for 3 images).
 
 ## Run environment
 
@@ -323,6 +324,38 @@ output. Confirmed by inspecting every row key in the emitted matrix: no
 `responseText`/`content`/`message` field exists. `rawOutputsStored: false`
 holds.
 
+## Bounded media smoke (L3)
+
+`--mode media-smoke --media-model-limit 3` in 55 s. The mode also re-runs the
+full schema pass, which reproduced the earlier result exactly (41 image pass /
+1 ghost, 43 video pass).
+
+| Model | Result | Outputs | NSFW flag |
+|---|---|---:|---|
+| `alibaba/qwen-image/text-to-image-max` | completed | 1 | none reported |
+| `alibaba/qwen-image/text-to-image-plus` | completed | 1 | none reported |
+| `alibaba/wan-2.5/text-to-image` | completed | 1 | none reported |
+
+**Cost: $0.10 actual** (balance $23.19 → $23.09) against **$0.0945 quoted** by
+`atlas generate cost` beforehand — $0.0525 + $0.021 + $0.021. Pricing the run
+before spending is worth doing; the quote held to within a rounding cent.
+
+### The limit takes the head of the list, not a sample
+
+`--media-model-limit 3` selected three **image** models and no video at all:
+`mediaTargets` is `eligibleMedia.slice(0, limit)`, and eligible media is
+ordered image-then-video, so video does not begin until index 42. **L3 video
+coverage is therefore still only the single 2026-08-27 clip.** A limit that
+samples across catalog types would be needed to cover both in one bounded run;
+today the limit is a prefix, not a sample.
+
+### No NSFW flag was reported
+
+None of the three responses carried `has_nsfw_contents`. Absence of a flag is
+not a safety result — the probe prompt is deliberately non-graphic, so a clean
+response says the route works, not that the model would refuse or permit
+anything else.
+
 ## Runner verification performed in this session
 
 The timeout bounding added in `bd050dd` was exercised against the real binary,
@@ -342,12 +375,13 @@ not only against synthetic processes:
 | L0 catalog | 65 chat, 121 image, 199 video — machine-derived, complete | **complete** (was partial/truncated on 2026-08-27) |
 | L1 schema | 85 of 85 eligible media models (42 image, 43 video) | **complete** — 84 addressable, 1 upstream ghost |
 | L2 chat | 60 of 60 eligible chat models | **complete** — 50 completed, 9 upstream 400s, 1 timeout |
-| L3 safe media smoke | 1 image, 1 video (2026-08-27) | controlled smoke only — unchanged |
+| L3 safe media smoke | 3 images (2026-08-28) + 1 image, 1 video (2026-08-27) | partial — image only this run; video coverage unchanged |
 | L4 explicit review | 0 | intentionally not automated |
 
 ## Conclusion
 
-L0, L1, and L2 are now settled and reproducible: the catalog is
+L0, L1, and L2 are settled and reproducible, and L3 has a bounded image
+sample: the catalog is
 machine-derived, every eligible media route has been confirmed addressable
 (bar the ghost entry), and every eligible chat model has been asked the policy
 probe. **The routing conclusion is unchanged from 2026-08-27:** no Atlas model is certified `mature`/NSFW-capable, and the only
