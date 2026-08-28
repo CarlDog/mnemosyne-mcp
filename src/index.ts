@@ -187,7 +187,15 @@ const warmupEnabled =
   httpConfig.port !== undefined ||
   warmupRequested === "true" ||
   warmupRequested === "1";
-if (warmupEnabled) {
+
+// Called only once the server is actually serving. Firing at module load
+// meant a model preload was in flight while the HTTP listener was still
+// trying to bind -- so a bind failure had to exit with that fetch open, and
+// forcing the exit aborted libuv on Windows ("Assertion failed:
+// !(handle->flags & UV_HANDLE_CLOSING)"). Preloading a model for a server
+// that cannot start was wasted work regardless.
+function startWarmup(): void {
+  if (!warmupEnabled) return;
   if (generatorConfig.provider === "ollama") {
     warmupProvider(generator, "ollama generator");
     if (
@@ -227,6 +235,7 @@ if (httpConfig.port === undefined) {
   const server = makeServer();
   await server.connect(new StdioServerTransport());
   log.info("server", "mnemosyne-mcp ready", { transport: "stdio" });
+  startWarmup();
 } else {
   const app = express();
   app.use(express.json());
@@ -297,6 +306,7 @@ if (httpConfig.port === undefined) {
         "MCP_AUTH_TOKEN is unset -- the HTTP endpoint accepts unauthenticated requests",
       );
     }
+    startWarmup();
   });
 
   // Bind failures arrive as an 'error' event, not a throw, and land AFTER every
@@ -310,17 +320,14 @@ if (httpConfig.port === undefined) {
       code: err.code ?? "unknown",
       error: err.message,
     });
-    // Exit non-zero immediately. Two alternatives were tried and rejected:
-    // awaiting dispose() before exiting still aborts libuv on Windows
-    // ("Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)") because
-    // warmup fires an Ollama fetch at module load whenever MCP_PORT is set;
-    // and setting only process.exitCode hangs the process indefinitely (the
-    // loop never drains). A prompt non-zero exit after a legible error beats
-    // both a hang and a silent stack trace. The libuv assertion may still
-    // print AFTER the message above -- noise, not the diagnosis.
-    // The real fix is to start warmup only after a successful bind; that
-    // means moving a module-level block and is queued separately.
-    process.exit(1);
+    // Close the OC client before exiting. oc.connect() has already succeeded
+    // by this point, so its transport is live; exiting on top of it is what
+    // aborts libuv on Windows. (Warmup was the earlier suspect and is not the
+    // cause -- deferring it past a successful bind did not change this.)
+    void oc
+      .close()
+      .catch(() => {})
+      .finally(() => process.exit(1));
   });
 
   const shutdown = async (signal: string): Promise<void> => {
