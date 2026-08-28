@@ -175,6 +175,13 @@ The billable media smoke step is opt-in and bounded:
 node scripts/atlas-capability-benchmark.mjs --mode media-smoke --media-model-limit 6 --out reports/atlas-media-smoke.json
 ```
 
+`--media-model-limit` bounds the **total** number of billable jobs, and the
+models it selects are round-robin interleaved across image and video, so a
+small limit still covers both types: `3` gives 2 image + 1 video, `6` gives
+3 + 3. Order within each type follows the catalog, so a given limit selects
+the same models every run. When one type runs out the other continues rather
+than truncating.
+
 To get every probe into one matrix in a single file, use `--mode all`. It
 includes the billable smoke step, so it requires `--media-model-limit` and is
 rejected at argument-parse time without one — before any paid call is made:

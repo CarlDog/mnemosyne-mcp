@@ -275,6 +275,23 @@ async function schemaProbe(cli, row, timeoutMs) {
   return { schemaProbe: "pass" };
 }
 
+// Round-robin image/video so a bounded --media-model-limit samples BOTH types
+// instead of taking a prefix. The eligible pool is catalog-ordered
+// image-then-video, so a plain slice(0, 3) picked three image models and never
+// reached video, which does not start until index 42. Order within each type
+// is preserved, so selection stays deterministic and reproducible across runs;
+// when one type runs out the other continues rather than truncating.
+export function interleaveMediaByType(pool) {
+  const image = pool.filter((row) => row.catalogType === "image");
+  const video = pool.filter((row) => row.catalogType === "video");
+  const out = [];
+  for (let i = 0; i < Math.max(image.length, video.length); i += 1) {
+    if (image[i]) out.push(image[i]);
+    if (video[i]) out.push(video[i]);
+  }
+  return out;
+}
+
 function predictionId(value) {
   return (
     value?.id ||
@@ -359,10 +376,14 @@ async function main() {
       (row.catalogType === "image" || row.catalogType === "video")
     );
   });
+  // NOTE: eligibleMedia itself is left in catalog order -- the schema pass
+  // below iterates it and its results are index-matched. Only the billable
+  // smoke targets are re-ordered.
+  const interleavedMedia = interleaveMediaByType(eligibleMedia);
   const mediaTargets =
     args.mediaModelLimit > 0
-      ? eligibleMedia.slice(0, args.mediaModelLimit)
-      : eligibleMedia;
+      ? interleavedMedia.slice(0, args.mediaModelLimit)
+      : interleavedMedia;
 
   const matrix = rows.map((row) => {
     const decision = triage(row);
