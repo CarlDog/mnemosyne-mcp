@@ -387,14 +387,17 @@ validator suites.
   safety net.
 - Author identity must be a GitHub noreply alias. The pre-commit
   hook enforces this (rejects personal-domain emails).
-- **`package.json` is `private: true` — do not remove it.** The unscoped
-  npm name `mnemosyne-mcp` is owned by an unrelated package (Anckur
-  Singh's "Agent-First Knowledge Database", first published 2026-08-10),
-  so this project can never publish under it. Nothing here is distributed
-  via npm — `bin`/`files` exist for local `npm link` only. If npx
-  distribution is ever wanted, rename to a scope you own
-  (`@<npm-user>/mnemosyne-mcp`) and drop the flag; the repo, OC project,
-  and docs keep the `mnemosyne-mcp` name either way.
+- **`package.json` is `@carldog/mnemosyne-mcp` and `private: true` — both
+  deliberate.** The unscoped name `mnemosyne-mcp` belongs to an unrelated
+  package (Anckur Singh's "Agent-First Knowledge Database", first published
+  2026-08-10), which is what the scope is for: a scope is reserved to the
+  account, so no name inside it can be taken. Nothing here publishes to npm:
+  this ships as a container (`ghcr.io/carldog/mnemosyne-mcp`), there is no
+  publish workflow and no `NPM_TOKEN`, and `private: true` blocks an
+  accidental publish while `bin` + `files` advertise a publishable shape. If
+  npx distribution is ever wanted, drop the flag and add `"publishConfig":
+  {"access": "public"}` — scoped packages default to private, so a first
+  publish without it fails with a 402.
 - **Companion-chat output conventions live in code, not here.** The
   outgoing provenance header (`MNEMO_USER_NAME`) is built in
   `src/companion-message.ts`; the asterisk-for-action / plain-dialogue
