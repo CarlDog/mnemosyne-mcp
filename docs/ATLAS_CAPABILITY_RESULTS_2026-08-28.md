@@ -340,14 +340,18 @@ full schema pass, which reproduced the earlier result exactly (41 image pass /
 `atlas generate cost` beforehand — $0.0525 + $0.021 + $0.021. Pricing the run
 before spending is worth doing; the quote held to within a rounding cent.
 
-### The limit takes the head of the list, not a sample
+### The limit took the head of the list, not a sample (since fixed)
 
 `--media-model-limit 3` selected three **image** models and no video at all:
 `mediaTargets` is `eligibleMedia.slice(0, limit)`, and eligible media is
 ordered image-then-video, so video does not begin until index 42. **L3 video
 coverage is therefore still only the single 2026-08-27 clip.** A limit that
 samples across catalog types would be needed to cover both in one bounded run;
-today the limit is a prefix, not a sample.
+**Fixed the same day:** `--media-model-limit` now round-robin interleaves
+image and video, so the same limit of 3 would select 2 image + 1 video. The
+limit remains a total job count — it is the billing guard — and within-type
+order still follows the catalog, so selection stays deterministic. The run
+recorded above predates that change.
 
 ### The smoke run violated the runner's own no-raw-output contract
 
