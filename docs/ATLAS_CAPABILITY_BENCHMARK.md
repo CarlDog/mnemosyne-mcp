@@ -199,6 +199,15 @@ media smoke quote (2 job(s)):
 quoted $1.2525 exceeds --max-spend $0.5; nothing was submitted.
 ```
 
+`--max-spend` bounds **media jobs only**, because `atlas generate cost` prices
+image and video jobs and has no equivalent for a chat completion. The chat
+sweep is billable and runs before the media stage, so a ceiling would have
+silently failed to cover it — `--mode chat` or `--mode all` combined with
+`--max-spend` is therefore **refused outright** rather than accepted with a
+bound it cannot deliver. Run a chat sweep without the flag (its cost is small
+and roughly fixed: $0.10 for 60 models, measured 2026-08-28), or use
+`--mode media-smoke` when you want a ceiling.
+
 The itemized quote prints whether or not a ceiling is set, so an unbounded run
 still shows its cost before spending. A target that cannot be priced aborts the
 run when `--max-spend` is set — an unpriceable job cannot be bounded — and
