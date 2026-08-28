@@ -324,7 +324,10 @@ input {
 }
 
 .card:hover,
-.card:focus-visible {
+/* focus-WITHIN, not focus-visible: .card is an <article>, which is not
+   focusable, so :focus-visible could never match. The focusable element is the
+   title link inside it, and keyboard users need the card to react to that. */
+.card:focus-within {
   transform: translateY(-2px);
   border-color: var(--amber);
   background: var(--surface-raised);
@@ -622,6 +625,14 @@ input {
   letter-spacing: 0.05em;
   text-transform: uppercase;
   background: var(--surface);
+}
+
+/* Buttons had hover styling and no keyboard equivalent, so a keyboard user
+   could not see where they were. */
+.button:focus-visible,
+.rail-tab:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
 }
 
 .button:hover {

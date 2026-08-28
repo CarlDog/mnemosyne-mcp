@@ -3,5 +3,11 @@ export default function Loading({
 }: {
   label?: string;
 }) {
-  return <div className="state-block">{label}</div>;
+  // role="status" announces politely -- a load finishing should not interrupt
+  // whatever the user is reading.
+  return (
+    <div className="state-block" role="status">
+      {label}
+    </div>
+  );
 }
