@@ -110,7 +110,10 @@ export interface OllamaConfig {
 }
 
 const OLLAMA_TIMEOUT_MS = 5 * 60 * 1000;
-const DEFAULT_KEEP_ALIVE = "30m";
+// Exported so index.ts's OLLAMA_KEEP_ALIVE env fallback and this
+// provider-level fallback are one value, not two independently-owned
+// "30m" literals that drift.
+export const DEFAULT_KEEP_ALIVE = "30m";
 const DEFAULT_TEMPERATURE = 0.8;
 const DEFAULT_MAX_TOKENS = 2048;
 const WARMUP_TOKENS = 4;

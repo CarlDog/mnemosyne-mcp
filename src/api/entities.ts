@@ -11,14 +11,13 @@
 import type { Router } from "express";
 import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
-import { findStory } from "../stories.js";
 import {
   ENTITY_TYPES,
   filterListedEntities,
   getEntityByMemoryId,
   listAllEntities,
 } from "../entities.js";
-import { asyncRoute } from "./helpers.js";
+import { asyncRoute, parseOr400, requireStory } from "./helpers.js";
 
 const rosterQuerySchema = z.object({
   type: z.enum(ENTITY_TYPES).optional(),
@@ -30,25 +29,11 @@ export function registerEntityRoutes(router: Router, oc: OcClient): void {
     "/stories/:storyId/entities",
     asyncRoute(async (req, res) => {
       const { storyId } = req.params as { storyId: string };
-      const story = await findStory(oc, storyId);
-      if (!story) {
-        res.status(404).json({
-          error: "story_not_found",
-          message: `No story matches "${storyId}".`,
-        });
-        return;
-      }
+      const story = await requireStory(oc, storyId, res);
+      if (!story) return;
 
-      const parsedQuery = rosterQuerySchema.safeParse(req.query);
-      if (!parsedQuery.success) {
-        res.status(400).json({
-          error: "invalid_query",
-          message: parsedQuery.error.issues
-            .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
-            .join("; "),
-        });
-        return;
-      }
+      const query = parseOr400(rosterQuerySchema, req.query, res, "invalid_query");
+      if (!query) return;
 
       const result = await listAllEntities(
         oc,
@@ -56,8 +41,8 @@ export function registerEntityRoutes(router: Router, oc: OcClient): void {
         story.marker_memory_id,
       );
       const entities = filterListedEntities(result.entities, {
-        type: parsedQuery.data.type,
-        query: parsedQuery.data.q,
+        type: query.type,
+        query: query.q,
         includeBody: false,
       });
       res.json({
