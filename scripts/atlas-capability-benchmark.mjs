@@ -407,6 +407,21 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const rows = await loadCatalog(args.cli, args.timeoutMs);
   const runChat = args.mode === "chat" || args.mode === "all";
+  // --max-spend can only bound what `atlas generate cost` can quote, and that
+  // endpoint prices image/video jobs only -- there is no pre-quote for a chat
+  // completion. The chat sweep is billable and runs BEFORE the media gate, so
+  // a ceiling silently failed to cover it: `--mode all --max-spend 0.001` ran
+  // a full paid sweep and only then refused the media jobs. Refuse the
+  // combination outright rather than let the flag's name imply a bound it
+  // cannot deliver.
+  if (runChat && args.maxSpendUsd !== undefined) {
+    throw new Error(
+      `--max-spend cannot bound --mode ${args.mode}: the chat sweep is billable and ` +
+        "cannot be pre-quoted (atlas generate cost prices image/video only). " +
+        "Run the chat sweep without --max-spend, or use --mode media-smoke to " +
+        "bound the media jobs.",
+    );
+  }
   const runSchema =
     args.mode === "media-schema" ||
     args.mode === "media-smoke" ||
