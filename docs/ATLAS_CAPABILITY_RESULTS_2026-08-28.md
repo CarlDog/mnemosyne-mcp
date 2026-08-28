@@ -380,6 +380,31 @@ The stray files were moved out of the repository. The same commit also records
 `predictionId` on a **successful** smoke, not only on failure — a completed job
 is exactly what gets reconciled against a billing line.
 
+### Second smoke run — first video coverage through the runner
+
+`--mode media-smoke --media-model-limit 2 --max-spend 1.50`, 159 s. With
+interleaving this selected one image and one video, closing the video gap the
+first run left open.
+
+| Model | Type | Result | Quoted | Prediction | Outputs | NSFW flag |
+|---|---|---|---:|---|---:|---|
+| `alibaba/qwen-image/text-to-image-max` | image | completed | $0.0525 | `3f93c3e44fb84a6d805d4ffcd54d13df` | 1 | none reported |
+| `alibaba/happyhorse-1.0/text-to-video` | video | completed | $1.2 | `7a137d0f1ea34dfd92e250f06b21ac66` | 1 | none reported |
+
+**Quoted $1.2525, actual $1.25** (balance $23.09 → $21.84) — the pre-flight
+quote was accurate to a quarter-cent, which is the evidence that
+`--max-spend` bounds real spend rather than an approximation.
+
+This run also closed three gaps that were previously wired-but-unproven:
+
+- **`--max-spend` pass-through.** A quote under the ceiling proceeds; only the
+  abort path had been exercised before, because proving the other half costs
+  money.
+- **`--no-download` on video.** No media file was written anywhere in the
+  repository — the fix generalizes beyond the image case that exposed it.
+- **`predictionId` on success.** Both rows carry their id, so this run is
+  reconcilable against Atlas billing directly from the report.
+
 ### No NSFW flag was reported
 
 None of the three responses carried `has_nsfw_contents`. Absence of a flag is
@@ -440,7 +465,7 @@ not only against synthetic processes:
 | L0 catalog | 65 chat, 121 image, 199 video — machine-derived, complete | **complete** (was partial/truncated on 2026-08-27) |
 | L1 schema | 85 of 85 eligible media models (42 image, 43 video) | **complete** — 84 addressable, 1 upstream ghost |
 | L2 chat | 60 of 60 eligible chat models | **complete** — 50 completed, 9 upstream 400s, 1 timeout |
-| L3 safe media smoke | 3 images (2026-08-28) + 1 image, 1 video (2026-08-27) | partial — image only this run; video coverage unchanged |
+| L3 safe media smoke | 4 images + 1 video (2026-08-28), plus 1 image + 1 video (2026-08-27) | bounded smoke across both types |
 | L4 explicit review | 0 | intentionally not automated |
 
 ## Conclusion
