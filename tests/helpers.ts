@@ -9,6 +9,10 @@
 import { OcClient } from "../src/oc-client.js";
 import { createStory } from "../src/stories.js";
 import { log } from "../src/log.js";
+import { afterEach, beforeEach } from "vitest";
+import fs from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 // Shared prefix so any story that does survive a teardown failure is
 // still identifiable as test cruft on the OC side.
@@ -69,4 +73,44 @@ export async function teardownStory(
       msg: (err as Error).message,
     });
   }
+}
+
+// Isolates the two directories src/config.ts reads, for the duration of each
+// test in the calling scope. Registers its own beforeEach/afterEach.
+//
+// Isolating MNEMO_DATA_DIR alone is NOT enough, and that is the whole reason
+// this is shared: readConfig() auto-migrates from the legacy OS config dir (a
+// real feature -- see config.ts), so a suite that leaves MNEMOSYNE_CONFIG_DIR
+// pointing at the developer's actual machine silently populates its "fresh"
+// temp dir with a leftover current_story_id. That rule was previously stated
+// in a prose comment in one suite and reimplemented by hand in three others.
+//
+// Returns a live object; read `.data` / `.legacy` inside a test, not at
+// module scope -- both are empty until beforeEach runs.
+export function isolateDataDirs(prefix: string): {
+  data: string;
+  legacy: string;
+} {
+  const dirs = { data: "", legacy: "" };
+  const saved: Record<string, string | undefined> = {};
+
+  beforeEach(async () => {
+    saved.MNEMO_DATA_DIR = process.env.MNEMO_DATA_DIR;
+    saved.MNEMOSYNE_CONFIG_DIR = process.env.MNEMOSYNE_CONFIG_DIR;
+    dirs.data = await fs.mkdtemp(join(tmpdir(), `${prefix}-`));
+    dirs.legacy = await fs.mkdtemp(join(tmpdir(), `${prefix}-legacy-`));
+    process.env.MNEMO_DATA_DIR = dirs.data;
+    process.env.MNEMOSYNE_CONFIG_DIR = dirs.legacy;
+  });
+
+  afterEach(async () => {
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    await fs.rm(dirs.data, { recursive: true, force: true });
+    await fs.rm(dirs.legacy, { recursive: true, force: true });
+  });
+
+  return dirs;
 }

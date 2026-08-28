@@ -6,15 +6,7 @@
 // `mnemosyne-test-` name prefix keeps any story that survives a failed
 // teardown identifiable on the OC side.
 
-import {
-  describe,
-  it,
-  expect,
-  beforeAll,
-  afterAll,
-  beforeEach,
-  afterEach,
-} from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { promises as fs } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -30,7 +22,7 @@ import {
   setKindroidTarget,
   STORY_MARKER_TAGS,
 } from "../src/stories.js";
-import { teardownStory, testStoryName } from "./helpers.js";
+import { isolateDataDirs, teardownStory, testStoryName } from "./helpers.js";
 
 describe("combineKindroidTarget (pure)", () => {
   it("returns undefined when neither is given", () => {
@@ -75,31 +67,7 @@ const poisonedOc = new Proxy(
 ) as unknown as OcClient;
 
 describe("resolveStoryId (pure)", () => {
-  let dataDir: string;
-  let legacyDir: string;
-  const savedEnv: Record<string, string | undefined> = {};
-
-  beforeEach(async () => {
-    savedEnv.MNEMO_DATA_DIR = process.env.MNEMO_DATA_DIR;
-    savedEnv.MNEMOSYNE_CONFIG_DIR = process.env.MNEMOSYNE_CONFIG_DIR;
-    dataDir = await fs.mkdtemp(join(tmpdir(), "mnemo-resolve-"));
-    // Also isolate the legacy OS-config-dir path -- otherwise readConfig()
-    // auto-migrates whatever real config.json exists there (a real feature,
-    // see config.ts), silently populating this "fresh" temp dir with a
-    // leftover current_story_id from the actual local environment.
-    legacyDir = await fs.mkdtemp(join(tmpdir(), "mnemo-resolve-legacy-"));
-    process.env.MNEMO_DATA_DIR = dataDir;
-    process.env.MNEMOSYNE_CONFIG_DIR = legacyDir;
-  });
-
-  afterEach(async () => {
-    for (const [key, value] of Object.entries(savedEnv)) {
-      if (value === undefined) delete process.env[key];
-      else process.env[key] = value;
-    }
-    await fs.rm(dataDir, { recursive: true, force: true });
-    await fs.rm(legacyDir, { recursive: true, force: true });
-  });
+  isolateDataDirs("mnemo-resolve");
 
   it("falls back to the active-story pointer with zero OC calls", async () => {
     await setCurrentStoryId("pointer-story-id");
