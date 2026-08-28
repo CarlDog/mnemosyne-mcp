@@ -22,8 +22,9 @@ it; Star Wars: The Black Ledger is not, and is structurally unlike the others
 **Read `data/stories/` before trusting any story inventory.** `data/` is
 gitignored, so `git status` stays clean while story trees you have not read
 sit on disk — including draft scaffolds that no ratified doc covers. Verify
-counts with `node scripts/validate-canon.mjs <slug>`; note it exits 0 on a
-*missing* `canon/` directory, so a pass does not prove a tree exists.
+counts with `node scripts/validate-canon.mjs <slug>`, which exits 0 only for
+a tree that exists, is readable, and holds at least one entity — so a sweep
+over every slug is trustworthy as an integrity check.
 
 **Nothing in any story's `canon/` has been imported to live OC.** Per
 standing operator instruction, nothing is locked in as canon until
@@ -124,8 +125,9 @@ assessments listed under "Layout" below.
   for a story adopting the authoring layer.
 - `scripts/validate-canon.mjs <slug>` — structural check of a story's
   `canon/` tree (no duplicate entities, no empty bodies). Content
-  correctness still needs a human pass, and it exits 0 when `canon/` is
-  missing entirely.
+  correctness still needs a human pass. Exits 0 only when the tree exists,
+  is readable, and holds at least one entity; a missing, unreadable, or
+  empty `canon/` exits 1.
 - `scripts/verify-provenance.mjs` — checks reference/art images against
   their JSON sidecars.
 - `docs/ARCHITECTURE.md` — locked architectural decisions. Read this
