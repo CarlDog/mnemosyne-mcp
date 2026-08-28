@@ -391,9 +391,10 @@ validator suites.
   deliberate.** The unscoped name `mnemosyne-mcp` belongs to an unrelated
   package (Anckur Singh's "Agent-First Knowledge Database", first published
   2026-08-10), which is what the scope is for: a scope is reserved to the
-  account, so no name inside it can be taken. Nothing here publishes to npm:
-  this ships as a container (`ghcr.io/carldog/mnemosyne-mcp`), there is no
-  publish workflow and no `NPM_TOKEN`, and `private: true` blocks an
+  account, so no name inside it can be taken. Nothing here publishes to npm and
+  nothing publishes anywhere else either: there is no publish workflow, no
+  `NPM_TOKEN`, and no Dockerfile — a container image is the *intended*
+  distribution (see STATUS.md), not a shipped one. `private: true` blocks an
   accidental publish while `bin` + `files` advertise a publishable shape. If
   npx distribution is ever wanted, drop the flag and add `"publishConfig":
   {"access": "public"}` — scoped packages default to private, so a first
