@@ -115,3 +115,29 @@ describe("web client api module", () => {
     } satisfies Partial<ApiError>);
   });
 });
+
+// webui/src/api/types.ts hand-mirrors three server enums with no codegen, and
+// its own header says so. Nothing compared them, so adding a server entity
+// type would silently leave the UI's filter and the continue form's <select>
+// short. This is the same drift-guard shape as env-schema.test.ts.
+describe("webui mirrors the server's enums", () => {
+  it("ENTITY_TYPES matches src/entities.ts", async () => {
+    const server = await import("../src/entities.js");
+    const webui = await import("../webui/src/api/types.js");
+    expect([...webui.ENTITY_TYPES]).toEqual([...server.ENTITY_TYPES]);
+  });
+
+  it("MODES matches src/prompt.ts", async () => {
+    const server = await import("../src/prompt.js");
+    const webui = await import("../webui/src/api/types.js");
+    expect([...webui.MODES]).toEqual([...server.MODES]);
+  });
+
+  it("SCENE_CONTEXT_STRATEGIES matches src/prompt.ts", async () => {
+    const server = await import("../src/prompt.js");
+    const webui = await import("../webui/src/api/types.js");
+    expect([...webui.SCENE_CONTEXT_STRATEGIES]).toEqual([
+      ...server.SCENE_CONTEXT_STRATEGIES,
+    ]);
+  });
+});

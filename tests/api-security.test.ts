@@ -55,6 +55,43 @@ describe("apiSecurity", () => {
     expect(res.status).toBe(403);
   });
 
+  // The Origin branch had no coverage on either copy of this check. These
+  // pin its ACTUAL contract, which is an OR-fallback rather than a second
+  // gate: hostAllowed() returns early the moment the Host matches, so Origin
+  // is consulted ONLY to rescue a request whose Host is not allowed.
+  test("Origin is not consulted when the Host already matches", async () => {
+    const { url } = await start({ allowedHosts: ["127.0.0.1"] });
+    const res = await fetch(`${url}/probe`, {
+      headers: { Origin: "http://evil.example" },
+    });
+    // Deliberately 200: Host matched, so the early return fires first.
+    expect(res.status).toBe(200);
+  });
+
+  test("a permitted Origin rescues a Host that is not allowed", async () => {
+    const { url } = await start({ allowedHosts: ["allowed.example"] });
+    const res = await fetch(`${url}/probe`, {
+      headers: { Origin: "http://allowed.example" },
+    });
+    expect(res.status).toBe(200);
+  });
+
+  test("403 when neither Host nor Origin is allowed", async () => {
+    const { url } = await start({ allowedHosts: ["allowed.example"] });
+    const res = await fetch(`${url}/probe`, {
+      headers: { Origin: "http://evil.example" },
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test("a malformed Origin cannot rescue a disallowed Host", async () => {
+    const { url } = await start({ allowedHosts: ["allowed.example"] });
+    const res = await fetch(`${url}/probe`, {
+      headers: { Origin: "not-a-url" },
+    });
+    expect(res.status).toBe(403);
+  });
+
   test("200 when the Host header matches the allowlist", async () => {
     const { url } = await start({ allowedHosts: ["127.0.0.1"] });
     const res = await fetch(`${url}/probe`);
