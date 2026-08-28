@@ -25,7 +25,12 @@ export default function ContinueScenePage() {
   const storyState = useApi(() => getStory(storyId!), [storyId]);
   const [direction, setDirection] = useState("");
   const [mode, setMode] = useState<Mode>("director");
-  const [strategy, setStrategy] = useState<SceneContextStrategy>("recency-first");
+  // "server-default" omits the field from the payload so the operator's
+  // MNEMO_SCENE_CONTEXT_STRATEGY applies -- always sending a hardcoded
+  // strategy here would silently override server config on every call.
+  const [strategy, setStrategy] = useState<
+    SceneContextStrategy | "server-default"
+  >("server-default");
   const [fallbackStrategy, setFallbackStrategy] = useState<
     SceneContextStrategy | "none"
   >("none");
@@ -53,9 +58,11 @@ export default function ContinueScenePage() {
       const payload: ContinueRequest = {
         direction: direction.trim(),
         mode,
-        scene_context_strategy: strategy,
         validate,
       };
+      if (strategy !== "server-default") {
+        payload.scene_context_strategy = strategy;
+      }
       if (fallbackStrategy !== "none") {
         payload.scene_context_fallback_strategy = fallbackStrategy;
       }
@@ -136,10 +143,13 @@ export default function ContinueScenePage() {
               id="strategy"
               value={strategy}
               onChange={(event) =>
-                setStrategy(event.target.value as SceneContextStrategy)
+                setStrategy(
+                  event.target.value as SceneContextStrategy | "server-default",
+                )
               }
               className="select"
             >
+              <option value="server-default">Server default</option>
               {SCENE_CONTEXT_STRATEGIES.map((item) => (
                 <option key={item} value={item}>
                   {item}
