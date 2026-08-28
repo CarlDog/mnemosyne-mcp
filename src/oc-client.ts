@@ -34,6 +34,20 @@ export interface OcMemory {
   source?: string;
 }
 
+/** memory_list's compact:true row shape — content swapped for a preview.
+ * Field names verified against a live OC response (2026-08-27). */
+export interface OcMemoryCompact {
+  id: string;
+  content_preview: string;
+  content_length: number;
+  project_id: string;
+  tags: string[];
+  pinned: boolean;
+  created_at: string;
+  updated_at?: string;
+  source?: string;
+}
+
 // The confirmed shape of project_delete's response ({status:"ok", ...}).
 // See the `confirm` note on OcClient.projectDelete for why the preview
 // shape ({status:"preview", memory_count}) never reaches a caller here.
@@ -207,6 +221,25 @@ export class OcClient {
   async memoryList(opts: { projectId: string }): Promise<OcMemory[]> {
     return this.callTool<OcMemory[]>("memory_list", {
       project_id: opts.projectId,
+    });
+  }
+
+  // Complete project enumeration in OC's compact form: content_preview +
+  // content_length instead of full content (verified against a live
+  // response 2026-08-27 — id/tags/pinned/created_at all present). The
+  // cheap scan half of a scan-then-hydrate pull: callers that need only
+  // tags/recency to pick winners fetch this, then memoryGet the few
+  // rows they actually keep, instead of transferring every entity body
+  // in the project. Note memory_list floats pinned rows above the
+  // recency order, so a caller wanting strict recency must sort by
+  // created_at itself (and must NOT pass a limit here — pinned rows
+  // would consume the window).
+  async memoryListCompact(opts: {
+    projectId: string;
+  }): Promise<OcMemoryCompact[]> {
+    return this.callTool<OcMemoryCompact[]>("memory_list", {
+      project_id: opts.projectId,
+      compact: true,
     });
   }
 

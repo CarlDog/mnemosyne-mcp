@@ -140,21 +140,28 @@ async function pullByType(
 
 // Scene pulls have two strategies, each with the same validation-safe
 // post-filter:
-// - recency-first (default): project-scoped memory_list + strict recency
-//   sorting, then client-side validation filtering.
+// - recency-first (default): a compact project scan (tags + created_at
+//   only, no bodies) picks the winners, then only those few scenes are
+//   hydrated via memory_get. The old shape fetched every entity body in
+//   the project per call just to keep 5 scene strings.
 // - query-ranked: project-scoped semantic recall + OC query ranking,
 //   then query-order filtering to drop only hard-errored scenes.
 //
 // DOGFOODING NOTE: OpenChronicle currently exposes this as either generic
-// recall (query ranking) or list+local filtering. If OC adds an ordered
-// scene-query endpoint that preserves relevance ordering and tags in one call,
-// we can remove this local multi-hop fallback path and reduce latency.
+// recall (query ranking) or list+local filtering. If OC adds an ordered,
+// tag-filtered scene-query endpoint that preserves ordering and tags in
+// one call, the recency path's scan-then-hydrate two-hop collapses to a
+// single call.
 // In both cases, validation:errors scenes are excluded. In recency-first,
 // validation:clean scenes are preferred over untagged.
-function applySceneValidationFilter(
-  pool: RecalledEntity[],
+//
+// Generic over {tags} so it can run on compact scan rows (pre-hydration)
+// and on full RecalledEntity pools alike -- one copy of the
+// clean/untagged/errors rule, not two.
+function applySceneValidationFilter<T extends { tags: string[] }>(
+  pool: T[],
   strategy: SceneContextStrategy,
-): RecalledEntity[] {
+): T[] {
   if (strategy === "query-ranked") {
     return pool.filter((e) => !e.tags.includes("validation:errors"));
   }
@@ -175,7 +182,10 @@ function applySceneValidationFilter(
   return [...clean, ...untagged];
 }
 
-function byCreatedAtDesc(a: RecalledEntity, b: RecalledEntity): number {
+function byCreatedAtDesc(
+  a: { created_at: string },
+  b: { created_at: string },
+): number {
   const aMs = Date.parse(a.created_at);
   const bMs = Date.parse(b.created_at);
   const aSafe = Number.isFinite(aMs) ? aMs : 0;
@@ -183,31 +193,60 @@ function byCreatedAtDesc(a: RecalledEntity, b: RecalledEntity): number {
   return bSafe - aSafe;
 }
 
-async function pullScenePool(
+// Scene tags as written by saveEntity (BASE_TAGS + type). Matching all
+// three keeps a coincidentally-"scene"-tagged non-mnemosyne memory out.
+const SCENE_TAGS = ["mnemosyne", "story", "scene"] as const;
+
+// Recency-first winners via scan-then-hydrate: the compact scan carries
+// tags + created_at (verified live -- see OcClient.memoryListCompact),
+// which is everything scene detection, recency sorting, AND the
+// validation filter need. Only the final <= TYPE_LIMITS.scene winners
+// get their bodies fetched. No limit on the scan: memory_list floats
+// pinned rows above recency order, so a server-side limit window would
+// fill with pinned rules before reaching recent scenes.
+async function pullRecencyScenes(
+  oc: OcClient,
+  storyId: string,
+): Promise<RecalledEntity[]> {
+  const rows = (await oc.memoryListCompact({ projectId: storyId }))
+    .filter((row) => SCENE_TAGS.every((tag) => row.tags.includes(tag)))
+    .sort(byCreatedAtDesc)
+    .slice(0, SCENE_POOL_SIZE);
+  const winners = applySceneValidationFilter(rows, "recency-first").slice(
+    0,
+    TYPE_LIMITS.scene,
+  );
+
+  // Sequential hydration -- see gatherContext's comment on OC's rate
+  // limiter under parallel bursts.
+  const hydrated: RecalledEntity[] = [];
+  for (const row of winners) {
+    const memory = await oc.memoryGet(row.id);
+    if (memory === null) continue; // deleted between scan and hydrate
+    const entity = memoryToRecalled(memory);
+    if (entity !== null && entity.type === "scene") hydrated.push(entity);
+  }
+  return hydrated;
+}
+
+async function pullScenesByStrategy(
   oc: OcClient,
   storyId: string,
   query: string,
   strategy: SceneContextStrategy,
 ): Promise<RecalledEntity[]> {
   if (strategy === "query-ranked") {
-    return recall(oc, storyId, {
+    const pool = await recall(oc, storyId, {
       query,
       type: "scene",
       limit: SCENE_POOL_SIZE,
     });
+    return applySceneValidationFilter(pool, strategy).slice(
+      0,
+      TYPE_LIMITS.scene,
+    );
   }
-
-  // memory_list gives deterministic scene recency at the story scope, then
-  // we apply local validation filtering exactly like query-ranked once the
-  // ordered scene slice is ready.
-  return (await oc.memoryList({ projectId: storyId }))
-    .map((memory) => memoryToRecalled(memory))
-    .filter(
-      (entity): entity is RecalledEntity =>
-        entity !== null && entity.type === "scene",
-    )
-    .sort(byCreatedAtDesc)
-    .slice(0, SCENE_POOL_SIZE);
+  return pullRecencyScenes(oc, storyId);
 }
 
 export async function pullFilteredScenes(
@@ -217,19 +256,20 @@ export async function pullFilteredScenes(
   strategy: SceneContextStrategy = DEFAULT_SCENE_CONTEXT_STRATEGY,
   fallbackStrategy?: SceneContextStrategy,
 ): Promise<string[]> {
-  const strategies = (
+  const strategies: SceneContextStrategy[] =
     fallbackStrategy && fallbackStrategy !== strategy
       ? [strategy, fallbackStrategy]
-      : [strategy]
-  ) as SceneContextStrategy[];
+      : [strategy];
 
   for (const currentStrategy of strategies) {
-    const pool = await pullScenePool(oc, storyId, query, currentStrategy);
-    const filteredScenes = applySceneValidationFilter(pool, currentStrategy);
-    if (filteredScenes.length > 0) {
-      return filteredScenes
-        .slice(0, TYPE_LIMITS.scene)
-        .map((e) => `${e.name}\n${e.body}`);
+    const scenes = await pullScenesByStrategy(
+      oc,
+      storyId,
+      query,
+      currentStrategy,
+    );
+    if (scenes.length > 0) {
+      return scenes.map((e) => `${e.name}\n${e.body}`);
     }
   }
 

@@ -97,11 +97,12 @@ describe("prompt — buildSystemPrompt", () => {
   });
 });
 
-// pullFilteredScenes has two strategies: recency-first uses oc.memoryList
-// for a strict recency pull; query-ranked uses oc.memorySearch via
-// recall(). This repo has no existing OcClient-mocking convention (per
-// the caller's instructions), so use a minimal object literal exposing
-// both hooks, cast to OcClient to satisfy the type.
+// pullFilteredScenes has two strategies: recency-first does a compact
+// scan (oc.memoryListCompact) then hydrates only the winners via
+// oc.memoryGet; query-ranked uses oc.memorySearch via recall(). This
+// repo has no existing OcClient-mocking convention (per the caller's
+// instructions), so use a minimal object literal exposing those hooks,
+// cast to OcClient to satisfy the type.
 function sceneMemory(
   id: string,
   name: string,
@@ -118,11 +119,35 @@ function sceneMemory(
   };
 }
 
-function mockOcWithScenes(memories: OcMemory[]): OcClient {
+// The compact-row projection OC's memory_list compact:true returns --
+// content swapped for a preview, everything the scan actually consumes
+// (id/tags/created_at) intact.
+function toCompactRow(memory: OcMemory) {
   return {
-    memoryList: async () => memories,
-    memorySearch: async () => memories,
+    id: memory.id,
+    content_preview: memory.content.slice(0, 120),
+    content_length: memory.content.length,
+    project_id: memory.project_id,
+    tags: memory.tags,
+    pinned: memory.pinned,
+    created_at: memory.created_at,
+  };
+}
+
+function mockOcWithScenes(
+  memories: OcMemory[],
+  ranked: OcMemory[] = memories,
+): { oc: OcClient; memoryGetIds: string[] } {
+  const memoryGetIds: string[] = [];
+  const oc = {
+    memoryListCompact: async () => memories.map(toCompactRow),
+    memorySearch: async () => ranked,
+    memoryGet: async (id: string) => {
+      memoryGetIds.push(id);
+      return memories.find((m) => m.id === id) ?? null;
+    },
   } as unknown as OcClient;
+  return { oc, memoryGetIds };
 }
 
 describe("prompt — pullFilteredScenes", () => {
@@ -136,7 +161,7 @@ describe("prompt — pullFilteredScenes", () => {
       sceneMemory("4", "Untagged B", [], "2026-01-01T10:30:00Z"),
     ];
     const result = await pullFilteredScenes(
-      mockOcWithScenes(pool),
+      mockOcWithScenes(pool).oc,
       storyId,
       "query",
     );
@@ -159,7 +184,7 @@ describe("prompt — pullFilteredScenes", () => {
       sceneMemory("6", "Untagged E", [], "2026-01-01T10:02:00Z"),
     ];
     const result = await pullFilteredScenes(
-      mockOcWithScenes(pool),
+      mockOcWithScenes(pool).oc,
       storyId,
       "query",
     );
@@ -181,7 +206,7 @@ describe("prompt — pullFilteredScenes", () => {
       sceneMemory("3", "Errors B", ["validation:errors"]),
     ];
     const result = await pullFilteredScenes(
-      mockOcWithScenes(pool),
+      mockOcWithScenes(pool).oc,
       storyId,
       "query",
     );
@@ -196,7 +221,7 @@ describe("prompt — pullFilteredScenes", () => {
       sceneMemory("2", "Errors B", ["validation:errors"]),
     ];
     const result = await pullFilteredScenes(
-      mockOcWithScenes(pool),
+      mockOcWithScenes(pool).oc,
       storyId,
       "query",
     );
@@ -212,13 +237,14 @@ describe("prompt — pullFilteredScenes", () => {
       sceneMemory("5", "Clean E", ["validation:clean"], "2026-01-01T08:00:00Z"),
       sceneMemory("6", "Clean F", ["validation:clean"], "2026-01-01T07:00:00Z"),
     ];
-    const result = await pullFilteredScenes(
-      mockOcWithScenes(pool),
-      storyId,
-      "query",
-    );
+    const { oc, memoryGetIds } = mockOcWithScenes(pool);
+    const result = await pullFilteredScenes(oc, storyId, "query");
     expect(result).toHaveLength(5);
     expect(result.some((r) => r.includes("Clean F"))).toBe(false);
+    // Scan-then-hydrate: only the capped winners get their bodies
+    // fetched -- 5 memory_get calls for a 6-scene pool, never the whole
+    // project.
+    expect(memoryGetIds).toHaveLength(5);
   });
 
   it("supports query-ranked scene lookup strategy when configured", async () => {
@@ -228,17 +254,9 @@ describe("prompt — pullFilteredScenes", () => {
       sceneMemory("3", "Oldly ranked scene", ["validation:clean"], "2026-01-01T10:05:00Z"),
       sceneMemory("4", "Newest scene", [], "2026-01-01T10:20:00Z"),
     ];
-    const ranked = [
-      pool[1],
-      pool[0],
-      pool[3],
-      pool[2],
-    ];
+    const ranked = [pool[1]!, pool[0]!, pool[3]!, pool[2]!];
     const result = await pullFilteredScenes(
-      {
-        memoryList: async () => pool,
-        memorySearch: async () => ranked,
-      } as unknown as OcClient,
+      mockOcWithScenes(pool, ranked).oc,
       storyId,
       "query",
       "query-ranked",
@@ -263,10 +281,7 @@ describe("prompt — pullFilteredScenes", () => {
     ];
 
     const result = await pullFilteredScenes(
-      {
-        memoryList: async () => recencyFallback,
-        memorySearch: async () => queryRanked,
-      } as unknown as OcClient,
+      mockOcWithScenes(recencyFallback, queryRanked).oc,
       storyId,
       "query",
       "query-ranked",
@@ -289,10 +304,7 @@ describe("prompt — pullFilteredScenes", () => {
     ];
 
     const result = await pullFilteredScenes(
-      {
-        memoryList: async () => recencyFallback,
-        memorySearch: async () => queryRanked,
-      } as unknown as OcClient,
+      mockOcWithScenes(recencyFallback, queryRanked).oc,
       storyId,
       "query",
       "query-ranked",
