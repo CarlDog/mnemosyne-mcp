@@ -11,7 +11,7 @@
 
 import { describe, it, expect, vi } from "vitest";
 import { parseServiceUrl, describeServiceUrl } from "../src/service-url.js";
-import { classifyOllamaHttpError } from "../src/llm.js";
+import { classifyOllamaHttpError, OllamaProvider } from "../src/llm.js";
 import { log } from "../src/log.js";
 
 describe("parseServiceUrl", () => {
@@ -107,5 +107,39 @@ describe("final-sink log redaction", () => {
     const line = capture({ url: "http://user:hunter2@host:1/mcp" });
     expect(line).not.toContain("hunter2");
     expect(line).toContain("http://<redacted>@host:1/mcp");
+  });
+});
+
+describe("Ollama timeout classification", () => {
+  it("a hung request classifies as timeout via the owned controller, not error-name sniffing", async () => {
+    const realFetch = globalThis.fetch;
+    // Hang until aborted, then reject the way undici does: a wrapper
+    // whose NAME is not AbortError (the real cause is nested).
+    globalThis.fetch = vi.fn(
+      (_input: URL | RequestInfo, init?: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            const wrapper = new TypeError("fetch failed");
+            (wrapper as { cause?: unknown }).cause = new Error("aborted");
+            reject(wrapper);
+          });
+        }),
+    ) as unknown as typeof fetch;
+    try {
+      const p = new OllamaProvider({
+        url: "http://127.0.0.1:1",
+        defaultModel: "m",
+        timeoutMs: 50,
+      });
+      // Pre-seed the show cache so no /api/show fetch races the hang.
+      (
+        p as unknown as { showCache: Map<string, Promise<unknown>> }
+      ).showCache.set("m", Promise.resolve({}));
+      await expect(
+        p.generate({ systemPrompt: "s", userMessage: "u" }),
+      ).rejects.toThrow(/timed out after 50ms.*OLLAMA_TIMEOUT_MS/s);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
   });
 });
