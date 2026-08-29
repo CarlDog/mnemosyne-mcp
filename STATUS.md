@@ -1,27 +1,38 @@
 # Status
 
-**Last updated:** 2026-08-28.
+**Last updated:** 2026-08-29.
 
-**Current documentation checkpoint:** the external-system research set is now
-durable and cross-linked: Ollama, OpenClaw, Open WebUI, and NemoClaw adoption
-assessments; the Atlas Cloud capability protocol and initial evidence; and the
-Hook Vault. The NemoClaw review contributed three genuinely new candidate
-boundaries—transport-specific filesystem authority, runtime validation plus
-required-tool discovery for sibling MCP services, and semantic dependency
-readiness—while explicitly rejecting an OpenShell/control-plane transplant.
-All recommendations remain research-only until separately ratified; the set
-was read end-to-end and triaged on 2026-08-28 (see the Done entry below), and
-three of its items have since shipped. The current local verification baseline
-is **213 passing and 62 skipped tests (275 total)**, with typecheck, lint, and
-prettier green, and CI green on all three OS legs.
+**Current checkpoint: the external-system research program is fully
+executed.** One continuous 2026-08-28→29 arc took the four adoption
+assessments from "validate these docs" to done: the claimed decision queue
+enumerated as a real artifact
+([docs/RESEARCH_DECISION_QUEUE.md](docs/RESEARCH_DECISION_QUEUE.md)) and
+the shipped items verified against their own acceptance proofs; **every
+remaining P0/P1/P2 and mechanical item shipped** (completion integrity
+across all providers, validator locality, schema-validated verdicts,
+sibling-MCP contract validation + bounded tool discovery, semantic
+readiness at `GET /api/status`, privacy-safe logging + final-sink
+redaction, usage telemetry, typed Ollama errors + configurable timeout,
+endpoint hygiene); the four design-heavy candidates written up,
+**adversarially reviewed (28 confirmed findings folded in), ratified with
+their measurement gates run first, and fully built** — run
+outcomes/cancellation, generator capabilities, ContextPlan with stable
+per-model `num_ctx` + reject-don't-truncate, and retrieval controls with
+flag-off enrichment. The verification baseline is **340 passing and 64
+skipped tests (404 total)**, typecheck/lint/prettier green, CI green at
+every pushed head.
 
-**Session close (2026-08-28).** A phase-end audit was run over the whole repo
-and all 28 findings are resolved, deliberately-not-flagged, or overtaken by
-events; `src/index.ts` was split 774 to 343 lines as its own stage; and the
-external-system research set was read end-to-end and reduced to a decision
-queue, with the three highest-value items shipped. Nothing is in flight.
-**The next direction is deliberately unset** -- development pauses here and
-will be shaped by live use rather than by a backlog.
+**Session close (2026-08-29).** Nothing is in flight. The actionable queue
+is empty; what remains is gated: the **enrichment benchmark needs
+operator-labeled fixtures** (expected/exited entities per direction
+against the five consolidated stories — the one concrete operator ask;
+`MNEMO_QUERY_ENRICHMENT` stays off until its win is recorded), the Ollama
+builder/parser extraction is a pure refactor with no behavior gap, the
+parked/rejected items keep their documented triggers, and the one known
+red is the pre-existing live `continue.test.ts` case (OC-side embedding
+lag for freshly saved memories, reproduced at the pre-session baseline
+and filed as `mcp-feedback` in openchronicle-mcp's OC project — an
+OC-side diagnosis, not a mnemosyne defect).
 
 **Previous engineering checkpoint (2026-08-28): the Atlas capability runner is
 hardened and L0-L3 evidence is on record.** Five real defects were found and
