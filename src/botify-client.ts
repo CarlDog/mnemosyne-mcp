@@ -103,7 +103,21 @@ export class BotifyClient {
     );
   }
 
+  /** Single-flight (RUN_OUTCOMES_DESIGN slice 3): concurrent first calls
+   * share one connection attempt instead of racing the SDK. A failed
+   * attempt clears the latch so the next call retries. */
+  private connecting?: Promise<void>;
+
   async connect(): Promise<void> {
+    if (this.connected) return;
+    if (this.connecting) return this.connecting;
+    this.connecting = this.doConnect().finally(() => {
+      this.connecting = undefined;
+    });
+    return this.connecting;
+  }
+
+  private async doConnect(): Promise<void> {
     if (this.connected) return;
     const transport = new StreamableHTTPClientTransport(this.url, {
       requestInit: this.authToken

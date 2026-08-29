@@ -248,6 +248,21 @@ if (httpConfig.port === undefined) {
   await server.connect(new StdioServerTransport());
   log.info("server", "mnemosyne-mcp ready", { transport: "stdio" });
   startWarmup();
+  // Stdio shutdown owner (RUN_OUTCOMES_DESIGN slice 3): close OC's live
+  // transport before exiting -- exiting on top of it is the libuv-abort
+  // path the bind-failure fix documented.
+  let stdioShuttingDown = false;
+  const stdioShutdown = (signal: string): void => {
+    if (stdioShuttingDown) return;
+    stdioShuttingDown = true;
+    log.info("server", "shutting down", { signal });
+    void oc
+      .close()
+      .catch(() => {})
+      .finally(() => process.exit(0));
+  };
+  process.on("SIGTERM", () => stdioShutdown("SIGTERM"));
+  process.on("SIGINT", () => stdioShutdown("SIGINT"));
 } else {
   const app = express();
   app.use(express.json());
@@ -342,10 +357,34 @@ if (httpConfig.port === undefined) {
       .finally(() => process.exit(1));
   });
 
+  // Single admission/shutdown owner (RUN_OUTCOMES_DESIGN slice 3, ratified
+  // grace 30s / MNEMO_SHUTDOWN_GRACE_MS): gate new admission and start
+  // listener close immediately; drain in-flight work for a bounded grace
+  // period (httpServer.close() resolves when the last open connection
+  // finishes); then close MCP sessions, then OC LAST -- the bind-failure
+  // fix already proved exiting on top of a live OC transport aborts libuv.
+  const SHUTDOWN_GRACE_MS = process.env.MNEMO_SHUTDOWN_GRACE_MS
+    ? Number(process.env.MNEMO_SHUTDOWN_GRACE_MS)
+    : 30_000;
+  let shuttingDown = false;
   const shutdown = async (signal: string): Promise<void> => {
-    log.info("server", "shutting down", { signal });
-    await mcp.dispose();
-    httpServer.close(() => process.exit(0));
+    if (shuttingDown) return;
+    shuttingDown = true;
+    log.info("server", "shutting down", {
+      signal,
+      grace_ms: SHUTDOWN_GRACE_MS,
+    });
+    const listenerClosed = new Promise<void>((resolve) => {
+      httpServer.close(() => resolve());
+    });
+    const graceElapsed = new Promise<void>((resolve) => {
+      const t = setTimeout(resolve, SHUTDOWN_GRACE_MS);
+      t.unref();
+    });
+    await Promise.race([listenerClosed, graceElapsed]);
+    await mcp.dispose().catch(() => {});
+    await oc.close().catch(() => {});
+    process.exit(0);
   };
   process.on("SIGTERM", () => void shutdown("SIGTERM"));
   process.on("SIGINT", () => void shutdown("SIGINT"));
