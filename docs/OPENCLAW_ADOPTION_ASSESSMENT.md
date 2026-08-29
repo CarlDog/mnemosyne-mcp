@@ -14,7 +14,10 @@ changes.
 
 **Mnemosyne snapshot:** `cfd9d7f4597d862314c78466f344f8118040016e`.
 A local audit clone was created from the canonical OpenClaw repository; this
-record does not imply that a GitHub-hosted fork was created.
+record does not imply that a GitHub-hosted fork was created. Relative
+Mnemosyne source links below refer to that snapshot, not HEAD — later
+refactors (notably the 2026-08-28 `src/index.ts` split) have moved some
+cited code.
 
 ## Decision summary
 

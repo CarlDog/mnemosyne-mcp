@@ -16,7 +16,10 @@ changes.
 
 **Mnemosyne snapshot:** `cfd9d7f4597d862314c78466f344f8118040016e`.
 The Mnemosyne worktree already contained unrelated in-progress edits when this
-review began; none were modified for this assessment.
+review began; none were modified for this assessment. Relative Mnemosyne
+source links below refer to that snapshot, not HEAD — later changes (notably
+the 2026-08-28 `src/index.ts` split and the §6 accessibility fixes) have
+moved some cited code.
 
 **Method:** Static source, dependency, documentation, license, and integration
 review. Open WebUI was not installed or run, and no live compatibility claim is

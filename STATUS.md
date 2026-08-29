@@ -2573,17 +2573,23 @@ consider only when real use exposes the corresponding pressure:
 - No open decision is currently ratified here. Streamable HTTP and the Web UI
   have shipped; the research findings below remain unratified candidates, not
   decisions.
+- The 2026-08-28 research triage's decision queue is now enumerated in
+  [docs/RESEARCH_DECISION_QUEUE.md](docs/RESEARCH_DECISION_QUEUE.md) — every
+  recommendation-table row from the four adoption assessments with its
+  disposition (shipped / rejected at triage / open candidate / parked), plus
+  the 2026-08-28 verification record for the three shipped items.
 
 ## Known Gaps
 
-- **HTTP import/export paths exceed the remote story-operation boundary.**
-  The same MCP tool schemas are registered for stdio and HTTP, while
-  `mnemo_export_story(out_path)` can overwrite any process-writable location
-  and `mnemo_import_story(file_path)` can read any process-readable valid
-  export. Default loopback reduces exposure, but this must be rejected or
-  confined by transport before non-loopback or third-party agent-host use.
-  Research and acceptance proof:
-  [NEMOCLAW_ADOPTION_ASSESSMENT.md](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md#1-constrain-filesystem-authority-by-transport).
+- ~~**HTTP import/export paths exceed the remote story-operation boundary.**~~
+  **Closed 2026-08-28** (`a12e992`): caller-supplied `out_path`/`file_path`
+  are refused over the HTTP transport (flat rejection, stdio unchanged) — see
+  the Done entry above. One acceptance-proof remainder from
+  [NEMOCLAW_ADOPTION_ASSESSMENT.md §1](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md#1-constrain-filesystem-authority-by-transport):
+  the shipped test covers the guard helper only; an HTTP MCP integration test
+  proving the wiring through the per-session server factory is still missing
+  and is queued in
+  [RESEARCH_DECISION_QUEUE.md](docs/RESEARCH_DECISION_QUEUE.md).
 - **Sibling MCP results are compile-time-cast, not runtime-validated.**
   `extractStructuredOrParsed<T>` trusts `structuredContent` or parsed text as
   `T`; OC, Kindroid, and Botify do not discover their required tool sets.

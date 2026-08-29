@@ -181,6 +181,11 @@ assessments listed under "Layout" below.
   NemoClaw's authority, MCP-contract, readiness, and endpoint patterns against
   Mnemosyne's demonstrated boundaries. It is not ratified architecture or an
   implementation commitment.
+- `docs/RESEARCH_DECISION_QUEUE.md` — the enumerated decision queue from the
+  2026-08-28 research triage: every recommendation-table row of the four
+  adoption assessments with its disposition (shipped / rejected at triage /
+  open candidate / parked) and the verification record for the shipped items.
+  Reconciliation artifact, not ratified work.
 - `docs/ATLAS_CAPABILITY_BENCHMARK.md` and the dated results documents —
   bounded, evidence-only Atlas Cloud route evaluation; the accompanying
   `scripts/atlas-capability-benchmark.mjs` never automates explicit-content

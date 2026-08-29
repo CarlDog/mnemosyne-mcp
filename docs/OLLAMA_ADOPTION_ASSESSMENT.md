@@ -14,7 +14,10 @@ Mnemosyne dependency.
 
 **Mnemosyne snapshot:** `cfd9d7f4597d862314c78466f344f8118040016e`.
 Mnemosyne already had unrelated working-tree changes when this audit began;
-none were modified by this assessment.
+none were modified by this assessment. Relative Mnemosyne source links below
+refer to that snapshot, not HEAD — later refactors (notably the 2026-08-28
+`src/index.ts` split and the `keep_alive` fix in `src/llm.ts`) have moved
+some cited code.
 
 ## Decision summary
 
