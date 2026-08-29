@@ -538,6 +538,49 @@ milestones at which they were measured.
 
 ## Done
 
+- **Design proposals written for all four design-heavy open candidates —
+  none ratified** (2026-08-28). The decision queue's remaining
+  design-conversation tier now has concrete, sign-off-ready proposals,
+  each ~150–200 lines of *decisions* (types, placement, chosen semantics,
+  slice order, acceptance tests, and an explicit decisions-needed list),
+  citing its assessment for rationale:
+  - [RUN_OUTCOMES_DESIGN.md](docs/RUN_OUTCOMES_DESIGN.md) — `RunContext`
+    threading per surface, the chosen disconnect semantics
+    (pre-dispatch-only abort, satisfying both the OpenClaw and Open WebUI
+    constraints), the typed replay-safe outcome table as
+    `RunOutcomeError` with a REST projection, `canon_write_unknown`,
+    Botify timeout parity, and the §7 lifecycle remainder folded in.
+    Idempotency keys explicitly excluded — they belong to the
+    triage-rejected run registry.
+  - [CONTEXT_PLAN_DESIGN.md](docs/CONTEXT_PLAN_DESIGN.md) — OpenClaw §1 +
+    Ollama §4/§6 as one design: structured `ContextEntry` surviving to
+    assembly, plan-describes-the-actual-payload (companion keyphrase
+    selection reported truthfully), three-stage enforcement rollout, a
+    live compatibility gate on `truncate/shift` before sending them, the
+    warmup/stable-`num_ctx` interaction named, and
+    single-context-vs-buckets surfaced as a ratification decision with
+    the NAS hardware tradeoff.
+  - [GENERATOR_CAPABILITIES_DESIGN.md](docs/GENERATOR_CAPABILITIES_DESIGN.md)
+    — the typed static table + model-aware resolver, three-way
+    supported/unsupported/**unknown** fields, five named consumers, and
+    an explicit non-ratification of content routing (attachment point
+    only). Recommends all-unknown cloud context windows over a drifting
+    local table.
+  - [RETRIEVAL_CONTROLS_DESIGN.md](docs/RETRIEVAL_CONTROLS_DESIGN.md) —
+    control exposure **live-confirmed** against the deployed OC's actual
+    tools/list (`mode`/`phrase`/`compact`/`pinned_limit` all advertised),
+    phrase-first overwrite lookup, and benchmark-gated deterministic
+    enrichment — with the benchmark required to run on settled fixtures
+    because the open embedding-lag `mcp-feedback` issue sits on the very
+    `memory_search` path it exercises.
+
+  The queue now annotates its remaining mechanical items (typed Ollama
+  error contract, endpoint hygiene, final-sink redaction) as ratifiable
+  directly from the assessments with no design doc, and links each
+  designed row to its proposal. Rejected/parked items (run registry, host
+  spikes, beat proposals, current-state apply) deliberately received no
+  design docs — their triggers stand.
+
 - **Provider usage telemetry: the last un-started item from the research
   queue's ranked list** (2026-08-28). Open WebUI §3 + the Ollama
   assessment's telemetry track, one implementation. Every provider
