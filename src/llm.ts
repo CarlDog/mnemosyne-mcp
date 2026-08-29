@@ -105,6 +105,27 @@ export interface GeneratedBeat {
   groupTurns?: number;
 }
 
+/** Map a provider's raw finish-reason string onto GeneratedBeat's
+ * completion fields. One helper because the classification carries the
+ * correctness rule ("length means do not auto-save") across four cloud
+ * providers whose vocabularies differ only in spelling -- Anthropic
+ * `max_tokens`, OpenAI `length`, Gemini `MAX_TOKENS`. Absent raw -> {}:
+ * the provider didn't report, callers treat the beat as complete.
+ * (OllamaProvider keeps its own inline mapping: its absent-field case
+ * deliberately reads as "stop" for old daemons, not as unreported.) */
+export function completionFromFinishReason(
+  raw: string | undefined,
+  vocab: { stop: readonly string[]; length: readonly string[] },
+): Pick<GeneratedBeat, "complete" | "finishReason"> {
+  if (raw === undefined) return {};
+  const finishReason = vocab.length.includes(raw)
+    ? "length"
+    : vocab.stop.includes(raw)
+      ? "stop"
+      : "unknown";
+  return { finishReason, complete: finishReason !== "length" };
+}
+
 /** Narrow structured-output capability, deliberately NOT a field on the
  * already-overloaded LlmGenerateOptions (docs/OLLAMA_ADOPTION_ASSESSMENT.md
  * §3: prefer a provider-specific structured-generation surface over another

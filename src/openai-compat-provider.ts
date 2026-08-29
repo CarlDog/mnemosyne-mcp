@@ -25,6 +25,7 @@
 
 import { llmPostJson } from "./llm-http.js";
 import { log } from "./log.js";
+import { completionFromFinishReason } from "./llm.js";
 import type { GeneratedBeat, LlmGenerateOptions, LlmProvider } from "./llm.js";
 
 export interface OpenAICompatConfig {
@@ -64,29 +65,43 @@ export function buildChatCompletionsBody(
 }
 
 interface ChatCompletionsResponse {
-  choices?: Array<{ message?: { content?: string } }>;
+  choices?: Array<{
+    message?: { content?: string };
+    /** "stop" (natural) | "length" (truncated) | others ("content_filter",
+     * "tool_calls") normalized to unknown. */
+    finish_reason?: string;
+  }>;
   error?: { message?: string } | string;
 }
 
 /** Pure response parsing -- throws with the provider's own error message
- * when one is present, else on a missing completion. */
+ * when one is present, else on a missing completion. Carries the finish
+ * reason so a `length`-cut beat is not auto-saved as canon (same contract
+ * as OllamaProvider -- see GeneratedBeat.complete). */
 export function extractChatCompletionText(
   provider: string,
   data: unknown,
-): string {
+): GeneratedBeat {
   const res = data as ChatCompletionsResponse;
   if (res.error) {
     const msg = typeof res.error === "string" ? res.error : res.error.message;
     throw new Error(`${provider} error: ${msg ?? JSON.stringify(res.error)}`);
   }
-  const content = res.choices?.[0]?.message?.content;
+  const choice = res.choices?.[0];
+  const content = choice?.message?.content;
   if (!content) {
     throw new Error(`${provider} returned no completion content`);
   }
   // Strip leading whitespace -- same lesson as OllamaProvider: a stray
   // leading space/newline gets saved into the scene and trips downstream
   // display + parsing.
-  return content.replace(/^\s+/, "");
+  return {
+    text: content.replace(/^\s+/, ""),
+    ...completionFromFinishReason(choice?.finish_reason, {
+      stop: ["stop"],
+      length: ["length"],
+    }),
+  };
 }
 
 export class OpenAICompatProvider implements LlmProvider {
@@ -110,12 +125,13 @@ export class OpenAICompatProvider implements LlmProvider {
       headers: { Authorization: `Bearer ${this.config.apiKey}` },
       body,
     });
-    const text = extractChatCompletionText(this.name, data);
+    const beat = extractChatCompletionText(this.name, data);
     log.info(this.name, "generate ok", {
       model: body.model,
       ms: Date.now() - start,
-      chars: text.length,
+      chars: beat.text.length,
+      finish_reason: beat.finishReason ?? "(unreported)",
     });
-    return { text };
+    return beat;
   }
 }

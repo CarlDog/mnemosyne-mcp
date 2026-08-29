@@ -538,6 +538,20 @@ milestones at which they were measured.
 
 ## Done
 
+- **Completion integrity extended to all four cloud providers**
+  (2026-08-28). The Ollama P0 fix deliberately scoped `complete`/
+  `finishReason` to Ollama; the cloud providers still discarded their
+  finish reasons, so a truncated *cloud* beat could still auto-save.
+  Anthropic (`stop_reason: "max_tokens"`), OpenAI-compat + Atlas
+  (`finish_reason: "length"`), and Gemini (`finishReason: "MAX_TOKENS"`)
+  now map through one shared `completionFromFinishReason()` normalizer —
+  extracted because the classification carries the correctness rule
+  ("length means do not auto-save") across four spellings — and hit the
+  same `continueScene` no-auto-save guard. Absent finish reason stays
+  unreported/complete (Kindroid/Botify have no truncation concept). The
+  pure extractors now return `GeneratedBeat`; 5 new normalization tests in
+  `tests/cloud-providers.test.ts` (250 passing / 64 skipped).
+
 - **Ollama P0 #2 shipped: the validator route is proven local, not assumed
   local** (2026-08-28). Per
   [OLLAMA_ADOPTION_ASSESSMENT.md §2](docs/OLLAMA_ADOPTION_ASSESSMENT.md):
