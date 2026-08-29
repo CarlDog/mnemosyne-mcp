@@ -17,7 +17,9 @@ reproducible as upstream changes.
 **Mnemosyne snapshot:** `cfd9d7f4597d862314c78466f344f8118040016e`.
 The Mnemosyne worktree already contained unrelated documentation and research
 changes when this review began; they were preserved. No NemoClaw code has been
-copied into Mnemosyne.
+copied into Mnemosyne. Relative Mnemosyne source links below refer to that
+snapshot, not HEAD — later refactors (notably the 2026-08-28 `src/index.ts`
+split) have moved some cited code.
 
 **Method:** Static source, documentation, test, dependency, license, security,
 inference, lifecycle, and integration review. NemoClaw was not installed or
