@@ -22,6 +22,7 @@
 import type { OcClient } from "./oc-client.js";
 import { RunOutcomeError } from "./run-outcome.js";
 import { estimateTokens, type ContextEntry } from "./context-plan.js";
+import { nameMentioned } from "./companion-message.js";
 import {
   recall,
   memoryToRecalled,
@@ -363,6 +364,102 @@ export async function pullFilteredScenes(
   ).map(flattenEntity);
 }
 
+// --- Vague-direction enrichment (RETRIEVAL_CONTROLS_DESIGN slice 3,
+// ratified; ships behind MNEMO_QUERY_ENRICHMENT=false until a benchmark on
+// settled fixtures records a win). Deterministic, no LLM rewriting.
+
+/** The normalized bare-continuation set. Lowercased, trailing punctuation
+ * stripped before comparison. */
+const VAGUE_DIRECTION_SET = new Set([
+  "continue",
+  "go on",
+  "next",
+  "keep going",
+  "more",
+  "and then",
+  "proceed",
+  "carry on",
+  "continue the scene",
+  "what happens next",
+]);
+
+const VAGUE_LENGTH_FLOOR = 20;
+export const ENRICHMENT_EXCERPT_MAX_CHARS = 120;
+
+/** Ratified heuristic: (a member of the normalized set) OR (below the
+ * 20-char floor AND containing no token matching a known entity name).
+ * The entity-name condition exists because a short direction can be
+ * maximally information-rich ("Aria dies") -- enriching it would bury its
+ * subject under the previous scene's vocabulary. Pure. */
+export function isVagueDirection(
+  direction: string,
+  knownEntityNames: readonly string[],
+): boolean {
+  const normalized = direction
+    .trim()
+    .toLowerCase()
+    .replace(/[.!?…]+$/u, "");
+  if (VAGUE_DIRECTION_SET.has(normalized)) return true;
+  if (direction.trim().length >= VAGUE_LENGTH_FLOOR) return false;
+  return !knownEntityNames.some((name) => nameMentioned(direction, name));
+}
+
+/** Direction FIRST, excerpt bounded hard (review finding: at 300 chars the
+ * excerpt outweighed a short direction ~30:1 and ranked the prior scene's
+ * cast -- the exact unwanted-persistence failure the benchmark
+ * penalizes). Pure. */
+export function buildEnrichedQuery(
+  direction: string,
+  sceneName: string,
+  sceneBody: string,
+): string {
+  const tail = sceneBody.slice(-ENRICHMENT_EXCERPT_MAX_CHARS);
+  return `${direction}
+${sceneName}: ${tail}`;
+}
+
+/** Entity-name extraction from compact-scan rows: content_preview begins
+ * with the entity header `[Type] Name`. */
+const HEADER_PREVIEW_RE = /^\[[A-Za-z]+\] (.+?)(?:\n|$)/;
+
+function enrichmentEnabled(): boolean {
+  return process.env.MNEMO_QUERY_ENRICHMENT === "true";
+}
+
+/** Resolve the enriched reference query, or undefined when enrichment is
+ * off, the direction is information-rich, or no eligible scene exists.
+ * Uses the LIST path (compact scan + one memoryGet) deliberately: it has
+ * no embedding dependency, so live immediate-continue use selects the
+ * true newest scene even while the open OC embedding-lag issue stands --
+ * which is also what makes the settled-fixtures benchmark a valid
+ * control. */
+async function maybeEnrichReferenceQuery(
+  oc: OcClient,
+  storyId: string,
+  direction: string,
+  signal?: AbortSignal,
+): Promise<string | undefined> {
+  const rows = await oc.memoryListCompact({ projectId: storyId, signal });
+  const knownNames = rows
+    .map((row) => HEADER_PREVIEW_RE.exec(row.content_preview)?.[1])
+    .filter((name): name is string => name !== undefined);
+  if (!isVagueDirection(direction, knownNames)) return undefined;
+
+  const newestEligibleScene = rows
+    .filter(
+      (row) =>
+        SCENE_TAGS.every((tag) => row.tags.includes(tag)) &&
+        !row.tags.includes("validation:errors"),
+    )
+    .sort(byCreatedAtDesc)[0];
+  if (!newestEligibleScene) return undefined;
+  const scene = await oc.memoryGet(newestEligibleScene.id, signal);
+  if (!scene) return undefined;
+  const parsed = memoryToRecalled(scene);
+  if (!parsed || parsed.type !== "scene") return undefined;
+  return buildEnrichedQuery(direction, parsed.name, parsed.body);
+}
+
 export interface GatherContextOptions {
   /** RECENT SCENES retrieval strategy. Default DEFAULT_SCENE_CONTEXT_STRATEGY. */
   sceneStrategy?: SceneContextStrategy;
@@ -408,9 +505,37 @@ export async function gatherContext(
   checkAborted();
   const style = await pullByType(oc, storyId, "style", query, signal);
   checkAborted();
-  const characters = await pullByType(oc, storyId, "character", query, signal);
+
+  // Vague-direction enrichment applies to the four REFERENCE queries only
+  // (ratified): rules/style pulls above and scene selection below keep the
+  // raw direction. Off by default; flips only on a recorded benchmark win.
+  let referenceQuery = query;
+  if (enrichmentEnabled() && !options.validationOnly) {
+    const enriched = await maybeEnrichReferenceQuery(
+      oc,
+      storyId,
+      query,
+      signal,
+    );
+    if (enriched !== undefined) referenceQuery = enriched;
+    checkAborted();
+  }
+
+  const characters = await pullByType(
+    oc,
+    storyId,
+    "character",
+    referenceQuery,
+    signal,
+  );
   checkAborted();
-  const locations = await pullByType(oc, storyId, "location", query, signal);
+  const locations = await pullByType(
+    oc,
+    storyId,
+    "location",
+    referenceQuery,
+    signal,
+  );
   checkAborted();
 
   // Structured entries (CONTEXT_PLAN_DESIGN): reason names the admission
@@ -444,13 +569,13 @@ export async function gatherContext(
     signal,
   );
   checkAborted();
-  const lore = await pullByType(oc, storyId, "lore", query, signal);
+  const lore = await pullByType(oc, storyId, "lore", referenceQuery, signal);
   checkAborted();
   const worldbuilding = await pullByType(
     oc,
     storyId,
     "worldbuilding",
-    query,
+    referenceQuery,
     signal,
   );
   entries.push(
