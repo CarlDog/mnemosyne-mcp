@@ -109,7 +109,9 @@ export function memoryToRecalled(memory: OcMemory): RecalledEntity | null {
     pinned: memory.pinned,
     tags: memory.tags,
     created_at: memory.created_at,
-    updated_at: memory.updated_at,
+    // OC's Python None arrives as null; RecalledEntity keeps the narrower
+    // string|undefined shape its consumers already expect.
+    updated_at: memory.updated_at ?? undefined,
   };
 }
 

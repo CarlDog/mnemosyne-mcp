@@ -11,29 +11,46 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { log } from "./log.js";
 import { MNEMOSYNE_VERSION } from "./version.js";
 import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
 import { extractText, extractStructuredOrParsed } from "./mcp-result.js";
+import { verifyRequiredTools } from "./mcp-discovery.js";
 
 // Minimal shape of a kindroid_advance_group reply -- only the fields
 // formatGroupReplies() in kindroid-provider.ts actually uses. kindroid-mcp's
 // own message shape carries more (id, timestamp, image_urls, sender_type);
-// add fields here only when a real call site needs them.
-export interface KindroidGroupReply {
+// add fields here only when a real call site needs them. Runtime schemas
+// per docs/NEMOCLAW_ADOPTION_ASSESSMENT.md §2 -- this was a compile-time
+// cast at a network boundary. Extra fields are tolerated (additive upstream
+// evolution); optional fields are .nullish().
+const KindroidGroupReplySchema = z.object({
   /** "ai" or "user". */
-  sender: string;
-  message: string;
-  display_name?: string;
-}
+  sender: z.string(),
+  message: z.string(),
+  display_name: z.string().nullish(),
+});
+export type KindroidGroupReply = z.infer<typeof KindroidGroupReplySchema>;
 
-export interface AdvanceGroupResult {
+const AdvanceGroupResultSchema = z.object({
   /** AI replies generated this call, oldest-first. */
-  replies: KindroidGroupReply[];
-  ended: "user_turn" | "max_turns";
-  turns: number;
+  replies: z.array(KindroidGroupReplySchema),
+  ended: z.enum(["user_turn", "max_turns"]),
+  turns: z.number(),
   /** Set by kindroid-mcp when the turns ran but reading them back failed.
    * `replies` is empty while `turns` is not -- the generations DID happen
    * upstream, so this is never a retry signal. */
-  read_back_error?: string;
-}
+  read_back_error: z.string().nullish(),
+});
+export type AdvanceGroupResult = z.infer<typeof AdvanceGroupResultSchema>;
+
+/** Every kindroid-mcp tool this client calls. Verified (bounded, name-only
+ * tools/list) at connect(), which runs lazily before the FIRST mutating
+ * call -- so a renamed upstream tool fails before a direction is ever
+ * posted to a real conversation, and a contract mismatch surfaces as
+ * "provider unavailable" while OC-backed story browsing keeps working. */
+export const KINDROID_REQUIRED_TOOLS = [
+  "kindroid_send_message",
+  "kindroid_advance_group",
+] as const;
 
 /**
  * Default per-request timeout for kindroid-mcp calls, overridable with
@@ -73,6 +90,11 @@ export class KindroidClient {
         : undefined,
     });
     await this.client.connect(transport);
+    await verifyRequiredTools(
+      this.client,
+      "kindroid-mcp",
+      KINDROID_REQUIRED_TOOLS,
+    );
     this.connected = true;
     log.info("kindroid-client", "connected", { url: this.url.toString() });
   }
@@ -173,9 +195,10 @@ export class KindroidClient {
     if (opts?.maxTurns !== undefined) args.max_turns = opts.maxTurns;
     if (opts?.allowUser !== undefined) args.allow_user = opts.allowUser;
     const result = await this.callMutatingTool("kindroid_advance_group", args);
-    return extractStructuredOrParsed<AdvanceGroupResult>(
+    return extractStructuredOrParsed(
       result,
       "kindroid_advance_group",
+      AdvanceGroupResultSchema,
     );
   }
 }

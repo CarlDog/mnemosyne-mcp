@@ -10,6 +10,8 @@
 // separate unwrapResult<T>() helper, which peels FastMCP's {result:[...]}
 // list-wrapping convention -- that's OC-specific and stays in oc-client.ts.
 
+import type { z } from "zod";
+
 interface McpContentBlock {
   type: string;
   text?: string;
@@ -52,10 +54,18 @@ export function extractText(result: McpResult, toolName: string): string {
 /**
  * Prefer `structuredContent` when present (the raw JSON value, not
  * stringified); otherwise extract the text content block and JSON.parse it.
+ *
+ * When a zod `schema` is supplied it validates the value from EITHER path
+ * (docs/NEMOCLAW_ADOPTION_ASSESSMENT.md §2: this used to be a compile-time
+ * cast at a runtime network boundary, so an upstream schema change entered
+ * story logic before failing). The thrown error names the tool and the
+ * offending field paths but never the payload's values -- upstream bodies
+ * can carry story canon.
  */
 export function extractStructuredOrParsed<T>(
   result: McpResult,
   toolName: string,
+  schema?: z.ZodType<T>,
 ): T {
   // isError check runs even when structuredContent is present -- an
   // error result's structured payload (if any) is not the success shape
@@ -63,8 +73,22 @@ export function extractStructuredOrParsed<T>(
   if (result.isError) {
     extractText(result, toolName); // always throws with the error text
   }
-  if (result.structuredContent !== undefined) {
-    return result.structuredContent as T;
+  const raw: unknown =
+    result.structuredContent !== undefined
+      ? result.structuredContent
+      : JSON.parse(extractText(result, toolName));
+  if (schema === undefined) return raw as T;
+  const parsed = schema.safeParse(raw);
+  if (!parsed.success) {
+    const detail = parsed.error.issues
+      .slice(0, 3)
+      .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
+      .join("; ");
+    throw new Error(
+      `${toolName} returned a result that does not match its expected ` +
+        `contract (${detail}) -- the upstream service may have changed its ` +
+        "schema",
+    );
   }
-  return JSON.parse(extractText(result, toolName)) as T;
+  return parsed.data;
 }

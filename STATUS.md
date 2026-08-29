@@ -538,6 +538,31 @@ milestones at which they were measured.
 
 ## Done
 
+- **Sibling-MCP results are runtime-validated, and required tools are
+  discovered before use** (2026-08-28). NemoClaw P1 #1
+  ([NEMOCLAW_ADOPTION_ASSESSMENT.md §2](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md),
+  previously a Known Gap): `extractStructuredOrParsed<T>` was a compile-time
+  cast at a runtime network boundary, and no client checked that the tools
+  it calls are advertised. Now every OC/Kindroid/Botify result crossing
+  into domain logic parses through a zod schema — the same schema on both
+  the `structuredContent` and text-fallback paths — with errors naming the
+  service, tool, and field paths but never payload values (upstream bodies
+  carry canon). Optional fields are `.nullish()` (Python `None` → `null`);
+  extra fields are tolerated (additive upstream evolution must not be an
+  outage); Botify's load-bearing `bot_message` null-vs-absent distinction
+  survives parsing, test-pinned. New `src/mcp-discovery.ts` runs bounded,
+  name-only `tools/list` discovery at each client's connect — page/tool/
+  name/cursor caps, duplicate-name and cursor-loop detection, zero
+  `tools/call` (proven by a throwing fake) — so OC missing its contract
+  **fails startup** (its connect is awaited there), while a companion
+  contract mismatch surfaces lazily as provider-unavailable *before any
+  message is posted to a real conversation*, with OC-backed browsing
+  unaffected. 14 new tests in `tests/mcp-contracts.test.ts`; the full live
+  suite ran green against real OC through the new schemas and discovery
+  (317 passing). Deliberately not done, per the assessment: no full
+  input/output schema fingerprinting — names plus result schemas close the
+  demonstrated boundary.
+
 - **Narrative prose removed from default logs** (2026-08-28). The sharpest
   slice of the OpenClaw assessment's §7 operational-safety track: the tool
   invoke line logged the first 200 characters of every long string at info
@@ -2706,12 +2731,11 @@ consider only when real use exposes the corresponding pressure:
   acceptance proof is now complete: `tests/http-integration.test.ts` proves
   the refusal over the real wire with the same `allowFilesystemPaths: false`
   wiring `makeServer()` uses for HTTP, alongside the guard's unit tests.
-- **Sibling MCP results are compile-time-cast, not runtime-validated.**
-  `extractStructuredOrParsed<T>` trusts `structuredContent` or parsed text as
-  `T`; OC, Kindroid, and Botify do not discover their required tool sets.
-  Runtime schemas plus bounded, non-mutating `tools/list` discovery are an
-  unratified P1 candidate. Research and acceptance proof:
-  [NEMOCLAW_ADOPTION_ASSESSMENT.md](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md#2-validate-external-mcp-contracts-and-discover-required-tools).
+- ~~**Sibling MCP results are compile-time-cast, not runtime-validated.**~~
+  **Closed 2026-08-28**: zod schemas at the extraction chokepoint plus
+  bounded, non-mutating `tools/list` discovery at each client's connect —
+  see the Done entry above and
+  [NEMOCLAW_ADOPTION_ASSESSMENT.md §2](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md#2-validate-external-mcp-contracts-and-discover-required-tools).
 - **`/health` is liveness only.** It always returns process `ok` and cannot
   report a dropped/incompatible OC connection, unavailable generator, or
   missing validator model. Keep it cheap; add protected semantic readiness
