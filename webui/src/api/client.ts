@@ -4,6 +4,7 @@
 // small typed wrapper functions (src/oc-client.ts) on the client side.
 
 import type {
+  GeneratorCapabilities,
   EntityDetail,
   EntitySummary,
   ContinueRequest,
@@ -81,6 +82,13 @@ export function getEntity(
   return get(
     `/stories/${encodeURIComponent(storyId)}/entities/${encodeURIComponent(memoryId)}`,
   );
+}
+
+export function getCapabilities(): Promise<{
+  generator: GeneratorCapabilities;
+  validator: GeneratorCapabilities;
+}> {
+  return get("/capabilities");
 }
 
 export function continueStory(

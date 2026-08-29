@@ -70,6 +70,24 @@ export interface ValidationReport {
   summary: string;
 }
 
+export type RangeCapability =
+  | { supported: true; min: number; max: number; passthrough_only: boolean }
+  | { supported: false }
+  | "unknown";
+
+export interface GeneratorCapabilities {
+  provider: string;
+  per_call_model_override: boolean;
+  temperature: RangeCapability;
+  max_tokens: RangeCapability;
+  context_window: number | "unknown";
+  system_prompt_channel: "native" | "none";
+  usage_reporting: "reported" | "none";
+  structured_output: boolean;
+  external_generation_side_effect: "none" | "conversation_mutation";
+  supports_noncommitting_variants: boolean;
+}
+
 export interface ModelUsage {
   provider: string;
   model?: string;

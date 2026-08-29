@@ -378,6 +378,67 @@ export class OllamaProvider implements LlmProvider {
     return probe;
   }
 
+  /** Cached trained-context lookups by exact model tag (shared by the
+   * capabilities resolver now and the ContextPlan profile later). */
+  private readonly trainedContexts = new Map<
+    string,
+    Promise<number | undefined>
+  >();
+
+  /** The EFFECTIVE enforceable input window for a model:
+   * min(trained context from /api/show, the operator's maxContextWindow
+   * cap). "unknown" when the daemon is unreachable or reports no
+   * context_length -- callers must treat unknown as unknown, never as a
+   * default (GENERATOR_CAPABILITIES_DESIGN / CONTEXT_PLAN_DESIGN). */
+  async getEffectiveContextWindow(model?: string): Promise<number | "unknown"> {
+    const tag = model ?? this.config.defaultModel;
+    const cap = this.config.maxContextWindow ?? DEFAULT_MAX_NUM_CTX;
+    let probe = this.trainedContexts.get(tag);
+    if (!probe) {
+      probe = this.fetchTrainedContext(tag);
+      this.trainedContexts.set(tag, probe);
+      probe.catch(() => this.trainedContexts.delete(tag));
+    }
+    try {
+      const trained = await probe;
+      return trained === undefined ? cap : Math.min(cap, trained);
+    } catch {
+      return "unknown";
+    }
+  }
+
+  private async fetchTrainedContext(
+    model: string,
+  ): Promise<number | undefined> {
+    const url = new URL("/api/show", this.config.url);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), SHOW_TIMEOUT_MS);
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model }),
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        throw new Error(`Ollama /api/show HTTP ${res.status}`);
+      }
+      const info = (await res.json()) as {
+        model_info?: Record<string, unknown>;
+      };
+      // The context length lives under a DYNAMIC architecture-prefixed key
+      // (e.g. "llama.context_length") -- match the suffix.
+      for (const [key, value] of Object.entries(info.model_info ?? {})) {
+        if (key.endsWith(".context_length") && typeof value === "number") {
+          return value;
+        }
+      }
+      return undefined;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
   /** Non-mutating readiness probe (LlmProvider.checkReady): the configured
    * model must exist on the daemon as an exact tag -- and, under
    * requireLocal, execute locally. /api/show only; no inference. */

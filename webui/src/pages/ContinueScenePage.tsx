@@ -2,13 +2,19 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useParams } from "react-router";
 import { useApi } from "../hooks/useApi";
-import { continueStory, getStory, type ContinueResponse } from "../api/client";
+import {
+  continueStory,
+  getCapabilities,
+  getStory,
+  type ContinueResponse,
+} from "../api/client";
 import {
   MODES,
   SCENE_CONTEXT_STRATEGIES,
   type Mode,
   type SceneContextStrategy,
   type ContinueRequest,
+  type RangeCapability,
   type ValidationReport,
 } from "../api/types";
 import type { ApiError } from "../api/client";
@@ -19,6 +25,21 @@ import BodyText from "../components/BodyText";
 export default function ContinueScenePage() {
   const { storyId } = useParams<{ storyId: string }>();
   const storyState = useApi(() => getStory(storyId!), [storyId]);
+  // Capability-aware controls (GENERATOR_CAPABILITIES_DESIGN, ratified):
+  // supported:false controls are removed; "unknown" stays ENABLED with a
+  // hint (unknown is not unsupported -- an unsupported model rejects the
+  // field with the provider's own message, which is the designed
+  // outcome). While capabilities load (or if the fetch fails), controls
+  // render as before -- the descriptor is advisory, not a gate.
+  const capsState = useApi(() => getCapabilities(), []);
+  const genCaps =
+    capsState.status === "ready" ? capsState.data.generator : undefined;
+  const showRange = (cap: RangeCapability | undefined): boolean =>
+    cap === undefined || cap === "unknown" || cap.supported;
+  const unknownHint = (cap: RangeCapability | undefined): string | null =>
+    cap === "unknown"
+      ? "Support depends on the selected model; an unsupported model rejects it."
+      : null;
   const [direction, setDirection] = useState("");
   const [mode, setMode] = useState<Mode>("director");
   // "server-default" omits the field from the payload so the operator's
@@ -181,63 +202,71 @@ export default function ContinueScenePage() {
           </div>
 
           <div className="field-grid">
-            <div>
-              <label className="field-label" htmlFor="max_tokens">
-                Max tokens
-              </label>
-              <input
-                id="max_tokens"
-                type="number"
-                min="1"
-                max="8192"
-                step="1"
-                value={maxTokens}
-                onChange={(event) => setMaxTokens(event.target.value)}
-                className="input"
-                placeholder="default"
-                aria-describedby="max-tokens-hint"
-              />
-              <span id="max-tokens-hint" className="field-hint">
-                Leave blank to use provider default.
-              </span>
-            </div>
-            <div>
-              <label className="field-label" htmlFor="temperature">
-                Temperature
-              </label>
-              <input
-                id="temperature"
-                type="number"
-                min="0"
-                max="2"
-                step="0.1"
-                value={temperature}
-                onChange={(event) => setTemperature(event.target.value)}
-                className="input"
-                placeholder="default"
-                aria-describedby="temp-hint"
-              />
-              <span id="temp-hint" className="field-hint">
-                Leave blank to preserve generator default.
-              </span>
-            </div>
-            <div>
-              <label className="field-label" htmlFor="model">
-                Model
-              </label>
-              <input
-                id="model"
-                type="text"
-                value={model}
-                onChange={(event) => setModel(event.target.value)}
-                className="input"
-                placeholder="Use default model"
-                aria-describedby="model-hint"
-              />
-              <span id="model-hint" className="field-hint">
-                Optional model override for this call.
-              </span>
-            </div>
+            {showRange(genCaps?.max_tokens) && (
+              <div>
+                <label className="field-label" htmlFor="max_tokens">
+                  Max tokens
+                </label>
+                <input
+                  id="max_tokens"
+                  type="number"
+                  min="1"
+                  max="8192"
+                  step="1"
+                  value={maxTokens}
+                  onChange={(event) => setMaxTokens(event.target.value)}
+                  className="input"
+                  placeholder="default"
+                  aria-describedby="max-tokens-hint"
+                />
+                <span id="max-tokens-hint" className="field-hint">
+                  {unknownHint(genCaps?.max_tokens) ??
+                    "Leave blank to use provider default."}
+                </span>
+              </div>
+            )}
+            {showRange(genCaps?.temperature) && (
+              <div>
+                <label className="field-label" htmlFor="temperature">
+                  Temperature
+                </label>
+                <input
+                  id="temperature"
+                  type="number"
+                  min="0"
+                  max="2"
+                  step="0.1"
+                  value={temperature}
+                  onChange={(event) => setTemperature(event.target.value)}
+                  className="input"
+                  placeholder="default"
+                  aria-describedby="temp-hint"
+                />
+                <span id="temp-hint" className="field-hint">
+                  {unknownHint(genCaps?.temperature) ??
+                    "Leave blank to preserve generator default."}
+                </span>
+              </div>
+            )}
+            {(genCaps === undefined || genCaps.per_call_model_override) && (
+              <div>
+                <label className="field-label" htmlFor="model">
+                  Model
+                </label>
+                <input
+                  id="model"
+                  type="text"
+                  value={model}
+                  onChange={(event) => setModel(event.target.value)}
+                  className="input"
+                  placeholder="Use default model"
+                  aria-describedby="model-hint"
+                />
+                <span id="model-hint" className="field-hint">
+                  Optional model override for this call.
+                </span>
+              </div>
+            )}
           </div>
 
           <label className="checkbox">

@@ -53,6 +53,7 @@ import { log } from "../log.js";
 import { asText, withLogging } from "./helpers.js";
 import { makeRunContext, type RunContext } from "../run-context.js";
 import { assertNotAborted } from "../run-outcome.js";
+import { capabilityWarnings } from "../capabilities.js";
 import {
   MAX_GENERATION_TOKENS,
   MAX_TEMPERATURE,
@@ -124,6 +125,9 @@ export interface ContinueSceneResult {
   };
   validation?: ValidationReport;
   validation_error?: string;
+  /** Warn-don't-break: options the selected provider ignores or that sit
+   * outside a known range (capabilityWarnings). Never fatal. */
+  capability_warnings?: string[];
   /** Provider-reported usage, generator and validator kept SEPARATE
    * (different models/prompts/cache semantics; a presentation layer can
    * sum). Absent when neither call reported any. */
@@ -196,6 +200,15 @@ export async function continueScene(
     storyTarget,
   );
 
+  // Warn-don't-break (GENERATOR_CAPABILITIES_DESIGN, ratified): options
+  // the provider ignores produce a response warning, never an error --
+  // legacy callers keep working.
+  const capability_warnings = capabilityWarnings(generator.name, {
+    temperature: opts.temperature,
+    maxTokens: opts.maxTokens,
+    model: opts.model,
+  });
+
   assertNotAborted(run, "the generate dispatch");
 
   const generateStart = Date.now();
@@ -226,6 +239,7 @@ export async function continueScene(
   if (beatText.trim() === "") {
     return {
       run_id: run.runId,
+      ...(capability_warnings.length > 0 && { capability_warnings }),
       yielded_to_user: true,
       beat_text: "",
       saved: false,
@@ -255,6 +269,7 @@ export async function continueScene(
   if (beat.complete === false) {
     return {
       run_id: run.runId,
+      ...(capability_warnings.length > 0 && { capability_warnings }),
       incomplete: true,
       saved: false,
       beat_text: beatText,
@@ -365,6 +380,7 @@ export async function continueScene(
 
   return {
     run_id: run.runId,
+    ...(capability_warnings.length > 0 && { capability_warnings }),
     beat_name: beatName,
     beat_text: beatText,
     ...(memoryId !== undefined && { memory_id: memoryId }),
