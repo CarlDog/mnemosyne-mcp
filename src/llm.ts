@@ -157,6 +157,14 @@ export interface LlmProvider {
    * Implementations should be non-fatal and low-cost; callers use it
    * fire-and-forget. */
   warmup?: () => Promise<void>;
+  /** Optional NON-MUTATING, NON-BILLABLE readiness probe: resolve when the
+   * provider can plausibly serve a generation (model installed, sibling
+   * MCP contract advertised), reject with an actionable reason otherwise.
+   * Absent means the provider has no free probe (the cloud providers --
+   * any real check is a billable call) and readiness reports `not_probed`
+   * rather than guessing (docs/NEMOCLAW_ADOPTION_ASSESSMENT.md §3).
+   * Implementations MUST NOT run inference or post to a conversation. */
+  checkReady?: () => Promise<void>;
 }
 
 export interface OllamaConfig {
@@ -298,13 +306,27 @@ export class OllamaProvider implements LlmProvider {
     }
     const cached = this.localityChecks.get(model);
     if (cached) return cached;
-    const probe = this.probeLocality(model);
+    const probe = this.probeModel(model, true);
     this.localityChecks.set(model, probe);
     probe.catch(() => this.localityChecks.delete(model));
     return probe;
   }
 
-  private async probeLocality(model: string): Promise<void> {
+  /** Non-mutating readiness probe (LlmProvider.checkReady): the configured
+   * model must exist on the daemon as an exact tag -- and, under
+   * requireLocal, execute locally. /api/show only; no inference. */
+  async checkReady(): Promise<void> {
+    if (this.config.requireLocal) {
+      await this.ensureLocalModel(this.config.defaultModel);
+      return;
+    }
+    await this.probeModel(this.config.defaultModel, false);
+  }
+
+  private async probeModel(
+    model: string,
+    enforceLocal: boolean,
+  ): Promise<void> {
     const url = new URL("/api/show", this.config.url);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), SHOW_TIMEOUT_MS);
@@ -332,14 +354,21 @@ export class OllamaProvider implements LlmProvider {
         remote_model?: string;
         remote_host?: string;
       };
-      if (info.remote_model || info.remote_host) {
+      if (enforceLocal && (info.remote_model || info.remote_host)) {
         throw new Error(
           `Ollama model "${model}" executes REMOTELY per /api/show -- this ` +
             "provider is configured local-only (requireLocal), and its " +
             "requests carry story canon. Use a locally installed model.",
         );
       }
-      log.info("ollama", "locality preflight ok", { model, route: "local" });
+      log.info("ollama", "model preflight ok", {
+        model,
+        route: enforceLocal
+          ? "local"
+          : info.remote_model || info.remote_host
+            ? "remote"
+            : "local",
+      });
     } catch (err) {
       const message = describeTransportError(err);
       throw err instanceof Error && message !== err.message

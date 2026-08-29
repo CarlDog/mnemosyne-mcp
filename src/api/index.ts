@@ -11,7 +11,8 @@ import {
 import { registerStoryRoutes } from "./stories.js";
 import { registerEntityRoutes } from "./entities.js";
 import { registerInteractiveRoutes } from "./interactive.js";
-import { apiErrorHandler } from "./helpers.js";
+import { apiErrorHandler, asyncRoute } from "./helpers.js";
+import { createReadinessProber } from "../readiness.js";
 
 export interface ApiRouterOptions {
   generator?: LlmProvider;
@@ -34,6 +35,20 @@ export function createApiRouter(
   registerEntityRoutes(router, oc);
 
   if (options.generator && options.validator) {
+    // Protected semantic readiness (NEMOCLAW_ADOPTION_ASSESSMENT §3):
+    // sits behind the same apiSecurity middleware as every /api route --
+    // /health stays the only public surface, and stays liveness-only.
+    // Every probe is non-mutating and non-billable; a cloud generator
+    // reports not_probed rather than a guessed ready.
+    const { generator, validator } = options;
+    const prober = createReadinessProber({ oc, generator, validator });
+    router.get(
+      "/status",
+      asyncRoute(async (_req, res) => {
+        res.json(await prober.probe());
+      }),
+    );
+
     registerInteractiveRoutes(
       router,
       oc,
