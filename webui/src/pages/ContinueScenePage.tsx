@@ -268,8 +268,17 @@ export default function ContinueScenePage() {
         {result && (
           <section className="result-panel card">
             <h2 className="panel-title">Result</h2>
-            {result.yielded_to_user && (
-              <p className="result-message">{result.message}</p>
+            {/* Covers both no-save responses: a group yield and an
+                incomplete (token-budget-cut) beat -- either way the server's
+                message says what happened and what to do next. */}
+            {result.message && (
+              <p
+                className={
+                  result.incomplete ? "result-warning" : "result-message"
+                }
+              >
+                {result.message}
+              </p>
             )}
             {result.save_error && (
               <p className="result-warning">

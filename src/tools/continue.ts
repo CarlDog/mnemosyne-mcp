@@ -91,6 +91,11 @@ export interface ContinueSceneResult {
   yielded_to_user?: true;
   message?: string;
   saved?: false;
+  /** Set when the generator reported the beat was cut off at the token
+   * budget (finish reason "length"). The text is returned but NOT saved
+   * as canon and NOT validated -- see the message for how to proceed. */
+  incomplete?: true;
+  finish_reason?: string;
   beat_name?: string;
   beat_text: string;
   memory_id?: string;
@@ -198,6 +203,38 @@ export async function continueScene(
         "turns were generated, so nothing was saved. Your direction " +
         "was already posted to the group; do not re-send it. Take " +
         `the turn: ${opts.reinvokeHint} with what you say next.`,
+      mode,
+      stages_ms: {
+        gather_ms: gatherMs,
+        generate_ms: generateMs,
+        save_ms: 0,
+        validate_ms: 0,
+      },
+      ...groupMeta,
+    };
+  }
+
+  // An incomplete beat -- the provider reports the output was cut off at
+  // the token budget (finish reason "length") -- must not become canon by
+  // auto-save: a scene that stops mid-sentence poisons recall and reads as
+  // authored truth (docs/OLLAMA_ADOPTION_ASSESSMENT.md §1). The costly
+  // text is still returned so nothing is lost; saving it is a deliberate
+  // caller decision, not a default. No silent retry either: a second
+  // generation is a different scene, not this one finished.
+  if (beat.complete === false) {
+    return {
+      incomplete: true,
+      saved: false,
+      beat_text: beatText,
+      ...(beat.finishReason !== undefined && {
+        finish_reason: beat.finishReason,
+      }),
+      message:
+        "The generator hit its output-token budget before finishing the " +
+        "beat (finish reason 'length'). The text below was NOT saved as a " +
+        "scene and NOT validated. Either raise max_tokens and regenerate, " +
+        "or -- after reviewing it -- save the partial deliberately via " +
+        "mnemo_save_entity (type 'scene').",
       mode,
       stages_ms: {
         gather_ms: gatherMs,

@@ -122,12 +122,23 @@ export async function validateContent(
     ? `Established story context:\n\n${constraints}\n\nNew content to validate:\n\n${content}\n\nReturn your verdict as JSON.`
     : `New content to validate (no established story constraints in this story yet):\n\n${content}\n\nReturn your verdict as JSON. With no constraints, you should typically return an empty issues array.`;
 
-  const { text: raw } = await validator.generate({
+  const verdictBeat = await validator.generate({
     systemPrompt: SYSTEM_PROMPT,
     userMessage,
     temperature: VALIDATOR_TEMPERATURE,
     maxTokens: VALIDATOR_MAX_TOKENS,
   });
+  // A verdict cut off at the token budget is a FAILED validation pass, not
+  // a shorter report -- truncated JSON that happened to parse (or an empty
+  // issues array) must never read as "clean"
+  // (docs/OLLAMA_ADOPTION_ASSESSMENT.md §1).
+  if (verdictBeat.complete === false) {
+    throw new Error(
+      "validator output was cut off at its token budget (finish reason " +
+        "'length') -- validation failed; the content was NOT verified clean",
+    );
+  }
+  const raw = verdictBeat.text;
 
   const parsed = parseValidatorJson<ValidationReport>(raw);
   // Defensive: ensure shape is sane even if LLM returned partial structure.

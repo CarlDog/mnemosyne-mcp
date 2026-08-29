@@ -53,7 +53,7 @@ now says so.
 
 | Doc rank | Item | Disposition |
 |---|---|---|
-| P0 | Preserve completion status; block auto-save of a `done_reason: "length"` beat as canon | **Open candidate** — top of the remaining queue; a truncated beat can be auto-saved as canon today |
+| P0 | Preserve completion status; block auto-save of a `done_reason: "length"` beat as canon | **Shipped 2026-08-28** — `GeneratedBeat.complete`/`finishReason`, `done === true` required, `continueScene` returns `incomplete:true` with zero saves and skips validation, a truncated validator verdict throws instead of reading clean; `tests/completion-integrity.test.ts` |
 | P0 | Prove the validator route is local (`:cloud`/remote-alias refusal, `/api/show` preflight, final-response route check) | **Open candidate** — a remote alias silently exports canon and makes "free" validation billable |
 | P0 | Schema-constrained + runtime-validated validator verdicts (Ollama `format` + strict runtime schema) | **Open candidate** — a malformed severity currently classifies as clean |
 | P1 | Model-aware, fail-closed context admission (`/api/show` profile, `truncate:false`/`shift:false`) | Open candidate |
