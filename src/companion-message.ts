@@ -64,6 +64,34 @@ function nameMentioned(message: string, name: string): boolean {
   );
 }
 
+/** The memory ids the companion message ACTUALLY folds in: keyphrase-
+ * matched reference entities plus the always-included scenes. One
+ * implementation of the matching (nameMentioned) serves both the builder
+ * below and this reporter, so the context-plan manifest cannot drift from
+ * the real payload (CONTEXT_PLAN_DESIGN). Undefined when the bundle has
+ * no structured entries (hand-built test bundles). */
+export function selectCompanionMemoryIds(
+  userMessage: string,
+  context?: ContextBundle,
+): string[] | undefined {
+  const entries = context?.entries;
+  if (!entries) return undefined;
+  const referenceTypes = new Set([
+    "character",
+    "location",
+    "lore",
+    "worldbuilding",
+  ]);
+  return entries
+    .filter(
+      (e) =>
+        e.entity_type === "scene" ||
+        (referenceTypes.has(e.entity_type) &&
+          nameMentioned(userMessage, e.name)),
+    )
+    .map((e) => e.memory_id);
+}
+
 const REFERENCE_TYPES = [
   "characters",
   "locations",

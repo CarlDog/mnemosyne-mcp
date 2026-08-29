@@ -30,6 +30,7 @@ import {
 } from "./companion-message.js";
 import type { KindroidClient, KindroidGroupReply } from "./kindroid-client.js";
 import { RunOutcomeError } from "./run-outcome.js";
+import { selectCompanionMemoryIds } from "./companion-message.js";
 import type { GeneratedBeat, LlmGenerateOptions, LlmProvider } from "./llm.js";
 import type { ContextBundle } from "./prompt.js";
 import type { KindroidTarget } from "./stories.js";
@@ -176,6 +177,8 @@ export class KindroidProvider implements LlmProvider {
       target.type === "group",
       this.config.userName,
     );
+    // The TRUE companion payload, for the context-plan manifest.
+    const selection = selectCompanionMemoryIds(opts.userMessage, opts.context);
 
     if (target.type === "group") {
       // allowUser defaults false -- AI-only turns, the right shape for a
@@ -217,9 +220,13 @@ export class KindroidProvider implements LlmProvider {
         text: formatGroupReplies(result.replies),
         groupEnded: result.ended,
         groupTurns: result.turns,
+        ...(selection !== undefined && { context_selection: selection }),
       };
     }
 
-    return { text: await this.client.sendMessage(target.id, message) };
+    return {
+      text: await this.client.sendMessage(target.id, message),
+      ...(selection !== undefined && { context_selection: selection }),
+    };
   }
 }

@@ -52,8 +52,22 @@ import type { ModelUsage } from "../llm.js";
 import { log } from "../log.js";
 import { asText, withLogging } from "./helpers.js";
 import { makeRunContext, type RunContext } from "../run-context.js";
-import { assertNotAborted } from "../run-outcome.js";
+import { assertNotAborted, RunOutcomeError } from "../run-outcome.js";
 import { capabilityWarnings } from "../capabilities.js";
+import {
+  admissionModeFromEnv,
+  estimateTokens,
+  logCalibration,
+  planContext,
+  toManifest,
+  type ContextPlanManifest,
+} from "../context-plan.js";
+import { renderAdmittedBundle } from "../prompt.js";
+import {
+  OllamaProvider,
+  DEFAULT_MAX_TOKENS,
+  NUM_CTX_MARGIN_TOKENS,
+} from "../llm.js";
 import {
   MAX_GENERATION_TOKENS,
   MAX_TEMPERATURE,
@@ -128,6 +142,12 @@ export interface ContinueSceneResult {
   /** Warn-don't-break: options the selected provider ignores or that sit
    * outside a known range (capabilityWarnings). Never fatal. */
   capability_warnings?: string[];
+  /** The context admission manifest (CONTEXT_PLAN_DESIGN): verdict,
+   * budget, section sizes, dropped-entry ids + reasons -- never bodies.
+   * companion_selection lists the memory ids a companion provider's
+   * keyphrase gate actually folded in (reported by the beat, so the
+   * planner never re-implements the matching). */
+  context_plan?: ContextPlanManifest & { companion_selection?: string[] };
   /** Provider-reported usage, generator and validator kept SEPARATE
    * (different models/prompts/cache semantics; a presentation layer can
    * sum). Absent when neither call reported any. */
@@ -180,7 +200,56 @@ export async function continueScene(
     signal: run.signal,
   });
   const gatherMs = Date.now() - gatherStart;
-  const systemPrompt = buildSystemPrompt(mode, context);
+
+  // Context admission (CONTEXT_PLAN_DESIGN, ratified). The budget is the
+  // Ollama effective window when the generator can supply one (cached
+  // /api/show); cloud windows are all-unknown by ratified decision, so
+  // those plans instrument without dropping.
+  let inputBudget: number | undefined;
+  if (generator instanceof OllamaProvider) {
+    const window = await generator.getEffectiveContextWindow(opts.model);
+    if (typeof window === "number") inputBudget = window;
+  }
+  const emptyBundle = {
+    rules: [],
+    style: [],
+    characters: [],
+    locations: [],
+    scenes: [],
+    lore: [],
+    worldbuilding: [],
+  };
+  const planResult = planContext(context.entries ?? [], {
+    provider: generator.name,
+    model: opts.model,
+    inputBudget,
+    outputReserve: opts.maxTokens ?? DEFAULT_MAX_TOKENS,
+    estFixedTokens: estimateTokens(buildSystemPrompt(mode, emptyBundle).length),
+    directionChars: opts.direction.length,
+    marginTokens: NUM_CTX_MARGIN_TOKENS,
+  });
+  const contextPlan: ContextPlanManifest & { companion_selection?: string[] } =
+    toManifest(planResult.plan, planResult.entries);
+  if (planResult.plan.verdict === "rejected") {
+    const detail =
+      "protected rules/style plus the direction alone exceed the " +
+      `effective context window (${inputBudget} tokens, model-aware). ` +
+      "Nothing droppable would make this fit -- trim rules/style, raise " +
+      "OLLAMA_NUM_CTX (within the model's trained context), or use a " +
+      "larger-context model.";
+    if (admissionModeFromEnv() === "enforce") {
+      throw new RunOutcomeError("rejected_before_dispatch", detail);
+    }
+    log.warn("continueScene", "context plan rejected (warn mode)", {
+      run_id: run.runId,
+      input_budget: inputBudget,
+    });
+  }
+  // Plan-driven rendering: the prompt contains exactly the admitted set,
+  // so the manifest can never describe a payload the model didn't see.
+  const admittedIds = new Set(planResult.admitted.map((e) => e.memory_id));
+  const renderedContext = renderAdmittedBundle(context, admittedIds);
+  const systemPrompt = buildSystemPrompt(mode, renderedContext);
 
   // Only fetch the story marker (an extra OC round trip) when it could
   // actually matter: no explicit override, a story-bound target is
@@ -219,12 +288,24 @@ export async function continueScene(
     temperature: opts.temperature,
     maxTokens: opts.maxTokens,
     model: opts.model,
-    context,
+    context: renderedContext,
     kindroidTarget,
     groupMaxTurns: opts.groupMaxTurns,
     allowUser: opts.allowUser,
   });
   const generateMs = Date.now() - generateStart;
+  // Companion plans are finalized from the beat's reported selection --
+  // the keyphrase matching lives only in the message builder.
+  if (beat.context_selection !== undefined) {
+    contextPlan.companion_selection = beat.context_selection;
+  }
+  // Estimator calibration (stage 1): logged, never substituted.
+  logCalibration(
+    planResult.plan.est_fixed_tokens +
+      planResult.plan.est_direction_tokens +
+      planResult.admitted.reduce((sum, e) => sum + e.est_tokens, 0),
+    beat.usage?.input_tokens,
+  );
   const beatText = beat.text;
   const groupMeta = {
     ...(beat.groupEnded !== undefined && { group_ended: beat.groupEnded }),
@@ -241,6 +322,7 @@ export async function continueScene(
     return {
       run_id: run.runId,
       ...(capability_warnings.length > 0 && { capability_warnings }),
+      context_plan: contextPlan,
       yielded_to_user: true,
       beat_text: "",
       saved: false,
@@ -271,6 +353,7 @@ export async function continueScene(
     return {
       run_id: run.runId,
       ...(capability_warnings.length > 0 && { capability_warnings }),
+      context_plan: contextPlan,
       incomplete: true,
       saved: false,
       beat_text: beatText,
@@ -382,6 +465,7 @@ export async function continueScene(
   return {
     run_id: run.runId,
     ...(capability_warnings.length > 0 && { capability_warnings }),
+    context_plan: contextPlan,
     beat_name: beatName,
     beat_text: beatText,
     ...(memoryId !== undefined && { memory_id: memoryId }),

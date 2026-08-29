@@ -150,6 +150,12 @@ export interface GeneratedBeat {
   /** Provider-reported usage/timing, absent when the provider reports
    * none (kindroid/botify). */
   usage?: ModelUsage;
+  /** Companion providers only: the memory ids of the context entries the
+   * keyphrase gate actually folded into the outgoing message (plus the
+   * always-included scenes). Lets the context-plan manifest report the
+   * TRUE companion payload without re-implementing the matching
+   * (CONTEXT_PLAN_DESIGN). */
+  context_selection?: string[];
   /** Kindroid group only: why the turn loop stopped. "user_turn" means the
    * floor came back to you mid-scene -- there may still be replies in
    * `text`. Only ever set when allowUser was true (kindroid-mcp's own
@@ -279,8 +285,7 @@ export const MAX_GENERATION_TOKENS = 8192;
 export const MIN_TEMPERATURE = 0;
 export const MAX_TEMPERATURE = 2;
 const DEFAULT_TEMPERATURE = 0.8;
-const DEFAULT_MAX_TOKENS = 2048;
-const WARMUP_TOKENS = 4;
+export const DEFAULT_MAX_TOKENS = 2048;
 
 // Ollama's own default num_ctx is ~4096 — far below what a fully-imported
 // story assembles (Chaos Saga's system prompt alone is ~60KB ≈ 16k
@@ -298,7 +303,7 @@ const MIN_NUM_CTX = 4_096;
 // Conservative prose estimate — better to over-provision KV cache than
 // to truncate: English prose runs ~3.5-4 chars/token.
 const EST_CHARS_PER_TOKEN = 3.5;
-const NUM_CTX_MARGIN_TOKENS = 256;
+export const NUM_CTX_MARGIN_TOKENS = 256;
 
 export interface NumCtxPlan {
   numCtx: number;
@@ -347,6 +352,12 @@ function nsToMs(ns: number | undefined): number | undefined {
 
 const SHOW_TIMEOUT_MS = 15_000;
 
+interface OllamaShowInfo {
+  remoteModel?: string;
+  remoteHost?: string;
+  trainedContext?: number;
+}
+
 export class OllamaProvider implements LlmProvider {
   readonly name = "ollama";
 
@@ -378,82 +389,23 @@ export class OllamaProvider implements LlmProvider {
     return probe;
   }
 
-  /** Cached trained-context lookups by exact model tag (shared by the
-   * capabilities resolver now and the ContextPlan profile later). */
-  private readonly trainedContexts = new Map<
-    string,
-    Promise<number | undefined>
-  >();
+  /** ONE cached /api/show fetch per exact model tag, shared by the
+   * locality preflight, the capabilities resolver, and the effective-
+   * window lookup -- one wire call serves all three. A rejected fetch is
+   * evicted so a transient failure doesn't wedge the model. */
+  private readonly showCache = new Map<string, Promise<OllamaShowInfo>>();
 
-  /** The EFFECTIVE enforceable input window for a model:
-   * min(trained context from /api/show, the operator's maxContextWindow
-   * cap). "unknown" when the daemon is unreachable or reports no
-   * context_length -- callers must treat unknown as unknown, never as a
-   * default (GENERATOR_CAPABILITIES_DESIGN / CONTEXT_PLAN_DESIGN). */
-  async getEffectiveContextWindow(model?: string): Promise<number | "unknown"> {
-    const tag = model ?? this.config.defaultModel;
-    const cap = this.config.maxContextWindow ?? DEFAULT_MAX_NUM_CTX;
-    let probe = this.trainedContexts.get(tag);
+  private fetchShowCached(model: string): Promise<OllamaShowInfo> {
+    let probe = this.showCache.get(model);
     if (!probe) {
-      probe = this.fetchTrainedContext(tag);
-      this.trainedContexts.set(tag, probe);
-      probe.catch(() => this.trainedContexts.delete(tag));
+      probe = this.fetchShow(model);
+      this.showCache.set(model, probe);
+      probe.catch(() => this.showCache.delete(model));
     }
-    try {
-      const trained = await probe;
-      return trained === undefined ? cap : Math.min(cap, trained);
-    } catch {
-      return "unknown";
-    }
+    return probe;
   }
 
-  private async fetchTrainedContext(
-    model: string,
-  ): Promise<number | undefined> {
-    const url = new URL("/api/show", this.config.url);
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), SHOW_TIMEOUT_MS);
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model }),
-        signal: controller.signal,
-      });
-      if (!res.ok) {
-        throw new Error(`Ollama /api/show HTTP ${res.status}`);
-      }
-      const info = (await res.json()) as {
-        model_info?: Record<string, unknown>;
-      };
-      // The context length lives under a DYNAMIC architecture-prefixed key
-      // (e.g. "llama.context_length") -- match the suffix.
-      for (const [key, value] of Object.entries(info.model_info ?? {})) {
-        if (key.endsWith(".context_length") && typeof value === "number") {
-          return value;
-        }
-      }
-      return undefined;
-    } finally {
-      clearTimeout(timeout);
-    }
-  }
-
-  /** Non-mutating readiness probe (LlmProvider.checkReady): the configured
-   * model must exist on the daemon as an exact tag -- and, under
-   * requireLocal, execute locally. /api/show only; no inference. */
-  async checkReady(): Promise<void> {
-    if (this.config.requireLocal) {
-      await this.ensureLocalModel(this.config.defaultModel);
-      return;
-    }
-    await this.probeModel(this.config.defaultModel, false);
-  }
-
-  private async probeModel(
-    model: string,
-    enforceLocal: boolean,
-  ): Promise<void> {
+  private async fetchShow(model: string): Promise<OllamaShowInfo> {
     const url = new URL("/api/show", this.config.url);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), SHOW_TIMEOUT_MS);
@@ -480,8 +432,63 @@ export class OllamaProvider implements LlmProvider {
       const info = (await res.json()) as {
         remote_model?: string;
         remote_host?: string;
+        model_info?: Record<string, unknown>;
       };
-      if (enforceLocal && (info.remote_model || info.remote_host)) {
+      // The context length lives under a DYNAMIC architecture-prefixed
+      // key (e.g. "llama.context_length") -- match the suffix.
+      let trainedContext: number | undefined;
+      for (const [key, value] of Object.entries(info.model_info ?? {})) {
+        if (key.endsWith(".context_length") && typeof value === "number") {
+          trainedContext = value;
+          break;
+        }
+      }
+      return {
+        remoteModel: info.remote_model,
+        remoteHost: info.remote_host,
+        trainedContext,
+      };
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  /** The EFFECTIVE enforceable input window for a model:
+   * min(trained context from /api/show, the operator's maxContextWindow
+   * cap). "unknown" when the daemon is unreachable or reports no
+   * context_length -- callers must treat unknown as unknown, never as a
+   * default (GENERATOR_CAPABILITIES_DESIGN / CONTEXT_PLAN_DESIGN). */
+  async getEffectiveContextWindow(model?: string): Promise<number | "unknown"> {
+    const tag = model ?? this.config.defaultModel;
+    const cap = this.config.maxContextWindow ?? DEFAULT_MAX_NUM_CTX;
+    try {
+      const info = await this.fetchShowCached(tag);
+      return info.trainedContext === undefined
+        ? cap
+        : Math.min(cap, info.trainedContext);
+    } catch {
+      return "unknown";
+    }
+  }
+
+  /** Non-mutating readiness probe (LlmProvider.checkReady): the configured
+   * model must exist on the daemon as an exact tag -- and, under
+   * requireLocal, execute locally. /api/show only; no inference. */
+  async checkReady(): Promise<void> {
+    if (this.config.requireLocal) {
+      await this.ensureLocalModel(this.config.defaultModel);
+      return;
+    }
+    await this.probeModel(this.config.defaultModel, false);
+  }
+
+  private async probeModel(
+    model: string,
+    enforceLocal: boolean,
+  ): Promise<void> {
+    try {
+      const info = await this.fetchShowCached(model);
+      if (enforceLocal && (info.remoteModel || info.remoteHost)) {
         throw new Error(
           `Ollama model "${model}" executes REMOTELY per /api/show -- this ` +
             "provider is configured local-only (requireLocal), and its " +
@@ -492,7 +499,7 @@ export class OllamaProvider implements LlmProvider {
         model,
         route: enforceLocal
           ? "local"
-          : info.remote_model || info.remote_host
+          : info.remoteModel || info.remoteHost
             ? "remote"
             : "local",
       });
@@ -501,8 +508,6 @@ export class OllamaProvider implements LlmProvider {
       throw err instanceof Error && message !== err.message
         ? new Error(message, { cause: err })
         : err;
-    } finally {
-      clearTimeout(timeout);
     }
   }
 
@@ -538,19 +543,34 @@ export class OllamaProvider implements LlmProvider {
     const url = new URL("/api/chat", this.config.url);
 
     const numPredict = opts.maxTokens ?? DEFAULT_MAX_TOKENS;
-    const ctxPlan = computeNumCtx(
-      opts.systemPrompt.length + opts.userMessage.length,
-      numPredict,
-      this.config.maxContextWindow,
-    );
-    const numCtx = numCtxOverride ?? ctxPlan.numCtx;
-    if (numCtxOverride === undefined && ctxPlan.capped) {
-      log.warn("ollama", "prompt likely exceeds context window cap", {
-        model,
-        est_prompt_tokens: ctxPlan.estPromptTokens,
-        num_ctx: ctxPlan.numCtx,
-        hint: "raise OLLAMA_NUM_CTX (and check the model's trained context) or trim story context — a truncated prompt degenerates into word salad",
-      });
+    // Stable per-model num_ctx (CONTEXT_PLAN_DESIGN decision #1, backed by
+    // the 2026-08-28 live measurement: the deployed daemon reloads the
+    // runner ~6s on EVERY num_ctx change, not just growth -- per-request
+    // sizing was reload churn). The effective window is min(trained
+    // context, operator cap) from the cached /api/show profile; when the
+    // daemon can't say (unknown), fall back to the old per-request sizing,
+    // which is conservative rather than degraded.
+    const effectiveWindow = await this.getEffectiveContextWindow(model);
+    let numCtx: number;
+    if (numCtxOverride !== undefined) {
+      numCtx = numCtxOverride;
+    } else if (typeof effectiveWindow === "number") {
+      numCtx = effectiveWindow;
+    } else {
+      const ctxPlan = computeNumCtx(
+        opts.systemPrompt.length + opts.userMessage.length,
+        numPredict,
+        this.config.maxContextWindow,
+      );
+      numCtx = ctxPlan.numCtx;
+      if (ctxPlan.capped) {
+        log.warn("ollama", "prompt likely exceeds context window cap", {
+          model,
+          est_prompt_tokens: ctxPlan.estPromptTokens,
+          num_ctx: ctxPlan.numCtx,
+          hint: "raise OLLAMA_NUM_CTX (and check the model's trained context) or trim story context — a truncated prompt degenerates into word salad",
+        });
+      }
     }
 
     const body = {
@@ -569,6 +589,13 @@ export class OllamaProvider implements LlmProvider {
       ),
       // format is a TOP-LEVEL field like keep_alive, not a runner option.
       ...(format !== undefined && { format }),
+      // Reject-don't-mangle (CONTEXT_PLAN_DESIGN stage 2): an over-window
+      // request must error (exceed_context_size_error, with exact
+      // n_prompt_tokens) instead of silently truncating or shifting into
+      // word salad. Both fields live-verified accepted on the deployed
+      // daemons (NAS 0.32.15, desktop 0.33.2) 2026-08-28.
+      truncate: false,
+      shift: false,
       options: {
         temperature: opts.temperature ?? DEFAULT_TEMPERATURE,
         num_predict: numPredict,
@@ -582,7 +609,6 @@ export class OllamaProvider implements LlmProvider {
       system_chars: opts.systemPrompt.length,
       user_chars: opts.userMessage.length,
       num_ctx: numCtx,
-      est_prompt_tokens: ctxPlan.estPromptTokens,
       keep_alive: normalizeKeepAlive(
         this.config.keepAlive ?? DEFAULT_KEEP_ALIVE,
       ),
@@ -699,16 +725,79 @@ export class OllamaProvider implements LlmProvider {
   }
 
   async warmup(): Promise<void> {
-    // Pin num_ctx to the configured window (not the tiny warmup prompt's
-    // computed floor) so the runner Ollama loads here is the same one
-    // real requests will hit -- see the numCtxOverride note on generate.
-    await this.generate(
-      {
-        systemPrompt: "",
-        userMessage: "ready",
-        maxTokens: WARMUP_TOKENS,
-      },
-      this.config.maxContextWindow ?? DEFAULT_MAX_NUM_CTX,
+    // True preload (CONTEXT_PLAN_DESIGN slice 2 / Ollama assessment §6):
+    // an EMPTY-messages request with a nonzero keep_alive loads the
+    // runner without generating a single token (done_reason "load"),
+    // replacing the old 4-token "ready" generation. num_ctx is the SAME
+    // effective per-model window generate() uses -- warming at a
+    // different size than real requests re-creates the first-call-reload
+    // bug the 2026-08-27 remediation fixed.
+    const keepAlive = normalizeKeepAlive(
+      this.config.keepAlive ?? DEFAULT_KEEP_ALIVE,
     );
+    if (keepAlive === 0) {
+      log.info("ollama", "warmup skipped (keep_alive is zero)", {});
+      return;
+    }
+    const model = this.config.defaultModel;
+    const effectiveWindow = await this.getEffectiveContextWindow(model);
+    const numCtx =
+      typeof effectiveWindow === "number"
+        ? effectiveWindow
+        : (this.config.maxContextWindow ?? DEFAULT_MAX_NUM_CTX);
+    const res = await fetch(new URL("/api/chat", this.config.url), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model,
+        messages: [],
+        stream: false,
+        keep_alive: keepAlive,
+        options: { num_ctx: numCtx },
+      }),
+    });
+    const data = (await res.json().catch(() => ({}))) as {
+      done_reason?: string;
+      error?: string;
+    };
+    if (!res.ok || data.error) {
+      throw new Error(
+        `Ollama warmup load failed: ${data.error ?? `HTTP ${res.status}`}`,
+      );
+    }
+    log.info("ollama", "warmup load", {
+      model,
+      num_ctx: numCtx,
+      done_reason: data.done_reason ?? "(absent)",
+    });
+    await this.logResidency();
+  }
+
+  /** One-shot /api/ps residency diagnostics after warmup -- compact
+   * metadata only, never polled, never used to second-guess Ollama's own
+   * scheduler. */
+  private async logResidency(): Promise<void> {
+    try {
+      const res = await fetch(new URL("/api/ps", this.config.url));
+      if (!res.ok) return;
+      const data = (await res.json()) as {
+        models?: Array<{
+          name?: string;
+          context_length?: number;
+          size_vram?: number;
+          expires_at?: string;
+        }>;
+      };
+      for (const m of data.models ?? []) {
+        log.info("ollama", "resident model", {
+          model: m.name ?? "(unnamed)",
+          context_length: m.context_length ?? "(unreported)",
+          vram_bytes: m.size_vram ?? 0,
+          expires_at: m.expires_at ?? "(unreported)",
+        });
+      }
+    } catch {
+      // Diagnostics only -- a failed /api/ps must never fail warmup.
+    }
   }
 }

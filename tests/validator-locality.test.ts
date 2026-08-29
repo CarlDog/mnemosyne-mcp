@@ -141,14 +141,17 @@ describe("requireLocal enforcement", () => {
     );
   });
 
-  it("without requireLocal (the generator), no /api/show call happens at all", async () => {
-    const state = stubFetch({});
+  it("without requireLocal (the generator), a :cloud model is NOT refused", async () => {
+    // The generator instance performs no LOCALITY enforcement. (It may
+    // still fetch /api/show for the stable-context window -- that probe
+    // never refuses anything without requireLocal.)
+    const state = stubFetch({ show: { body: {} } });
     const provider = new OllamaProvider({
       url: "http://127.0.0.1:1",
       defaultModel: "any-model:cloud",
     });
     const beat = await provider.generate(genOpts);
     expect(beat.text).toBe("ok");
-    expect(state.calls).toEqual(["/api/chat"]);
+    expect(state.calls).toContain("/api/chat");
   });
 });
