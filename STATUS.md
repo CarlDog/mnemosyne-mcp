@@ -538,6 +538,56 @@ milestones at which they were measured.
 
 ## Done
 
+- **The four design proposals adversarially reviewed and revised — still
+  none ratified** (2026-08-28). Four independent reviewers (one per doc,
+  each reading the design against the actual source, the assessments'
+  guardrails, and platform feasibility) produced 33 findings; 28 were
+  confirmed and folded into the docs, each of which now carries a
+  revision note enumerating its corrections. The load-bearing catches:
+  - **Run outcomes:** `req.on("close")` fires at ~0 ms on this stack
+    (empirically verified by the reviewer) — the draft would have
+    aborted *every* REST run at start; now guarded `res.on("close")` +
+    `!writableEnded`. The `AbortSignal.any` provider-request composition
+    contradicted the design's own pre-dispatch-only semantics — removed
+    (signal at phase boundaries only). A thrown `canon_write_unknown`
+    would have discarded the beat text the code's own guard preserves —
+    now a success-shaped field. One acceptance test copied from the
+    assessment contradicted the chosen semantics — inverted.
+  - **ContextPlan:** bare fail-closed + the deliberately conservative
+    chars/3.5 estimator would have hard-rejected large stories that
+    generate fine today, with no recourse — now a `warn|enforce`
+    admission mode gated on calibration. "Zero churn" contradicted the
+    manifest-accuracy test — rendering is now plan-driven. The
+    stable-`num_ctx` premise is contested between the code's own comment
+    (bigger-only reloads) and the assessment (any-mismatch) — decision
+    #1 is now gated on a live `load_ms` measurement, with status-quo (c)
+    added and the desktop deployment's corruption caveat named.
+  - **Capabilities:** the sync resolver could never source Ollama's
+    `/api/show`-backed window — now async, with `context_window` defined
+    as the *effective* window; the validator's descriptor was
+    unresolvable from a name-keyed table (two Ollama instances differ) —
+    now instance-keyed; the `cancellation` field was aspiration with a
+    vocabulary owned by an unratified sibling — dropped; the honest
+    resolution matrix is stated so ratification weighs the real payoff
+    (companion control removal + unknown-hints, not sliders everywhere).
+  - **Retrieval:** `compact` on `memorySearch` would have been rejected
+    wholesale by the shared result schema while the request-side test
+    stayed green — dropped from v1; the response's `relevance` was
+    assumed a number but a captured live response shows an **object**
+    (`{channel, rrf_score, …}`) — schema now search-specific and
+    fixture-pinned; the <20-char vagueness floor would have buried
+    short-but-rich directions ("Aria dies") under a 300-char excerpt —
+    classifier gains a no-entity-name condition and the bound drops to
+    ≤120; excerpt-scene selection is mandated list-based, which is what
+    makes the settled-fixtures benchmark a valid control.
+
+  Facts re-verified during triage: desktop Ollama is **0.33.2** (probed
+  live; the draft said 0.33.1), NAS 0.32.15; and the MCP SDK's tool
+  handlers do carry a required `extra.signal` (checked against installed
+  types). Five reviewer claims were rejected or downgraded as
+  no-issue/documentation-precision (each reviewer also explicitly
+  cleared the axes where nothing was found, per the no-padding rule).
+
 - **Design proposals written for all four design-heavy open candidates —
   none ratified** (2026-08-28). The decision queue's remaining
   design-conversation tier now has concrete, sign-off-ready proposals,
