@@ -50,6 +50,7 @@ explicitly directed.
 Written down but **not ratified** — design input, not specification:
 [WEBUI_NOTES.md](docs/WEBUI_NOTES.md),
 [CONTENT_ROUTING_DESIGN.md](docs/CONTENT_ROUTING_DESIGN.md),
+[COMPANION_PROFILE_DESIGN.md](docs/COMPANION_PROFILE_DESIGN.md),
 [HOOK_VAULT.md](docs/HOOK_VAULT.md), and the four external-system adoption
 assessments listed under "Layout" below.
 
@@ -258,6 +259,11 @@ assessments listed under "Layout" below.
   check at `mnemo_continue`'s one real generation call site. Grounded in
   OpenChronicle v1's `ContentRoutingConfig`/`ModelSelector` (a real
   design that was built and never wired to anything).
+- `docs/COMPANION_PROFILE_DESIGN.md` — proposal for keeping canonical
+  character/voice identity separate from desired provider projections,
+  observed Kindroid/Botify snapshots, and account-specific bindings. Records
+  the detailed voice-profile and voice-asset provenance shape plus the
+  snapshot → diff → reviewed-apply workflow; no runtime sync is built.
 - `docs/V2_RETROSPECTIVE.md` — entity schemas, verbatim prompt templates,
   lessons learned, and anti-patterns from the v2 OpenChronicle
   storytelling plugin. v2 code is NOT being ported; this doc is the
