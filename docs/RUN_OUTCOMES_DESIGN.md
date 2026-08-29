@@ -2,13 +2,20 @@
 
 **Status:** Proposal, recorded 2026-08-28, revised same day after an
 adversarial review (9 findings; see the revision note at the end);
-**not ratified**. This document does not schedule work.
+since **RATIFIED** — see the ratification block below. This document does not schedule work by itself; the ratified slices are in build.
 [STATUS.md](../STATUS.md) remains the source of current priority.
 Rationale lives in
 [OPENCLAW_ADOPTION_ASSESSMENT.md §3](OPENCLAW_ADOPTION_ASSESSMENT.md#3-cancellation-idempotency-and-replay-safe-outcomes)
 and [§7](OPENCLAW_ADOPTION_ASSESSMENT.md#7-supporting-operational-safety);
 this document records the Mnemosyne-specific decisions: types, placement,
 chosen semantics, slice order, and acceptance tests.
+
+**Ratified 2026-08-28** (operator "go ahead" on the reviewed revision) with
+decisions: ① pre-dispatch-only abort, signal at phase boundaries only;
+② `canon_write_unknown` as a success-shaped field (dispatched saves only);
+③ 30s drain grace, env-overridable; ④ status map: 400 for
+`rejected/timeout_before_dispatch`, 502 for `provider_dispatch_unknown`
+and `completed_but_readback_failed`.
 
 ## Problem (what the code does today)
 

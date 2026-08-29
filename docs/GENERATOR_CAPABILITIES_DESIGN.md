@@ -2,7 +2,7 @@
 
 **Status:** Proposal, recorded 2026-08-28, revised same day after an
 adversarial review (9 findings; see the revision note at the end);
-**not ratified**. This document does not schedule work.
+since **RATIFIED** — see the ratification block below. This document does not schedule work by itself; the ratified slices are in build.
 [STATUS.md](../STATUS.md) remains the source of current priority.
 Rationale lives in
 [OPENCLAW_ADOPTION_ASSESSMENT.md §4](OPENCLAW_ADOPTION_ASSESSMENT.md#4-static-generator-capability-descriptors),
@@ -10,6 +10,11 @@ corroborated by
 [OPEN_WEBUI_ADOPTION_ASSESSMENT.md §7](OPEN_WEBUI_ADOPTION_ASSESSMENT.md#7-findings-that-corroborate-existing-work-rather-than-add-it)
 and [NEMOCLAW_ADOPTION_ASSESSMENT.md](NEMOCLAW_ADOPTION_ASSESSMENT.md)
 (corroboration table).
+
+**Ratified 2026-08-28** (operator "go ahead" on the reviewed revision) with
+decisions: ① warn-don't-break + surface-bounds precedence; ② cloud
+context windows all-`unknown`, no local per-model table; ③ the honest
+resolution matrix accepted as the slice-2 payoff.
 
 ## Problem (what the code does today)
 
