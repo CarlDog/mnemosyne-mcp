@@ -10,6 +10,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
 import { log } from "./log.js";
+import { describeServiceUrl } from "./service-url.js";
 import { RunOutcomeError } from "./run-outcome.js";
 import { MNEMOSYNE_VERSION } from "./version.js";
 import { z } from "zod";
@@ -127,7 +128,9 @@ export class BotifyClient {
     await this.client.connect(transport);
     await verifyRequiredTools(this.client, "botify-mcp", BOTIFY_REQUIRED_TOOLS);
     this.connected = true;
-    log.info("botify-client", "connected", { url: this.url.toString() });
+    log.info("botify-client", "connected", {
+      url: describeServiceUrl(this.url),
+    });
   }
 
   async close(): Promise<void> {

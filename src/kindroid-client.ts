@@ -9,6 +9,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { log } from "./log.js";
+import { describeServiceUrl } from "./service-url.js";
 import { RunOutcomeError } from "./run-outcome.js";
 import { MNEMOSYNE_VERSION } from "./version.js";
 import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
@@ -111,7 +112,9 @@ export class KindroidClient {
       KINDROID_REQUIRED_TOOLS,
     );
     this.connected = true;
-    log.info("kindroid-client", "connected", { url: this.url.toString() });
+    log.info("kindroid-client", "connected", {
+      url: describeServiceUrl(this.url),
+    });
   }
 
   async close(): Promise<void> {

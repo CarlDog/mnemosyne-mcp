@@ -538,6 +538,23 @@ milestones at which they were measured.
 
 ## Done
 
+- **The two remaining mechanical hardening items shipped** (2026-08-29).
+  Typed Ollama error classification (`classifyOllamaHttpError`: 404 →
+  exact-tag guidance; `exceed_context_size_error` → the
+  reject-don't-truncate message carrying the daemon's exact
+  `n_prompt_tokens`/`n_ctx`, tolerant of the nested-JSON-escaped wire
+  form; 429/503 → overload with the no-auto-retry rationale) plus a
+  configurable `OLLAMA_TIMEOUT_MS` whose timeout message says to raise it
+  rather than retry. And the NemoClaw §4 hygiene batch: one central
+  `parseServiceUrl` (http(s)-only, no embedded credentials/fragment/query;
+  private addresses deliberately allowed) applied to every configured
+  endpoint, sanitized origin+path connection logs, `redirect: "error"` on
+  the credential-bearing cloud path, 2KB-bounded upstream error bodies,
+  and recursive sensitive-key + URL-userinfo redaction at the one log
+  sink every line passes through. 9 new tests (`tests/hardening.test.ts`),
+  including the captured nested-escape wire fixture. Known Gaps' last
+  research entry is closed. 339 passing / 64 skipped.
+
 - **All four ratified designs implemented — the build-out of the research
   program is complete** (2026-08-28, seven commits `2baef78..05317f4`).
   The operator ratified the reviewed proposals; the measurement gates the
@@ -2936,13 +2953,12 @@ consider only when real use exposes the corresponding pressure:
   non-billable probes — see the Done entry above and
   [NEMOCLAW_ADOPTION_ASSESSMENT.md §3](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md#3-separate-liveness-from-semantic-readiness).
   A stdio-side `mnemo_status` tool remains an open option.
-- **Credential-bearing endpoint diagnostics need a single safe boundary.**
-  URL parsing currently permits embedded userinfo/query/fragment shapes,
-  direct-provider fetch follows redirects by default, and logs lack final-sink
-  URL/secret redaction. Private/loopback endpoints must remain supported; this
-  is targeted hygiene, not blanket SSRF blocking. Research and acceptance
-  proof:
-  [NEMOCLAW_ADOPTION_ASSESSMENT.md](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md#4-endpoint-redirect-error-body-and-logging-hygiene).
+- ~~**Credential-bearing endpoint diagnostics need a single safe boundary.**~~
+  **Closed 2026-08-29**: `src/service-url.ts` central parser on every
+  configured endpoint (loopback/RFC1918 deliberately still allowed),
+  redirect rejection on credential-bearing requests, bounded error-body
+  reads, and recursive final-sink redaction — see
+  [NEMOCLAW_ADOPTION_ASSESSMENT.md §4](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md#4-endpoint-redirect-error-body-and-logging-hygiene).
 
 - ~~No CI yet~~ — stale. CI has existed since 2026-07-23 (`test.yml`,
   typecheck/build/test matrixed across ubuntu/windows/macos) and 2026-08-01

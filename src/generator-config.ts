@@ -16,6 +16,7 @@
 // no call site in index.ts had to change when this moved.
 
 import { log } from "./log.js";
+import { parseServiceUrl } from "./service-url.js";
 import { DEFAULT_KEEP_ALIVE } from "./llm.js";
 import {
   MAX_GROUP_MAX_TURNS,
@@ -105,6 +106,19 @@ if (OLLAMA_NUM_CTX) {
   }
 }
 
+// Per-request Ollama timeout override (ms). Optional; positive integer.
+export const OLLAMA_TIMEOUT_MS = process.env.OLLAMA_TIMEOUT_MS;
+export let ollamaTimeoutMs: number | undefined;
+if (OLLAMA_TIMEOUT_MS) {
+  ollamaTimeoutMs = Number(OLLAMA_TIMEOUT_MS);
+  if (!Number.isInteger(ollamaTimeoutMs) || ollamaTimeoutMs <= 0) {
+    log.error("startup", "OLLAMA_TIMEOUT_MS must be a positive integer (ms)", {
+      value: OLLAMA_TIMEOUT_MS,
+    });
+    process.exit(1);
+  }
+}
+
 export const OLLAMA_KEEP_ALIVE_CLEAN = OLLAMA_KEEP_ALIVE.trim();
 if (!OLLAMA_KEEP_ALIVE_CLEAN) {
   log.error("startup", "OLLAMA_KEEP_ALIVE is invalid", {
@@ -130,7 +144,7 @@ export const SCENE_CONTEXT_FALLBACK_STRATEGY = parseEnvEnum(
 
 export let ocUrl: URL;
 try {
-  ocUrl = new URL(OC_URL);
+  ocUrl = parseServiceUrl("OC_URL", OC_URL);
 } catch (err) {
   log.error("startup", "OC_URL is not a valid URL", {
     value: OC_URL,
@@ -144,7 +158,7 @@ try {
 // GENERATOR_PROVIDER -- so validate it at startup rather than gating this
 // check behind the ollama/kindroid branch below.
 try {
-  new URL(OLLAMA_URL);
+  parseServiceUrl("OLLAMA_URL", OLLAMA_URL);
 } catch (err) {
   log.error("startup", "OLLAMA_URL is not a valid URL", {
     value: OLLAMA_URL,
@@ -277,7 +291,7 @@ if (GENERATOR_PROVIDER === "kindroid") {
 
   let kindroidUrl: URL;
   try {
-    kindroidUrl = new URL(KINDROID_MCP_URL);
+    kindroidUrl = parseServiceUrl("KINDROID_MCP_URL", KINDROID_MCP_URL);
   } catch (err) {
     log.error("startup", "KINDROID_MCP_URL is not a valid URL", {
       value: KINDROID_MCP_URL,
@@ -316,7 +330,7 @@ if (GENERATOR_PROVIDER === "kindroid") {
 
   let botifyUrl: URL;
   try {
-    botifyUrl = new URL(BOTIFY_MCP_URL);
+    botifyUrl = parseServiceUrl("BOTIFY_MCP_URL", BOTIFY_MCP_URL);
   } catch (err) {
     log.error("startup", "BOTIFY_MCP_URL is not a valid URL", {
       value: BOTIFY_MCP_URL,
@@ -391,7 +405,7 @@ if (GENERATOR_PROVIDER === "kindroid") {
   }
   if (baseUrl) {
     try {
-      new URL(baseUrl);
+      parseServiceUrl("provider base URL", baseUrl);
     } catch (err) {
       log.error("startup", "provider base URL is not a valid URL", {
         provider: GENERATOR_PROVIDER,

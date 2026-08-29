@@ -21,10 +21,35 @@ const LEVEL_PRIORITY: Record<Level, number> = {
 const envLevel = (process.env.LOG_LEVEL ?? "info").toLowerCase() as Level;
 const minPriority = LEVEL_PRIORITY[envLevel] ?? LEVEL_PRIORITY.info;
 
+// Final-sink redaction (OpenClaw assessment §7's defense-in-depth
+// placement, ratified as a mechanical item): sensitive-named keys are
+// redacted RECURSIVELY at the one point every log line passes through, and
+// URL userinfo is scrubbed out of string values -- so a future call site
+// that logs a config object or a URL with embedded credentials leaks
+// nothing even though it should not have logged it in the first place.
+const SENSITIVE_KEY_RE =
+  /(?:^|_|-)(token|secret|password|passwd|credential|authorization|auth|api[-_]?key|apikey|bearer)(?:$|_|-)/i;
+const URL_USERINFO_RE = /(\w+:\/\/)[^/\s@]+@/g;
+
+function redactValue(key: string, value: unknown): unknown {
+  if (SENSITIVE_KEY_RE.test(key)) return "<redacted>";
+  if (typeof value === "string") {
+    return value.replace(URL_USERINFO_RE, "$1<redacted>@");
+  }
+  if (Array.isArray(value)) return value.map((v) => redactValue("", v));
+  if (value !== null && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) out[k] = redactValue(k, v);
+    return out;
+  }
+  return value;
+}
+
 function formatMeta(meta?: Record<string, unknown>): string {
   if (!meta) return "";
   const parts: string[] = [];
-  for (const [k, v] of Object.entries(meta)) {
+  for (const [k, raw] of Object.entries(meta)) {
+    const v = redactValue(k, raw);
     let val: string;
     if (v === null || v === undefined) {
       val = String(v);
