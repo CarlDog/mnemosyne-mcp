@@ -21,6 +21,7 @@
 
 import type { OcClient } from "./oc-client.js";
 import { RunOutcomeError } from "./run-outcome.js";
+import { estimateTokens, type ContextEntry } from "./context-plan.js";
 import {
   recall,
   memoryToRecalled,
@@ -127,6 +128,13 @@ export interface ContextBundle {
   scenes: string[];
   lore: string[];
   worldbuilding: string[];
+  /** Structured admission entries (CONTEXT_PLAN_DESIGN, ratified):
+   * memory ids, tags, relevance, sizes -- everything the string arrays
+   * above discard. Present on every gatherContext result; optional in
+   * the type so hand-built test bundles stay valid. The string arrays
+   * reflect ALL gathered entries; plan-driven rendering re-derives the
+   * admitted subset in continueScene. */
+  entries?: ContextEntry[];
 }
 
 async function pullByType(
@@ -135,14 +143,66 @@ async function pullByType(
   type: EntityType,
   query: string,
   signal?: AbortSignal,
-): Promise<string[]> {
-  const entities = await recall(oc, storyId, {
+): Promise<RecalledEntity[]> {
+  return recall(oc, storyId, {
     query,
     type,
     limit: TYPE_LIMITS[type],
     signal,
   });
-  return entities.map((e) => `${e.name}\n${e.body}`);
+}
+
+/** The rendered "name\nbody" flattening every consumer sees. chars in the
+ * matching ContextEntry is exactly this string's length, so section-size
+ * reporting and rendering agree by construction. */
+export function flattenEntity(e: RecalledEntity): string {
+  return `${e.name}\n${e.body}`;
+}
+
+function toContextEntry(e: RecalledEntity, reason: string): ContextEntry {
+  const chars = flattenEntity(e).length;
+  return {
+    memory_id: e.memory_id,
+    entity_type: e.type,
+    name: e.name,
+    tags: e.tags,
+    pinned: e.pinned,
+    created_at: e.created_at,
+    ...(e.relevance !== undefined && { relevance: e.relevance }),
+    chars,
+    est_tokens: estimateTokens(chars),
+    admission: "included",
+    reason,
+  };
+}
+
+/** Plan-driven rendering (CONTEXT_PLAN_DESIGN): rebuild the string arrays
+ * keeping only admitted entries, so the rendered prompt is exactly the
+ * planned payload. Within a type, gather order and entry order are the
+ * same by construction (gatherContext builds both from one pull), so a
+ * positional zip is sound. */
+export function renderAdmittedBundle(
+  context: ContextBundle,
+  admittedIds: ReadonlySet<string>,
+): ContextBundle {
+  const entries = context.entries ?? [];
+  const filterType = (strings: string[], type: EntityType): string[] => {
+    const typed = entries.filter((e) => e.entity_type === type);
+    return strings.filter((_, i) => {
+      const entry = typed[i];
+      return entry === undefined || admittedIds.has(entry.memory_id);
+    });
+  };
+  return {
+    rules: filterType(context.rules, "rule"),
+    style: filterType(context.style, "style"),
+    characters: filterType(context.characters, "character"),
+    locations: filterType(context.locations, "location"),
+    scenes: filterType(context.scenes, "scene"),
+    lore: filterType(context.lore, "lore"),
+    worldbuilding: filterType(context.worldbuilding, "worldbuilding"),
+    entries: entries.filter((e) => admittedIds.has(e.memory_id)),
+  };
 }
 
 // Scene pulls have two strategies, each with the same validation-safe
@@ -253,14 +313,14 @@ async function pullScenesByStrategy(
   return pullRecencyScenes(oc, storyId, signal);
 }
 
-export async function pullFilteredScenes(
+async function pullFilteredSceneEntities(
   oc: OcClient,
   storyId: string,
   query: string,
-  strategy: SceneContextStrategy = DEFAULT_SCENE_CONTEXT_STRATEGY,
+  strategy: SceneContextStrategy,
   fallbackStrategy?: SceneContextStrategy,
   signal?: AbortSignal,
-): Promise<string[]> {
+): Promise<RecalledEntity[]> {
   const strategies: SceneContextStrategy[] =
     fallbackStrategy && fallbackStrategy !== strategy
       ? [strategy, fallbackStrategy]
@@ -274,15 +334,33 @@ export async function pullFilteredScenes(
       currentStrategy,
       signal,
     );
-    if (scenes.length > 0) {
-      return scenes.map((e) => `${e.name}\n${e.body}`);
-    }
+    if (scenes.length > 0) return scenes;
   }
 
   // All candidate pools were exhausted with validation:errors only.
   // Omitting RECENT SCENES is preferred to seeding few-shot context with
   // known bad scenes.
   return [];
+}
+
+export async function pullFilteredScenes(
+  oc: OcClient,
+  storyId: string,
+  query: string,
+  strategy: SceneContextStrategy = DEFAULT_SCENE_CONTEXT_STRATEGY,
+  fallbackStrategy?: SceneContextStrategy,
+  signal?: AbortSignal,
+): Promise<string[]> {
+  return (
+    await pullFilteredSceneEntities(
+      oc,
+      storyId,
+      query,
+      strategy,
+      fallbackStrategy,
+      signal,
+    )
+  ).map(flattenEntity);
 }
 
 export interface GatherContextOptions {
@@ -334,18 +412,30 @@ export async function gatherContext(
   checkAborted();
   const locations = await pullByType(oc, storyId, "location", query, signal);
   checkAborted();
+
+  // Structured entries (CONTEXT_PLAN_DESIGN): reason names the admission
+  // class -- "protected" never drops; scenes carry their validation
+  // bucket so the drop-tier ordering can prefer clean over untagged.
+  const entries: ContextEntry[] = [
+    ...rules.map((e) => toContextEntry(e, "protected")),
+    ...style.map((e) => toContextEntry(e, "protected")),
+    ...characters.map((e) => toContextEntry(e, "reference")),
+    ...locations.map((e) => toContextEntry(e, "reference")),
+  ];
+
   if (options.validationOnly) {
     return {
-      rules,
-      style,
-      characters,
-      locations,
+      rules: rules.map(flattenEntity),
+      style: style.map(flattenEntity),
+      characters: characters.map(flattenEntity),
+      locations: locations.map(flattenEntity),
       scenes: [],
       lore: [],
       worldbuilding: [],
+      entries,
     };
   }
-  const scenes = await pullFilteredScenes(
+  const scenes = await pullFilteredSceneEntities(
     oc,
     storyId,
     query,
@@ -363,7 +453,26 @@ export async function gatherContext(
     query,
     signal,
   );
-  return { rules, style, characters, locations, scenes, lore, worldbuilding };
+  entries.push(
+    ...scenes.map((e) =>
+      toContextEntry(
+        e,
+        e.tags.includes("validation:clean") ? "scene:clean" : "scene:untagged",
+      ),
+    ),
+    ...lore.map((e) => toContextEntry(e, "reference")),
+    ...worldbuilding.map((e) => toContextEntry(e, "reference")),
+  );
+  return {
+    rules: rules.map(flattenEntity),
+    style: style.map(flattenEntity),
+    characters: characters.map(flattenEntity),
+    locations: locations.map(flattenEntity),
+    scenes: scenes.map(flattenEntity),
+    lore: lore.map(flattenEntity),
+    worldbuilding: worldbuilding.map(flattenEntity),
+    entries,
+  };
 }
 
 /**

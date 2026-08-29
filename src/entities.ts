@@ -98,17 +98,27 @@ export interface RecalledEntity extends ParsedEntity {
   tags: string[];
   created_at: string;
   updated_at?: string;
+  /** Extracted rrf_score when the source row came from a hybrid-ranked
+   * memory_search (absent for keyword/semantic modes, pinned floats, and
+   * non-search reads -- see OcMemorySearchResult). */
+  relevance?: number;
 }
 
-export function memoryToRecalled(memory: OcMemory): RecalledEntity | null {
+export function memoryToRecalled(
+  memory: OcMemory & {
+    relevance?: { rrf_score?: number | null } | null;
+  },
+): RecalledEntity | null {
   const parsed = parseEntityContent(memory.content);
   if (!parsed) return null;
+  const rrf = memory.relevance?.rrf_score;
   return {
     ...parsed,
     memory_id: memory.id,
     pinned: memory.pinned,
     tags: memory.tags,
     created_at: memory.created_at,
+    ...(typeof rrf === "number" && { relevance: rrf }),
     // OC's Python None arrives as null; RecalledEntity keeps the narrower
     // string|undefined shape its consumers already expect.
     updated_at: memory.updated_at ?? undefined,

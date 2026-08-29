@@ -16,7 +16,10 @@
 // Botify binding would be a marker-schema bump and is deliberately not
 // built until real use asks for it).
 
-import { buildCompanionMessage } from "./companion-message.js";
+import {
+  buildCompanionMessage,
+  selectCompanionMemoryIds,
+} from "./companion-message.js";
 import type { BotifyClient } from "./botify-client.js";
 import type { GeneratedBeat, LlmGenerateOptions, LlmProvider } from "./llm.js";
 
@@ -51,8 +54,10 @@ export class BotifyProvider implements LlmProvider {
       undefined,
       this.config.userName,
     );
+    const selection = selectCompanionMemoryIds(opts.userMessage, opts.context);
     return {
       text: await this.client.sendMessage(this.config.defaultChatId, message),
+      ...(selection !== undefined && { context_selection: selection }),
     };
   }
 }
