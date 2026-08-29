@@ -551,7 +551,11 @@ milestones at which they were measured.
   The full-args debug line requires an explicit `MNEMO_LOG_CONTENT=true`
   opt-in on top of `LOG_LEVEL=debug`, documented in `.env.example` as
   short-lived. 6 new tests including a stderr-capture proof that no
-  emitted line contains the prose. The rest of §7 (shutdown ownership, OC
+  emitted line contains the prose. The REST ingress (`src/api/`) was
+  verified log-free for bodies as part of this pass: its only log sink is
+  the 500 handler (path + error message), and `parseOr400`'s zod issues
+  carry field paths, not input values — the chokepoint has no second
+  unexamined ingress. The rest of §7 (shutdown ownership, OC
   retry classification, atomic config writes, final-sink secret redaction)
   stays open in the decision queue.
 
