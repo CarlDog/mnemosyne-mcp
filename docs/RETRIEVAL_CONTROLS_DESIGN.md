@@ -2,7 +2,7 @@
 
 **Status:** Proposal, recorded 2026-08-28, revised same day after an
 adversarial review (5 findings; see the revision note at the end);
-**not ratified**. This document does not schedule work.
+since **RATIFIED** — see the ratification block below. This document does not schedule work by itself; the ratified slices are in build.
 [STATUS.md](../STATUS.md) remains the source of current priority.
 Rationale lives in
 [OPENCLAW_ADOPTION_ASSESSMENT.md §5](OPENCLAW_ADOPTION_ASSESSMENT.md#5-openchronicle-retrieval-controls-and-vague-direction-enrichment).
@@ -20,6 +20,17 @@ Rationale lives in
   would have deserialized to silent `undefined` forever). Hybrid-mode
   capture only; keyword/semantic modes must be captured before slice 1
   pins the schema.
+
+**Ratified 2026-08-28** (operator "go ahead" on the reviewed revision) with
+decisions: ① the revised vague heuristic (normalized set, OR <20 chars
+AND no entity-name token) and ≤120-char excerpt; ② settled-fixtures
+benchmark, flag ships OFF and flips only on a recorded win. Per-mode
+`relevance` fixtures captured live 2026-08-28: hybrid
+`{channel,rrf_score,semantic_similarity}`, keyword
+`{channel,keyword_rank}` (NO rrf_score), semantic
+`{channel,semantic_similarity}` (NO rrf_score); pinned-floated rows omit
+`relevance` entirely — so the schema is a four-field nullish object and
+`rrf_score` exists only in hybrid mode.
 
 ## Problem (what the code does today)
 

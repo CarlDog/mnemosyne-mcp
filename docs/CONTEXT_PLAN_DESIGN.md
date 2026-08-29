@@ -2,7 +2,7 @@
 
 **Status:** Proposal, recorded 2026-08-28, revised same day after an
 adversarial review (10 findings; see the revision note at the end);
-**not ratified**. This document does not schedule work.
+since **RATIFIED** — see the ratification block below. This document does not schedule work by itself; the ratified slices are in build.
 [STATUS.md](../STATUS.md) remains the source of current priority.
 Rationale lives in
 [OPENCLAW_ADOPTION_ASSESSMENT.md §1](OPENCLAW_ADOPTION_ASSESSMENT.md#1-structured-budgeted-inspectable-context-assembly)
@@ -11,6 +11,20 @@ and [OLLAMA_ADOPTION_ASSESSMENT.md §4](OLLAMA_ADOPTION_ASSESSMENT.md#4-model-aw
 they are one design because the Ollama assessment itself assigns the
 shared planner ownership of admission and Ollama introspection ownership
 of the trustworthy window.
+
+**Ratified 2026-08-28** (operator "go ahead" on the reviewed revision), with
+the measurement gates RUN and recorded: **reload semantics are
+any-mismatch on the deployed daemon** — llama3.1:8b-q8 on the NAS
+(0.32.15) reloaded ~6s on EVERY `num_ctx` change (8192→4096→8192→16384:
+25629/6662/5644/5890 ms load) — so decision ① resolves to **(a) one
+stable per-model effective context** (the code comment's bigger-only
+wording was wrong; the assessment was right). `truncate:false`/
+`shift:false` **accepted live on both daemons** (NAS 0.32.15, desktop
+0.33.2), and an oversized request with `truncate:false` returns HTTP 400
+`exceed_context_size_error` carrying exact `n_prompt_tokens` — reject,
+not truncate, plus a free calibration signal. Remaining decisions:
+② `MNEMO_CONTEXT_ADMISSION` defaults `warn` until calibration, ③
+manifest always-on, ④ margin 256.
 
 ## Problem (what the code does today)
 
