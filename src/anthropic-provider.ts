@@ -23,6 +23,7 @@
 
 import { llmPostJson } from "./llm-http.js";
 import { log } from "./log.js";
+import { completionFromFinishReason } from "./llm.js";
 import type { GeneratedBeat, LlmGenerateOptions, LlmProvider } from "./llm.js";
 
 const ANTHROPIC_BASE_URL = "https://api.anthropic.com";
@@ -53,12 +54,16 @@ export function buildAnthropicBody(
 
 interface AnthropicResponse {
   content?: Array<{ type?: string; text?: string }>;
+  /** "end_turn" | "stop_sequence" (natural) | "max_tokens" (truncated). */
+  stop_reason?: string;
   error?: { message?: string };
 }
 
 /** Pure response parsing: concatenate the text blocks (a normal reply is
- * one, but the contract allows several). */
-export function extractAnthropicText(data: unknown): string {
+ * one, but the contract allows several) and carry the stop reason so a
+ * `max_tokens`-cut beat is not auto-saved as canon (same contract as
+ * OllamaProvider -- see GeneratedBeat.complete). */
+export function extractAnthropicText(data: unknown): GeneratedBeat {
   const res = data as AnthropicResponse;
   if (res.error) {
     throw new Error(`anthropic error: ${res.error.message ?? "unknown"}`);
@@ -73,7 +78,13 @@ export function extractAnthropicText(data: unknown): string {
   // Strip leading whitespace -- same lesson as OllamaProvider: a stray
   // leading space/newline gets saved into the scene and trips downstream
   // display + parsing.
-  return text.replace(/^\s+/, "");
+  return {
+    text: text.replace(/^\s+/, ""),
+    ...completionFromFinishReason(res.stop_reason, {
+      stop: ["end_turn", "stop_sequence"],
+      length: ["max_tokens"],
+    }),
+  };
 }
 
 export class AnthropicProvider implements LlmProvider {
@@ -98,12 +109,13 @@ export class AnthropicProvider implements LlmProvider {
       },
       body,
     });
-    const text = extractAnthropicText(data);
+    const beat = extractAnthropicText(data);
     log.info(this.name, "generate ok", {
       model: body.model,
       ms: Date.now() - start,
-      chars: text.length,
+      chars: beat.text.length,
+      finish_reason: beat.finishReason ?? "(unreported)",
     });
-    return { text };
+    return beat;
   }
 }

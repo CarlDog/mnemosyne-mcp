@@ -77,9 +77,10 @@ describe("buildChatCompletionsBody / extractChatCompletionText (pure)", () => {
       ],
       usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
     };
-    expect(extractChatCompletionText("openai", fixture)).toBe(
-      "The fog rolled in.",
-    );
+    const beat = extractChatCompletionText("openai", fixture);
+    expect(beat.text).toBe("The fog rolled in.");
+    expect(beat.complete).toBe(true);
+    expect(beat.finishReason).toBe("stop");
   });
 
   it("surfaces the provider's own error message, and throws on empty choices", () => {
@@ -118,7 +119,7 @@ describe("buildAnthropicBody / extractAnthropicText (pure)", () => {
         { type: "text", text: "rolled in." },
       ],
     };
-    expect(extractAnthropicText(fixture)).toBe("The fog rolled in.");
+    expect(extractAnthropicText(fixture).text).toBe("The fog rolled in.");
   });
 
   it("surfaces API errors and empty content", () => {
@@ -153,13 +154,78 @@ describe("buildGeminiBody / extractGeminiText (pure)", () => {
           },
         ],
       }),
-    ).toBe("The fog rolled in.");
+    ).toMatchObject({ text: "The fog rolled in." });
     expect(() =>
       extractGeminiText({ promptFeedback: { blockReason: "SAFETY" } }),
     ).toThrow(/blocked the prompt \(SAFETY\)/);
     expect(() =>
       extractGeminiText({ candidates: [{ finishReason: "MAX_TOKENS" }] }),
     ).toThrow(/no text content \(finishReason: MAX_TOKENS\)/);
+  });
+});
+
+describe("cloud finish-reason normalization (completion-integrity follow-through)", () => {
+  // Each provider's truncation spelling maps to complete:false so
+  // continueScene refuses to auto-save the cut beat -- the same contract
+  // OllamaProvider ships (tests/completion-integrity.test.ts).
+  it("anthropic max_tokens marks the beat incomplete; end_turn is complete", () => {
+    const cut = extractAnthropicText({
+      content: [{ type: "text", text: "cut mid-sen" }],
+      stop_reason: "max_tokens",
+    });
+    expect(cut).toMatchObject({ complete: false, finishReason: "length" });
+    expect(
+      extractAnthropicText({
+        content: [{ type: "text", text: "done." }],
+        stop_reason: "end_turn",
+      }),
+    ).toMatchObject({ complete: true, finishReason: "stop" });
+  });
+
+  it("openai-compat length marks the beat incomplete", () => {
+    expect(
+      extractChatCompletionText("openai", {
+        choices: [{ message: { content: "cut" }, finish_reason: "length" }],
+      }),
+    ).toMatchObject({ complete: false, finishReason: "length" });
+  });
+
+  it("gemini MAX_TOKENS with partial text marks the beat incomplete; STOP is complete", () => {
+    expect(
+      extractGeminiText({
+        candidates: [
+          {
+            content: { parts: [{ text: "cut" }] },
+            finishReason: "MAX_TOKENS",
+          },
+        ],
+      }),
+    ).toMatchObject({ complete: false, finishReason: "length" });
+    expect(
+      extractGeminiText({
+        candidates: [
+          { content: { parts: [{ text: "done." }] }, finishReason: "STOP" },
+        ],
+      }),
+    ).toMatchObject({ complete: true, finishReason: "stop" });
+  });
+
+  it("an absent finish reason leaves completion unreported (treated as complete)", () => {
+    const beat = extractAnthropicText({
+      content: [{ type: "text", text: "ok" }],
+    });
+    expect(beat.complete).toBeUndefined();
+    expect(beat.finishReason).toBeUndefined();
+  });
+
+  it("an unrecognized finish reason (e.g. content_filter) is complete but flagged unknown", () => {
+    expect(
+      extractChatCompletionText("openai", {
+        choices: [
+          { message: { content: "ok" }, finish_reason: "content_filter" },
+        ],
+      }),
+    ).toMatchObject({ complete: true, finishReason: "unknown" });
   });
 });
 
@@ -195,19 +261,19 @@ describe("leading-whitespace trim (the Ollama lesson, applied to cloud extractor
     expect(
       extractChatCompletionText("openai", {
         choices: [{ message: { content: "\n The fog rolled in." } }],
-      }),
+      }).text,
     ).toBe("The fog rolled in.");
     expect(
       extractAnthropicText({
         content: [{ type: "text", text: " The fog rolled in." }],
-      }),
+      }).text,
     ).toBe("The fog rolled in.");
     expect(
       extractGeminiText({
         candidates: [
           { content: { parts: [{ text: "\nThe fog rolled in." }] } },
         ],
-      }),
+      }).text,
     ).toBe("The fog rolled in.");
   });
 });

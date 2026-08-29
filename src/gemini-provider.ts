@@ -17,6 +17,7 @@
 
 import { llmPostJson } from "./llm-http.js";
 import { log } from "./log.js";
+import { completionFromFinishReason } from "./llm.js";
 import type { GeneratedBeat, LlmGenerateOptions, LlmProvider } from "./llm.js";
 
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com";
@@ -60,7 +61,7 @@ interface GeminiResponse {
  * but does carry promptFeedback.blockReason -- surface it rather than a
  * generic "no content", since the fix (rephrase, or a different
  * provider) is completely different from a transport problem. */
-export function extractGeminiText(data: unknown): string {
+export function extractGeminiText(data: unknown): GeneratedBeat {
   const res = data as GeminiResponse;
   if (res.error) {
     throw new Error(`gemini error: ${res.error.message ?? "unknown"}`);
@@ -71,19 +72,28 @@ export function extractGeminiText(data: unknown): string {
         "rephrase the direction or use a different provider for this content",
     );
   }
-  const text = (res.candidates?.[0]?.content?.parts ?? [])
+  const candidate = res.candidates?.[0];
+  const text = (candidate?.content?.parts ?? [])
     .map((part) => part.text ?? "")
     .join("");
   if (!text) {
-    const finish = res.candidates?.[0]?.finishReason;
+    const finish = candidate?.finishReason;
     throw new Error(
       `gemini returned no text content${finish ? ` (finishReason: ${finish})` : ""}`,
     );
   }
   // Strip leading whitespace -- same lesson as OllamaProvider: a stray
   // leading space/newline gets saved into the scene and trips downstream
-  // display + parsing.
-  return text.replace(/^\s+/, "");
+  // display + parsing. MAX_TOKENS with partial text marks the beat
+  // incomplete so it is not auto-saved as canon (same contract as
+  // OllamaProvider -- see GeneratedBeat.complete).
+  return {
+    text: text.replace(/^\s+/, ""),
+    ...completionFromFinishReason(candidate?.finishReason, {
+      stop: ["STOP"],
+      length: ["MAX_TOKENS"],
+    }),
+  };
 }
 
 export class GeminiProvider implements LlmProvider {
@@ -106,12 +116,13 @@ export class GeminiProvider implements LlmProvider {
       headers: { "x-goog-api-key": this.config.apiKey },
       body,
     });
-    const text = extractGeminiText(data);
+    const beat = extractGeminiText(data);
     log.info(this.name, "generate ok", {
       model,
       ms: Date.now() - start,
-      chars: text.length,
+      chars: beat.text.length,
+      finish_reason: beat.finishReason ?? "(unreported)",
     });
-    return { text };
+    return beat;
   }
 }
