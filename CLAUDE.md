@@ -181,6 +181,15 @@ assessments listed under "Layout" below.
   NemoClaw's authority, MCP-contract, readiness, and endpoint patterns against
   Mnemosyne's demonstrated boundaries. It is not ratified architecture or an
   implementation commitment.
+- `docs/RUN_OUTCOMES_DESIGN.md`, `docs/CONTEXT_PLAN_DESIGN.md`,
+  `docs/GENERATOR_CAPABILITIES_DESIGN.md`, `docs/RETRIEVAL_CONTROLS_DESIGN.md`
+  — design proposals (written 2026-08-28, **none ratified**) for the four
+  design-heavy open candidates in the research decision queue: cancellation +
+  replay-safe typed outcomes, structured/budgeted context admission,
+  static provider capability descriptors, and OC retrieval controls +
+  vague-direction enrichment. Each records concrete types, chosen semantics,
+  slice order, acceptance tests, and an explicit decisions-needed list;
+  each cites its assessment for rationale rather than restating it.
 - `docs/RESEARCH_DECISION_QUEUE.md` — the enumerated decision queue from the
   2026-08-28 research triage: every recommendation-table row of the four
   adoption assessments with its disposition (shipped / rejected at triage /
