@@ -96,7 +96,7 @@ now says so.
 | Medium | Static generator capability descriptors | Open candidate — prerequisite for variants, capability-aware UI, and usage telemetry labeling |
 | Medium | OC retrieval controls (mode/phrase/compact/pinnedLimit) + vague-direction enrichment | Open candidate |
 | Later | Provenance-bound current-state proposals | Parked — prototype-only per the doc; needs an OC compare-and-set contract for any apply path |
-| High | Operational safety: prose out of default logs, admission/shutdown ownership, OC retry classification, atomic config writes | Open candidate — the logging item is the sharpest (narrative prose is default telemetry today) |
+| High | Operational safety: prose out of default logs, admission/shutdown ownership, OC retry classification, atomic config writes | **Partially shipped 2026-08-28** — the logging half landed: tool logs record lengths/counts instead of story text (prose fields always, long strings and arrays generally), full args require the `MNEMO_LOG_CONTENT=true` opt-in; `tests/tool-logging-privacy.test.ts`. Admission/shutdown ownership, OC retry classification, atomic config writes, and final-sink secret redaction remain open |
 
 ## Ranked next-up, if and when the pause ends
 

@@ -14,33 +14,57 @@ type ToolResult = {
 };
 type ToolHandler<A extends ToolArgs> = (args: A) => Promise<ToolResult>;
 
-// String arg values longer than this are truncated in the info-level
-// invoke line. Entity content and direction prose can run to whole
-// scenes; the full values are still available at debug level.
+// Narrative prose is NOT normal telemetry (OpenClaw assessment §7 -- this is
+// a private storytelling server designed for mature material). The old
+// invoke line logged the first 200 characters of every long string and the
+// FULL args at debug, so entity bodies and scene directions were default log
+// content. Now:
+//  - Known prose fields (content, direction) log only their length, always
+//    -- even a short direction is story content.
+//  - Any other string past the threshold logs only its length (a long value
+//    in a non-prose field is prose we didn't anticipate, e.g. a pasted
+//    excerpt in `query`). Short identifiers (names, ids, modes, tags) pass
+//    through -- they're the diagnostic value of the line.
+//  - Arrays log only their element count (import's `entities` carries whole
+//    bodies).
+//  - The full-args debug line requires the explicit MNEMO_LOG_CONTENT=true
+//    opt-in (plus LOG_LEVEL=debug); it exists for short-lived content
+//    debugging, not as a default.
+const PROSE_FIELDS = new Set(["content", "direction"]);
 const INFO_ARG_MAX_CHARS = 200;
 
-function truncateArgsForInfo(args: ToolArgs): ToolArgs {
+export function sanitizeToolArgsForLog(args: ToolArgs): ToolArgs {
   const out: ToolArgs = {};
   for (const [k, v] of Object.entries(args)) {
-    out[k] =
-      typeof v === "string" && v.length > INFO_ARG_MAX_CHARS
-        ? `${v.slice(0, INFO_ARG_MAX_CHARS)}… (${v.length} chars)`
-        : v;
+    if (
+      typeof v === "string" &&
+      (PROSE_FIELDS.has(k) || v.length > INFO_ARG_MAX_CHARS)
+    ) {
+      out[k] = `(${v.length} chars)`;
+    } else if (Array.isArray(v)) {
+      out[k] = `(${v.length} items)`;
+    } else {
+      out[k] = v;
+    }
   }
   return out;
 }
 
+function contentLoggingOptedIn(): boolean {
+  return process.env.MNEMO_LOG_CONTENT === "true";
+}
+
 /**
  * Wrap a tool handler with structured logging:
- * - Logs an `invoke` line at info with the tool's args (long string
- *   values truncated — full args are logged at debug level).
+ * - Logs an `invoke` line at info with sanitized args -- prose fields and
+ *   long strings as lengths, arrays as counts (see sanitizeToolArgsForLog).
  * - Logs an `ok` line at info with elapsed ms.
  * - Logs an `error` line at error with elapsed ms + the error message,
  *   then re-throws so the MCP framework still surfaces an error result.
+ * - Full args appear ONLY with MNEMO_LOG_CONTENT=true at debug level.
  *
- * Story names and ids are not secrets; truncation is about keeping
- * whole-scene prose (entity content, direction) out of default-level
- * logs, not about redaction.
+ * Story names and ids are not secrets and stay in the line -- the point is
+ * keeping narrative prose out of default telemetry, not hiding identifiers.
  */
 export function withLogging<A extends ToolArgs>(
   name: string,
@@ -48,8 +72,10 @@ export function withLogging<A extends ToolArgs>(
 ): ToolHandler<A> {
   return async (args: A) => {
     const start = Date.now();
-    log.info(`tool:${name}`, "invoke", truncateArgsForInfo(args));
-    log.debug(`tool:${name}`, "invoke args (full)", args);
+    log.info(`tool:${name}`, "invoke", sanitizeToolArgsForLog(args));
+    if (contentLoggingOptedIn()) {
+      log.debug(`tool:${name}`, "invoke args (full, MNEMO_LOG_CONTENT)", args);
+    }
     try {
       const result = await handler(args);
       log.info(`tool:${name}`, "ok", { ms: Date.now() - start });
