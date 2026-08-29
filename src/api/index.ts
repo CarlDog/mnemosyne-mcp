@@ -13,6 +13,7 @@ import { registerEntityRoutes } from "./entities.js";
 import { registerInteractiveRoutes } from "./interactive.js";
 import { apiErrorHandler, asyncRoute } from "./helpers.js";
 import { createReadinessProber } from "../readiness.js";
+import { resolveCapabilities } from "../capabilities.js";
 
 export interface ApiRouterOptions {
   generator?: LlmProvider;
@@ -46,6 +47,22 @@ export function createApiRouter(
       "/status",
       asyncRoute(async (_req, res) => {
         res.json(await prober.probe());
+      }),
+    );
+
+    // Capability projection (GENERATOR_CAPABILITIES_DESIGN, ratified):
+    // TWO descriptors -- the generator instance's and the validator
+    // instance's (distinct even when both are Ollama: different models
+    // and window caps). Consumers must render "unknown" as unknown,
+    // never as unsupported.
+    router.get(
+      "/capabilities",
+      asyncRoute(async (_req, res) => {
+        const [gen, val] = await Promise.all([
+          resolveCapabilities(generator),
+          resolveCapabilities(validator),
+        ]);
+        res.json({ generator: gen, validator: val });
       }),
     );
 
