@@ -55,7 +55,7 @@ function parseFlattened(entries: string[]): ParsedEntry[] {
 // Lookaround instead checks "is the adjacent character (if any) a word
 // char", which is correct regardless of what the name itself starts/ends
 // with, and is vacuously true at the start/end of the message.
-function nameMentioned(message: string, name: string): boolean {
+export function nameMentioned(message: string, name: string): boolean {
   const trimmed = name.trim();
   if (!trimmed) return false;
   const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

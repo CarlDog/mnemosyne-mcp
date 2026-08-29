@@ -9,9 +9,15 @@
 //   3. Phrase-first overwrite lookup: an exact-name entity the hybrid
 //      window misses is still found (and updated, not duplicated).
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import { OcClient, type OcMemory } from "../src/oc-client.js";
 import { saveEntity } from "../src/entities.js";
+import {
+  isVagueDirection,
+  buildEnrichedQuery,
+  gatherContext,
+  ENRICHMENT_EXCERPT_MAX_CHARS,
+} from "../src/prompt.js";
 
 const STORY_ID = "11111111-2222-4333-8444-555555555555";
 
@@ -158,5 +164,140 @@ describe("phrase-first overwrite lookup", () => {
     });
     expect(result.memory_id).toBe("hyb");
     expect(calls.filter((c) => c.name === "memory_search").length).toBe(2);
+  });
+});
+
+// --- slice 3: vague-direction enrichment (flag-off by default) -------------
+
+afterEach(() => {
+  delete process.env.MNEMO_QUERY_ENRICHMENT;
+});
+
+describe("isVagueDirection (ratified heuristic)", () => {
+  const names = ["Aria Voss", "The Docks"];
+  it.each([
+    ["continue", true],
+    ["Go on.", true],
+    ["What happens next?", true],
+    ["Aria Voss dies", false], // short but rich: entity-name token
+    ["zzz ambush now", true], // short, no known name
+    ["keep going with whatever feels right", false], // long = not vague
+  ])("%s -> %s", (direction, expected) => {
+    expect(isVagueDirection(direction, names)).toBe(expected);
+  });
+});
+
+describe("buildEnrichedQuery", () => {
+  it("puts the direction FIRST and hard-bounds the excerpt tail", () => {
+    const body = "x".repeat(500) + "THE-TAIL";
+    const q = buildEnrichedQuery("go on", "Scene 9", body);
+    expect(q.startsWith("go on\n")).toBe(true);
+    expect(q).toContain("THE-TAIL");
+    const excerpt = q.slice(q.indexOf("Scene 9: ") + "Scene 9: ".length);
+    expect(excerpt.length).toBeLessThanOrEqual(ENRICHMENT_EXCERPT_MAX_CHARS);
+  });
+});
+
+function enrichmentOc(): {
+  oc: OcClient;
+  searches: Array<{ query: string; tags?: string[] }>;
+  listCalls: number;
+} {
+  const state = {
+    oc: undefined as unknown as OcClient,
+    searches: [] as Array<{ query: string; tags?: string[] }>,
+    listCalls: 0,
+  };
+  const sceneRow = (id: string, createdAt: string, tags: string[]) => ({
+    id,
+    content_preview: `[Scene] ${id}`,
+    content_length: 100,
+    project_id: STORY_ID,
+    tags,
+    pinned: false,
+    created_at: createdAt,
+  });
+  state.oc = {
+    memorySearch: async (opts: { query: string; tags?: string[] }) => {
+      state.searches.push({ query: opts.query, tags: opts.tags });
+      return [];
+    },
+    memoryListCompact: async () => {
+      state.listCalls += 1;
+      return [
+        {
+          id: "char-row",
+          content_preview: "[Character] Aria Voss",
+          content_length: 50,
+          project_id: STORY_ID,
+          tags: ["mnemosyne", "story", "character"],
+          pinned: false,
+          created_at: "2026-01-01T00:00:00Z",
+        },
+        // newest scene is validation:errors -> must be SKIPPED
+        sceneRow("Scene Bad", "2026-01-03T00:00:00Z", [
+          "mnemosyne",
+          "story",
+          "scene",
+          "validation:errors",
+        ]),
+        sceneRow("Scene Good", "2026-01-02T00:00:00Z", [
+          "mnemosyne",
+          "story",
+          "scene",
+        ]),
+      ];
+    },
+    memoryGet: async (id: string) =>
+      ({
+        id,
+        content: `[Scene] ${id}
+
+The rain kept falling on the docks.`,
+        project_id: STORY_ID,
+        tags: ["mnemosyne", "story", "scene"],
+        pinned: false,
+        created_at: "2026-01-02T00:00:00Z",
+      }) satisfies OcMemory,
+  } as unknown as OcClient;
+  return state;
+}
+
+describe("gatherContext enrichment wiring", () => {
+  it("flag off (default): no compact scan, raw query everywhere (query-ranked)", async () => {
+    const state = enrichmentOc();
+    await gatherContext(state.oc, STORY_ID, "go on", {
+      sceneStrategy: "query-ranked",
+    });
+    expect(state.listCalls).toBe(0);
+    expect(state.searches.every((s) => s.query === "go on")).toBe(true);
+  });
+
+  it("flag on + vague: reference queries are enriched from the newest NON-errors scene; rules stay raw", async () => {
+    process.env.MNEMO_QUERY_ENRICHMENT = "true";
+    const state = enrichmentOc();
+    await gatherContext(state.oc, STORY_ID, "go on", {
+      sceneStrategy: "query-ranked",
+    });
+    const byTag = (tag: string) =>
+      state.searches.filter((s) => s.tags?.includes(tag));
+    expect(byTag("rule")[0]?.query).toBe("go on");
+    const charQuery = byTag("character")[0]?.query ?? "";
+    expect(charQuery.startsWith("go on\n")).toBe(true);
+    // Skipped the newer validation:errors scene; enriched from Scene Good.
+    expect(charQuery).toContain("Scene Good");
+    expect(charQuery).toContain("rain kept falling");
+    expect(charQuery).not.toContain("Scene Bad");
+  });
+
+  it("flag on + information-rich short direction: untouched (entity-name condition)", async () => {
+    process.env.MNEMO_QUERY_ENRICHMENT = "true";
+    const state = enrichmentOc();
+    await gatherContext(state.oc, STORY_ID, "Aria Voss dies", {
+      sceneStrategy: "query-ranked",
+    });
+    expect(state.searches.every((s) => s.query === "Aria Voss dies")).toBe(
+      true,
+    );
   });
 });
