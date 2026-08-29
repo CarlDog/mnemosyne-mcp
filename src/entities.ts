@@ -140,13 +140,33 @@ async function findExistingEntity(
   name: string,
 ): Promise<OcMemory | null> {
   const headerPrefix = `${entityHeader(type, name)}\n`;
+  const isHeaderMatch = (m: OcMemory) => m.content.startsWith(headerPrefix);
+
+  // Phrase-first (RETRIEVAL_CONTROLS_DESIGN slice 2, ratified): an exact
+  // keyword+phrase search for the name surfaces the `[Type] Name` header
+  // memory even when the hybrid window is crowded, reducing false
+  // creates. The residual miss mode remains in kind: within-type BODY
+  // mentions of the name can still outrank the header past the window --
+  // narrowed, not eliminated; the deterministic fix is an eventual OC
+  // exact (project, type, name) endpoint.
+  const phraseMatches = await oc.memorySearch({
+    query: name,
+    projectId: storyId,
+    tags: [...BASE_TAGS, type],
+    topK: SAVE_DEDUPE_SEARCH_TOPK,
+    mode: "keyword",
+    phrase: true,
+  });
+  const phraseHit = phraseMatches.find(isHeaderMatch);
+  if (phraseHit) return phraseHit;
+
   const matches = await oc.memorySearch({
     query: name,
     projectId: storyId,
     tags: [...BASE_TAGS, type],
     topK: SAVE_DEDUPE_SEARCH_TOPK,
   });
-  return matches.find((m) => m.content.startsWith(headerPrefix)) ?? null;
+  return matches.find(isHeaderMatch) ?? null;
 }
 
 /** A caller-resolved answer to "does this (type, name) already exist" —
