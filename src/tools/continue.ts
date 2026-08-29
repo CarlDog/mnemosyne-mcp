@@ -44,10 +44,11 @@ import {
   resolveKindroidTarget,
 } from "../kindroid-provider.js";
 import {
-  validateContent,
+  validateContentWithUsage,
   classifyVerdict,
   type ValidationReport,
 } from "../validator.js";
+import type { ModelUsage } from "../llm.js";
 import { log } from "../log.js";
 import { asText, withLogging } from "./helpers.js";
 import {
@@ -112,6 +113,13 @@ export interface ContinueSceneResult {
   };
   validation?: ValidationReport;
   validation_error?: string;
+  /** Provider-reported usage, generator and validator kept SEPARATE
+   * (different models/prompts/cache semantics; a presentation layer can
+   * sum). Absent when neither call reported any. */
+  usage?: {
+    generator?: ModelUsage;
+    validator?: ModelUsage;
+  };
   stages_ms: {
     gather_ms: number;
     generate_ms: number;
@@ -272,11 +280,18 @@ export async function continueScene(
 
   let validateMs = 0;
   let validation: ValidationReport | undefined;
+  let validatorUsage: ModelUsage | undefined;
   let validationError: string | undefined;
   if (opts.validate) {
     const validateStart = Date.now();
     try {
-      validation = await validateContent(validator, context, beatText);
+      const outcome = await validateContentWithUsage(
+        validator,
+        context,
+        beatText,
+      );
+      validation = outcome.report;
+      validatorUsage = outcome.usage;
     } catch (err) {
       validationError = (err as Error).message;
       log.warn("continueScene", "validation pass failed", {
@@ -330,6 +345,12 @@ export async function continueScene(
     ...(validation !== undefined && { validation }),
     ...(validationError !== undefined && {
       validation_error: validationError,
+    }),
+    ...((beat.usage !== undefined || validatorUsage !== undefined) && {
+      usage: {
+        ...(beat.usage !== undefined && { generator: beat.usage }),
+        ...(validatorUsage !== undefined && { validator: validatorUsage }),
+      },
     }),
     stages_ms: {
       gather_ms: gatherMs,

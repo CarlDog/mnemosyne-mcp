@@ -81,7 +81,7 @@ now says so.
 | Doc rank | Item | Disposition |
 |---|---|---|
 | High-value experiment | Open WebUI host compatibility spike (native MCP, then optional Pipe) | **Rejected at triage** — the doc's own analysis predicts a structural failure (host-model paraphrase vs the already-saved exact beat) |
-| Medium-high | Provider usage/timing telemetry (`ModelUsage` envelope, generator/validator kept separate) | **Open candidate** — the set's clearest genuinely new capability; pairs with Ollama P1 telemetry |
+| Medium-high | Provider usage/timing telemetry (`ModelUsage` envelope, generator/validator kept separate) | **Shipped 2026-08-28** — `ModelUsage` on `GeneratedBeat` from Ollama (exact counts + ns→ms load/eval timings), Anthropic (incl. cache creation/reads), OpenAI-compat/Atlas (incl. `cached_tokens`), and Gemini (`usageMetadata`); continuation responses carry `usage.generator`/`usage.validator` separately; unknown values stay absent, totals only reported-or-both-parts, no invented dollar cost; `tests/usage-telemetry.test.ts` |
 | High | Recoverable continuation runs + SSE events | **Parked** — the HTTP projection of the per-story run registry, which was deliberately not taken (no incident proves the race) |
 | Conditional | Stale-aware, noncommitting beat proposals | **Parked** — needs capability descriptors + structured context identity first; companion providers excluded by side effect |
 | Low-risk | Accessibility hardening | **Shipped** `9be11f3` (the four cited defects); walkthrough/announcement items travel with the run contract |
@@ -113,9 +113,10 @@ schedule:
 4. ~~**Privacy-safe logging**~~ — the logging half shipped 2026-08-28 (see
    the OpenClaw table); the §7 remainder (shutdown ownership, OC retry
    classification, atomic config writes, final-sink redaction) stays open.
-5. **Usage telemetry** (Open WebUI §3 + Ollama §7, one implementation) —
-   the last un-started item from the original ranked list. (Cloud
-   finish-reason adoption, added later, also shipped 2026-08-28.)
+5. ~~**Usage telemetry**~~ — shipped 2026-08-28 (see the Open WebUI
+   table). (Cloud finish-reason adoption, added later, also shipped
+   2026-08-28.) Every item on this ranked list is now shipped except the
+   §7 operational-safety remainder.
 6. Everything else waits for its documented trigger.
 
 The ~60 explicit non-adoptions across the four docs are not restated here;

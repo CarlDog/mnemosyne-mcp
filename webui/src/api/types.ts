@@ -70,6 +70,20 @@ export interface ValidationReport {
   summary: string;
 }
 
+export interface ModelUsage {
+  provider: string;
+  model?: string;
+  source: "reported";
+  input_tokens?: number;
+  output_tokens?: number;
+  total_tokens?: number;
+  cached_input_tokens?: number;
+  cache_creation_input_tokens?: number;
+  load_ms?: number;
+  prompt_eval_ms?: number;
+  generation_ms?: number;
+}
+
 export interface ContinueResponse {
   // beat_name and context_summary are absent on the yielded_to_user
   // response (a Kindroid group handing the floor straight back) -- the
@@ -92,6 +106,12 @@ export interface ContinueResponse {
   };
   validation?: ValidationReport;
   validation_error?: string;
+  /** Provider-reported usage, generator/validator separate; every field
+   * optional -- absent means the provider didn't report it. */
+  usage?: {
+    generator?: ModelUsage;
+    validator?: ModelUsage;
+  };
   stages_ms: {
     gather_ms: number;
     generate_ms: number;
