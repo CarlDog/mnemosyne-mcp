@@ -538,6 +538,51 @@ milestones at which they were measured.
 
 ## Done
 
+- **All four ratified designs implemented — the build-out of the research
+  program is complete** (2026-08-28, seven commits `2baef78..05317f4`).
+  The operator ratified the reviewed proposals; the measurement gates the
+  designs demanded were run FIRST and recorded in the docs (any-mismatch
+  reload semantics confirmed live at ~6s per `num_ctx` change on the 8B
+  model; `truncate/shift` accepted on both daemons with exact
+  `n_prompt_tokens` in the rejection; per-mode `relevance` fixtures
+  captured, `rrf_score` hybrid-only). Then, in dependency order:
+  - **Run outcomes (all 3 slices):** `RunContext` + phase-boundary aborts
+    (guarded `res.close` on REST — the empirically-proven `req.close`
+    0 ms trap avoided; `extra.signal` on MCP), `RunOutcomeError` with the
+    ratified status map through REST, `run_id` on every success,
+    companion producers mapped, success-shaped `canon_write_outcome`,
+    Botify timeout parity, bounded-grace shutdown owner on both
+    transports (OC closed last), single-flight connects, explicit
+    OC mutating-retry safety with an abortable backoff threaded through
+    the whole gather path, atomic serialized config writes.
+  - **Capabilities (all 3 slices):** instance-keyed async resolver
+    (distinct generator/validator Ollama descriptors), ONE shared cached
+    `/api/show` serving locality + capabilities + window sizing,
+    `GET /api/capabilities`, capability-gated Web UI controls
+    (`unknown` ≠ unsupported), warn-don't-break `capability_warnings`.
+  - **ContextPlan (slices 1–2):** structured `ContextEntry` through
+    gather, deterministic `planContext` (ratified drop tiers, memory_id
+    tie-break, direction counted), plan-driven rendering, `context_plan`
+    manifest + companion `context_selection`, calibration logging,
+    `MNEMO_CONTEXT_ADMISSION` (default warn), stable per-model `num_ctx`
+    (measurement-backed), `truncate:false`/`shift:false`, empty-message
+    load warmup + one-shot `/api/ps`. Cloud enforcement (slice 3) is a
+    documented no-op while capability windows are all-unknown.
+  - **Retrieval (all 3 slices):** `mode`/`phrase`/`pinnedLimit` with the
+    captured relevance object on a search-specific schema, phrase-first
+    overwrite lookup, and flag-off vague-direction enrichment
+    (`MNEMO_QUERY_ENRICHMENT`, ratified OFF until the settled-fixtures
+    benchmark — which needs operator-labeled fixtures — records a win).
+
+  Test baseline: 284 → **330 passing** (64 env-gated skips). Live
+  verification along the way: real-OC entities/stories/http/validator
+  suites green through every new path, including real generations with
+  the new stable-window + `truncate:false` request contract against the
+  NAS daemon. Remaining open in the queue: the enrichment benchmark run,
+  the §7 final-sink redaction (mechanical), the typed Ollama error
+  classification remainder (mechanical), endpoint hygiene (P2), and the
+  parked/rejected items whose triggers stand.
+
 - **The four design proposals adversarially reviewed and revised — still
   none ratified** (2026-08-28). Four independent reviewers (one per doc,
   each reading the design against the actual source, the assessments'
