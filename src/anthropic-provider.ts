@@ -23,8 +23,17 @@
 
 import { llmPostJson } from "./llm-http.js";
 import { log } from "./log.js";
-import { completionFromFinishReason } from "./llm.js";
-import type { GeneratedBeat, LlmGenerateOptions, LlmProvider } from "./llm.js";
+import {
+  completionFromFinishReason,
+  computeTotalTokens,
+  omitUndefined,
+} from "./llm.js";
+import type {
+  GeneratedBeat,
+  LlmGenerateOptions,
+  LlmProvider,
+  ModelUsage,
+} from "./llm.js";
 
 const ANTHROPIC_BASE_URL = "https://api.anthropic.com";
 const ANTHROPIC_VERSION = "2023-06-01";
@@ -56,6 +65,13 @@ interface AnthropicResponse {
   content?: Array<{ type?: string; text?: string }>;
   /** "end_turn" | "stop_sequence" (natural) | "max_tokens" (truncated). */
   stop_reason?: string;
+  model?: string;
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+    cache_creation_input_tokens?: number;
+    cache_read_input_tokens?: number;
+  };
   error?: { message?: string };
 }
 
@@ -78,12 +94,31 @@ export function extractAnthropicText(data: unknown): GeneratedBeat {
   // Strip leading whitespace -- same lesson as OllamaProvider: a stray
   // leading space/newline gets saved into the scene and trips downstream
   // display + parsing.
+  const usage: ModelUsage | undefined = res.usage
+    ? {
+        provider: "anthropic",
+        source: "reported",
+        ...omitUndefined({
+          model: res.model,
+          input_tokens: res.usage.input_tokens,
+          output_tokens: res.usage.output_tokens,
+          total_tokens: computeTotalTokens(
+            res.usage.input_tokens,
+            res.usage.output_tokens,
+            undefined,
+          ),
+          cached_input_tokens: res.usage.cache_read_input_tokens,
+          cache_creation_input_tokens: res.usage.cache_creation_input_tokens,
+        }),
+      }
+    : undefined;
   return {
     text: text.replace(/^\s+/, ""),
     ...completionFromFinishReason(res.stop_reason, {
       stop: ["end_turn", "stop_sequence"],
       length: ["max_tokens"],
     }),
+    ...(usage !== undefined && { usage }),
   };
 }
 

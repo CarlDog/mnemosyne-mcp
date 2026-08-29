@@ -14,7 +14,11 @@
 // duplicated across four validators).
 
 import { z } from "zod";
-import { supportsStructuredOutput, type LlmProvider } from "./llm.js";
+import {
+  supportsStructuredOutput,
+  type LlmProvider,
+  type ModelUsage,
+} from "./llm.js";
 import type { ContextBundle } from "./prompt.js";
 import { neutralizeSectionDelimiters } from "./prompt.js";
 
@@ -153,11 +157,22 @@ export function parseValidatorJson<T>(raw: string): T {
   return JSON.parse(text.trim()) as T;
 }
 
-export async function validateContent(
+export interface ValidationOutcome {
+  report: ValidationReport;
+  /** The validator model call's own reported usage, kept SEPARATE from the
+   * generator's (different models/prompts/cache semantics -- merging them
+   * destroys the diagnostic value; a presentation layer can sum). */
+  usage?: ModelUsage;
+}
+
+/** validateContent plus the validator call's usage envelope. The plain
+ * validateContent wrapper below keeps the three callers that don't consume
+ * usage unchanged. */
+export async function validateContentWithUsage(
   validator: LlmProvider,
   context: ContextBundle,
   content: string,
-): Promise<ValidationReport> {
+): Promise<ValidationOutcome> {
   const constraints = constraintsBlock(context);
   const userMessage = constraints
     ? `Established story context:\n\n${constraints}\n\nNew content to validate:\n\n${content}\n\nReturn your verdict as JSON.`
@@ -211,5 +226,16 @@ export async function validateContent(
         "failed; the content was NOT verified clean",
     );
   }
-  return result.data;
+  return {
+    report: result.data,
+    ...(verdictBeat.usage !== undefined && { usage: verdictBeat.usage }),
+  };
+}
+
+export async function validateContent(
+  validator: LlmProvider,
+  context: ContextBundle,
+  content: string,
+): Promise<ValidationReport> {
+  return (await validateContentWithUsage(validator, context, content)).report;
 }

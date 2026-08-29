@@ -538,6 +538,37 @@ milestones at which they were measured.
 
 ## Done
 
+- **Provider usage telemetry: the last un-started item from the research
+  queue's ranked list** (2026-08-28). Open WebUI §3 + the Ollama
+  assessment's telemetry track, one implementation. Every provider
+  previously discarded its response's usage block. `GeneratedBeat` now
+  carries an optional `ModelUsage` (source `"reported"` only — locally
+  estimated numbers are never mixed in under that label): Ollama maps
+  exact prompt/eval counts and normalizes wire-nanosecond load/prompt-eval/
+  eval durations to ms; Anthropic maps input/output plus cache-creation and
+  cache-read tokens; OpenAI-compat/Atlas map `usage` incl.
+  `prompt_tokens_details.cached_tokens`; Gemini maps `usageMetadata` incl.
+  `cachedContentTokenCount`; Kindroid/Botify report nothing and stay
+  absent. Continuation responses expose `usage.generator` and
+  `usage.validator` **separately** (different models/prompts/cache
+  semantics — a presentation layer can sum; merged values can't be
+  un-merged), via `validateContentWithUsage()` with the plain
+  `validateContent` wrapper keeping the other three callers unchanged.
+  Guardrails per the assessment: unknown values stay absent (never a
+  flattering zero, enforced by a shared `omitUndefined`), `total_tokens`
+  only when reported or both parts known, no dollar cost invented from a
+  pricing table, and telemetry rides results/logs — never a saved scene
+  body. 9 new tests in `tests/usage-telemetry.test.ts`.
+
+  **Flagged, pre-existing, not fixed here:** the env-gated live
+  `tests/continue.test.ts` suite (real OC + real NAS Ollama) has one
+  failing case — `gatherContext` returns 0 rules for a just-saved test
+  story. Reproduced identically on clean HEAD **and** at the pre-session
+  baseline `3853d14` via a detached worktree, so it predates all of
+  2026-08-28's work; most plausibly OC-side retrieval timing (embedding
+  lag for freshly saved memories) or an OC deployment change. Needs its
+  own diagnosis pass.
+
 - **Protected semantic readiness at `GET /api/status`** (2026-08-28).
   NemoClaw P1 #2
   ([NEMOCLAW_ADOPTION_ASSESSMENT.md §3](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md),

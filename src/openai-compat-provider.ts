@@ -25,8 +25,13 @@
 
 import { llmPostJson } from "./llm-http.js";
 import { log } from "./log.js";
-import { completionFromFinishReason } from "./llm.js";
-import type { GeneratedBeat, LlmGenerateOptions, LlmProvider } from "./llm.js";
+import { completionFromFinishReason, omitUndefined } from "./llm.js";
+import type {
+  GeneratedBeat,
+  LlmGenerateOptions,
+  LlmProvider,
+  ModelUsage,
+} from "./llm.js";
 
 export interface OpenAICompatConfig {
   /** Provider name surfaced in logs/tool responses ("openai",
@@ -71,6 +76,13 @@ interface ChatCompletionsResponse {
      * "tool_calls") normalized to unknown. */
     finish_reason?: string;
   }>;
+  model?: string;
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+    prompt_tokens_details?: { cached_tokens?: number };
+  };
   error?: { message?: string } | string;
 }
 
@@ -95,12 +107,26 @@ export function extractChatCompletionText(
   // Strip leading whitespace -- same lesson as OllamaProvider: a stray
   // leading space/newline gets saved into the scene and trips downstream
   // display + parsing.
+  const usage: ModelUsage | undefined = res.usage
+    ? {
+        provider,
+        source: "reported",
+        ...omitUndefined({
+          model: res.model,
+          input_tokens: res.usage.prompt_tokens,
+          output_tokens: res.usage.completion_tokens,
+          total_tokens: res.usage.total_tokens,
+          cached_input_tokens: res.usage.prompt_tokens_details?.cached_tokens,
+        }),
+      }
+    : undefined;
   return {
     text: content.replace(/^\s+/, ""),
     ...completionFromFinishReason(choice?.finish_reason, {
       stop: ["stop"],
       length: ["length"],
     }),
+    ...(usage !== undefined && { usage }),
   };
 }
 

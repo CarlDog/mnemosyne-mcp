@@ -73,6 +73,58 @@ export interface LlmGenerateOptions {
   allowUser?: boolean;
 }
 
+/** Provider-reported usage and timing for one model call
+ * (docs/OPEN_WEBUI_ADOPTION_ASSESSMENT.md §3 + the Ollama assessment's
+ * telemetry track, one implementation). Guardrails baked into every
+ * producer: unknown values stay ABSENT, never a flattering zero;
+ * `total_tokens` is set only when the provider reported it or both parts
+ * are known; no dollar cost is invented from a pricing table; and none of
+ * this ever lands in a saved scene body -- it rides results and logs. */
+export interface ModelUsage {
+  provider: string;
+  model?: string;
+  /** All values here come from the provider's own response ("reported");
+   * locally estimated numbers must not be mixed in under this label. */
+  source: "reported";
+  input_tokens?: number;
+  output_tokens?: number;
+  total_tokens?: number;
+  /** Cache reads (Anthropic cache_read, OpenAI cached_tokens, Gemini
+   * cachedContentTokenCount). */
+  cached_input_tokens?: number;
+  cache_creation_input_tokens?: number;
+  /** Ollama-only timing detail (wire nanoseconds normalized to ms). */
+  load_ms?: number;
+  prompt_eval_ms?: number;
+  generation_ms?: number;
+}
+
+/** Drop undefined-valued keys, so "unknown stays absent" holds
+ * structurally in every provider's usage envelope (a serialized undefined
+ * would vanish anyway, but in-process consumers see clean objects and
+ * tests can assert absence). */
+export function omitUndefined<T extends Record<string, unknown>>(
+  obj: T,
+): Partial<T> {
+  const out: Partial<T> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v !== undefined) out[k as keyof T] = v as T[keyof T];
+  }
+  return out;
+}
+
+/** total_tokens policy in one place: reported wins; else computed only
+ * when BOTH parts are known. */
+export function computeTotalTokens(
+  input: number | undefined,
+  output: number | undefined,
+  reported: number | undefined,
+): number | undefined {
+  if (reported !== undefined) return reported;
+  if (input !== undefined && output !== undefined) return input + output;
+  return undefined;
+}
+
 /** What a provider returns for one beat.
  *
  * `text` is the beat. The `group*` fields are Kindroid-group-only telemetry
@@ -95,6 +147,9 @@ export interface GeneratedBeat {
   /** Normalized finish reason when the provider reports one: "stop"
    * (natural end), "length" (token budget exhausted), or "unknown". */
   finishReason?: "stop" | "length" | "unknown";
+  /** Provider-reported usage/timing, absent when the provider reports
+   * none (kindroid/botify). */
+  usage?: ModelUsage;
   /** Kindroid group only: why the turn loop stopped. "user_turn" means the
    * floor came back to you mid-scene -- there may still be replies in
    * `text`. Only ever set when allowUser was true (kindroid-mcp's own
@@ -277,6 +332,17 @@ interface OllamaChatResponse {
    * remote-host alias) model rather than locally. */
   remote_model?: string;
   remote_host?: string;
+  /** Exact usage/timing metrics; durations are NANOSECONDS on the wire. */
+  prompt_eval_count?: number;
+  eval_count?: number;
+  load_duration?: number;
+  prompt_eval_duration?: number;
+  eval_duration?: number;
+}
+
+/** Wire nanoseconds -> whole milliseconds; absent stays absent. */
+function nsToMs(ns: number | undefined): number | undefined {
+  return ns === undefined ? undefined : Math.round(ns / 1_000_000);
 }
 
 const SHOW_TIMEOUT_MS = 15_000;
@@ -526,13 +592,36 @@ export class OllamaProvider implements LlmProvider {
       // through means scenes get saved as " Text..." which then trips
       // downstream display + parsing in subtle ways.
       const trimmed = content.replace(/^\s+/, "");
+      const usage: ModelUsage = {
+        provider: this.name,
+        model,
+        source: "reported",
+        ...omitUndefined({
+          input_tokens: data.prompt_eval_count,
+          output_tokens: data.eval_count,
+          total_tokens: computeTotalTokens(
+            data.prompt_eval_count,
+            data.eval_count,
+            undefined,
+          ),
+          load_ms: nsToMs(data.load_duration),
+          prompt_eval_ms: nsToMs(data.prompt_eval_duration),
+          generation_ms: nsToMs(data.eval_duration),
+        }),
+      };
       log.info("ollama", "generate ok", {
         model,
         ms: Date.now() - start,
         chars: trimmed.length,
         finish_reason: data.done_reason ?? "(absent)",
+        ...omitUndefined({
+          input_tokens: usage.input_tokens,
+          output_tokens: usage.output_tokens,
+          load_ms: usage.load_ms,
+          generation_ms: usage.generation_ms,
+        }),
       });
-      return { text: trimmed, complete, finishReason };
+      return { text: trimmed, complete, finishReason, usage };
     } catch (err) {
       const message = describeTransportError(err);
       log.error("ollama", "generate error", {

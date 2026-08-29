@@ -17,8 +17,17 @@
 
 import { llmPostJson } from "./llm-http.js";
 import { log } from "./log.js";
-import { completionFromFinishReason } from "./llm.js";
-import type { GeneratedBeat, LlmGenerateOptions, LlmProvider } from "./llm.js";
+import {
+  completionFromFinishReason,
+  computeTotalTokens,
+  omitUndefined,
+} from "./llm.js";
+import type {
+  GeneratedBeat,
+  LlmGenerateOptions,
+  LlmProvider,
+  ModelUsage,
+} from "./llm.js";
 
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com";
 
@@ -55,6 +64,13 @@ interface GeminiResponse {
   }>;
   error?: { message?: string };
   promptFeedback?: { blockReason?: string };
+  modelVersion?: string;
+  usageMetadata?: {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+    totalTokenCount?: number;
+    cachedContentTokenCount?: number;
+  };
 }
 
 /** Pure response parsing. A safety-blocked prompt returns no candidates
@@ -87,12 +103,31 @@ export function extractGeminiText(data: unknown): GeneratedBeat {
   // display + parsing. MAX_TOKENS with partial text marks the beat
   // incomplete so it is not auto-saved as canon (same contract as
   // OllamaProvider -- see GeneratedBeat.complete).
+  const meta = res.usageMetadata;
+  const usage: ModelUsage | undefined = meta
+    ? {
+        provider: "gemini",
+        source: "reported",
+        ...omitUndefined({
+          model: res.modelVersion,
+          input_tokens: meta.promptTokenCount,
+          output_tokens: meta.candidatesTokenCount,
+          total_tokens: computeTotalTokens(
+            meta.promptTokenCount,
+            meta.candidatesTokenCount,
+            meta.totalTokenCount,
+          ),
+          cached_input_tokens: meta.cachedContentTokenCount,
+        }),
+      }
+    : undefined;
   return {
     text: text.replace(/^\s+/, ""),
     ...completionFromFinishReason(candidate?.finishReason, {
       stop: ["STOP"],
       length: ["MAX_TOKENS"],
     }),
+    ...(usage !== undefined && { usage }),
   };
 }
 
