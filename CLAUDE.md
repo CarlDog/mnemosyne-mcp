@@ -13,10 +13,13 @@ Status lives in [STATUS.md](STATUS.md) — read it first. This section names
 only what is in flight; it must never restate STATUS.md's Done log. (When
 the two disagree, STATUS.md is newer.)
 
-**Nothing is in flight (2026-08-28).** The phase-end audit is closed, the
-`index.ts` stage is done, and the external-system research is triaged. The next
-direction is deliberately unset and will be shaped by live use. Read
-[STATUS.md](STATUS.md) first; the standing context below still applies.
+**Nothing is in flight (2026-08-29).** The external-system research program
+is fully executed: decision queue enumerated, every open queue item
+shipped, the four design-heavy candidates ratified (with measurement gates
+run first) and built. The one pending operator ask is labeling the
+enrichment-benchmark fixtures (`MNEMO_QUERY_ENRICHMENT` stays off until a
+recorded win). Read [STATUS.md](STATUS.md) first; the standing context
+below still applies.
 
 `canon/` is the permanent human-editable source
 for a story's narrative content ([docs/DATA_LAYOUT.md](docs/DATA_LAYOUT.md));
@@ -132,7 +135,36 @@ assessments listed under "Layout" below.
   SDKs). The OpenAI-compatible class serves both `openai` and
   `atlascloud` (and any compatible host via `OPENAI_BASE_URL`).
 - `src/tools/*.ts` — tool registrations (one file per tool surface).
-- `src/log.ts` — structured stderr logger.
+- `src/run-context.ts` / `src/run-outcome.ts` — run identity + typed
+  replay-safe outcomes (RUN_OUTCOMES_DESIGN, ratified): `RunContext`
+  carries the caller's abort signal (consulted at phase boundaries only —
+  a dispatched generation always completes and saves), `RunOutcomeError`
+  carries the retry-safety projection and ratified HTTP status map.
+- `src/context-plan.ts` — pure deterministic context admission
+  (CONTEXT_PLAN_DESIGN, ratified): `planContext` drop tiers (protected
+  rules/style never drop; untagged scenes → clean scenes → references,
+  memory_id terminal tie-break), the `context_plan` response manifest,
+  estimator calibration logging, `MNEMO_CONTEXT_ADMISSION` warn/enforce.
+- `src/capabilities.ts` — generator capability descriptors
+  (GENERATOR_CAPABILITIES_DESIGN, ratified): instance-keyed async
+  resolver (Ollama effective window from live `/api/show`; cloud windows
+  all-unknown by decision), `GET /api/capabilities` source,
+  warn-don't-break `capabilityWarnings`.
+- `src/mcp-discovery.ts` — bounded, name-only `tools/list` verification of
+  sibling MCP services' required tool sets (NemoClaw §2): OC fails
+  startup on a missing contract; companions fail before any message
+  posts. Zero `tools/call` by construction.
+- `src/readiness.ts` — the protected `GET /api/status` prober (NemoClaw
+  §3): non-mutating, non-billable probes; cloud generators honestly
+  `not_probed`; 15s TTL cache. `/health` stays public liveness-only.
+- `src/service-url.ts` — the one parser every configured service endpoint
+  passes through (NemoClaw §4): http(s)-only, no embedded
+  credentials/fragment/query; private addresses deliberately allowed.
+- `src/log.ts` — structured stderr logger, with recursive sensitive-key +
+  URL-userinfo redaction at the final sink (meta values; the authored
+  message string is not scanned). Tool-argument prose never logs by
+  default (`MNEMO_LOG_CONTENT=true` + `LOG_LEVEL=debug` is the explicit
+  short-lived opt-in).
 - `src/mcp-result.ts` — unwraps a sibling MCP server's tool result;
   throws an `isError` result's real message rather than returning error
   prose as a reply. Shared by the OC/Kindroid/Botify clients.
