@@ -84,6 +84,17 @@ export interface LlmGenerateOptions {
  * is still queued as its own redesign (see STATUS.md). */
 export interface GeneratedBeat {
   text: string;
+  /** False when the provider reports the output was cut off before its
+   * natural end (Ollama `done_reason: "length"` -- the num_predict budget
+   * ran out mid-scene). Absent means the provider does not report
+   * completion state, which callers treat as complete -- so providers can
+   * adopt the contract incrementally without changing existing behavior
+   * (docs/OLLAMA_ADOPTION_ASSESSMENT.md §1). Callers must not auto-save
+   * a `complete: false` beat as canon. */
+  complete?: boolean;
+  /** Normalized finish reason when the provider reports one: "stop"
+   * (natural end), "length" (token budget exhausted), or "unknown". */
+  finishReason?: "stop" | "length" | "unknown";
   /** Kindroid group only: why the turn loop stopped. "user_turn" means the
    * floor came back to you mid-scene -- there may still be replies in
    * `text`. Only ever set when allowUser was true (kindroid-mcp's own
@@ -196,6 +207,9 @@ interface OllamaChatResponse {
   message?: { role?: string; content?: string };
   error?: string;
   done?: boolean;
+  /** Why generation stopped: "stop" (natural end), "length" (num_predict
+   * exhausted), "load" (empty-message load request). Absent on old daemons. */
+  done_reason?: string;
 }
 
 export class OllamaProvider implements LlmProvider {
@@ -284,10 +298,32 @@ export class OllamaProvider implements LlmProvider {
       if (data.error) {
         throw new Error(`Ollama error: ${data.error}`);
       }
+      // Nonstreaming mode must end in a terminal response. A response with
+      // done !== true is malformed, not a shorter answer -- trusting it
+      // would treat an interrupted generation as a finished beat.
+      if (data.done !== true) {
+        throw new Error(
+          "Ollama returned a non-terminal response (done !== true) in nonstreaming mode",
+        );
+      }
       const content = data.message?.content;
       if (!content) {
         throw new Error("Ollama returned no message content");
       }
+
+      // Normalize the finish reason so callers can keep a truncated beat
+      // out of automatic canon admission (docs/OLLAMA_ADOPTION_ASSESSMENT.md
+      // §1). "stop" is a natural end; "length" means num_predict ran out
+      // mid-scene. Absent done_reason (old daemons) is treated as complete
+      // -- the field predates every supported deployment, so absence means
+      // an old server, not a truncation.
+      const finishReason: GeneratedBeat["finishReason"] =
+        data.done_reason === "length"
+          ? "length"
+          : data.done_reason === "stop" || data.done_reason === undefined
+            ? "stop"
+            : "unknown";
+      const complete = finishReason !== "length";
 
       // Strip leading whitespace. Some models (notably HammerAI/mythomax-l2)
       // prefix their responses with a stray space character; passing it
@@ -298,8 +334,9 @@ export class OllamaProvider implements LlmProvider {
         model,
         ms: Date.now() - start,
         chars: trimmed.length,
+        finish_reason: data.done_reason ?? "(absent)",
       });
-      return { text: trimmed };
+      return { text: trimmed, complete, finishReason };
     } catch (err) {
       const message = describeTransportError(err);
       log.error("ollama", "generate error", {

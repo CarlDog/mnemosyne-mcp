@@ -99,6 +99,10 @@ export interface ContinueResponse {
     validate_ms: number;
   };
   yielded_to_user?: boolean;
+  /** The beat was cut off at the generator's token budget: text present,
+   * NOT saved, NOT validated -- message says how to proceed. */
+  incomplete?: boolean;
+  finish_reason?: string;
   message?: string;
   group_ended?: "user_turn" | "max_turns";
   group_turns?: number;

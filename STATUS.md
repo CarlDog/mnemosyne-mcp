@@ -538,6 +538,24 @@ milestones at which they were measured.
 
 ## Done
 
+- **Ollama P0 #1 shipped: a beat cut off at the token budget is no longer
+  auto-saved as canon** (2026-08-28). The first of the three remaining P0s in
+  [docs/RESEARCH_DECISION_QUEUE.md](docs/RESEARCH_DECISION_QUEUE.md), per
+  [OLLAMA_ADOPTION_ASSESSMENT.md §1](docs/OLLAMA_ADOPTION_ASSESSMENT.md).
+  `OllamaProvider` now requires a terminal `done: true` response and
+  normalizes `done_reason` into `GeneratedBeat.complete`/`finishReason`
+  (absent = complete, so every other provider is unchanged). `continueScene`
+  returns the costly text with `incomplete: true`, performs zero save calls,
+  and skips validation — saving a partial is a deliberate
+  `mnemo_save_entity` decision, and no silent retry (a second generation is
+  a different scene). A validator verdict cut at its budget now throws
+  instead of parsing truncated-but-valid JSON into a clean report. The web
+  UI renders the server's message for any no-save response (previously only
+  the group-yield case) and styles the incomplete one as a warning.
+  8 new tests in `tests/completion-integrity.test.ts`, including the
+  acceptance case verbatim: a `length` beat performs zero `memorySave`
+  calls and still returns its text.
+
 - **Research decision queue enumerated; the three shipped triage items
   verified against their own acceptance proofs** (2026-08-28, `63b0db9`).
   The triage entry below claimed "a decision queue of 20 live proposals"
