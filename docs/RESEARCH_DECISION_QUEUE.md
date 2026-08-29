@@ -107,9 +107,15 @@ schedule:
    integrity, validator locality, schema-validated verdicts — see the
    Ollama table above). No P0 remains anywhere in the set.
 2. ~~**NemoClaw §1 integration test**~~ — shipped 2026-08-28 (see above).
-3. **NemoClaw P1 ×2** — sibling-MCP contract validation; semantic readiness.
-4. **Privacy-safe logging** (OpenClaw §7) — prose out of default logs.
-5. **Usage telemetry** (Open WebUI §3 + Ollama §7, one implementation).
+3. **NemoClaw P1 ×2** — sibling-MCP contract validation, then semantic
+   readiness (readiness builds on the discovery machinery). The largest
+   remaining items; each wants its own design pass before code.
+4. ~~**Privacy-safe logging**~~ — the logging half shipped 2026-08-28 (see
+   the OpenClaw table); the §7 remainder (shutdown ownership, OC retry
+   classification, atomic config writes, final-sink redaction) stays open.
+5. **Usage telemetry** (Open WebUI §3 + Ollama §7, one implementation) —
+   the last un-started item from the original ranked list. (Cloud
+   finish-reason adoption, added later, also shipped 2026-08-28.)
 6. Everything else waits for its documented trigger.
 
 The ~60 explicit non-adoptions across the four docs are not restated here;
