@@ -538,6 +538,22 @@ milestones at which they were measured.
 
 ## Done
 
+- **Research decision queue enumerated; the three shipped triage items
+  verified against their own acceptance proofs** (2026-08-28, `63b0db9`).
+  The triage entry below claimed "a decision queue of 20 live proposals"
+  that was written down nowhere;
+  [docs/RESEARCH_DECISION_QUEUE.md](docs/RESEARCH_DECISION_QUEUE.md) now
+  enumerates every recommendation-table row of the four assessments with its
+  disposition, and holds the verification record. Verification found one real
+  gap: `a12e992`'s test covers only the guard helper, while NemoClaw §1's
+  acceptance proof requires an HTTP MCP integration test through the actual
+  per-session server factory — queued, not silently fixed. keep_alive and the
+  a11y fixes are fully covered; the "five drift items" were all the Atlas
+  corrections in `32e027f`, nothing outstanding. Also fixed: Known Gaps still
+  listed HTTP filesystem authority as open while this Done log said it
+  shipped (struck), and each assessment header now says its relative
+  Mnemosyne links resolve against the recorded `cfd9d7f` snapshot, not HEAD.
+
 - **External-system research read end-to-end, triaged, and three items
   shipped** (2026-08-28, `32e027f`, `ebb6d36`, `9be11f3`, `a12e992`). The five
   documents (3,128 lines) had never been read in full since landing, and
