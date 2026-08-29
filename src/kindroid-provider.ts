@@ -29,6 +29,7 @@ import {
   DEFAULT_USER_NAME,
 } from "./companion-message.js";
 import type { KindroidClient, KindroidGroupReply } from "./kindroid-client.js";
+import { RunOutcomeError } from "./run-outcome.js";
 import type { GeneratedBeat, LlmGenerateOptions, LlmProvider } from "./llm.js";
 import type { ContextBundle } from "./prompt.js";
 import type { KindroidTarget } from "./stories.js";
@@ -202,7 +203,8 @@ export class KindroidProvider implements LlmProvider {
         const cause = result.read_back_error
           ? `: ${result.read_back_error}`
           : "";
-        throw new Error(
+        throw new RunOutcomeError(
+          "completed_but_readback_failed",
           `Kindroid group ${target.id} generated ${result.turns} ` +
             `turn(s) but they could not be read back${cause}. Those turns ` +
             `exist in the conversation -- do NOT retry this beat, that ` +

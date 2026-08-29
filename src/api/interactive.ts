@@ -23,6 +23,7 @@ import {
   MAX_GROUP_MAX_TURNS,
 } from "../kindroid-provider.js";
 import { continueScene } from "../tools/continue.js";
+import { makeRunContext } from "../run-context.js";
 import { revalidateScenes } from "../tools/revalidate.js";
 import { validateContent } from "../validator.js";
 import { asyncRoute, parseOr400, requireStory } from "./helpers.js";
@@ -128,24 +129,46 @@ export function registerInteractiveRoutes(
         return;
       }
 
-      const result = await continueScene(oc, generator, validator, story.id, {
-        direction: body.direction,
-        mode: body.mode,
-        sceneStrategy: sceneStrategies.strategy,
-        sceneFallbackStrategy: sceneStrategies.fallback,
-        maxTokens: body.max_tokens,
-        temperature: body.temperature,
-        model: body.model,
-        explicitKindroidTarget: explicitTarget,
-        // findStory already ran for the 404 check above -- hand its
-        // binding over so continueScene doesn't re-fetch the marker.
-        storyKindroidTarget: story.kindroid_target,
-        storyKindroidTargetPrefetched: true,
-        groupMaxTurns: body.group_max_turns,
-        allowUser: body.allow_user,
-        validate: body.validate,
-        reinvokeHint: `call /stories/${story.id}/continue again`,
+      // Disconnect detection (RUN_OUTCOMES_DESIGN, ratified): abort from
+      // the RESPONSE's close event, guarded by writableEnded -- req's
+      // 'close' fires when the request BODY completes (~0 ms into a long
+      // route, empirically verified), which would abort every run at
+      // start. res 'close' fires on both disconnect and normal
+      // completion; writableEnded is the discriminator.
+      const abort = new AbortController();
+      res.on("close", () => {
+        if (!res.writableEnded) abort.abort();
       });
+      const run = makeRunContext("rest", {
+        storyId: story.id,
+        signal: abort.signal,
+      });
+
+      const result = await continueScene(
+        oc,
+        generator,
+        validator,
+        story.id,
+        {
+          direction: body.direction,
+          mode: body.mode,
+          sceneStrategy: sceneStrategies.strategy,
+          sceneFallbackStrategy: sceneStrategies.fallback,
+          maxTokens: body.max_tokens,
+          temperature: body.temperature,
+          model: body.model,
+          explicitKindroidTarget: explicitTarget,
+          // findStory already ran for the 404 check above -- hand its
+          // binding over so continueScene doesn't re-fetch the marker.
+          storyKindroidTarget: story.kindroid_target,
+          storyKindroidTargetPrefetched: true,
+          groupMaxTurns: body.group_max_turns,
+          allowUser: body.allow_user,
+          validate: body.validate,
+          reinvokeHint: `call /stories/${story.id}/continue again`,
+        },
+        run,
+      );
       res.json(result);
     }),
   );

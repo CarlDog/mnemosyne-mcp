@@ -76,7 +76,13 @@ server logs — correlation is the field's stated purpose.
 **A surface disconnect aborts pre-dispatch work only**, and the signal is
 therefore consulted **only at phase boundaries** — before gather, between
 retrieval calls (including inside OC backoff sleeps), and immediately
-before a provider dispatch or an OC `memory_save` dispatch. The signal is
+before the provider dispatch. There is deliberately **no check before the
+`memory_save` dispatch** (an implementation-time correction to this
+paragraph's first wording): by then the generation is complete, and
+aborting the save on a disconnect would strand the finished beat unsaved
+with the caller gone — the exact outcome the acceptance test
+"dispatched, then disconnected, still completes and saves" forbids. The
+signal is
 **never composed into an in-flight provider request**: aborting a
 dispatched generation would discard spent tokens and, for a companion,
 manufacture an ambiguous outcome for a call that would have completed —

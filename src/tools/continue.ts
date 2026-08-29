@@ -51,6 +51,8 @@ import {
 import type { ModelUsage } from "../llm.js";
 import { log } from "../log.js";
 import { asText, withLogging } from "./helpers.js";
+import { makeRunContext, type RunContext } from "../run-context.js";
+import { assertNotAborted } from "../run-outcome.js";
 import {
   MAX_GENERATION_TOKENS,
   MAX_TEMPERATURE,
@@ -89,6 +91,8 @@ export interface ContinueSceneOptions {
 }
 
 export interface ContinueSceneResult {
+  /** Correlates this run with server logs (RUN_OUTCOMES_DESIGN). */
+  run_id: string;
   yielded_to_user?: true;
   message?: string;
   saved?: false;
@@ -101,6 +105,13 @@ export interface ContinueSceneResult {
   beat_text: string;
   memory_id?: string;
   save_error?: string;
+  /** Set when a DISPATCHED OC save failed: the canonical write outcome is
+   * unprovable from here (the transport may have failed after OC
+   * committed). The beat text is preserved above; deciding whether to
+   * re-persist (mnemo_save_entity) after checking the story is the
+   * caller's call. Absent when the failure is provably pre-dispatch
+   * (rate-limit rejection), which stays plainly retryable. */
+  canon_write_outcome?: "unknown";
   mode: Mode;
   context_summary?: {
     rules: number;
@@ -146,8 +157,17 @@ export async function continueScene(
   validator: LlmProvider,
   storyId: string,
   opts: ContinueSceneOptions,
+  // Optional so direct callers (unit tests, scripts) need no ceremony;
+  // both real surfaces pass one carrying the caller's abort signal.
+  run: RunContext = makeRunContext("mcp", { storyId }),
 ): Promise<ContinueSceneResult> {
   const mode = opts.mode ?? DEFAULT_MODE;
+
+  // Phase-boundary abort checks (RUN_OUTCOMES_DESIGN, ratified): before
+  // gather and before the generate dispatch -- NEVER after generation has
+  // been dispatched, so a disconnected caller's beat still completes and
+  // saves (the tokens are spent; the scene is recoverable afterwards).
+  assertNotAborted(run, "context gathering");
 
   const gatherStart = Date.now();
   const context = await gatherContext(oc, storyId, opts.direction, {
@@ -176,6 +196,8 @@ export async function continueScene(
     storyTarget,
   );
 
+  assertNotAborted(run, "the generate dispatch");
+
   const generateStart = Date.now();
   const beat = await generator.generate({
     systemPrompt,
@@ -203,6 +225,7 @@ export async function continueScene(
   // re-send, or the group sees it twice.
   if (beatText.trim() === "") {
     return {
+      run_id: run.runId,
       yielded_to_user: true,
       beat_text: "",
       saved: false,
@@ -231,6 +254,7 @@ export async function continueScene(
   // generation is a different scene, not this one finished.
   if (beat.complete === false) {
     return {
+      run_id: run.runId,
       incomplete: true,
       saved: false,
       beat_text: beatText,
@@ -280,6 +304,14 @@ export async function continueScene(
     saveError = (err as Error).message;
     log.warn("continueScene", "scene save failed", { msg: saveError });
   }
+  // A dispatched-save failure leaves the canonical write outcome UNKNOWN
+  // (RUN_OUTCOMES_DESIGN, ratified): the transport may have failed after
+  // OC committed. Success-shaped -- the beat text is preserved and the
+  // caller decides. The one provably-pre-dispatch failure is OC's
+  // rate-limit rejection (its middleware rejects before handler
+  // dispatch), which stays a plainly retryable save_error.
+  const canonWriteUnknown =
+    saveError !== undefined && !/rate limit/i.test(saveError);
   const saveMs = Date.now() - saveStart;
 
   let validateMs = 0;
@@ -332,10 +364,12 @@ export async function continueScene(
   }
 
   return {
+    run_id: run.runId,
     beat_name: beatName,
     beat_text: beatText,
     ...(memoryId !== undefined && { memory_id: memoryId }),
     ...(saveError !== undefined && { save_error: saveError }),
+    ...(canonWriteUnknown && { canon_write_outcome: "unknown" as const }),
     mode,
     context_summary: {
       rules: context.rules.length,
@@ -486,22 +520,26 @@ export function registerContinueTool(
     },
     withLogging(
       "mnemo_continue",
-      async (args: {
-        direction: string;
-        mode?: (typeof MODES)[number];
-        scene_context_strategy?: SceneContextStrategy;
-        scene_context_fallback_strategy?: SceneContextStrategy;
-        max_tokens?: number;
-        temperature?: number;
-        model?: string;
-        kindroid_kin?: string;
-        kindroid_group_id?: string;
-        group_max_turns?: number;
-        allow_user?: boolean;
-        validate?: boolean;
-        story?: string;
-      }) => {
+      async (
+        args: {
+          direction: string;
+          mode?: (typeof MODES)[number];
+          scene_context_strategy?: SceneContextStrategy;
+          scene_context_fallback_strategy?: SceneContextStrategy;
+          max_tokens?: number;
+          temperature?: number;
+          model?: string;
+          kindroid_kin?: string;
+          kindroid_group_id?: string;
+          group_max_turns?: number;
+          allow_user?: boolean;
+          validate?: boolean;
+          story?: string;
+        },
+        extra,
+      ) => {
         const storyId = await resolveStoryId(oc, args.story);
+        const run = makeRunContext("mcp", { storyId, signal: extra.signal });
         const sceneStrategies = resolveSceneContextStrategies(
           {
             strategy: args.scene_context_strategy,
@@ -520,20 +558,27 @@ export function registerContinueTool(
           args.kindroid_group_id,
         );
 
-        const result = await continueScene(oc, generator, validator, storyId, {
-          direction: args.direction,
-          mode: args.mode,
-          sceneStrategy: sceneStrategies.strategy,
-          sceneFallbackStrategy: sceneStrategies.fallback,
-          maxTokens: args.max_tokens,
-          temperature: args.temperature,
-          model: args.model,
-          explicitKindroidTarget: explicitTarget,
-          groupMaxTurns: args.group_max_turns,
-          allowUser: args.allow_user,
-          validate: args.validate,
-          reinvokeHint: "call mnemo_continue again",
-        });
+        const result = await continueScene(
+          oc,
+          generator,
+          validator,
+          storyId,
+          {
+            direction: args.direction,
+            mode: args.mode,
+            sceneStrategy: sceneStrategies.strategy,
+            sceneFallbackStrategy: sceneStrategies.fallback,
+            maxTokens: args.max_tokens,
+            temperature: args.temperature,
+            model: args.model,
+            explicitKindroidTarget: explicitTarget,
+            groupMaxTurns: args.group_max_turns,
+            allowUser: args.allow_user,
+            validate: args.validate,
+            reinvokeHint: "call mnemo_continue again",
+          },
+          run,
+        );
         return asText(result);
       },
     ),

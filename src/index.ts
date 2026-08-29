@@ -94,6 +94,9 @@ if (generatorConfig.provider === "kindroid") {
   const botifyClient = new BotifyClient(
     generatorConfig.url,
     process.env.BOTIFY_MCP_AUTH_TOKEN,
+    process.env.BOTIFY_MCP_TIMEOUT_MS
+      ? Number(process.env.BOTIFY_MCP_TIMEOUT_MS)
+      : undefined,
   );
   generator = new BotifyProvider(botifyClient, {
     defaultChatId: generatorConfig.chatId,

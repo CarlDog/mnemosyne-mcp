@@ -12,7 +12,17 @@ type ToolResult = {
   content: Array<{ type: "text"; text: string }>;
   isError?: boolean;
 };
-type ToolHandler<A extends ToolArgs> = (args: A) => Promise<ToolResult>;
+/** The slice of the SDK's RequestHandlerExtra tools consume. The SDK's
+ * `signal` is required and fires when the caller cancels the request --
+ * withLogging used to drop the whole extra context, which is why no MCP
+ * cancellation ever reached a provider call (RUN_OUTCOMES_DESIGN). */
+export interface ToolExtra {
+  signal: AbortSignal;
+}
+type ToolHandler<A extends ToolArgs> = (
+  args: A,
+  extra: ToolExtra,
+) => Promise<ToolResult>;
 
 // Narrative prose is NOT normal telemetry (OpenClaw assessment §7 -- this is
 // a private storytelling server designed for mature material). The old
@@ -70,14 +80,14 @@ export function withLogging<A extends ToolArgs>(
   name: string,
   handler: ToolHandler<A>,
 ): ToolHandler<A> {
-  return async (args: A) => {
+  return async (args: A, extra: ToolExtra) => {
     const start = Date.now();
     log.info(`tool:${name}`, "invoke", sanitizeToolArgsForLog(args));
     if (contentLoggingOptedIn()) {
       log.debug(`tool:${name}`, "invoke args (full, MNEMO_LOG_CONTENT)", args);
     }
     try {
-      const result = await handler(args);
+      const result = await handler(args, extra);
       log.info(`tool:${name}`, "ok", { ms: Date.now() - start });
       return result;
     } catch (err) {
