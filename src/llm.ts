@@ -105,6 +105,29 @@ export interface GeneratedBeat {
   groupTurns?: number;
 }
 
+/** Narrow structured-output capability, deliberately NOT a field on the
+ * already-overloaded LlmGenerateOptions (docs/OLLAMA_ADOPTION_ASSESSMENT.md
+ * §3: prefer a provider-specific structured-generation surface over another
+ * generic option most providers ignore). Ollama implements it by sending
+ * the JSON Schema as the top-level `format` field; the validator uses it
+ * when available and falls back to prompt-only JSON otherwise -- runtime
+ * schema validation of the parsed result applies either way. */
+export interface StructuredOutputCapable {
+  generateStructured(
+    opts: LlmGenerateOptions,
+    format: Record<string, unknown>,
+  ): Promise<GeneratedBeat>;
+}
+
+export function supportsStructuredOutput(
+  provider: LlmProvider,
+): provider is LlmProvider & StructuredOutputCapable {
+  return (
+    typeof (provider as Partial<StructuredOutputCapable>).generateStructured ===
+    "function"
+  );
+}
+
 export interface LlmProvider {
   readonly name: string;
   generate(opts: LlmGenerateOptions): Promise<GeneratedBeat>;
@@ -223,9 +246,22 @@ export class OllamaProvider implements LlmProvider {
   // model when a later request wants a bigger num_ctx than it was loaded
   // with -- a warmup at the computeNumCtx floor (MIN_NUM_CTX) would leave
   // the first real call paying the full cold start anyway.
+  /** Structured generation: identical to generate() but constrains the
+   * output through Ollama's top-level `format` JSON-Schema field (verified
+   * accepted and shape-enforced against the deployed daemon, 0.32.15,
+   * 2026-08-28). Callers still runtime-validate the parsed result --
+   * `format` constrains shape, it does not prove content. */
+  async generateStructured(
+    opts: LlmGenerateOptions,
+    format: Record<string, unknown>,
+  ): Promise<GeneratedBeat> {
+    return this.generate(opts, undefined, format);
+  }
+
   async generate(
     opts: LlmGenerateOptions,
     numCtxOverride?: number,
+    format?: Record<string, unknown>,
   ): Promise<GeneratedBeat> {
     const model = opts.model ?? this.config.defaultModel;
     const url = new URL("/api/chat", this.config.url);
@@ -260,6 +296,8 @@ export class OllamaProvider implements LlmProvider {
       keep_alive: normalizeKeepAlive(
         this.config.keepAlive ?? DEFAULT_KEEP_ALIVE,
       ),
+      // format is a TOP-LEVEL field like keep_alive, not a runner option.
+      ...(format !== undefined && { format }),
       options: {
         temperature: opts.temperature ?? DEFAULT_TEMPERATURE,
         num_predict: numPredict,
