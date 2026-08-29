@@ -538,6 +538,31 @@ milestones at which they were measured.
 
 ## Done
 
+- **Protected semantic readiness at `GET /api/status`** (2026-08-28).
+  NemoClaw P1 #2
+  ([NEMOCLAW_ADOPTION_ASSESSMENT.md §3](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md),
+  previously a Known Gap): `/health` always says `ok` and cannot report a
+  dropped OC connection or a missing model — it stays exactly that, cheap
+  public liveness. The new route sits behind the existing bearer +
+  Host/Origin `apiSecurity` boundary and reports `openchronicle`,
+  `generator`, and `validator` as `ready`/`unavailable`/`not_probed` with
+  an observation timestamp and a canon-free reason. Every probe is
+  non-mutating and non-billable, via a new optional
+  `LlmProvider.checkReady()`: OC re-runs the bounded tools/list contract
+  check (startup proof isn't continued availability), Ollama hits
+  `/api/show` for the exact tag (no inference; the locality probe was
+  refactored so requireLocal and plain existence share one path),
+  companions do connect+discovery only (never a posted message), and the
+  four cloud generators report `not_probed` honestly — a real probe is a
+  billable call, and a load balancer must never bill. A 15-second TTL
+  cache keeps repeated deployment polls to one probe run, preserving the
+  original `checked_at` so staleness is visible. `degraded` from the
+  assessment's vocabulary is deliberately unused until a partial state
+  exists, and the stdio-side `mnemo_status` twin is recorded as an open
+  option rather than smuggled in. 8 new tests in `tests/readiness.test.ts`
+  including the route through the real router. Both NemoClaw P1s are now
+  closed.
+
 - **Sibling-MCP results are runtime-validated, and required tools are
   discovered before use** (2026-08-28). NemoClaw P1 #1
   ([NEMOCLAW_ADOPTION_ASSESSMENT.md §2](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md),
@@ -2736,11 +2761,12 @@ consider only when real use exposes the corresponding pressure:
   bounded, non-mutating `tools/list` discovery at each client's connect —
   see the Done entry above and
   [NEMOCLAW_ADOPTION_ASSESSMENT.md §2](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md#2-validate-external-mcp-contracts-and-discover-required-tools).
-- **`/health` is liveness only.** It always returns process `ok` and cannot
-  report a dropped/incompatible OC connection, unavailable generator, or
-  missing validator model. Keep it cheap; add protected semantic readiness
-  only through a separately ratified slice. Research and acceptance proof:
-  [NEMOCLAW_ADOPTION_ASSESSMENT.md](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md#3-separate-liveness-from-semantic-readiness).
+- ~~**`/health` is liveness only.**~~ **Closed 2026-08-28**: `/health` stays
+  cheap public liveness, and the protected `GET /api/status` now reports
+  semantic readiness (OC contract, generator, validator) with non-mutating,
+  non-billable probes — see the Done entry above and
+  [NEMOCLAW_ADOPTION_ASSESSMENT.md §3](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md#3-separate-liveness-from-semantic-readiness).
+  A stdio-side `mnemo_status` tool remains an open option.
 - **Credential-bearing endpoint diagnostics need a single safe boundary.**
   URL parsing currently permits embedded userinfo/query/fragment shapes,
   direct-provider fetch follows redirects by default, and logs lack final-sink

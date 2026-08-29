@@ -160,6 +160,13 @@ export class KindroidProvider implements LlmProvider {
     private readonly config: KindroidProviderConfig,
   ) {}
 
+  /** Non-mutating readiness probe: connect() performs the MCP handshake
+   * plus bounded required-tool discovery -- it never posts a message to a
+   * conversation (docs/NEMOCLAW_ADOPTION_ASSESSMENT.md §3). */
+  async checkReady(): Promise<void> {
+    await this.client.connect();
+  }
+
   async generate(opts: LlmGenerateOptions): Promise<GeneratedBeat> {
     const target = opts.kindroidTarget ?? this.config.defaultTarget;
     const message = buildKindroidMessage(

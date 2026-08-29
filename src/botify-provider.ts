@@ -37,6 +37,13 @@ export class BotifyProvider implements LlmProvider {
     private readonly config: BotifyProviderConfig,
   ) {}
 
+  /** Non-mutating readiness probe: connect() performs the MCP handshake
+   * plus bounded required-tool discovery -- it never posts a message to a
+   * conversation (docs/NEMOCLAW_ADOPTION_ASSESSMENT.md §3). */
+  async checkReady(): Promise<void> {
+    await this.client.connect();
+  }
+
   async generate(opts: LlmGenerateOptions): Promise<GeneratedBeat> {
     const message = buildCompanionMessage(
       opts.userMessage,

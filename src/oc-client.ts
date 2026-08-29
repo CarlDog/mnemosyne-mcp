@@ -158,6 +158,15 @@ export class OcClient {
     this.connected = false;
   }
 
+  /** Non-mutating readiness probe: a fresh bounded tools/list round-trip
+   * proving OC is still reachable AND still advertises the required
+   * contract -- the startup check does not prove continued availability
+   * (docs/NEMOCLAW_ADOPTION_ASSESSMENT.md §3). */
+  async checkReady(): Promise<void> {
+    await this.connect();
+    await verifyRequiredTools(this.client, "OpenChronicle", OC_REQUIRED_TOOLS);
+  }
+
   private async callTool<T>(
     name: string,
     args: Record<string, unknown>,
