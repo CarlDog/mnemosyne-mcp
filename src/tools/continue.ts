@@ -237,6 +237,10 @@ export async function continueScene(
       ...(beat.finishReason !== undefined && {
         finish_reason: beat.finishReason,
       }),
+      // A truncated generation still spent real tokens -- and this is
+      // exactly the case where the caller wants the counts to decide how
+      // much to raise max_tokens by.
+      ...(beat.usage !== undefined && { usage: { generator: beat.usage } }),
       message:
         "The generator hit its output-token budget before finishing the " +
         "beat (finish reason 'length'). The text below was NOT saved as a " +

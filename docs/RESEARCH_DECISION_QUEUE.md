@@ -61,7 +61,7 @@ now says so.
 | P1 | Model-aware, fail-closed context admission (`/api/show` profile, `truncate:false`/`shift:false`) | Open candidate |
 | P1 | Typed native request/response contract | **Partially shipped** — `ebb6d36` fixed numeric `keep_alive` and pinned placement/shape in tests; the full builder/parser/typed-error contract (Slice A) is open |
 | P1 | Stable `num_ctx`, preload without inference (empty-message load), `/api/ps` residency | Open candidate — warmup-at-configured-ceiling shipped earlier (2026-08-27 remediation); the load-op and residency pieces are open |
-| P1 | Consume native usage/route/error metadata | Open candidate — overlaps the Open WebUI `ModelUsage` envelope; implement once, together |
+| P1 | Consume native usage/route/error metadata | **Partially shipped 2026-08-28** — the usage/timing half landed with the `ModelUsage` envelope (exact tokens + ns→ms load/eval durations). Still open: carrying route fields through results, and the typed error classification (missing model / capability mismatch / 429/503 / timeout / abort mapping, configurable timeout) |
 | P2 | Bounded preflight/diagnostics + deployment guidance | Open candidate |
 
 ## NemoClaw ([NEMOCLAW_ADOPTION_ASSESSMENT.md](NEMOCLAW_ADOPTION_ASSESSMENT.md))

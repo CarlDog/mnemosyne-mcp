@@ -221,6 +221,36 @@ describe("continuation response usage envelope", () => {
     });
   });
 
+  it("an incomplete (length-cut) beat still reports its generator usage", async () => {
+    const truncated: LlmProvider = {
+      name: "stub-generator",
+      generate: async () => ({
+        text: "cut mid-sen",
+        complete: false,
+        finishReason: "length",
+        usage: {
+          provider: "stub-generator",
+          source: "reported",
+          input_tokens: 500,
+          output_tokens: 2048,
+        },
+      }),
+    };
+    const result = await continueScene(
+      stubOc(),
+      truncated,
+      usageValidator,
+      STORY_ID,
+      {
+        direction: "go on",
+        sceneStrategy: "query-ranked",
+        reinvokeHint: "call again",
+      },
+    );
+    expect(result.incomplete).toBe(true);
+    expect(result.usage?.generator).toMatchObject({ output_tokens: 2048 });
+  });
+
   it("omits the envelope entirely when nothing reported usage", async () => {
     const bare: LlmProvider = {
       name: "bare",
