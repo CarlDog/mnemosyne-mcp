@@ -29,9 +29,15 @@ export async function llmPostJson(opts: {
       headers: { "Content-Type": "application/json", ...opts.headers },
       body: JSON.stringify(opts.body),
       signal: controller.signal,
+      // Credential-bearing requests never follow redirects (NemoClaw §4):
+      // a redirect would replay the Authorization header at whatever
+      // location the (possibly compromised) upstream names.
+      redirect: "error",
     });
     if (!res.ok) {
-      const text = await res.text().catch(() => "");
+      // Bounded read: an upstream error body is untrusted and can be
+      // huge; 2KB is plenty for a diagnostic.
+      const text = (await res.text().catch(() => "")).slice(0, 2048);
       throw new Error(
         `${opts.provider} HTTP ${res.status}: ${text || res.statusText}`,
       );

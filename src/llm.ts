@@ -236,6 +236,10 @@ export interface OllamaConfig {
   maxContextWindow?: number;
   /** keep_alive for Ollama /api/chat. */
   keepAlive?: string;
+  /** Per-request /api/chat timeout in ms (OLLAMA_TIMEOUT_MS). Default 5
+   * minutes; raise for CPU/NAS deployments where a big-story generation
+   * legitimately runs long. */
+  timeoutMs?: number;
   /** Enforce that every model this provider runs executes LOCALLY
    * (docs/OLLAMA_ADOPTION_ASSESSMENT.md §2). Ollama transparently proxies
    * `:cloud` models and remote-host aliases through the same localhost
@@ -249,7 +253,48 @@ export interface OllamaConfig {
   requireLocal?: boolean;
 }
 
-const OLLAMA_TIMEOUT_MS = 5 * 60 * 1000;
+export const DEFAULT_OLLAMA_TIMEOUT_MS = 5 * 60 * 1000;
+
+/** Typed, actionable classification of Ollama /api/chat HTTP failures
+ * (Ollama assessment §7, ratified as a mechanical item). Pure. No
+ * automatic retry anywhere: Ollama queues work itself, so retrying
+ * overload amplifies it, and an ambiguous failure must never be replayed
+ * blind. */
+export function classifyOllamaHttpError(
+  status: number,
+  bodyText: string,
+  model: string,
+): Error {
+  if (status === 404) {
+    return new Error(
+      `Ollama model "${model}" is not installed on this daemon -- model ` +
+        "names must be EXACT installed tags (list them with `ollama list` " +
+        "or GET /api/tags)",
+    );
+  }
+  if (status === 400 && bodyText.includes("exceed_context_size_error")) {
+    // The daemon nests JSON inside a JSON string, so the counts arrive as
+    // \"n_prompt_tokens\":6016 -- tolerate both escaped and plain forms.
+    const tokens = /n_prompt_tokens\\?":\s*(\d+)/.exec(bodyText)?.[1];
+    const ctx = /n_ctx\\?":\s*(\d+)/.exec(bodyText)?.[1];
+    return new Error(
+      `Ollama rejected the request as over the context window` +
+        (tokens && ctx ? ` (${tokens} tokens vs num_ctx ${ctx})` : "") +
+        ` -- this is the deliberate reject-don't-truncate contract. Raise ` +
+        "OLLAMA_NUM_CTX (within the model's trained context) or trim story " +
+        "context; the context-plan manifest shows what was admitted.",
+    );
+  }
+  if (status === 429 || status === 503) {
+    return new Error(
+      `Ollama is overloaded (HTTP ${status}). It queues work itself, so ` +
+        "this call is NOT retried automatically (a retry storm amplifies " +
+        "the overload) -- wait for in-flight generations to finish and " +
+        "retry manually.",
+    );
+  }
+  return new Error(`Ollama HTTP ${status}: ${bodyText || String(status)}`);
+}
 // Exported so index.ts's OLLAMA_KEEP_ALIVE env fallback and this
 // provider-level fallback are one value, not two independently-owned
 // "30m" literals that drift.
@@ -614,8 +659,9 @@ export class OllamaProvider implements LlmProvider {
       ),
     });
 
+    const timeoutMs = this.config.timeoutMs ?? DEFAULT_OLLAMA_TIMEOUT_MS;
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), OLLAMA_TIMEOUT_MS);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const res = await fetch(url, {
         method: "POST",
@@ -625,8 +671,9 @@ export class OllamaProvider implements LlmProvider {
       });
 
       if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(`Ollama HTTP ${res.status}: ${text || res.statusText}`);
+        // Bounded read: an upstream error body is untrusted input.
+        const text = (await res.text().catch(() => "")).slice(0, 2048);
+        throw classifyOllamaHttpError(res.status, text, model);
       }
 
       const data = (await res.json()) as OllamaChatResponse;
@@ -710,10 +757,18 @@ export class OllamaProvider implements LlmProvider {
       });
       return { text: trimmed, complete, finishReason, usage };
     } catch (err) {
-      const message = describeTransportError(err);
+      const timedOut = err instanceof Error && err.name === "AbortError";
+      const message = timedOut
+        ? `Ollama request timed out after ${timeoutMs}ms ` +
+          `(OLLAMA_TIMEOUT_MS). A big story on a CPU/slow daemon can ` +
+          `legitimately need longer -- raise OLLAMA_TIMEOUT_MS rather ` +
+          `than retrying (the daemon may still be working on this ` +
+          `request; a blind retry doubles the queue).`
+        : describeTransportError(err);
       log.error("ollama", "generate error", {
         model,
         ms: Date.now() - start,
+        timed_out: timedOut,
         msg: message,
       });
       throw err instanceof Error && message !== err.message

@@ -40,6 +40,7 @@ import {
   ollamaGeneratorModel,
   ollamaNumCtx,
   ollamaValidatorModel,
+  ollamaTimeoutMs,
 } from "./generator-config.js";
 
 let httpConfig: HttpConfig;
@@ -144,6 +145,7 @@ if (generatorConfig.provider === "kindroid") {
     defaultModel: generatorConfig.model,
     maxContextWindow: ollamaNumCtx,
     keepAlive: OLLAMA_KEEP_ALIVE_CLEAN,
+    timeoutMs: ollamaTimeoutMs,
   });
   log.info("startup", "ollama generator configured", {
     url: OLLAMA_URL,
@@ -157,6 +159,7 @@ const validator = new OllamaProvider({
   defaultModel: ollamaValidatorModel,
   maxContextWindow: ollamaNumCtx,
   keepAlive: OLLAMA_KEEP_ALIVE_CLEAN,
+  timeoutMs: ollamaTimeoutMs,
   // The validator is architecturally local ("local and free"): its requests
   // carry the story's full canon, and Ollama can transparently proxy cloud
   // models through the same localhost API. requireLocal refuses :cloud

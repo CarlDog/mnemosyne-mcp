@@ -14,6 +14,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { z } from "zod";
 import { log } from "./log.js";
+import { describeServiceUrl } from "./service-url.js";
 import { MNEMOSYNE_VERSION } from "./version.js";
 import { extractStructuredOrParsed } from "./mcp-result.js";
 import { verifyRequiredTools } from "./mcp-discovery.js";
@@ -221,7 +222,7 @@ export class OcClient {
     await this.client.connect(transport);
     await verifyRequiredTools(this.client, "OpenChronicle", OC_REQUIRED_TOOLS);
     this.connected = true;
-    log.info("oc-client", "connected", { url: this.url.toString() });
+    log.info("oc-client", "connected", { url: describeServiceUrl(this.url) });
   }
 
   async close(): Promise<void> {
