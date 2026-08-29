@@ -10,19 +10,34 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { log } from "./log.js";
 import { MNEMOSYNE_VERSION } from "./version.js";
+import { z } from "zod";
 import { extractStructuredOrParsed } from "./mcp-result.js";
+import { verifyRequiredTools } from "./mcp-discovery.js";
 
 // Minimal shape of botify-mcp's send_message result -- only the fields
 // extractBotReply() actually uses. botify-mcp's own Message type carries
 // more (id, type, senderId, createdAt); add fields here only when a real
 // call site needs them. Verified against botify-mcp source
-// (src/botify.ts: SendMessageResult / Message).
-export interface BotifySendMessageResult {
-  bot_message?: { text?: string } | null;
+// (src/botify.ts: SendMessageResult / Message). Runtime schema per
+// docs/NEMOCLAW_ADOPTION_ASSESSMENT.md §2. CAREFUL: bot_message's
+// null-vs-absent distinction is load-bearing for extractBotReply (null =
+// inference ran, no text; absent = inference never attempted), so
+// bot_message is .nullish() on an object whose text is also .nullish() --
+// zod preserves null vs undefined through parsing.
+const BotifySendMessageResultSchema = z.object({
+  bot_message: z.object({ text: z.string().nullish() }).nullish(),
   /** Set by botify-mcp when the user message persisted but the bot-reply
    * inference step failed -- the message DID land in the chat. */
-  trigger_warning?: string;
-}
+  trigger_warning: z.string().nullish(),
+});
+export type BotifySendMessageResult = z.infer<
+  typeof BotifySendMessageResultSchema
+>;
+
+/** Every botify-mcp tool this client calls. Verified (bounded, name-only
+ * tools/list) at connect(), which runs lazily before the FIRST mutating
+ * call -- same rationale as kindroid-client.ts. */
+export const BOTIFY_REQUIRED_TOOLS = ["send_message"] as const;
 
 /** Pull the bot's reply text out of a send_message result, or throw with
  * the most actionable message available. Pure -- unit-testable without a
@@ -82,6 +97,7 @@ export class BotifyClient {
         : undefined,
     });
     await this.client.connect(transport);
+    await verifyRequiredTools(this.client, "botify-mcp", BOTIFY_REQUIRED_TOOLS);
     this.connected = true;
     log.info("botify-client", "connected", { url: this.url.toString() });
   }
@@ -103,9 +119,10 @@ export class BotifyClient {
         name: "send_message",
         arguments: { chat_id: chatId, text },
       });
-      const parsed = extractStructuredOrParsed<BotifySendMessageResult>(
+      const parsed = extractStructuredOrParsed(
         result,
         "send_message",
+        BotifySendMessageResultSchema,
       );
       const reply = extractBotReply(parsed);
       log.debug("botify-client", "tool ok", {

@@ -12,50 +12,79 @@
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { z } from "zod";
 import { log } from "./log.js";
 import { MNEMOSYNE_VERSION } from "./version.js";
 import { extractStructuredOrParsed } from "./mcp-result.js";
+import { verifyRequiredTools } from "./mcp-discovery.js";
 
-export interface OcProject {
-  id: string;
-  name: string;
-  created_at?: string;
-  metadata?: Record<string, unknown>;
-}
+// Runtime result schemas (docs/NEMOCLAW_ADOPTION_ASSESSMENT.md §2): these
+// were compile-time interfaces cast at a network boundary, so an OC schema
+// change entered story logic before failing. Optional fields are .nullish()
+// -- OC is Python, and a None serializes as null, which a bare .optional()
+// would reject. Unknown extra fields are tolerated (zod strips them):
+// sibling services evolve additively, and rejecting a new field would turn
+// every upstream release into an outage.
+const OcProjectSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  created_at: z.string().nullish(),
+  metadata: z.record(z.unknown()).nullish(),
+});
+export type OcProject = z.infer<typeof OcProjectSchema>;
 
-export interface OcMemory {
-  id: string;
-  content: string;
-  project_id: string;
-  tags: string[];
-  pinned: boolean;
-  created_at: string;
-  updated_at?: string;
-  source?: string;
-}
+const OcMemorySchema = z.object({
+  id: z.string(),
+  content: z.string(),
+  project_id: z.string(),
+  tags: z.array(z.string()),
+  pinned: z.boolean(),
+  created_at: z.string(),
+  updated_at: z.string().nullish(),
+  source: z.string().nullish(),
+});
+export type OcMemory = z.infer<typeof OcMemorySchema>;
 
 /** memory_list's compact:true row shape — content swapped for a preview.
  * Field names verified against a live OC response (2026-08-27). */
-export interface OcMemoryCompact {
-  id: string;
-  content_preview: string;
-  content_length: number;
-  project_id: string;
-  tags: string[];
-  pinned: boolean;
-  created_at: string;
-  updated_at?: string;
-  source?: string;
-}
+const OcMemoryCompactSchema = z.object({
+  id: z.string(),
+  content_preview: z.string(),
+  content_length: z.number(),
+  project_id: z.string(),
+  tags: z.array(z.string()),
+  pinned: z.boolean(),
+  created_at: z.string(),
+  updated_at: z.string().nullish(),
+  source: z.string().nullish(),
+});
+export type OcMemoryCompact = z.infer<typeof OcMemoryCompactSchema>;
 
 // The confirmed shape of project_delete's response ({status:"ok", ...}).
 // See the `confirm` note on OcClient.projectDelete for why the preview
 // shape ({status:"preview", memory_count}) never reaches a caller here.
-export interface OcProjectDeleteResult {
-  status: string;
-  name?: string;
-  deleted_memories?: number;
-}
+const OcProjectDeleteResultSchema = z.object({
+  status: z.string(),
+  name: z.string().nullish(),
+  deleted_memories: z.number().nullish(),
+});
+export type OcProjectDeleteResult = z.infer<typeof OcProjectDeleteResultSchema>;
+
+/** Every OC tool this client calls. Verified as advertised (bounded,
+ * name-only tools/list -- zero tools/call) at connect(), which index.ts
+ * awaits at startup: a deployed OC missing part of this contract fails
+ * startup instead of surfacing as a confusing mid-story error. */
+export const OC_REQUIRED_TOOLS = [
+  "project_create",
+  "project_delete",
+  "memory_save",
+  "memory_search",
+  "memory_list",
+  "memory_get",
+  "memory_update",
+  "memory_pin",
+  "memory_delete",
+] as const;
 
 export interface OcMemorySaveOptions {
   content: string;
@@ -118,6 +147,7 @@ export class OcClient {
     if (this.connected) return;
     const transport = new StreamableHTTPClientTransport(this.url);
     await this.client.connect(transport);
+    await verifyRequiredTools(this.client, "OpenChronicle", OC_REQUIRED_TOOLS);
     this.connected = true;
     log.info("oc-client", "connected", { url: this.url.toString() });
   }
@@ -131,6 +161,7 @@ export class OcClient {
   private async callTool<T>(
     name: string,
     args: Record<string, unknown>,
+    schema?: z.ZodType<T>,
     retriesLeft = MAX_RATE_LIMIT_RETRIES,
   ): Promise<T> {
     const start = Date.now();
@@ -143,9 +174,27 @@ export class OcClient {
 
       // extractStructuredOrParsed handles the "how do I get the raw parsed
       // value out of the MCP result" step (structuredContent when present,
-      // else parse the text content block). unwrapResult<T> is a separate,
-      // OC-specific step that peels FastMCP's {result:[...]} list-wrapping.
-      return unwrapResult<T>(extractStructuredOrParsed<unknown>(result, name));
+      // else parse the text content block). unwrapResult is a separate,
+      // OC-specific step that peels FastMCP's {result:[...]} list-wrapping
+      // -- it runs BEFORE schema validation so the schema describes the
+      // natural value, not FastMCP's envelope.
+      const raw = unwrapResult<unknown>(
+        extractStructuredOrParsed<unknown>(result, name),
+      );
+      if (schema === undefined) return raw as T;
+      const parsed = schema.safeParse(raw);
+      if (!parsed.success) {
+        const detail = parsed.error.issues
+          .slice(0, 3)
+          .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
+          .join("; ");
+        throw new Error(
+          `OpenChronicle ${name} returned a result that does not match its ` +
+            `expected contract (${detail}) -- the deployed OC version may ` +
+            "have changed its schema",
+        );
+      }
+      return parsed.data;
     } catch (err) {
       const msg = (err as Error).message;
       if (retriesLeft > 0 && /rate limit/i.test(msg)) {
@@ -157,7 +206,7 @@ export class OcClient {
           delay_ms: delayMs,
         });
         await new Promise((resolve) => setTimeout(resolve, delayMs));
-        return this.callTool(name, args, retriesLeft - 1);
+        return this.callTool(name, args, schema, retriesLeft - 1);
       }
       log.error("oc-client", "tool error", {
         tool: name,
@@ -174,7 +223,7 @@ export class OcClient {
   ): Promise<OcProject> {
     const args: Record<string, unknown> = { name };
     if (metadata) args.metadata = metadata;
-    return this.callTool<OcProject>("project_create", args);
+    return this.callTool("project_create", args, OcProjectSchema);
   }
 
   // Hard delete — the project and every memory in it. No soft-delete, no
@@ -187,10 +236,11 @@ export class OcClient {
   // as a parameter no caller would ever set to false. (Omitting it is what
   // silently no-op'd memoryDelete below.)
   async projectDelete(projectId: string): Promise<OcProjectDeleteResult> {
-    return this.callTool<OcProjectDeleteResult>("project_delete", {
-      project_id: projectId,
-      confirm: true,
-    });
+    return this.callTool(
+      "project_delete",
+      { project_id: projectId, confirm: true },
+      OcProjectDeleteResultSchema,
+    );
   }
 
   async memorySave(opts: OcMemorySaveOptions): Promise<OcMemory> {
@@ -201,7 +251,7 @@ export class OcClient {
     if (opts.tags) args.tags = opts.tags;
     if (opts.pinned !== undefined) args.pinned = opts.pinned;
     if (opts.createdAt) args.created_at = opts.createdAt;
-    return this.callTool<OcMemory>("memory_save", args);
+    return this.callTool("memory_save", args, OcMemorySchema);
   }
 
   async memorySearch(opts: OcMemorySearchOptions): Promise<OcMemory[]> {
@@ -209,7 +259,7 @@ export class OcClient {
     if (opts.projectId) args.project_id = opts.projectId;
     if (opts.tags) args.tags = opts.tags;
     if (opts.topK !== undefined) args.top_k = opts.topK;
-    return this.callTool<OcMemory[]>("memory_search", args);
+    return this.callTool("memory_search", args, z.array(OcMemorySchema));
   }
 
   // Complete project enumeration, unlike memorySearch's ranked window.
@@ -219,9 +269,11 @@ export class OcClient {
   // export that silently truncated at a search cap would be quiet data
   // loss.
   async memoryList(opts: { projectId: string }): Promise<OcMemory[]> {
-    return this.callTool<OcMemory[]>("memory_list", {
-      project_id: opts.projectId,
-    });
+    return this.callTool(
+      "memory_list",
+      { project_id: opts.projectId },
+      z.array(OcMemorySchema),
+    );
   }
 
   // Complete project enumeration in OC's compact form: content_preview +
@@ -237,10 +289,11 @@ export class OcClient {
   async memoryListCompact(opts: {
     projectId: string;
   }): Promise<OcMemoryCompact[]> {
-    return this.callTool<OcMemoryCompact[]>("memory_list", {
-      project_id: opts.projectId,
-      compact: true,
-    });
+    return this.callTool(
+      "memory_list",
+      { project_id: opts.projectId, compact: true },
+      z.array(OcMemoryCompactSchema),
+    );
   }
 
   // Fetch one memory by id (unscoped by project -- callers that need a
@@ -262,9 +315,11 @@ export class OcClient {
   // the message OC itself controls and guarantees.
   async memoryGet(memoryId: string): Promise<OcMemory | null> {
     try {
-      return await this.callTool<OcMemory>("memory_get", {
-        memory_id: memoryId,
-      });
+      return await this.callTool(
+        "memory_get",
+        { memory_id: memoryId },
+        OcMemorySchema,
+      );
     } catch (err) {
       if (/Memory not found: /.test((err as Error).message)) {
         return null;
@@ -281,7 +336,7 @@ export class OcClient {
     const args: Record<string, unknown> = { memory_id: opts.memoryId };
     if (opts.content !== undefined) args.content = opts.content;
     if (opts.tags !== undefined) args.tags = opts.tags;
-    return this.callTool<OcMemory>("memory_update", args);
+    return this.callTool("memory_update", args, OcMemorySchema);
   }
 
   async memoryPin(memoryId: string, pinned = true): Promise<void> {
