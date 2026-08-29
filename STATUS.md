@@ -538,6 +538,23 @@ milestones at which they were measured.
 
 ## Done
 
+- **Narrative prose removed from default logs** (2026-08-28). The sharpest
+  slice of the OpenClaw assessment's §7 operational-safety track: the tool
+  invoke line logged the first 200 characters of every long string at info
+  and the FULL arguments at debug — on a private storytelling server
+  designed for mature material, entity bodies and scene directions were
+  default telemetry. `sanitizeToolArgsForLog()` now records lengths for
+  prose fields (`content`/`direction`, always — a short direction is still
+  story content) and for any string past the threshold, and element counts
+  for arrays (import's `entities` carries whole bodies); short identifiers
+  (names, ids, modes) stay, since they are the line's diagnostic value.
+  The full-args debug line requires an explicit `MNEMO_LOG_CONTENT=true`
+  opt-in on top of `LOG_LEVEL=debug`, documented in `.env.example` as
+  short-lived. 6 new tests including a stderr-capture proof that no
+  emitted line contains the prose. The rest of §7 (shutdown ownership, OC
+  retry classification, atomic config writes, final-sink secret redaction)
+  stays open in the decision queue.
+
 - **Completion integrity extended to all four cloud providers**
   (2026-08-28). The Ollama P0 fix deliberately scoped `complete`/
   `finishReason` to Ollama; the cloud providers still discarded their
