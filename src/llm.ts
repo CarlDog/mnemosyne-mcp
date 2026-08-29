@@ -757,7 +757,12 @@ export class OllamaProvider implements LlmProvider {
       });
       return { text: trimmed, complete, finishReason, usage };
     } catch (err) {
-      const timedOut = err instanceof Error && err.name === "AbortError";
+      // Own-controller check, not err.name: undici wraps aborts in
+      // "TypeError: fetch failed" with the real cause nested (the exact
+      // wrapping describeTransportError exists for), so name-sniffing can
+      // misclassify a timeout as a plain transport error. The controller
+      // is ours -- if it aborted, this WAS the timeout.
+      const timedOut = controller.signal.aborted;
       const message = timedOut
         ? `Ollama request timed out after ${timeoutMs}ms ` +
           `(OLLAMA_TIMEOUT_MS). A big story on a CPU/slow daemon can ` +

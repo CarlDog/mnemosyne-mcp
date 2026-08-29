@@ -551,9 +551,17 @@ milestones at which they were measured.
   endpoint, sanitized origin+path connection logs, `redirect: "error"` on
   the credential-bearing cloud path, 2KB-bounded upstream error bodies,
   and recursive sensitive-key + URL-userinfo redaction at the one log
-  sink every line passes through. 9 new tests (`tests/hardening.test.ts`),
-  including the captured nested-escape wire fixture. Known Gaps' last
-  research entry is closed. 339 passing / 64 skipped.
+  sink every line's META passes through (the authored message string is
+  not scanned — messages are authored, meta is data). 10 new tests
+  (`tests/hardening.test.ts`), including the captured nested-escape wire
+  fixture and a timeout-classification case proving the owned-controller
+  check survives undici's error wrapping (an advisor catch: name-sniffing
+  AbortError would have misclassified real timeouts). Two working notes:
+  the pre-commit PII hook blocked the internal NAS hostname from a test
+  fixture mid-commit — the second time this session-family that hostname
+  gravitated toward a public file (`.codex/config.toml` before it), so
+  the hook is load-bearing here, not theoretical. Known Gaps' last
+  research entry is closed. 340 passing / 64 skipped.
 
 - **All four ratified designs implemented — the build-out of the research
   program is complete** (2026-08-28, seven commits `2baef78..05317f4`).
