@@ -35,8 +35,8 @@ acceptance proofs, not just the Done log:
   `tests/filesystem-path-authority.test.ts` unit-tests only the guard helper;
   `tests/http-integration.test.ts` never exercises `out_path`/`file_path`. A
   refactor that stopped passing `httpConfig.port === undefined` through
-  `makeServer()` would re-open the hole with every test green. Queued below
-  as its own small item.
+  `makeServer()` would re-open the hole with every test green. **Closed later
+  the same day** — see the NemoClaw table below.
 - **`9be11f3` (a11y)** — all four cited defects fixed and verified in the
   built bundles. The rest of Open WebUI §6's proof list (full keyboard
   walkthrough, continuation phase/result announcements) depends on the run
@@ -67,7 +67,7 @@ now says so.
 | Doc rank | Item | Disposition |
 |---|---|---|
 | P0 | HTTP filesystem authority | **Shipped** `a12e992` — flat rejection per the assessment's own argument; see verification record above for the remaining integration-test gap |
-| — | HTTP-transport integration test for the path refusal (the §1 acceptance proof) | **Open candidate** — small, test-only, closes the acceptance proof |
+| — | HTTP-transport integration test for the path refusal (the §1 acceptance proof) | **Shipped 2026-08-28** — `tests/http-integration.test.ts` now registers with `allowFilesystemPaths: false` exactly as `makeServer()` does for HTTP, proves `out_path`/`file_path` are refused over the wire before any filesystem operation, and proves the server-managed default export still works; non-vacuity confirmed by flipping the wiring (1 of 5 fails) |
 | P1 | Runtime-validate sibling-MCP results + bounded required-tool discovery | **Open candidate** — mirrored in STATUS.md Known Gaps |
 | P1 | Separate liveness from protected semantic readiness (`/api/status` / `mnemo_status`) | **Open candidate** — mirrored in Known Gaps |
 | P2 | Endpoint/redirect/error-body/final-sink-redaction hygiene | Open candidate — mirrored in Known Gaps |
@@ -103,8 +103,7 @@ schedule:
 
 1. **Ollama P0 ×3** — the only remaining P0s in the set; each is an
    integrity/privacy defect in current behavior, not a feature.
-2. **NemoClaw §1 integration test** — closes the last acceptance proof of an
-   already-shipped item; smallest item in the queue.
+2. ~~**NemoClaw §1 integration test**~~ — shipped 2026-08-28 (see above).
 3. **NemoClaw P1 ×2** — sibling-MCP contract validation; semantic readiness.
 4. **Privacy-safe logging** (OpenClaw §7) — prose out of default logs.
 5. **Usage telemetry** (Open WebUI §3 + Ollama §7, one implementation).

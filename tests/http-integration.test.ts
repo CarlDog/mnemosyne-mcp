@@ -8,6 +8,12 @@
 //   2. The story-pointer override (`story` param, resolveStoryId) actually
 //      bypasses the active-story pointer over the wire, not just through
 //      the helper function directly (already covered in stories.test.ts).
+//   3. Caller-supplied filesystem paths are refused over the HTTP transport
+//      (docs/NEMOCLAW_ADOPTION_ASSESSMENT.md §1 acceptance proof). The
+//      factory below passes allowFilesystemPaths: false exactly as
+//      index.ts's makeServer() does when serving HTTP, so a refactor that
+//      drops that wiring shows up here, not only in the guard's unit tests
+//      (tests/filesystem-path-authority.test.ts).
 //
 // Env-gated on OC_URL only -- none of the tools exercised here
 // (mnemo_story_list, mnemo_save_entity, mnemo_recall) touch the
@@ -18,7 +24,7 @@ import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
 import { promises as fs } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import express from "express";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -93,7 +99,17 @@ suite("HTTP transport + story override (real OC, end to end)", () => {
           name: "http-integration-test-server",
           version: "0.0.0",
         });
-        registerTools(server, oc, stubProvider, stubProvider);
+        registerTools(
+          server,
+          oc,
+          stubProvider,
+          stubProvider,
+          undefined,
+          undefined,
+          // Serving HTTP -- same value index.ts's makeServer() passes
+          // (httpConfig.port === undefined is false there).
+          false,
+        );
         return server;
       },
       sessionIdleMs: 60_000,
@@ -155,6 +171,55 @@ suite("HTTP transport + story override (real OC, end to end)", () => {
       expect(resB.isError).not.toBe(true);
     } finally {
       await Promise.all([clientA.close(), clientB.close()]);
+    }
+  });
+
+  it("refuses caller-supplied out_path/file_path over HTTP before touching the filesystem", async () => {
+    const client = await newClient(url);
+    const refusedPath = join(dataDir, "must-never-exist.json");
+    try {
+      const exportResult = await client.callTool({
+        name: "mnemo_export_story",
+        arguments: { story: storyAId, out_path: refusedPath },
+      });
+      expect(exportResult.isError).toBe(true);
+      expect(JSON.stringify(exportResult.content)).toMatch(
+        /refused over the HTTP transport/,
+      );
+      // Refused before any filesystem operation: nothing was written.
+      await expect(fs.access(refusedPath)).rejects.toThrow();
+
+      const importResult = await client.callTool({
+        name: "mnemo_import_story",
+        arguments: { file_path: refusedPath },
+      });
+      expect(importResult.isError).toBe(true);
+      expect(JSON.stringify(importResult.content)).toMatch(
+        /refused over the HTTP transport/,
+      );
+    } finally {
+      await client.close();
+    }
+  });
+
+  it("server-managed default export still works over HTTP", async () => {
+    const client = await newClient(url);
+    try {
+      const result = await client.callTool({
+        name: "mnemo_export_story",
+        arguments: { story: storyAId },
+      });
+      expect(result.isError).not.toBe(true);
+      const manifest = extractStructuredOrParsed<{ path: string }>(
+        result,
+        "mnemo_export_story",
+      );
+      // Lands under the suite's isolated data dir, at the server-owned
+      // default destination.
+      expect(resolve(manifest.path).startsWith(resolve(dataDir))).toBe(true);
+      await expect(fs.access(manifest.path)).resolves.toBeUndefined();
+    } finally {
+      await client.close();
     }
   });
 
