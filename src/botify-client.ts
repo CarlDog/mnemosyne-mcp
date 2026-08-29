@@ -8,7 +8,9 @@
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
 import { log } from "./log.js";
+import { RunOutcomeError } from "./run-outcome.js";
 import { MNEMOSYNE_VERSION } from "./version.js";
 import { z } from "zod";
 import { extractStructuredOrParsed } from "./mcp-result.js";
@@ -39,6 +41,14 @@ export type BotifySendMessageResult = z.infer<
  * call -- same rationale as kindroid-client.ts. */
 export const BOTIFY_REQUIRED_TOOLS = ["send_message"] as const;
 
+/** Default per-request timeout, overridable with BOTIFY_MCP_TIMEOUT_MS.
+ * Matches kindroid-client's reasoning: erring long is the safe direction
+ * because a mid-flight timeout does not mean "nothing happened" -- a
+ * too-short timeout manufactures the ambiguous, retry-hazardous failure
+ * (RUN_OUTCOMES_DESIGN: Botify timeout parity; a parity fix, not a
+ * response to an observed Botify incident). */
+export const BOTIFY_DEFAULT_TIMEOUT_MS = 180_000;
+
 /** Pull the bot's reply text out of a send_message result, or throw with
  * the most actionable message available. Pure -- unit-testable without a
  * live client. botify-mcp only generates a reply inline when its
@@ -49,7 +59,8 @@ export function extractBotReply(result: BotifySendMessageResult): string {
   const text = result.bot_message?.text;
   if (text) return text;
   if (result.trigger_warning) {
-    throw new Error(
+    throw new RunOutcomeError(
+      "completed_but_readback_failed",
       `Botify accepted the message but reply generation failed: ${result.trigger_warning}. ` +
         "The direction WAS posted to the chat -- do not blindly retry, that would double-post.",
     );
@@ -62,12 +73,14 @@ export function extractBotReply(result: BotifySendMessageResult): string {
   // the token in the null case sends the operator chasing config that
   // is correct.
   if (result.bot_message !== undefined) {
-    throw new Error(
+    throw new RunOutcomeError(
+      "completed_but_readback_failed",
       "Botify ran reply generation but produced no text. The direction WAS " +
         "posted to the chat -- do not blindly retry, that would double-post.",
     );
   }
-  throw new Error(
+  throw new RunOutcomeError(
+    "completed_but_readback_failed",
     "Botify returned no bot reply and never attempted inference. botify-mcp " +
       "only generates replies inline when its BOTIFY_APP_TOKEN is configured " +
       "on that server -- check its deployment config. The direction WAS " +
@@ -82,6 +95,7 @@ export class BotifyClient {
   constructor(
     private readonly url: URL,
     private readonly authToken?: string,
+    private readonly timeoutMs: number = BOTIFY_DEFAULT_TIMEOUT_MS,
   ) {
     this.client = new Client(
       { name: "mnemosyne-mcp", version: MNEMOSYNE_VERSION },
@@ -115,10 +129,11 @@ export class BotifyClient {
     await this.connect();
     const start = Date.now();
     try {
-      const result = await this.client.callTool({
-        name: "send_message",
-        arguments: { chat_id: chatId, text },
-      });
+      const result = await this.client.callTool(
+        { name: "send_message", arguments: { chat_id: chatId, text } },
+        undefined,
+        { timeout: this.timeoutMs },
+      );
       const parsed = extractStructuredOrParsed(
         result,
         "send_message",
@@ -131,11 +146,26 @@ export class BotifyClient {
       });
       return reply;
     } catch (err) {
+      const ms = Date.now() - start;
+      const timedOut =
+        err instanceof McpError && err.code === ErrorCode.RequestTimeout;
       log.error("botify-client", "tool error", {
         tool: "send_message",
-        ms: Date.now() - start,
+        ms,
+        timed_out: timedOut,
         msg: (err as Error).message,
       });
+      if (timedOut) {
+        throw new RunOutcomeError(
+          "provider_dispatch_unknown",
+          `send_message timed out after ${ms}ms (BOTIFY_MCP_TIMEOUT_MS=` +
+            `${this.timeoutMs}). The request was accepted, so the direction ` +
+            `may have ALREADY been posted and a reply generated -- do NOT ` +
+            `retry blindly, that would double-post in a real conversation. ` +
+            `Read the chat's recent history to see what landed.`,
+          { cause: err },
+        );
+      }
       throw err;
     }
   }

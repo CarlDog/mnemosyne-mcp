@@ -69,11 +69,12 @@ describe("withLogging emits no story text by default", () => {
   });
 
   const handler = withLogging("mnemo_test", async () => asText({ ok: true }));
+  const stubExtra = { signal: new AbortController().signal };
 
   it("no stderr line contains the prose without the opt-in", async () => {
     delete process.env.MNEMO_LOG_CONTENT;
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-    await handler({ direction: PROSE, content: PROSE });
+    await handler({ direction: PROSE, content: PROSE }, stubExtra);
     const lines = spy.mock.calls.map((c) => String(c[0]));
     expect(lines.length).toBeGreaterThan(0);
     for (const line of lines) {
@@ -84,7 +85,7 @@ describe("withLogging emits no story text by default", () => {
   it("MNEMO_LOG_CONTENT=true is the explicit opt-in for full args", async () => {
     process.env.MNEMO_LOG_CONTENT = "true";
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-    await handler({ direction: PROSE });
+    await handler({ direction: PROSE }, stubExtra);
     const lines = spy.mock.calls.map((c) => String(c[0]));
     // The full-args line goes through log.debug; under the default info
     // level it is suppressed by the logger, so the opt-in alone still

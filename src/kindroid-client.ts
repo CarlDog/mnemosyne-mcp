@@ -9,6 +9,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { log } from "./log.js";
+import { RunOutcomeError } from "./run-outcome.js";
 import { MNEMOSYNE_VERSION } from "./version.js";
 import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
@@ -156,7 +157,8 @@ export class KindroidClient {
         msg: (err as Error).message,
       });
       if (timedOut) {
-        throw new Error(
+        throw new RunOutcomeError(
+          "provider_dispatch_unknown",
           `${name} timed out after ${ms}ms (KINDROID_MCP_TIMEOUT_MS=` +
             `${this.timeoutMs}). The request was accepted, so it may have ` +
             `ALREADY posted a message and generated replies -- do NOT retry ` +
