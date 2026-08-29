@@ -154,6 +154,12 @@ const validator = new OllamaProvider({
   defaultModel: ollamaValidatorModel,
   maxContextWindow: ollamaNumCtx,
   keepAlive: OLLAMA_KEEP_ALIVE_CLEAN,
+  // The validator is architecturally local ("local and free"): its requests
+  // carry the story's full canon, and Ollama can transparently proxy cloud
+  // models through the same localhost API. requireLocal refuses :cloud
+  // tags, preflights the exact model via /api/show, and re-checks the
+  // final response's route fields (docs/OLLAMA_ADOPTION_ASSESSMENT.md §2).
+  requireLocal: true,
 });
 log.info("startup", "ollama validator configured", {
   url: OLLAMA_URL,

@@ -54,7 +54,8 @@ now says so.
 | Doc rank | Item | Disposition |
 |---|---|---|
 | P0 | Preserve completion status; block auto-save of a `done_reason: "length"` beat as canon | **Shipped 2026-08-28** — `GeneratedBeat.complete`/`finishReason`, `done === true` required, `continueScene` returns `incomplete:true` with zero saves and skips validation, a truncated validator verdict throws instead of reading clean; `tests/completion-integrity.test.ts` |
-| P0 | Prove the validator route is local (`:cloud`/remote-alias refusal, `/api/show` preflight, final-response route check) | **Open candidate** — a remote alias silently exports canon and makes "free" validation billable |
+| P0 | Prove the validator route is local (`:cloud`/remote-alias refusal, `/api/show` preflight, final-response route check) | **Shipped 2026-08-28** — `OllamaConfig.requireLocal` on the validator instance: startup `:cloud` tag refusal (generator-config), per-model cached `/api/show` preflight refusing `remote_model`/`remote_host` before any canon is sent, actionable 404 mapping, and a final-response route re-check; `.env.example` recommends daemon-side `OLLAMA_NO_CLOUD=1`; `tests/validator-locality.test.ts` + live-verified against the NAS daemon |
+| — | Ollama *generator* local-by-default (assessment §2's second half: expose Ollama Cloud only as an explicit named route with content-routing semantics) | **Open candidate** — deliberately not folded into the validator P0; needs the content-routing design |
 | P0 | Schema-constrained + runtime-validated validator verdicts (Ollama `format` + strict runtime schema) | **Shipped 2026-08-28** — strict zod report schema replaces the permissive fallback (malformed verdict throws, never reads clean); Ollama sends the literal JSON Schema as top-level `format` via a narrow `StructuredOutputCapable` surface, live-verified against the deployed daemon (0.32.15); drift guard pins the two schema copies together; `tests/validator-schema.test.ts`. Validator `think: false` deliberately deferred pending its own compatibility verification per the doc's sequencing |
 | P1 | Model-aware, fail-closed context admission (`/api/show` profile, `truncate:false`/`shift:false`) | Open candidate |
 | P1 | Typed native request/response contract | **Partially shipped** — `ebb6d36` fixed numeric `keep_alive` and pinned placement/shape in tests; the full builder/parser/typed-error contract (Slice A) is open |
@@ -101,8 +102,9 @@ now says so.
 Dependency-and-severity order from the docs' own rankings — a menu, not a
 schedule:
 
-1. **Ollama P0 ×3** — the only remaining P0s in the set; each is an
-   integrity/privacy defect in current behavior, not a feature.
+1. ~~**Ollama P0 ×3**~~ — all three shipped 2026-08-28 (completion
+   integrity, validator locality, schema-validated verdicts — see the
+   Ollama table above). No P0 remains anywhere in the set.
 2. ~~**NemoClaw §1 integration test**~~ — shipped 2026-08-28 (see above).
 3. **NemoClaw P1 ×2** — sibling-MCP contract validation; semantic readiness.
 4. **Privacy-safe logging** (OpenClaw §7) — prose out of default logs.
