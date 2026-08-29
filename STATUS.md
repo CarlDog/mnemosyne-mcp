@@ -538,6 +538,30 @@ milestones at which they were measured.
 
 ## Done
 
+- **Ollama P0 #3 shipped: validator verdicts are schema-constrained and
+  runtime-validated** (2026-08-28). Per
+  [OLLAMA_ADOPTION_ASSESSMENT.md §3](docs/OLLAMA_ADOPTION_ASSESSMENT.md): the
+  verdict shape used to exist only inside the prompt plus a generic cast,
+  and the "defensive" fallback coerced any malformed report into
+  `{issues: [], summary: ""}` — i.e. broken validator output read as a
+  clean verdict, and a misspelled severity could never equal `error`. Now a
+  strict zod `ValidationReportSchema` (closed severity enum, nonempty
+  rule/quote/explanation, no extra fields at either level) validates every
+  parsed verdict, and a violation throws — a failed validation pass, never
+  an empty clean report. The same contract as a hand-maintained literal
+  JSON Schema is sent as Ollama's top-level `format` field through a new
+  narrow `StructuredOutputCapable` provider surface (deliberately not
+  another ignored field on `LlmGenerateOptions`), live-verified accepted
+  and shape-enforced against the deployed daemon (0.32.15) before wiring.
+  A drift-guard test compares the two schema copies structurally so
+  editing one fails until the other follows (zod 3 has no `toJSONSchema`;
+  not upgrading zod for this, per the assessment). 16 new tests in
+  `tests/validator-schema.test.ts`; the live validator suite (real OC +
+  NAS Ollama) ran green through the new path. Deliberately deferred, per
+  the doc's own sequencing: validator `think: false` (needs its own
+  compatibility check), `truncate:false`/`shift:false` (P1), and the full
+  typed request-contract extraction.
+
 - **Ollama P0 #1 shipped: a beat cut off at the token budget is no longer
   auto-saved as canon** (2026-08-28). The first of the three remaining P0s in
   [docs/RESEARCH_DECISION_QUEUE.md](docs/RESEARCH_DECISION_QUEUE.md), per

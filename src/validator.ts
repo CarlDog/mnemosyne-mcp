@@ -13,24 +13,65 @@
 // code fences. Factored once per the v2 retro lesson (v2 had this helper
 // duplicated across four validators).
 
-import type { LlmProvider } from "./llm.js";
+import { z } from "zod";
+import { supportsStructuredOutput, type LlmProvider } from "./llm.js";
 import type { ContextBundle } from "./prompt.js";
 import { neutralizeSectionDelimiters } from "./prompt.js";
 
-export interface ValidationIssue {
-  severity: "error" | "warning" | "info";
-  /** The name or first line of the rule that is being violated. */
-  rule: string;
-  /** Exact quote of the violating text, copied from the new content. */
-  violating_text: string;
-  /** One-sentence explanation of why this text violates the rule. */
-  explanation: string;
-}
+// Runtime verdict schema (docs/OLLAMA_ADOPTION_ASSESSMENT.md §3). The shape
+// used to exist only inside the prompt plus a generic cast, so a malformed
+// issue survived parsing and a misspelled severity could never equal
+// "error" -- classifyVerdict() then reported clean. Strict: no extra fields
+// at either level, nonempty rule/quote/explanation, severity a closed enum.
+// A schema violation is a FAILED validation pass, never an empty report.
+const ValidationIssueSchema = z
+  .object({
+    severity: z.enum(["error", "warning", "info"]),
+    rule: z.string().min(1),
+    violating_text: z.string().min(1),
+    explanation: z.string().min(1),
+  })
+  .strict();
 
-export interface ValidationReport {
-  issues: ValidationIssue[];
-  summary: string;
-}
+export const ValidationReportSchema = z
+  .object({
+    issues: z.array(ValidationIssueSchema),
+    summary: z.string(),
+  })
+  .strict();
+
+export type ValidationIssue = z.infer<typeof ValidationIssueSchema>;
+export type ValidationReport = z.infer<typeof ValidationReportSchema>;
+
+// The same contract as literal JSON Schema, sent as Ollama's top-level
+// `format` field so the daemon constrains generation to the shape (verified
+// accepted and enforced against the deployed daemon, 0.32.15, 2026-08-28).
+// Hand-maintained rather than derived: this repo is on zod 3, which has no
+// toJSONSchema (assessment's explicit guidance -- do not upgrade zod for
+// this). tests/validator-schema.test.ts pins the two copies against each
+// other so they cannot drift silently.
+export const VALIDATION_REPORT_JSON_SCHEMA = {
+  type: "object",
+  properties: {
+    issues: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          severity: { type: "string", enum: ["error", "warning", "info"] },
+          rule: { type: "string", minLength: 1 },
+          violating_text: { type: "string", minLength: 1 },
+          explanation: { type: "string", minLength: 1 },
+        },
+        required: ["severity", "rule", "violating_text", "explanation"],
+        additionalProperties: false,
+      },
+    },
+    summary: { type: "string" },
+  },
+  required: ["issues", "summary"],
+  additionalProperties: false,
+} as const;
 
 // Single source of truth for the clean/errors split used to tag saved scenes
 // (v0.1.3 validator-gated inclusion — see STATUS.md). "clean" allows warnings
@@ -122,12 +163,19 @@ export async function validateContent(
     ? `Established story context:\n\n${constraints}\n\nNew content to validate:\n\n${content}\n\nReturn your verdict as JSON.`
     : `New content to validate (no established story constraints in this story yet):\n\n${content}\n\nReturn your verdict as JSON. With no constraints, you should typically return an empty issues array.`;
 
-  const verdictBeat = await validator.generate({
+  const genOpts = {
     systemPrompt: SYSTEM_PROMPT,
     userMessage,
     temperature: VALIDATOR_TEMPERATURE,
     maxTokens: VALIDATOR_MAX_TOKENS,
-  });
+  };
+  // Constrain the output shape at generation time where the provider can
+  // (Ollama `format`); the semantic prompt above still carries the
+  // quote-grounding instructions either way, and the runtime schema below
+  // validates the parsed result regardless of which path produced it.
+  const verdictBeat = supportsStructuredOutput(validator)
+    ? await validator.generateStructured(genOpts, VALIDATION_REPORT_JSON_SCHEMA)
+    : await validator.generate(genOpts);
   // A verdict cut off at the token budget is a FAILED validation pass, not
   // a shorter report -- truncated JSON that happened to parse (or an empty
   // issues array) must never read as "clean"
@@ -140,10 +188,28 @@ export async function validateContent(
   }
   const raw = verdictBeat.text;
 
-  const parsed = parseValidatorJson<ValidationReport>(raw);
-  // Defensive: ensure shape is sane even if LLM returned partial structure.
-  return {
-    issues: Array.isArray(parsed.issues) ? parsed.issues : [],
-    summary: typeof parsed.summary === "string" ? parsed.summary : "",
-  };
+  let parsed: unknown;
+  try {
+    parsed = parseValidatorJson<unknown>(raw);
+  } catch {
+    throw new Error(
+      "validator returned unparseable JSON -- validation failed; the " +
+        "content was NOT verified clean",
+    );
+  }
+  // Strict runtime validation replaces the old permissive fallback, which
+  // coerced a malformed report into {issues: [], summary: ""} -- i.e. read
+  // broken validator output as a clean verdict.
+  const result = ValidationReportSchema.safeParse(parsed);
+  if (!result.success) {
+    const detail = result.error.issues
+      .slice(0, 3)
+      .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
+      .join("; ");
+    throw new Error(
+      `validator returned a malformed verdict (${detail}) -- validation ` +
+        "failed; the content was NOT verified clean",
+    );
+  }
+  return result.data;
 }
