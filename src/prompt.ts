@@ -20,6 +20,7 @@
 // ===" with nothing under it.
 
 import type { OcClient } from "./oc-client.js";
+import { RunOutcomeError } from "./run-outcome.js";
 import {
   recall,
   memoryToRecalled,
@@ -133,11 +134,13 @@ async function pullByType(
   storyId: string,
   type: EntityType,
   query: string,
+  signal?: AbortSignal,
 ): Promise<string[]> {
   const entities = await recall(oc, storyId, {
     query,
     type,
     limit: TYPE_LIMITS[type],
+    signal,
   });
   return entities.map((e) => `${e.name}\n${e.body}`);
 }
@@ -211,8 +214,9 @@ const SCENE_TAGS = ["mnemosyne", "story", "scene"] as const;
 async function pullRecencyScenes(
   oc: OcClient,
   storyId: string,
+  signal?: AbortSignal,
 ): Promise<RecalledEntity[]> {
-  const rows = (await oc.memoryListCompact({ projectId: storyId }))
+  const rows = (await oc.memoryListCompact({ projectId: storyId, signal }))
     .filter((row) => SCENE_TAGS.every((tag) => row.tags.includes(tag)))
     .sort(byCreatedAtDesc)
     .slice(0, SCENE_POOL_SIZE);
@@ -222,7 +226,7 @@ async function pullRecencyScenes(
   // limiter under parallel bursts.
   const hydrated: RecalledEntity[] = [];
   for (const row of winners) {
-    const memory = await oc.memoryGet(row.id);
+    const memory = await oc.memoryGet(row.id, signal);
     if (memory === null) continue; // deleted between scan and hydrate
     const entity = memoryToRecalled(memory);
     if (entity !== null && entity.type === "scene") hydrated.push(entity);
@@ -235,16 +239,18 @@ async function pullScenesByStrategy(
   storyId: string,
   query: string,
   strategy: SceneContextStrategy,
+  signal?: AbortSignal,
 ): Promise<RecalledEntity[]> {
   if (strategy === "query-ranked") {
     const pool = await recall(oc, storyId, {
       query,
       type: "scene",
       limit: SCENE_POOL_SIZE,
+      signal,
     });
     return applySceneValidationFilter(pool).slice(0, TYPE_LIMITS.scene);
   }
-  return pullRecencyScenes(oc, storyId);
+  return pullRecencyScenes(oc, storyId, signal);
 }
 
 export async function pullFilteredScenes(
@@ -253,6 +259,7 @@ export async function pullFilteredScenes(
   query: string,
   strategy: SceneContextStrategy = DEFAULT_SCENE_CONTEXT_STRATEGY,
   fallbackStrategy?: SceneContextStrategy,
+  signal?: AbortSignal,
 ): Promise<string[]> {
   const strategies: SceneContextStrategy[] =
     fallbackStrategy && fallbackStrategy !== strategy
@@ -265,6 +272,7 @@ export async function pullFilteredScenes(
       storyId,
       query,
       currentStrategy,
+      signal,
     );
     if (scenes.length > 0) {
       return scenes.map((e) => `${e.name}\n${e.body}`);
@@ -283,6 +291,10 @@ export interface GatherContextOptions {
   /** Optional second strategy tried when the primary yields no eligible
    * scenes. Unset = no fallback. */
   sceneFallbackStrategy?: SceneContextStrategy;
+  /** Run-abort signal, consulted between the sequential per-type pulls
+   * and threaded into each OC call so backoff sleeps abort promptly
+   * (RUN_OUTCOMES_DESIGN: the between-retrieval-calls phase boundary). */
+  signal?: AbortSignal;
   /** Validation contexts consume only rules/style/characters/locations
    * (validator.ts's constraintsBlock never reads scenes/lore/
    * worldbuilding), so validation callers skip those pulls entirely --
@@ -304,10 +316,24 @@ export async function gatherContext(
   // by LLM generation in the next step, so the simpler sequential form
   // is the right v0 trade. Revisit if/when OC raises the rate-limit
   // ceiling or exposes a bulk-search endpoint.
-  const rules = await pullByType(oc, storyId, "rule", query);
-  const style = await pullByType(oc, storyId, "style", query);
-  const characters = await pullByType(oc, storyId, "character", query);
-  const locations = await pullByType(oc, storyId, "location", query);
+  const signal = options.signal;
+  const checkAborted = () => {
+    if (signal?.aborted) {
+      throw new RunOutcomeError(
+        "rejected_before_dispatch",
+        "run aborted between context-retrieval calls; nothing was " +
+          "dispatched to a provider -- safe to retry",
+      );
+    }
+  };
+  const rules = await pullByType(oc, storyId, "rule", query, signal);
+  checkAborted();
+  const style = await pullByType(oc, storyId, "style", query, signal);
+  checkAborted();
+  const characters = await pullByType(oc, storyId, "character", query, signal);
+  checkAborted();
+  const locations = await pullByType(oc, storyId, "location", query, signal);
+  checkAborted();
   if (options.validationOnly) {
     return {
       rules,
@@ -325,9 +351,18 @@ export async function gatherContext(
     query,
     options.sceneStrategy ?? DEFAULT_SCENE_CONTEXT_STRATEGY,
     options.sceneFallbackStrategy,
+    signal,
   );
-  const lore = await pullByType(oc, storyId, "lore", query);
-  const worldbuilding = await pullByType(oc, storyId, "worldbuilding", query);
+  checkAborted();
+  const lore = await pullByType(oc, storyId, "lore", query, signal);
+  checkAborted();
+  const worldbuilding = await pullByType(
+    oc,
+    storyId,
+    "worldbuilding",
+    query,
+    signal,
+  );
   return { rules, style, characters, locations, scenes, lore, worldbuilding };
 }
 

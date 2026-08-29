@@ -243,6 +243,58 @@ describe("REST error mapping", () => {
   });
 });
 
+describe("lifecycle (slice 3)", () => {
+  it("OC rate-limit backoff aborts promptly on the run signal", async () => {
+    const { OcClient } = await import("../src/oc-client.js");
+    const oc = new OcClient(new URL("http://127.0.0.1:1"));
+    // Bypass the network: pretend connected, and make every tool call a
+    // rate-limit rejection so the backoff path engages.
+    (oc as unknown as { connected: boolean }).connected = true;
+    (oc as unknown as { client: unknown }).client = {
+      callTool: async () => {
+        throw new Error("Error executing tool memory_search: rate limit");
+      },
+    };
+    const abort = new AbortController();
+    setTimeout(() => abort.abort(), 50);
+    const start = Date.now();
+    await expect(
+      oc.memorySearch({ query: "x", signal: abort.signal }),
+    ).rejects.toMatchObject({ outcome: "rejected_before_dispatch" });
+    // First backoff sleep alone is 1000ms; prompt abort must beat it.
+    expect(Date.now() - start).toBeLessThan(900);
+  });
+
+  it("concurrent config writes serialize into a valid file (atomic rename)", async () => {
+    const { promises: fs } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const savedDataDir = process.env.MNEMO_DATA_DIR;
+    const dir = await fs.mkdtemp(join(tmpdir(), "mnemo-atomic-cfg-"));
+    process.env.MNEMO_DATA_DIR = dir;
+    try {
+      const { setCurrentStoryId, getCurrentStoryId } =
+        await import("../src/config.js");
+      await Promise.all([
+        setCurrentStoryId("11111111-2222-4333-8444-555555555551"),
+        setCurrentStoryId("11111111-2222-4333-8444-555555555552"),
+        setCurrentStoryId("11111111-2222-4333-8444-555555555553"),
+      ]);
+      // Whatever won, the file parses and no temp sibling is left behind.
+      const winner = await getCurrentStoryId();
+      expect(winner).toMatch(/^11111111-2222-4333-8444-55555555555[123]$/);
+      const leftovers = (await fs.readdir(dir)).filter((f) =>
+        f.includes(".tmp-"),
+      );
+      expect(leftovers).toEqual([]);
+    } finally {
+      if (savedDataDir === undefined) delete process.env.MNEMO_DATA_DIR;
+      else process.env.MNEMO_DATA_DIR = savedDataDir;
+      await fs.rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("companion producers", () => {
   it("Botify readback throws are completed_but_readback_failed", () => {
     for (const payload of [

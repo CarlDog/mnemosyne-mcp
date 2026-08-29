@@ -17,6 +17,34 @@ import { log } from "./log.js";
 import { MNEMOSYNE_VERSION } from "./version.js";
 import { extractStructuredOrParsed } from "./mcp-result.js";
 import { verifyRequiredTools } from "./mcp-discovery.js";
+import { RunOutcomeError } from "./run-outcome.js";
+
+/** Backoff sleep that rejects promptly when the run aborts -- a caller
+ * disconnect or shutdown must not sit out up to 31s of retry sleeps
+ * (RUN_OUTCOMES_DESIGN slice 3). */
+function sleepUnlessAborted(
+  delayMs: number,
+  signal?: AbortSignal,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const abort = () => {
+      clearTimeout(timer);
+      reject(
+        new RunOutcomeError(
+          "rejected_before_dispatch",
+          "run aborted during OpenChronicle rate-limit backoff; the pending " +
+            "call was never dispatched -- safe to retry",
+        ),
+      );
+    };
+    if (signal?.aborted) return abort();
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", abort);
+      resolve();
+    }, delayMs);
+    signal?.addEventListener("abort", abort, { once: true });
+  });
+}
 
 // Runtime result schemas (docs/NEMOCLAW_ADOPTION_ASSESSMENT.md §2): these
 // were compile-time interfaces cast at a network boundary, so an OC schema
@@ -103,6 +131,10 @@ export interface OcMemorySearchOptions {
   projectId?: string;
   tags?: string[];
   topK?: number;
+  /** Optional run-abort signal: aborts the rate-limit backoff sleep
+   * promptly (RUN_OUTCOMES_DESIGN slice 3). Never interrupts an in-flight
+   * request. */
+  signal?: AbortSignal;
 }
 
 // OC v3's rate limit is 120 RPM per client IP (configurable via
@@ -143,7 +175,21 @@ export class OcClient {
     );
   }
 
+  /** Single-flight (RUN_OUTCOMES_DESIGN slice 3): concurrent first calls
+   * share one connection attempt instead of racing the SDK. A failed
+   * attempt clears the latch so the next call retries. */
+  private connecting?: Promise<void>;
+
   async connect(): Promise<void> {
+    if (this.connected) return;
+    if (this.connecting) return this.connecting;
+    this.connecting = this.doConnect().finally(() => {
+      this.connecting = undefined;
+    });
+    return this.connecting;
+  }
+
+  private async doConnect(): Promise<void> {
     if (this.connected) return;
     const transport = new StreamableHTTPClientTransport(this.url);
     await this.client.connect(transport);
@@ -171,6 +217,7 @@ export class OcClient {
     name: string,
     args: Record<string, unknown>,
     schema?: z.ZodType<T>,
+    signal?: AbortSignal,
     retriesLeft = MAX_RATE_LIMIT_RETRIES,
   ): Promise<T> {
     const start = Date.now();
@@ -214,8 +261,13 @@ export class OcClient {
           attempt,
           delay_ms: delayMs,
         });
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
-        return this.callTool(name, args, schema, retriesLeft - 1);
+        // Retrying is safe for EVERY tool here -- including mutating ones
+        // -- only because OC's rate limiting rejects the request BEFORE
+        // handler dispatch (verified in the pinned OC source: the
+        // middleware runs ahead of the tool handler). If OC ever rate
+        // limits mid-handler, this retry becomes a duplicate-write hazard.
+        await sleepUnlessAborted(delayMs, signal);
+        return this.callTool(name, args, schema, signal, retriesLeft - 1);
       }
       log.error("oc-client", "tool error", {
         tool: name,
@@ -268,7 +320,12 @@ export class OcClient {
     if (opts.projectId) args.project_id = opts.projectId;
     if (opts.tags) args.tags = opts.tags;
     if (opts.topK !== undefined) args.top_k = opts.topK;
-    return this.callTool("memory_search", args, z.array(OcMemorySchema));
+    return this.callTool(
+      "memory_search",
+      args,
+      z.array(OcMemorySchema),
+      opts.signal,
+    );
   }
 
   // Complete project enumeration, unlike memorySearch's ranked window.
@@ -277,11 +334,15 @@ export class OcClient {
   // when you want completeness") — which is the export contract: a story
   // export that silently truncated at a search cap would be quiet data
   // loss.
-  async memoryList(opts: { projectId: string }): Promise<OcMemory[]> {
+  async memoryList(opts: {
+    projectId: string;
+    signal?: AbortSignal;
+  }): Promise<OcMemory[]> {
     return this.callTool(
       "memory_list",
       { project_id: opts.projectId },
       z.array(OcMemorySchema),
+      opts.signal,
     );
   }
 
@@ -297,11 +358,13 @@ export class OcClient {
   // would consume the window).
   async memoryListCompact(opts: {
     projectId: string;
+    signal?: AbortSignal;
   }): Promise<OcMemoryCompact[]> {
     return this.callTool(
       "memory_list",
       { project_id: opts.projectId, compact: true },
       z.array(OcMemoryCompactSchema),
+      opts.signal,
     );
   }
 
@@ -322,12 +385,16 @@ export class OcClient {
   // found: <id>". Match on "Memory not found: " as a substring rather
   // than hardcoding the full wrapper chain, since that's the one part of
   // the message OC itself controls and guarantees.
-  async memoryGet(memoryId: string): Promise<OcMemory | null> {
+  async memoryGet(
+    memoryId: string,
+    signal?: AbortSignal,
+  ): Promise<OcMemory | null> {
     try {
       return await this.callTool(
         "memory_get",
         { memory_id: memoryId },
         OcMemorySchema,
+        signal,
       );
     } catch (err) {
       if (/Memory not found: /.test((err as Error).message)) {

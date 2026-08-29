@@ -177,6 +177,7 @@ export async function continueScene(
   const context = await gatherContext(oc, storyId, opts.direction, {
     sceneStrategy: opts.sceneStrategy,
     sceneFallbackStrategy: opts.sceneFallbackStrategy,
+    signal: run.signal,
   });
   const gatherMs = Date.now() - gatherStart;
   const systemPrompt = buildSystemPrompt(mode, context);

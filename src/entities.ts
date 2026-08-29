@@ -277,6 +277,9 @@ export interface RecallArgs {
   query?: string;
   type?: EntityType;
   limit?: number;
+  /** Run-abort signal threaded into the OC call (aborts backoff sleeps
+   * promptly; never interrupts an in-flight request). */
+  signal?: AbortSignal;
 }
 
 export interface DeleteEntityResult {
@@ -320,6 +323,7 @@ export async function recall(
     projectId: storyId,
     tags,
     topK: limit,
+    signal: args.signal,
   });
   // OC surfaces pinned memories even past topK; slice client-side so the
   // caller's `limit` is a hard cap rather than a soft hint.

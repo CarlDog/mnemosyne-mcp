@@ -102,10 +102,23 @@ async function readConfig(): Promise<MnemoConfig> {
   }
 }
 
+// In-process mutation serialization + atomic temp-sibling rename
+// (RUN_OUTCOMES_DESIGN slice 3): a crash or concurrent read mid-write must
+// never observe a half-written config.json. No journal, no database --
+// rename within one directory is atomic on the platforms we run on.
+let configWriteChain: Promise<void> = Promise.resolve();
+
 async function writeConfig(config: MnemoConfig): Promise<void> {
-  const path = configPath();
-  await fs.mkdir(dirname(path), { recursive: true });
-  await fs.writeFile(path, JSON.stringify(config, null, 2) + "\n", "utf8");
+  const run = async () => {
+    const path = configPath();
+    await fs.mkdir(dirname(path), { recursive: true });
+    const tmp = `${path}.tmp-${process.pid}`;
+    await fs.writeFile(tmp, JSON.stringify(config, null, 2) + "\n", "utf8");
+    await fs.rename(tmp, path);
+  };
+  const next = configWriteChain.then(run, run);
+  configWriteChain = next.catch(() => {});
+  return next;
 }
 
 export async function setCurrentStoryId(storyId: string): Promise<void> {
