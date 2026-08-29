@@ -76,6 +76,11 @@ live-verification status per provider. Related docs:
 - [docs/SEED_TEMPLATES.md](docs/SEED_TEMPLATES.md) — fill-in skeletons
   for seeding a new story (character, style guide, rules) via one
   import call
+- [docs/COMPANION_PROFILE_DESIGN.md](docs/COMPANION_PROFILE_DESIGN.md) —
+  proposed provider-neutral character/voice profiles, bounded Kindroid and
+  Botify projections, and snapshot-before-write workflow; design only, not
+  implemented or ratified
+
 ## Setup
 
 Mnemosyne is a *client* of two services you run yourself. Neither is bundled,

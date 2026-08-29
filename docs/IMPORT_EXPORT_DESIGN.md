@@ -211,7 +211,7 @@ one `mnemo_import_story` call.
   informs *bulk import* semantics (preview, explicit conflict handling) —
   it does not reopen the locked v0 auto-save decision.
 
-## Future direction (recorded 2026-08-21, not designed)
+## Future direction (recorded 2026-08-21; projection design added 2026-08-29)
 
 The operator's stated vision: each story carries **per-character provider
 bindings** — a Kindroid kin or Botify bot per character — with a group
@@ -222,6 +222,12 @@ are why the export schema is versioned from day one: a future
 `mnemosyne_export: 2` can add a per-character `bindings` field without
 migrating v1 documents. Do not build ahead of need; recorded so the
 schema isn't designed into a corner.
+
+The provider-neutral character/voice projection, observed-snapshot, and
+reviewed-apply boundary is now proposed in
+[COMPANION_PROFILE_DESIGN.md](COMPANION_PROFILE_DESIGN.md). That proposal does
+not settle or implement per-character bindings, marker/export schema changes,
+generator routing, storage location, or automatic synchronization.
 
 ## Rejected alternatives
 
