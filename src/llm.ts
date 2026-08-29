@@ -146,6 +146,17 @@ export interface OllamaConfig {
   maxContextWindow?: number;
   /** keep_alive for Ollama /api/chat. */
   keepAlive?: string;
+  /** Enforce that every model this provider runs executes LOCALLY
+   * (docs/OLLAMA_ADOPTION_ASSESSMENT.md §2). Ollama transparently proxies
+   * `:cloud` models and remote-host aliases through the same localhost
+   * API, so a localhost OLLAMA_URL is not proof of local inference. With
+   * requireLocal, a `:cloud` tag is refused outright, the exact model is
+   * preflighted via /api/show (remote_model/remote_host must be absent,
+   * cached per model), and the final chat response's route fields are
+   * re-checked so an alias changed after preflight cannot slip through.
+   * Set for the validator instance -- its requests carry the story's full
+   * canon and the pass is documented as local and free. */
+  requireLocal?: boolean;
 }
 
 const OLLAMA_TIMEOUT_MS = 5 * 60 * 1000;
@@ -233,12 +244,90 @@ interface OllamaChatResponse {
   /** Why generation stopped: "stop" (natural end), "length" (num_predict
    * exhausted), "load" (empty-message load request). Absent on old daemons. */
   done_reason?: string;
+  /** Set when the request actually executed on a remote (Ollama Cloud or
+   * remote-host alias) model rather than locally. */
+  remote_model?: string;
+  remote_host?: string;
 }
+
+const SHOW_TIMEOUT_MS = 15_000;
 
 export class OllamaProvider implements LlmProvider {
   readonly name = "ollama";
 
+  /** Per-model /api/show locality verdicts (requireLocal only). Caches the
+   * promise so concurrent first calls share one probe; a rejected probe is
+   * evicted so a transient failure doesn't wedge the model permanently. */
+  private readonly localityChecks = new Map<string, Promise<void>>();
+
   constructor(private readonly config: OllamaConfig) {}
+
+  /** requireLocal enforcement, step 1+2: cheap tag refusal, then the
+   * authoritative /api/show preflight -- remote_model/remote_host must be
+   * absent. Runs before any provider-visible canon is sent. */
+  private ensureLocalModel(model: string): Promise<void> {
+    if (/:cloud$/i.test(model)) {
+      return Promise.reject(
+        new Error(
+          `Ollama model "${model}" is a Cloud tag -- this provider is ` +
+            "configured local-only (requireLocal); use a locally installed " +
+            "model tag",
+        ),
+      );
+    }
+    const cached = this.localityChecks.get(model);
+    if (cached) return cached;
+    const probe = this.probeLocality(model);
+    this.localityChecks.set(model, probe);
+    probe.catch(() => this.localityChecks.delete(model));
+    return probe;
+  }
+
+  private async probeLocality(model: string): Promise<void> {
+    const url = new URL("/api/show", this.config.url);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), SHOW_TIMEOUT_MS);
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model }),
+        signal: controller.signal,
+      });
+      if (res.status === 404) {
+        throw new Error(
+          `Ollama model "${model}" is not installed on this daemon -- ` +
+            "model names must be EXACT installed tags (list them with " +
+            "`ollama list` or GET /api/tags)",
+        );
+      }
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(
+          `Ollama /api/show HTTP ${res.status}: ${text || res.statusText}`,
+        );
+      }
+      const info = (await res.json()) as {
+        remote_model?: string;
+        remote_host?: string;
+      };
+      if (info.remote_model || info.remote_host) {
+        throw new Error(
+          `Ollama model "${model}" executes REMOTELY per /api/show -- this ` +
+            "provider is configured local-only (requireLocal), and its " +
+            "requests carry story canon. Use a locally installed model.",
+        );
+      }
+      log.info("ollama", "locality preflight ok", { model, route: "local" });
+    } catch (err) {
+      const message = describeTransportError(err);
+      throw err instanceof Error && message !== err.message
+        ? new Error(message, { cause: err })
+        : err;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
 
   // numCtxOverride is warmup plumbing: it pins num_ctx instead of sizing
   // it to the (tiny) warmup prompt, so the preloaded runner matches the
@@ -264,6 +353,11 @@ export class OllamaProvider implements LlmProvider {
     format?: Record<string, unknown>,
   ): Promise<GeneratedBeat> {
     const model = opts.model ?? this.config.defaultModel;
+    // Locality is proven BEFORE the request carrying canon is built or
+    // sent -- a refused model must leak nothing.
+    if (this.config.requireLocal) {
+      await this.ensureLocalModel(model);
+    }
     const url = new URL("/api/chat", this.config.url);
 
     const numPredict = opts.maxTokens ?? DEFAULT_MAX_TOKENS;
@@ -336,6 +430,20 @@ export class OllamaProvider implements LlmProvider {
       if (data.error) {
         throw new Error(`Ollama error: ${data.error}`);
       }
+      // requireLocal step 3: re-check the route on the FINAL response. An
+      // alias re-pointed at a remote host after the cached preflight would
+      // pass step 2; the response's own route fields cannot lie about
+      // where it actually ran. Too late for privacy on this request, but
+      // it surfaces immediately instead of silently continuing -- and the
+      // result is refused rather than treated as a valid local pass.
+      if (this.config.requireLocal && (data.remote_model || data.remote_host)) {
+        throw new Error(
+          `Ollama response for "${model}" reports REMOTE execution -- this ` +
+            "provider is configured local-only (requireLocal). The result " +
+            "was discarded; use a locally installed model.",
+        );
+      }
+
       // Nonstreaming mode must end in a terminal response. A response with
       // done !== true is malformed, not a shorter answer -- trusting it
       // would treat an interrupted generation as a finished beat.

@@ -423,3 +423,22 @@ if (GENERATOR_PROVIDER === "kindroid") {
   ollamaGeneratorModel = OLLAMA_GENERATOR_MODEL;
   generatorConfig = { provider: "ollama", model: OLLAMA_GENERATOR_MODEL };
 }
+
+// The validator is architecturally local ("local and free" -- ARCHITECTURE
+// §3). Current Ollama transparently executes a `:cloud` model through the
+// same localhost API, which would silently ship retrieved canon (including
+// mature/private material) to Ollama's cloud and make the "free" validation
+// pass billable (docs/OLLAMA_ADOPTION_ASSESSMENT.md §2). The cheap tag check
+// runs here at startup; the authoritative /api/show remote_model/remote_host
+// preflight and final-response route check live in OllamaProvider
+// (requireLocal), because a local-looking alias can still point at a remote
+// host.
+if (/:cloud$/i.test(ollamaValidatorModel)) {
+  log.error(
+    "startup",
+    `OLLAMA_VALIDATOR_MODEL "${ollamaValidatorModel}" is an Ollama Cloud tag -- ` +
+      "the validator must stay local (it receives the story's full canon and " +
+      "is documented as free). Use a locally installed model tag.",
+  );
+  process.exit(1);
+}

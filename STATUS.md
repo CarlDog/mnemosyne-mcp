@@ -538,6 +538,30 @@ milestones at which they were measured.
 
 ## Done
 
+- **Ollama P0 #2 shipped: the validator route is proven local, not assumed
+  local** (2026-08-28). Per
+  [OLLAMA_ADOPTION_ASSESSMENT.md §2](docs/OLLAMA_ADOPTION_ASSESSMENT.md):
+  Ollama transparently executes `:cloud` models and remote-host aliases
+  through the same localhost API, so a localhost `OLLAMA_URL` was never
+  proof of local inference — and the validator's request carries the
+  story's full canon while the pass is documented as "local and free."
+  Three layers, all on the validator instance via a new
+  `OllamaConfig.requireLocal`: a `:cloud` tag is refused at startup
+  (generator-config) and per call before any fetch; the exact model is
+  preflighted via `/api/show` (cached per model, failures evicted), with
+  `remote_model`/`remote_host` refused **before** the canon-bearing
+  `/api/chat` request is built and a 404 mapped to an actionable
+  exact-tag error; and the final response's route fields are re-checked so
+  an alias re-pointed after the cached preflight fails loudly with the
+  result discarded. The generator instance is unchanged (no `/api/show`
+  call at all without the flag) — making the ollama *generator*
+  local-by-default is recorded as its own queue row since it belongs with
+  the content-routing design. `.env.example` now also recommends
+  daemon-side `OLLAMA_NO_CLOUD=1`. 8 new tests in
+  `tests/validator-locality.test.ts`, plus a live round-trip against the
+  NAS daemon (preflight ok, real generation, actionable missing-model
+  error). All three Ollama P0s are now closed.
+
 - **Ollama P0 #3 shipped: validator verdicts are schema-constrained and
   runtime-validated** (2026-08-28). Per
   [OLLAMA_ADOPTION_ASSESSMENT.md §3](docs/OLLAMA_ADOPTION_ASSESSMENT.md): the
