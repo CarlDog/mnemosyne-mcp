@@ -73,6 +73,24 @@ const OcMemorySchema = z.object({
 });
 export type OcMemory = z.infer<typeof OcMemorySchema>;
 
+/** memory_search rows additionally carry ranking metadata. Captured live
+ * per mode (2026-08-28): hybrid {channel, rrf_score, semantic_similarity},
+ * keyword {channel, keyword_rank}, semantic {channel, semantic_similarity}
+ * -- an OBJECT, not a bare score, with rrf_score present ONLY in hybrid
+ * mode, and pinned-floated rows omitting relevance entirely. Search gets
+ * its own extended schema; memory_get/list/save/update results never carry
+ * relevance and keep the base schema. */
+const OcSearchRelevanceSchema = z.object({
+  channel: z.string().nullish(),
+  rrf_score: z.number().nullish(),
+  semantic_similarity: z.number().nullish(),
+  keyword_rank: z.number().nullish(),
+});
+const OcMemorySearchResultSchema = OcMemorySchema.extend({
+  relevance: OcSearchRelevanceSchema.nullish(),
+});
+export type OcMemorySearchResult = z.infer<typeof OcMemorySearchResultSchema>;
+
 /** memory_list's compact:true row shape — content swapped for a preview.
  * Field names verified against a live OC response (2026-08-27). */
 const OcMemoryCompactSchema = z.object({
@@ -131,6 +149,14 @@ export interface OcMemorySearchOptions {
   projectId?: string;
   tags?: string[];
   topK?: number;
+  /** Search channel. Default (omitted) is OC's hybrid FTS+semantic RRF. */
+  mode?: "hybrid" | "keyword" | "semantic";
+  /** Exact-phrase matching on the query. */
+  phrase?: boolean;
+  /** Caps the pinned FLOAT (how many pinned rows are lifted ahead of the
+   * ranked results). Zero disables the float; pinned rows still rank
+   * normally. An RRF score is not a probability. */
+  pinnedLimit?: number;
   /** Optional run-abort signal: aborts the rate-limit backoff sleep
    * promptly (RUN_OUTCOMES_DESIGN slice 3). Never interrupts an in-flight
    * request. */
@@ -315,15 +341,20 @@ export class OcClient {
     return this.callTool("memory_save", args, OcMemorySchema);
   }
 
-  async memorySearch(opts: OcMemorySearchOptions): Promise<OcMemory[]> {
+  async memorySearch(
+    opts: OcMemorySearchOptions,
+  ): Promise<OcMemorySearchResult[]> {
     const args: Record<string, unknown> = { query: opts.query };
     if (opts.projectId) args.project_id = opts.projectId;
     if (opts.tags) args.tags = opts.tags;
     if (opts.topK !== undefined) args.top_k = opts.topK;
+    if (opts.mode !== undefined) args.mode = opts.mode;
+    if (opts.phrase !== undefined) args.phrase = opts.phrase;
+    if (opts.pinnedLimit !== undefined) args.pinned_limit = opts.pinnedLimit;
     return this.callTool(
       "memory_search",
       args,
-      z.array(OcMemorySchema),
+      z.array(OcMemorySearchResultSchema),
       opts.signal,
     );
   }
