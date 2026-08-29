@@ -68,7 +68,8 @@ describe("validateContent rejects malformed verdicts", () => {
   });
 
   it("missing required issue field", async () => {
-    const { explanation: _dropped, ...noExplanation } = validIssue;
+    const noExplanation: Partial<typeof validIssue> = { ...validIssue };
+    delete noExplanation.explanation;
     await rejects(
       { issues: [noExplanation], summary: "s" },
       /malformed verdict/,
