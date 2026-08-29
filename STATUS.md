@@ -2600,12 +2600,11 @@ consider only when real use exposes the corresponding pressure:
 - ~~**HTTP import/export paths exceed the remote story-operation boundary.**~~
   **Closed 2026-08-28** (`a12e992`): caller-supplied `out_path`/`file_path`
   are refused over the HTTP transport (flat rejection, stdio unchanged) — see
-  the Done entry above. One acceptance-proof remainder from
-  [NEMOCLAW_ADOPTION_ASSESSMENT.md §1](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md#1-constrain-filesystem-authority-by-transport):
-  the shipped test covers the guard helper only; an HTTP MCP integration test
-  proving the wiring through the per-session server factory is still missing
-  and is queued in
-  [RESEARCH_DECISION_QUEUE.md](docs/RESEARCH_DECISION_QUEUE.md).
+  the Done entry above. The
+  [NEMOCLAW_ADOPTION_ASSESSMENT.md §1](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md#1-constrain-filesystem-authority-by-transport)
+  acceptance proof is now complete: `tests/http-integration.test.ts` proves
+  the refusal over the real wire with the same `allowFilesystemPaths: false`
+  wiring `makeServer()` uses for HTTP, alongside the guard's unit tests.
 - **Sibling MCP results are compile-time-cast, not runtime-validated.**
   `extractStructuredOrParsed<T>` trusts `structuredContent` or parsed text as
   `T`; OC, Kindroid, and Botify do not discover their required tool sets.
