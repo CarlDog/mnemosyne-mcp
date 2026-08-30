@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { continueStory } from "../webui/src/api/client.js";
-import type { ApiError } from "../webui/src/api/client.js";
+import type { ApiError, ContinueResponse } from "../webui/src/api/client.js";
+import { buildContinueRequest } from "../webui/src/continue-request.js";
+import {
+  canonStatusLabel,
+  contextEntityCount,
+} from "../webui/src/result-status.js";
 
 function makeJsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -10,6 +15,7 @@ function makeJsonResponse(body: unknown, status = 200) {
 }
 
 const successfulContinueResponse = {
+  run_id: "run-success",
   beat_name: "Scene 2026-08-27T00:00:00.000Z",
   beat_text: "A lantern gutters out as the fog shifts. A second bell sounds.",
   memory_id: "scene-1",
@@ -29,7 +35,7 @@ const successfulContinueResponse = {
     save_ms: 30,
     validate_ms: 0,
   },
-};
+} satisfies ContinueResponse;
 
 describe("web client api module", () => {
   beforeEach(() => {
@@ -77,6 +83,7 @@ describe("web client api module", () => {
     // context_summary -- the client type must allow that (the result
     // panel once crashed dereferencing context_summary on this shape).
     const yieldedResponse = {
+      run_id: "run-yielded",
       yielded_to_user: true,
       beat_text: "",
       saved: false,
@@ -84,7 +91,7 @@ describe("web client api module", () => {
         "The group handed the floor straight back to you -- do not re-send your direction.",
       mode: "director" as const,
       stages_ms: { gather_ms: 12, generate_ms: 34, save_ms: 0, validate_ms: 0 },
-    };
+    } satisfies ContinueResponse;
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       makeJsonResponse(yieldedResponse),
     );
@@ -95,6 +102,92 @@ describe("web client api module", () => {
     expect(result).toEqual(yieldedResponse);
     expect(result.context_summary).toBeUndefined();
     expect(result.beat_name).toBeUndefined();
+  });
+
+  it("does not describe an ambiguous canon write as unsaved", () => {
+    const ambiguousWrite = {
+      run_id: "run-ambiguous",
+      beat_name: "Scene 2026-08-27T00:00:00.000Z",
+      beat_text: "The beat survived, but the save response did not.",
+      mode: "director",
+      save_error: "OpenChronicle readback timed out",
+      canon_write_outcome: "unknown",
+      stages_ms: {
+        gather_ms: 20,
+        generate_ms: 80,
+        save_ms: 100,
+        validate_ms: 0,
+      },
+    } satisfies ContinueResponse;
+
+    expect(canonStatusLabel(ambiguousWrite)).toBe("canon write unknown");
+  });
+
+  it("falls back to the admission plan when context counts are omitted", () => {
+    const yieldedWithPlan = {
+      run_id: "run-planned-yield",
+      yielded_to_user: true,
+      beat_text: "",
+      saved: false,
+      mode: "participant",
+      context_plan: {
+        provider: "kindroid",
+        input_budget: 8_192,
+        output_reserve: 512,
+        est_fixed_tokens: 120,
+        est_direction_tokens: 20,
+        sections: {
+          character: { included: 2, dropped: 0, est_tokens: 160 },
+          scene: { included: 3, dropped: 1, est_tokens: 480 },
+        },
+        verdict: "partial",
+        dropped_entries: [{ memory_id: "scene-old", reason: "budget" }],
+      },
+      stages_ms: { gather_ms: 12, generate_ms: 34, save_ms: 0, validate_ms: 0 },
+    } satisfies ContinueResponse;
+
+    expect(contextEntityCount(yieldedWithPlan)).toBe(5);
+  });
+
+  it("preserves replay-safety metadata on unsafe HTTP failures", async () => {
+    const unsafeBody = {
+      error: "provider_dispatch_unknown",
+      retry_safe: false,
+      dispatch_attempted: true,
+      provider_charge_possible: true,
+      external_conversation_mutation_possible: true,
+      message: "The provider may have accepted the direction.",
+    } as const;
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      makeJsonResponse(unsafeBody, 502),
+    );
+
+    await expect(
+      continueStory("story-abc", { direction: "Open the door." }),
+    ).rejects.toMatchObject({ status: 502, body: unsafeBody });
+  });
+
+  it("preserves the Kindroid group default until the user overrides it", () => {
+    const baseFields = {
+      direction: "Let the room answer.",
+      mode: "director",
+      validate: false,
+      strategy: "server-default",
+      fallbackStrategy: "server-default",
+      maxTokens: "",
+      temperature: "",
+      model: "",
+      kindroidGroup: true,
+      allowUser: true,
+      groupMaxTurns: "",
+    } as const;
+
+    expect(buildContinueRequest(baseFields)).not.toHaveProperty(
+      "group_max_turns",
+    );
+    expect(
+      buildContinueRequest({ ...baseFields, groupMaxTurns: "6" }),
+    ).toMatchObject({ allow_user: true, group_max_turns: 6 });
   });
 
   it("continueStory converts HTTP errors into ApiError", async () => {

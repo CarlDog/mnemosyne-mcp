@@ -25,10 +25,17 @@ export default function EntityCard({
         className="card-title-link"
       >
         <div className="card-type">
-          {entity.pinned && <span className="pinned-mark">★</span>}
+          {entity.pinned && (
+            <>
+              <span className="pinned-mark" aria-hidden="true">
+                ★
+              </span>
+              <span className="sr-only">Pinned </span>
+            </>
+          )}
           {entity.type}
         </div>
-        <h3 className="card-name">{entity.name}</h3>
+        <h2 className="card-name">{entity.name}</h2>
         {extraTags.length > 0 && (
           <div className="card-meta">
             {extraTags.map((tag) => (
@@ -39,19 +46,13 @@ export default function EntityCard({
           </div>
         )}
       </Link>
-      <div className="card-actions">
-        <Link
-          to={`/stories/${storyId}/entities/${entity.memory_id}`}
-          className="card-action"
-        >
-          Open
-        </Link>
-        {entity.type === "scene" && (
+      {entity.type === "scene" && (
+        <div className="card-actions">
           <Link to={`/stories/${storyId}/continue`} className="card-action">
             Continue
           </Link>
-        )}
-      </div>
+        </div>
+      )}
     </article>
   );
 }

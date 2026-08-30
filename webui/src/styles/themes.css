@@ -1,0 +1,296 @@
+/*
+ * Built-in Mnemosyne themes.
+ *
+ * These selectors change semantic color and material roles only. Layout,
+ * content, interaction, and story state remain invariant across themes.
+ */
+
+/* White Garden Courtesy — Wonderland's shadowless porcelain order. */
+:root[data-theme="white-garden"] {
+  --ground: #e4e9e6;
+  --ground-deep: #d5ddda;
+  --surface: #f7f6f0;
+  --surface-raised: #ffffff;
+  --line: #748583;
+  --line-soft: #b3beba;
+  --control-border: #687a78;
+
+  --ink: #1e292d;
+  --ink-soft: #3e4c50;
+  --muted: #536267;
+  --faint: #536064;
+
+  --accent: #744d70;
+  --accent-strong: #5f3d5d;
+  --accent-glow: rgba(116, 77, 112, 0.13);
+  --mode-director: #744d70;
+  --mode-director-strong: #5f3d5d;
+  --mode-director-glow: rgba(116, 77, 112, 0.13);
+  --mode-audience: #2f6f8d;
+  --mode-audience-glow: rgba(47, 111, 141, 0.12);
+  --mode-participant: #6f4c85;
+  --mode-participant-glow: rgba(111, 76, 133, 0.12);
+  --danger: #8e3444;
+  --danger-text: #7a2638;
+  --danger-glow: rgba(142, 52, 68, 0.12);
+  --danger-glow-soft: rgba(142, 52, 68, 0.08);
+  --danger-line: rgba(122, 38, 56, 0.72);
+
+  --body-wash: rgba(47, 111, 141, 0.08);
+  --workspace-wash: rgba(116, 77, 112, 0.05);
+  --surface-sheen: rgba(30, 41, 45, 0.045);
+  --surface-sheen-mid: rgba(30, 41, 45, 0.038);
+  --surface-sheen-low: rgba(30, 41, 45, 0.025);
+  --surface-sheen-soft: rgba(255, 255, 255, 0.36);
+  --surface-sheen-faint: rgba(30, 41, 45, 0.025);
+  --rail-background: #eef1ee;
+  --header-background: rgba(247, 246, 240, 0.96);
+  --dock-background: rgba(228, 233, 230, 0.94);
+  --composer-background: rgba(247, 246, 240, 0.97);
+  --spine-background: rgba(213, 221, 218, 0.97);
+  --pane-background: rgba(247, 246, 240, 0.97);
+  --pane-scenes-background:
+    linear-gradient(180deg, rgba(47, 111, 141, 0.055), transparent 38%),
+    var(--pane-background);
+  --pane-cast-background:
+    radial-gradient(
+      circle at 105% -5%,
+      rgba(116, 77, 112, 0.11),
+      transparent 46%
+    ),
+    var(--pane-background);
+  --pane-assembly-background:
+    linear-gradient(135deg, rgba(47, 111, 141, 0.075), transparent 48%),
+    var(--pane-background);
+  --pane-media-background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.5), transparent 56%),
+    var(--pane-background);
+  --pane-watch-background:
+    radial-gradient(circle at 100% 0, rgba(111, 76, 133, 0.1), transparent 48%),
+    var(--pane-background);
+  --portrait-frame-radius: 56% 44% 52% 48% / 48% 54% 46% 52%;
+  --portrait-frame-border: color-mix(in srgb, var(--accent) 52%, var(--line));
+  --portrait-frame-background:
+    radial-gradient(
+      circle at 34% 24%,
+      rgba(255, 255, 255, 0.82),
+      transparent 42%
+    ),
+    linear-gradient(145deg, var(--accent-glow), var(--surface-raised));
+  --portrait-frame-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.58),
+    0 0 0 1px rgba(116, 77, 112, 0.08);
+  --scrim: rgba(30, 41, 45, 0.38);
+  --scrim-solid: rgba(30, 41, 45, 0.78);
+  --noise-opacity: 0.018;
+  --noise-blend: multiply;
+
+  --manuscript-background: rgba(247, 246, 240, 0.98);
+  --manuscript-sheen: rgba(255, 255, 255, 0.5);
+  --manuscript-ink: #1e292d;
+  --manuscript-ink-soft: #3e4c50;
+  --manuscript-muted: #536267;
+  --manuscript-faint: #536064;
+  --manuscript-line: #748583;
+  --manuscript-line-soft: #b3beba;
+  --manuscript-director: #744d70;
+  --manuscript-director-strong: #5f3d5d;
+  --manuscript-director-glow: rgba(116, 77, 112, 0.13);
+  --manuscript-audience: #2f6f8d;
+  --manuscript-audience-glow: rgba(47, 111, 141, 0.12);
+  --manuscript-participant: #6f4c85;
+  --manuscript-participant-glow: rgba(111, 76, 133, 0.12);
+  --manuscript-danger: #8e3444;
+  --manuscript-danger-text: #7a2638;
+  --manuscript-danger-glow: rgba(142, 52, 68, 0.12);
+  --manuscript-danger-glow-soft: rgba(142, 52, 68, 0.08);
+  --manuscript-danger-line: rgba(122, 38, 56, 0.72);
+  --action-text-shadow: rgba(116, 77, 112, 0.1);
+
+  --radius-small: 2px;
+  --radius-pane: 4px;
+  --shadow-card: 0 12px 30px -26px rgba(30, 41, 45, 0.5);
+  --shadow-pane: 0 16px 34px -28px rgba(30, 41, 45, 0.45);
+  --shadow-leaf: 0 18px 42px -34px rgba(30, 41, 45, 0.55);
+  --shadow-composer:
+    0 -10px 30px -28px rgba(30, 41, 45, 0.36),
+    0 16px 38px -32px rgba(30, 41, 45, 0.45);
+  --shadow-drawer: 20px 0 48px -30px rgba(30, 41, 45, 0.58);
+
+  color-scheme: light;
+}
+
+:root[data-theme="white-garden"] .story-rail-link.is-active {
+  position: relative;
+}
+
+:root[data-theme="white-garden"] .story-rail-link.is-active::after {
+  content: "";
+  position: absolute;
+  right: 0.58rem;
+  width: 0.42rem;
+  height: 0.42rem;
+  border: 1px solid currentColor;
+  border-radius: 70% 30% 65% 35%;
+  background: var(--surface);
+  transform: rotate(38deg);
+}
+
+:root[data-theme="white-garden"] .card,
+:root[data-theme="white-garden"] .manuscript-leaf,
+:root[data-theme="white-garden"] .manuscript-empty {
+  background-image: none;
+}
+
+/* Blackwood Glass Plate — photographic evidence in darkroom chrome. */
+:root[data-theme="blackwood"] {
+  --ground: #0e161a;
+  --ground-deep: #090f12;
+  --surface: #1c292e;
+  --surface-raised: #26363c;
+  --line: #53666b;
+  --line-soft: #2d4147;
+  --control-border: #71878d;
+
+  --ink: #edf1ec;
+  --ink-soft: #cad4d1;
+  --muted: #a4b4b2;
+  --faint: #93a5a4;
+
+  --accent: #b8945a;
+  --accent-strong: #dcb875;
+  --accent-glow: rgba(184, 148, 90, 0.16);
+  --mode-director: #b8945a;
+  --mode-director-strong: #dcb875;
+  --mode-director-glow: rgba(184, 148, 90, 0.16);
+  --mode-audience: #83b7c1;
+  --mode-audience-glow: rgba(131, 183, 193, 0.14);
+  --mode-participant: #bc9ac6;
+  --mode-participant-glow: rgba(188, 154, 198, 0.14);
+  --danger: #d97078;
+  --danger-text: #f0a0a6;
+  --danger-glow: rgba(217, 112, 120, 0.14);
+  --danger-glow-soft: rgba(217, 112, 120, 0.09);
+  --danger-line: rgba(217, 112, 120, 0.55);
+
+  --body-wash: rgba(131, 183, 193, 0.06);
+  --workspace-wash: rgba(217, 112, 120, 0.035);
+  --surface-sheen: rgba(255, 255, 255, 0.035);
+  --surface-sheen-mid: rgba(255, 255, 255, 0.028);
+  --surface-sheen-low: rgba(255, 255, 255, 0.022);
+  --surface-sheen-soft: rgba(255, 255, 255, 0.018);
+  --surface-sheen-faint: rgba(255, 255, 255, 0.014);
+  --rail-background: #0b1215;
+  --header-background: rgba(14, 22, 26, 0.95);
+  --dock-background: rgba(9, 15, 18, 0.9);
+  --composer-background: rgba(18, 29, 34, 0.97);
+  --spine-background: rgba(9, 15, 18, 0.97);
+  --pane-background: rgba(24, 37, 42, 0.97);
+  --pane-scenes-background:
+    linear-gradient(180deg, rgba(131, 183, 193, 0.07), transparent 42%),
+    var(--pane-background);
+  --pane-cast-background:
+    radial-gradient(
+      circle at 104% -4%,
+      rgba(184, 148, 90, 0.12),
+      transparent 46%
+    ),
+    var(--pane-background);
+  --pane-assembly-background:
+    linear-gradient(135deg, rgba(131, 183, 193, 0.09), transparent 48%),
+    var(--pane-background);
+  --pane-media-background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.035), transparent 58%),
+    var(--pane-background);
+  --pane-watch-background:
+    radial-gradient(
+      circle at 100% 0,
+      rgba(217, 112, 120, 0.1),
+      transparent 48%
+    ),
+    var(--pane-background);
+  --portrait-frame-radius: 2px;
+  --portrait-frame-border: var(--control-border);
+  --portrait-frame-background:
+    linear-gradient(145deg, rgba(131, 183, 193, 0.13), transparent 62%),
+    var(--surface-raised);
+  --portrait-frame-shadow:
+    inset 0 0 0 2px rgba(9, 15, 18, 0.72), 2px 2px 0 rgba(131, 151, 148, 0.28);
+  --scrim: rgba(3, 7, 9, 0.72);
+  --scrim-solid: rgba(3, 7, 9, 0.95);
+  --noise-opacity: 0.025;
+  --noise-blend: screen;
+
+  --manuscript-background: #d7dcd6;
+  --manuscript-sheen: rgba(255, 255, 255, 0.16);
+  --manuscript-ink: #172125;
+  --manuscript-ink-soft: #334247;
+  --manuscript-muted: #495c60;
+  --manuscript-faint: #526367;
+  --manuscript-line: #667673;
+  --manuscript-line-soft: #a9b4b0;
+  --manuscript-director: #6e542c;
+  --manuscript-director-strong: #5d461f;
+  --manuscript-director-glow: rgba(110, 84, 44, 0.13);
+  --manuscript-audience: #35656f;
+  --manuscript-audience-glow: rgba(53, 101, 111, 0.12);
+  --manuscript-participant: #6a4a72;
+  --manuscript-participant-glow: rgba(106, 74, 114, 0.12);
+  --manuscript-danger: #9b3540;
+  --manuscript-danger-text: #7d2630;
+  --manuscript-danger-glow: rgba(155, 53, 64, 0.12);
+  --manuscript-danger-glow-soft: rgba(155, 53, 64, 0.08);
+  --manuscript-danger-line: rgba(125, 38, 48, 0.7);
+  --action-text-shadow: rgba(110, 84, 44, 0.08);
+
+  --radius-small: 2px;
+  --radius-pane: 5px;
+
+  color-scheme: dark;
+}
+
+:root[data-theme="blackwood"] .manuscript-leaf,
+:root[data-theme="blackwood"] .manuscript-empty {
+  background:
+    linear-gradient(var(--manuscript-audience), var(--manuscript-audience)) left
+      0.72rem top 0.72rem / 1rem 1px no-repeat,
+    linear-gradient(var(--manuscript-audience), var(--manuscript-audience)) left
+      0.72rem top 0.72rem / 1px 1rem no-repeat,
+    linear-gradient(var(--manuscript-audience), var(--manuscript-audience))
+      right 0.72rem top 0.72rem / 1rem 1px no-repeat,
+    linear-gradient(var(--manuscript-audience), var(--manuscript-audience))
+      right 0.72rem top 0.72rem / 1px 1rem no-repeat,
+    linear-gradient(var(--manuscript-audience), var(--manuscript-audience)) left
+      0.72rem bottom 0.72rem / 1rem 1px no-repeat,
+    linear-gradient(var(--manuscript-audience), var(--manuscript-audience)) left
+      0.72rem bottom 0.72rem / 1px 1rem no-repeat,
+    linear-gradient(var(--manuscript-audience), var(--manuscript-audience))
+      right 0.72rem bottom 0.72rem / 1rem 1px no-repeat,
+    linear-gradient(var(--manuscript-audience), var(--manuscript-audience))
+      right 0.72rem bottom 0.72rem / 1px 1rem no-repeat,
+    linear-gradient(150deg, var(--manuscript-sheen), transparent 35%),
+    var(--manuscript-background);
+  box-shadow:
+    2px 2px 0 rgba(131, 151, 148, 0.44),
+    var(--shadow-leaf);
+}
+
+:root[data-theme="blackwood"] .manuscript-leaf--generated::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: 0.82rem;
+  right: 0.82rem;
+  width: 0.42rem;
+  height: 0.42rem;
+  border: 1px solid #7d2630;
+  border-radius: 50%;
+  background: #d97078;
+  box-shadow: 0 0 0 3px rgba(217, 112, 120, 0.15);
+}
+
+:root[data-theme="blackwood"] .leaf-meta,
+:root[data-theme="blackwood"] .manuscript-status {
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}

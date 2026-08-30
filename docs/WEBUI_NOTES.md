@@ -6,9 +6,19 @@ about where mnemosyne actually hurts. Nothing here is ratified. It exists so
 the thinking survives as the Web UI grows. **Implementation-state refresh
 2026-08-28:** §0's transport, per-call story scope, and access-control baseline
 have shipped; entity browse/search/detail and the shared interactive continue
-flow have shipped. Entity edit/delete, differentiated mode postures and control
-planes, the assembly panel, media, and watch parties remain unbuilt. The
-original feasibility reasoning below is retained as historical design input.
+flow had shipped. At that point, entity edit/delete, differentiated mode
+postures and control planes, the assembly panel, media, and watch parties were
+still unbuilt.
+**Implementation-state refresh 2026-08-30:** the first stable-landmark
+workspace now ships a persistent story rail, prose-first manuscript, live
+Participant/Director/Audience posture switch, real scene index and cast panes,
+and a beat-assembly instrument fed by the REST response's context plan, usage,
+and timings. It deliberately labels scene records as scenes rather than
+inventing a chapter model. Media and Plex watch-along panes are honest empty
+states until replay-safe asset/watch APIs exist; companion providers still
+lack a native mode/system-prompt channel, so the mode switch changes the
+workspace posture but does not claim to change Kindroid/Botify performance.
+The original feasibility reasoning below is retained as historical design input.
 **Updated same day** with
 findings from a live browser pass on both reference apps' actual screens (not
 just feature descriptions), plus a paired senior-ui-ux-designer critique and a
@@ -674,6 +684,597 @@ What makes it plausible rather than fantasy, and what to actually research:
   existing beats rather than a fourth mode.
 
 Nothing here is committed. It is written down so it survives.
+
+---
+
+## 11. Visual themes — built-ins now, user imports later
+
+Theme support shipped as a presentation layer on 2026-08-30. It deliberately
+does not key or remount the router: changing the room's lighting must not throw
+away an unsent direction, a generated variant, an open pane, or any other
+working state. Themes also never enter story data, OpenChronicle, URLs, or the
+backend configuration.
+
+Three built-ins now share the same story rail, manuscript, composer, and
+beat-linked pane geometry:
+
+| Theme | Intent | Signature |
+|---|---|---|
+| **Archivist's Light Table** | The existing warm night desk; amber indexing, cold audience marks, violet participant marks | Punched archive cards and a warm manuscript leaf |
+| **White Garden Courtesy** | Wonderland's shadowless porcelain order — deliberately severe rather than creamy, luxurious, or “wellness” minimal | Near-symmetrical pale rules interrupted by one bruise-purple petal/notch on the active destination |
+| **Blackwood Glass Plate** | GhostHunters' photographic evidence room — darkroom chrome around a pale case sheet, not a generic paranormal HUD | Static registration corners, a faint doubled plate edge, and one EMF-red registration dot on a generated beat |
+
+All three reuse the self-hosted Fraunces, Literata, and Courier Prime faces.
+Blackwood makes the evidence/metadata role more prominent, while White Garden
+keeps routine prose upright and high contrast. Neither theme adds scanlines,
+blurred text, glassmorphism, remote assets, or motion as decoration.
+
+### Runtime contract
+
+- `<html data-theme>` is the only theme selector, so page backgrounds and
+  native controls change with the workspace.
+- The selected built-in ID is stored origin-locally under the versioned key
+  `mnemosyne.webui.theme.v1`. Missing, unknown, or unavailable storage falls
+  back to `archivist` without preventing an in-memory switch.
+- A tiny synchronous head bootstrap applies a valid stored ID before React and
+  before first paint; the provider then owns switching and cross-tab updates.
+- Palette-bearing literals have semantic roles for canvas, surfaces, text,
+  boundaries, modes, danger states, and manuscript ink. Layout dimensions,
+  component order, focus behavior, and story semantics are invariant.
+- `color-scheme`, forced-colors behavior, reduced motion, and reduced
+  transparency remain part of the theme contract rather than theme-specific
+  afterthoughts.
+
+### Parked proposal: imported user themes
+
+This is intentionally **not implemented yet**, but the built-in token boundary
+leaves a clean route to it. The first import format should be small, local,
+declarative JSON — never a stylesheet. A likely v1 envelope is:
+
+```json
+{
+  "format": "mnemosyne-webui-theme",
+  "version": 1,
+  "id": "user.carl.blue-pencil",
+  "name": "Blue Pencil Proof",
+  "appearance": "light",
+  "colors": {
+    "canvas": "#E5DFD2",
+    "canvasDeep": "#D7D0C3",
+    "surface": "#F5F0E7",
+    "surfaceRaised": "#FFFAF1",
+    "text": "#242A2E",
+    "textSoft": "#3D474D",
+    "textMuted": "#526169",
+    "textFaint": "#566168",
+    "accent": "#1E5F7A",
+    "accentStrong": "#174B62",
+    "modeDirector": "#1E5F7A",
+    "modeAudience": "#476A61",
+    "modeParticipant": "#6A4F80",
+    "danger": "#8E3841"
+  }
+}
+```
+
+The exact complete color map still needs an ADR before an importer ships,
+especially whether a theme may provide a second manuscript palette like
+Blackwood. The trust boundary does not:
+
+- Reject unknown versions and fields, incomplete token sets, oversized files,
+  invalid/overlong names or IDs, and IDs that collide with a built-in. Custom
+  IDs must be namespaced.
+- Accept normalized literal colors only (`#RRGGBB`, with alpha permitted only
+  for named glow roles). Reject raw CSS, selectors, arbitrary custom-property
+  names, `url()`, `var()`, `calc()`, `@import`, data URIs, HTML/SVG, scripts,
+  fonts, remote assets, shadows, radii, and layout values.
+- Map validated fields through a fixed token-to-property table with
+  `style.setProperty`; never concatenate uploaded CSS or interpolate a user ID
+  into a selector. Switching back to a built-in must clear every imported
+  inline property atomically.
+- Preview in isolation, then save only after explicit confirmation. Store the
+  imported record separately from the selected-theme ID, keep it browser-local,
+  provide **Restore Archivist**, and perform no upload, network fetch, story
+  mutation, or telemetry.
+- Treat accessibility as an admission gate, not a warning: at least 4.5:1 for
+  normal and small text (including muted/faint labels), 3:1 for focus rings,
+  controls, and meaningful boundaries, plus checks for every mode, selection,
+  manuscript, and error pairing. Reject themes that fail. Keyboard and Windows
+  high-contrast walkthroughs remain required alongside automated contrast
+  checks, and color may never become the only status signal.
+
+A later version could expose a small allowlist of already-installed font roles
+or safe built-in decorative signatures. Arbitrary font files and arbitrary CSS
+remain out of scope even then.
+
+---
+
+## 12. Parked identity brief — logo and visual branding
+
+**Status:** needed, deliberately not designed or ratified yet. The small
+four-point `spark` in `webui/src/components/Icon.tsx`, currently shown beside
+the Mnemosyne name in `WorkspaceShell`, is a generic interface placeholder —
+not a logo. The WebUI has no favicon, app-icon family, wordmark asset, or usage
+guide today.
+
+The product truth to express is already in README and ARCHITECTURE: **Mnemosyne
+is the force by which memory becomes story.** It is a private writer's
+instrument and custodian of living canon, not a companion marketplace, generic
+AI assistant, or memory database with prose attached.
+
+### Brand posture
+
+The identity should feel **literate, exact, custodial, quietly uncanny, and
+authored**. It should not feel cute, clinical, grandly mythological, or
+“AI-magical.” Typography can remain important, but the installed UI faces are
+not automatically the final wordmark; that decision needs to be made while
+looking at the full name at navigation, documentation, and app-icon scales.
+
+Three useful exploration territories, not three logo proposals:
+
+| Territory | Product-specific idea | Failure to avoid |
+|---|---|---|
+| **Indexed thread / the recalled line** *(strongest starting point)* | One interrupted story-spine line passes through punched archive points; its missing segment is completed in negative space and may imply an `M` without becoming a literal monogram | An infinity loop, generic workflow-node icon, or delicate linework that disappears at 16px |
+| **Palimpsest seal** | Two offset record leaves share one registration notch, so the older layer remains visible beneath the current telling | A generic “documents,” copy, or layers icon |
+| **Ninefold seal** | An asymmetric provenance seal uses nine restrained notches for the Muses, without illustrating a goddess; the center can hold the same absent/recalled segment | A loading spinner, clock face, fantasy crest, or detail too fine for a favicon |
+
+The worthwhile aesthetic risk is **incompleteness**: the mark should make the
+act of recall visible through one absent/recovered segment rather than adding a
+sparkle to say “AI.” Everything around that device should stay restrained.
+
+Explicitly avoid the default category symbols: brain, robot face, database
+cylinder, open book, quill, glowing orb, four-point sparkle, Greek bust,
+temple/column, laurel, and a gradient `M`. Mythological reference can inform
+the story behind the identity, but should not turn the product into classical
+pastiche. Any finalist also needs a basic name/mark similarity review before
+adoption; familiarity with an existing software or publishing logo is a stop
+condition, not something to polish around.
+
+Before lettering begins, settle the naming hierarchy. Current copy alternates
+among **Story Archive**, **Mnemosyne archive**, **Story desk**, and
+**Archivist's Light Table**. The likely hierarchy is product **Mnemosyne**,
+utility short form **mnemo**, and technical package **mnemosyne-mcp**; the
+workspace descriptor still needs one consistent name. Theme names describe
+skins and must not quietly become competing product names. Public/commercial
+adoption also needs appropriate name, mark, repository, domain, and app-store
+clearance rather than assuming a mythological name is uncontested.
+
+### System requirements
+
+- Produce a symbol, full `Mnemosyne` wordmark, horizontal lockup, compact
+  lockup, and monochrome/reversed forms. `mnemo` can be a utility short form,
+  but must not quietly replace the full product name.
+- The symbol must remain recognizable and optically clean at 16, 20, and 32px;
+  work in one flat color; survive low-resolution favicons; and remain distinct
+  without gradients, shadows, transparency, or animation.
+- Test every finalist on Archivist, White Garden, and Blackwood, plus Windows
+  forced-colors. The eventual asset should consume a small fixed brand-color
+  role rather than embed one theme's palette.
+- User themes may recolor the approved monochrome mark through that role, but
+  theme JSON v1 must not replace it or upload executable/remote logo assets.
+  Story emblems, if wanted later, are a separate content feature rather than a
+  way to overwrite product identity.
+- The home link keeps an explicit accessible name in compact layouts. Motion,
+  if explored for a splash/loading moment, must be ornamental, singular, and
+  absent under reduced-motion; recognition cannot depend on it.
+- Deliver source SVG with expanded/controlled geometry, optimized production
+  SVG, PNG app-icon sizes, favicon assets, safe-area guidance, minimum-size and
+  misuse examples, plus the token mapping used by the WebUI.
+
+### When the dedicated pass begins
+
+Start in black and white: sketch broadly, remove the category clichés above,
+then test no more than three finalists at favicon size before spending time on
+color or animation. Review the finalists beside real story titles and the
+actual rail — not on an empty brand-board mockup. Only after one silhouette
+survives those tests should the work expand into wordmark spacing, theme
+variants, application assets, and a small usage guide.
+
+No logo asset should land as part of opportunistic UI cleanup. This deserves a
+separate, reviewable branding change set.
+
+---
+
+## 13. Workspace finish — quiet footer, service ledger, and pane atmosphere
+
+**Status:** operator-requested design input, except for the small presentation
+hook noted below. This section does not ratify new backend integrations, change
+`ARCHITECTURE.md`'s v0 boundary, or claim that a service is observable when no
+safe probe exists.
+
+The supplied WobbleBot dashboard clarifies the useful hierarchy. Its global
+navigation stays calm, keeps health and notifications compact, and sends dense
+operational detail to a page with a clear heading, refreshed timestamp, summary
+figures, and individually readable rows. Mnemosyne should borrow that layering,
+not the trading product's green/red P&L language, sparklines, `LIVE` theater, or
+always-visible table density.
+
+### A footer is a colophon and a doorway
+
+The persistent footer may carry the canonical Mnemosyne version, one aggregate
+status sentence, the age of the last observation, a notice count when real
+notices exist, and one **Open service ledger** action. It must not permanently
+list every dependency, provider, statistic, or failure. On narrow screens it
+collapses to version, aggregate state, and the ledger action without horizontal
+scrolling or covering the composer.
+
+The footer must use words as well as color. A cloud generator that cannot be
+checked without a billable request is **not probed**, not red and not green. An
+inactive provider is not down. Failure to fetch the ledger is not evidence that
+all dependencies failed. A small live region may announce a newly observed
+failure, but routine polling must not repeatedly interrupt a screen reader.
+
+### Detailed operations live in a service ledger
+
+The detailed surface should be a global **Service ledger** rather than a
+generic dashboard. Its eyebrow can be **Workspace health**. It owns:
+
+- the exact observation time and manual refresh;
+- a short summary of ready, unavailable, unprobed, stale, and inactive rows;
+- Mnemosyne build/update state;
+- scoped OpenChronicle health and statistics;
+- the active generator and validator;
+- separately configured companion bridges such as Kindroid and Botify;
+- safely enumerable LLM integrations and model labels; and
+- timestamped alerts or notices once a real source exists.
+
+Every service row must distinguish `ready`, `unavailable`, `not_probed`,
+`inactive`/`not_configured`, `stale`, and `unknown` in text. **Configured,
+active, and healthy are three different facts.** Statistics must state their
+scope — OpenChronicle-wide, all Mnemosyne stories, or current story — and their
+observation time. Rows stack as labeled definitions on small screens rather
+than forcing a wide table.
+
+Current contracts do not support that complete screen yet:
+
+- Public `/health` remains cheap process liveness. Protected `/api/status`
+  reports OpenChronicle, the one selected generator, and the validator with a
+  15-second server cache. It does not inventory every integration.
+- Kindroid and Botify readiness currently reuses an already-connected client
+  after its first successful check. A fresh bounded `tools/list` discovery is
+  required before the UI can present durable green companion status.
+- OpenChronicle exposes `health` and `memory_stats`, but Mnemosyne has no
+  optional wrappers or sanitized WebUI projection for them yet. Nice-to-have
+  diagnostics must not become a new startup-critical contract.
+- Mnemosyne has page-local failures, not a notification store, unread state,
+  acknowledgement API, or browser event stream. First-slice messages should be
+  called alerts/notices rather than pretending to be durable notifications.
+- WobbleBot is a design reference and a possible future service row. Its WebUI
+  session and aggregate health behavior are not a machine-to-machine contract
+  Mnemosyne can safely reuse.
+
+The smallest backend sequence is additive: include application name/version
+and validator provider in `/api/status`; fix companion probes; then expose a
+lazy, cached `/api/diagnostics` projection for sanitized OC/provider detail.
+Background release checking is separate, infrequent server work with explicit
+`checking`, `current`, `available`, `ahead`, `unknown`, and `disabled` states.
+Failure to reach the release source stays unknown and never becomes a false
+“current.” The browser must not poll a public forge on every status refresh.
+
+All probes remain bounded, non-mutating, and non-billable. Polling pauses while
+the page is hidden, retains a visibly stale last-known result, and runs no faster
+than roughly 30–60 seconds; diagnostics/statistics load on ledger open or manual
+refresh and cache longer. Payloads must not expose canon prose, prompts, memory
+bodies or identifiers, provider endpoints, credentials, companion target IDs,
+raw upstream bodies, filesystem paths, or unsanitized exception text. Browser
+notification permission is never requested automatically.
+
+### Pane backgrounds are atmosphere, not state
+
+The current workspace already emits `data-pane` for scenes, cast, assembly,
+media, and watch-along panes. The 2026-08-30 presentation slice gives those
+hooks separate semantic background roles so each built-in theme can provide a
+restrained material wash without changing pane geometry or meaning. These
+layers are decorative; they never signal readiness, selection, validation, or
+canon status.
+
+A later operator control should be browser-local and scoped by
+`(storyId, paneId)`, with theme default, none, vetted built-in material, and a
+reviewed same-story asset ID as the first safe choices. It must not accept raw
+CSS, arbitrary custom-property names, external URLs, or filesystem paths.
+Theme JSON v1 remains color-only. If local image upload is ever admitted, bytes
+belong in IndexedDB and render through an app-created blob URL, never
+`localStorage`, OpenChronicle canon, or interpolated `url()` CSS.
+
+Decorative artwork belongs in a separate layer behind an opaque/theme-owned
+scrim; content contrast cannot depend on the picture. Preserve source
+proportions with crop/focal-position controls rather than stretching. Forced
+colors removes the artwork, reduced transparency strengthens the surface, and
+reduced motion prohibits ambient pan/zoom. A missing or rejected asset falls
+back atomically to the theme default.
+
+### Portrait frames may follow the theme; identity may not
+
+The current cast list has no portrait asset route and correctly falls back to
+initials. The same 2026-08-30 presentation slice now gives that fallback a
+theme-owned frame role: Archivist keeps the circular/index-ring instinct,
+White Garden uses a restrained cameo shape, and Blackwood uses a squared
+glass-plate mount. Size and layout remain stable; a frame's shape or color is
+never the only way to identify a speaker.
+
+Real portraits stay gated behind a reviewed asset manifest and authenticated,
+MIME/size/dimension-validated route. Only accepted, non-superseded portrait or
+face variants qualify; raw filesystem paths and remote image URLs never reach
+the client. Strip metadata, preserve the source composition, use
+`object-fit: cover` with a reviewed focal position for thumbnails, and provide
+a non-cropped view where it matters. A broken or absent image returns to the
+theme-shaped initials without layout shift.
+
+Portraits belong in the cast sidecar and a future **structured** companion/chat
+thread, not in the prose-first manuscript. The client must receive speaker ID,
+name, message body, time, and portrait asset reference; it must not guess
+speakers by parsing flattened `Name: message` text. Theme changes only the CSS
+frame around the same reviewed image. Imported themes may recolor approved
+frame roles but cannot inject frame geometry, CSS, or assets in v1.
+
+Actual portrait rendering and portrait-driven layouts remain outside current
+v0 scope under `ARCHITECTURE.md` §8 until that scope is deliberately amended.
+The initials-frame and pane-material roles are presentation hooks, not a quiet
+claim that the asset/chat contracts already exist.
+
+### Slice order
+
+1. Ratify the service-ledger and safe asset-manifest contracts.
+2. Fix fresh companion readiness, then add the compact footer and ledger using
+   the existing truthful status subset first.
+3. Add browser-local pane preferences over the shipped semantic material roles.
+4. Add a reusable portrait component with initials fallback after the reviewed
+   asset route exists.
+5. Add portrait-bearing chat only when companion messages are structured rather
+   than inferred from prose.
+
+Keep the backend-contract work separately reviewable from the current
+WebUI/theme/docs change set.
+
+---
+
+## 14. Parked experience brief — graphic novel mode
+
+**Status:** planned product direction and memory marker only. The interaction,
+data model, generation workflow, and export format are intentionally undecided.
+Graphic novel mode is an application mode, not another visual theme.
+
+The intended experience is an optional sequential-art view of a story: reviewed
+character and scene artwork, captions, dialogue, and panel/page composition can
+appear beside the chapter and scene material from which they were derived. A
+candidate workspace could put a page or panel canvas in the center, retain
+chapter/scene navigation nearby, and open art, layout, lettering, provenance,
+or companion panes as needed. That is a direction to explore rather than a
+ratified layout.
+
+### Chaos House reference dossier — _Sunstone_
+
+For Chaos House, the clearest visual, content, and layout calibration is
+[_Sunstone_](https://imagecomics.com/comics/releases/sunstone-tp-new-edition-vol-1),
+written and illustrated by Stjepan Šejić. This dossier was researched against
+the publisher catalogue, creator interviews, and several close visual readings;
+it supersedes the earlier image-search impression. Treat the series as a
+page-grammar and storytelling reference, not an asset source or a request to
+reproduce existing panels or an artist's exact signature.
+
+#### Publication and story architecture
+
+_Sunstone_ began as fetish illustrations and humorous strips posted online,
+then grew into a long-form, creator-owned adult romance. Top Cow/Image began
+publishing it in print in 2014. The
+[official collected-editions catalogue](https://imagecomics.com/comics/list/series/sunstone/collected-editions)
+currently contains eight original story volumes:
+
+- Volumes 1–5 form the first _Sunstone_ arc, centered on Lisa and Ally. Volume
+  5 closes that arc without ending the larger ensemble story.
+- Volumes 6–8 are the published _Mercy_ material. _Mercy_ shifts and broadens
+  the center of gravity toward Anne, Alan, Laura, Marion, and other histories
+  while continuing the original cast. The
+  [third hardcover](https://imagecomics.com/comics/releases/sunstone-hc-vol-3)
+  collects those three volumes; that collection is not evidence that the
+  overall _Mercy_ storyline or series is complete.
+- Image began a smaller 6×9 reissue program in 2026. Those books are new
+  editions of existing story volumes, not additional narrative installments or
+  a required target size for Mnemosyne.
+
+Šejić has described a planned twenty-volume endgame, with later _Mercy_ and
+_Jasper_ material eventually reconnecting to Lisa and Ally. This is valuable
+evidence of the intended nested ensemble structure, but it remains a creator
+plan rather than a publisher-guaranteed release roadmap.
+
+The chronology is deliberately richer than a straight sequel chain. The first
+arc reveals its eventual relationship destination early, then builds suspense
+from how the characters reach it. _Mercy_ moves backward to histories that
+predate Lisa and Ally's meeting, sideways into supporting relationships, and
+forward into consequences seeded in earlier volumes. Graphic novel mode must
+therefore be capable of retrospective narration, flashback, concurrent arcs,
+recontextualized scenes, and deliberate reveal order rather than assuming that
+page order and story chronology are identical.
+
+#### Content, themes, and tone
+
+At its core, _Sunstone_ is a slow-burn queer romantic comedy and relationship
+drama about two adults who meet through complementary BDSM interests: Ally is a
+dominant and Lisa a submissive. The publisher rates the series **M**. Its pages
+include nudity, fetish clothing and equipment, bondage and roleplay, sexual
+situations, strong language, and adult conflict. Reviews of the first arc note
+that it often emphasizes anticipation, negotiation, aftermath, and domestic
+intimacy rather than anatomically depicting every sexual act; later volumes
+must still be assessed individually rather than assumed to share one exact
+explicitness level.
+
+The kink is story material, not the whole dramatic subject. The recurring
+engine is the contrast between characters who can negotiate physical trust but
+struggle to state ordinary emotional needs. Themes include:
+
+- consent, boundaries, safewords, trust, care, and responsibility;
+- the difference between a negotiated role and the whole person playing it;
+- emotional vulnerability, miscommunication, taking a partner for granted,
+  jealousy, shame, and repair;
+- sexual identity, self-acceptance, stigma, and the relief of found community;
+- multiple personal approaches to kink rather than one universal rulebook; and
+- in _Mercy_, the longer consequences of old wounds, obsession, addictive
+  behavior, secrecy, and damaged friendship.
+
+The tonal range is essential: erotic and sensual, but also awkward, nerdy,
+domestic, self-deprecating, slapstick, tender, and sometimes painful. In a
+[2025 creator interview](https://www.tcj.com/i-had-a-panic-attack-because-i-realized-i-was-making-a-romance-comic-stjepan-sejic-on-sunstone-and-beyond/),
+Šejić describes consciously choosing a lighthearted, humanizing romance over
+pure pornography and emphasizes the people behind kink. Chaos House should
+borrow that humane tonal breadth, not reduce the reference to red-and-black
+fetish imagery or treat adult content as a substitute for character work.
+
+#### Narrative voice and visual point of view
+
+The first arc is filtered primarily through introspective Lisa, a writer
+reconstructing and novelizing the relationship retrospectively. Captions can
+carry memory, hindsight, embarrassment, correction, and an older narrator's
+interpretation while the pictured younger character experiences something
+less clearly. Later material can incorporate other accounts and perspectives.
+That creates a useful distinction among what happened, what someone remembers,
+what another person reported, and what the narrator now believes it meant.
+
+_Sunstone_ also turns roleplay, games, private fiction, fantasy, and metaphor
+into visible storytelling layers. A phone conflict may become a fantasy battle;
+a repaired relationship may become a physical bridge; borders can become rope,
+roses, or puzzle pieces. For Mnemosyne, such panels need explicit semantic
+status—candidate values include `literal`, `memory`, `reported`, `roleplay`,
+`fiction_within_fiction`, `fantasy`, and `metaphor`—so expressive imagery never
+silently becomes a canon fact.
+
+#### Visual language and page grammar
+
+The visual core is character acting. Šejić has described body language,
+expressiveness, and acting as central interests; reviewers repeatedly identify
+glances, eye lines, hands, lip bites, posture shifts, awkward distance, costume,
+and small sequential changes of expression as the mechanism that keeps long
+conversations alive. Roleplay permits heightened performance, but the contrast
+with unguarded domestic behavior is what makes the cast feel human.
+
+The rendering uses an intentional hierarchy rather than one finish everywhere:
+
+- ordinary connective scenes often use a looser, comic-like digital line and
+  color treatment;
+- scene-level color scripting externalizes mood, with warm or saturated spaces
+  for connection and cooler or sickly shifts for isolation or self-reproach;
+- more painterly lighting, modeling, and detail appear at romantic, erotic,
+  metaphorical, or emotionally decisive anchor beats; and
+- a highly rendered panel functions as a pause or hold, not merely as a more
+  expensive version of every surrounding image.
+
+Page composition is equally elastic. Quiet dialogue grids can give way to
+reaction strips, close inserts, match cuts, overlaid panels, borderless figures,
+wide or tall anchors, montages, splashes, and full spreads. Decorative borders
+and negative space can encode the scene's subject. Lettering participates in
+the acting: balloon contour, crossed-out language, caption placement, and the
+space around a line can communicate hesitation, excitement, irritation, or
+retrospective distance. This is why dialogue and captions must be structured,
+editable text composed with the art—not pixels baked irreversibly into an image.
+
+The qualities to carry into an original Chaos House visual system are:
+
+- character-first cinematic staging in which micro-expression and gesture can
+  carry a dialogue-heavy beat;
+- conversational restraint followed by a wide, tall, borderless, or full-page
+  image only when an emotional beat earns the space;
+- panel layout, borders, color, render detail, and metaphor chosen from the
+  scene's emotional thesis rather than applied as decoration;
+- enough ordinary rooms, pauses, jokes, and aftermath to make heightened scenes
+  feel consequential; and
+- composition-aware lettering that preserves faces, gesture, reading order,
+  and breathing room.
+
+#### What not to overlearn
+
+_Sunstone_ is a grammar reference, not a flawless template. Its retrospective
+captioning can become dense; its finish can vary; much of its cast is idealized;
+and painterly illustration can sometimes carry more attention than motion
+between panels. Those are useful constraints for Mnemosyne rather than defaults
+to inherit: budget captions, let acting and sequence show what they can, preserve
+clear action and reading order, define reviewable finish tiers, and keep each
+Chaos House character's age, build, face, posture, imperfections, and wardrobe
+distinct.
+
+Do not copy Šejić's faces, anatomy, costumes, recurring red/black palette,
+specific compositions, decorative borders, brushwork, or lettering. Do not use
+published _Sunstone_ pages as generation inputs without appropriate rights.
+Chaos House needs its own color script, silhouettes, environments, visual
+motifs, and lettering voice. The worthwhile reference is the relationship
+between story beat and visual decision.
+
+#### Translation into graphic novel mode
+
+The browser should author and preview a **page or spread composition**, not a
+feed of unrelated generated illustrations. Candidate semantic layout roles may
+include dialogue grid, silent reaction, match cut, inset, entrance/reveal,
+montage or history spread, environmental pause, metaphor panel, splash, and
+two-page spread. Templates should accelerate composition without preventing a
+scene from breaking them deliberately.
+
+Rendering also needs visible stages rather than a one-shot flattened output:
+storyboard, continuity-approved drawing, color/paint, lettering, and accepted
+page are plausible checkpoints. Acting directions—gaze, expression, hand pose,
+blocking, distance, and eye line—matter as much as camera and palette. A
+character, room, prop, costume, lighting state, and focal crop need continuity
+across panels even when rendering detail changes.
+
+Desktop can pair the page canvas with scene, continuity, and asset panes.
+Narrow screens should use an author-approved single-panel path that preserves
+reaction pauses, reveals, and metaphor/literal distinctions rather than simply
+shrinking a lettered spread until it is illegible. Readers should retain access
+to the whole-page composition and zoom.
+
+Mature content needs story- and panel-level metadata plus operator-controlled
+presentation. A future discreet-workspace option may obscure explicit
+thumbnails in global navigation, recents, notices, and screen-adjacent panes
+without altering the actual story. Notifications and logs must never surface
+explicit prose or generation prompts. Any depicted participant in mature
+material must have unambiguous canonical adult status. These controls protect
+privacy and context; they are not a judgment on the material.
+
+Accessibility requires native balloons and captions, declared speakers and
+narrators, meaningful panel descriptions, programmatic reading order, and a
+linear transcript/story view. Full-page appearance cannot be the only usable
+representation. Export and responsive reading may share source content while
+using separately approved composition profiles.
+
+#### Sources retained for the future design pass
+
+- [Image Comics collected editions](https://imagecomics.com/comics/list/series/sunstone/collected-editions)
+  and [2026 edition program](https://imagecomics.com/press-releases/brand-spanking-new-6x9-editions-of-stejpan-%C5%A1eji%C4%87s-queer-romance-sunstone-to-feature-new-cover-art-launch-in-time-for-valentines-day-2026)
+- [_Sunstone: Mercy_ Vol. 8](https://imagecomics.com/comics/releases/sunstone-mercy-tp-vol-8)
+  and the [hardcover collecting Volumes 6–8](https://imagecomics.com/comics/releases/sunstone-hc-vol-3)
+- [The Comics Journal creator interview](https://www.tcj.com/i-had-a-panic-attack-because-i-realized-i-was-making-a-romance-comic-stjepan-sejic-on-sunstone-and-beyond/)
+  and [Pfangirl creator interview](https://www.pfangirl.com/features/stjepan-sejic-interview/)
+- [Atomic Junk Shop's Volumes 1–5 visual reading](https://atomicjunkshop.com/review-time-with-sunstone-volumes-1-5/),
+  [Comic Picks' Volume 1 layout reading](https://comicpicksbytheglick.com/sunstone-vol-1/),
+  and [The Queerblr on framing and lettering](https://thequeerblr.com/2019/01/17/book-review-sunstone-volume-1-by-stjepan-sejic-mature-content-nsfw/)
+
+The research conclusion is concise: borrow _Sunstone_'s emotional pacing,
+character acting, elastic page grammar, and humane treatment of adult
+relationships. Do not borrow its copyrighted pages or collapse Chaos House
+into an imitation of its surface style.
+
+The prose manuscript, entities, and canon remain the source of truth. Rendered
+panels must be a traceable projection, not a second hidden canon: every panel
+should retain explicit story/chapter/scene or beat references plus asset and
+revision provenance. Dialogue or captions shown in artwork must not be parsed
+back from pixels, and visual regeneration must never silently rewrite prose or
+accepted facts. Billable generation is explicit and operator-initiated.
+
+Before implementation, decide and document:
+
+- whether the primary unit is a beat, panel, strip, page, or a layered mixture;
+- how captions, balloons, speaker identity, reading order, and lettering map to
+  structured story content;
+- how character consistency, art direction, accepted variants, crops, and asset
+  supersession work across many panels;
+- how layout edits and source-text revisions report drift and reconcile safely;
+- what editable and flattened export formats are worthwhile; and
+- the accessible equivalent: ordered transcript, meaningful alternative text,
+  keyboard navigation, high-contrast behavior, and a small-screen single-panel
+  reading path.
+
+Theme styling may frame the workspace but must stay separate from a story's art
+direction. Entry into implementation requires an ADR and an explicit extension
+to the current data/asset contracts; scene-bound image generation and
+portrait-driven layouts remain outside the present v0 boundary in
+`ARCHITECTURE.md` §8.
 
 ---
 

@@ -30,9 +30,6 @@ export default function StoryCard({ story }: { story: StorySummary }) {
         </div>
       </Link>
       <div className="story-card-actions">
-        <Link to={`/stories/${story.id}`} className="story-card-action">
-          Open roster
-        </Link>
         <Link
           to={`/stories/${story.id}/continue`}
           className="story-card-action"

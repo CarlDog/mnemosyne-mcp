@@ -102,16 +102,63 @@ export interface ModelUsage {
   generation_ms?: number;
 }
 
+export interface ContextPlan {
+  provider: string;
+  model?: string;
+  /** Absent when the provider's effective input window is unknown. */
+  input_budget?: number;
+  output_reserve: number;
+  est_fixed_tokens: number;
+  est_direction_tokens: number;
+  sections: Partial<
+    Record<
+      EntityType,
+      { included: number; dropped: number; est_tokens: number }
+    >
+  >;
+  verdict: "complete" | "partial" | "rejected";
+}
+
+/** Compact context-admission response: counts and dropped ids/reasons,
+ * never entity bodies. */
+export interface ContextPlanManifest extends ContextPlan {
+  dropped_entries: Array<{ memory_id: string; reason: string }>;
+}
+
+export type ThrowableRunOutcome =
+  | "rejected_before_dispatch"
+  | "timeout_before_dispatch"
+  | "provider_dispatch_unknown"
+  | "completed_but_readback_failed";
+
+/** Structured REST error body for a failed continuation whose replay safety
+ * is known. This is separate from ContinueResponse: canon-write ambiguity
+ * preserves the generated beat and therefore remains success-shaped. */
+export interface RunOutcomeErrorResponse {
+  error: ThrowableRunOutcome;
+  retry_safe: boolean;
+  dispatch_attempted: boolean;
+  provider_charge_possible: boolean;
+  external_conversation_mutation_possible: boolean;
+  message: string;
+}
+
 export interface ContinueResponse {
+  /** Correlates this run with server logs. */
+  run_id: string;
   // beat_name and context_summary are absent on the yielded_to_user
   // response (a Kindroid group handing the floor straight back) -- the
-  // server sends only beat_text:"", saved:false, message, mode, and
-  // stages_ms in that case, so both must be optional here.
+  // server sends only the run metadata, beat_text:"", saved:false,
+  // message, mode, and stages_ms in that case, so both must be optional
+  // here.
   beat_name?: string;
   beat_text: string;
   memory_id?: string;
   save_error?: string;
-  saved?: boolean;
+  /** A dispatched OC save failed, so whether canon was written cannot be
+   * proven. Inspect the story before deciding whether to persist again. */
+  canon_write_outcome?: "unknown";
+  saved?: false;
   mode: Mode;
   context_summary?: {
     rules: number;
@@ -124,6 +171,11 @@ export interface ContinueResponse {
   };
   validation?: ValidationReport;
   validation_error?: string;
+  /** Warn-don't-break notices for unsupported or out-of-range options. */
+  capability_warnings?: string[];
+  /** Context admission manifest; companion_selection is present when a
+   * companion provider reports which memory ids its keyphrase gate used. */
+  context_plan?: ContextPlanManifest & { companion_selection?: string[] };
   /** Provider-reported usage, generator/validator separate; every field
    * optional -- absent means the provider didn't report it. */
   usage?: {
@@ -136,10 +188,10 @@ export interface ContinueResponse {
     save_ms: number;
     validate_ms: number;
   };
-  yielded_to_user?: boolean;
+  yielded_to_user?: true;
   /** The beat was cut off at the generator's token budget: text present,
    * NOT saved, NOT validated -- message says how to proceed. */
-  incomplete?: boolean;
+  incomplete?: true;
   finish_reason?: string;
   message?: string;
   group_ended?: "user_turn" | "max_turns";
