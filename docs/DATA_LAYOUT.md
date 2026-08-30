@@ -5,8 +5,9 @@ Ratified 2026-08-23; amended 2026-08-27 to add `canon/` and narrow
 "Exports" below — `exports/` had drifted into holding hand-authored
 editorial-pass files under undocumented descriptive-suffix names, e.g.
 `<slug>-mature-<stamp>.json`, none of them actually produced by
-`mnemo_export_story`). The organization and naming standard for
-everything under `<data dir>` (default `<repo>/data`, gitignored,
+`mnemo_export_story`); amended 2026-08-29 to add selectively promoted,
+finished scenes to `canon/scenes/` and review-gated `drafts/` overlays. The
+organization and naming standard for everything under `<data dir>` (default `<repo>/data`, gitignored,
 `MNEMO_DATA_DIR` override — see `src/config.ts`). Two guiding principles:
 
 1. **The entity model's `(type, name)` key maps deterministically onto
@@ -28,9 +29,18 @@ data/
     │   ├── lore/<slug>.md            #   one file per lore entity
     │   ├── lore/objects/<slug>.md    #   material objects (still type: lore) -- a
     │   │                             #   navigation folder, not a distinct schema type
+    │   ├── scenes/<catalog-key>--<slug>.md
+    │   │                             #   one file per established/locked scene
     │   ├── worldbuilding/<slug>.md   #   one file per topic
     │   ├── rules.md                  #   ONE file, one `##` heading per rule entity
     │   └── style.md                  #   ONE file, one `##` heading per style entity
+    ├── drafts/                       # sparse, canon-shaped proposal overlay (never runtime canon)
+    │   ├── <canon-relative>.md       #   additions/replacements at their proposed canon paths
+    │   └── _control/                 #   retained review evidence; never promoted as entities
+    │       ├── overlay.json          #   exact add/replace/remove operations + SHA-256 hashes
+    │       ├── PASS.md               #   completion, validation, and approval state
+    │       ├── LCS_SCORECARD.md       #   Living Canon compliance/adversarial findings
+    │       └── ASSET_REVIEW.md       #   reference coverage and provenance findings
     ├── exports/                      # story backups (server-written)
     │   ├── <slug>-<stamp>.json       #   stamp = UTC to the second, colons stripped --
     │   │                             #   no descriptive suffixes; a plain timestamp only
@@ -70,9 +80,11 @@ existing canon gets revised, a story goes through this cycle repeatedly
 over its whole life, not once. `canon/` is the human-editable *source* of
 a story's canon; OpenChronicle is the *runtime* copy `mnemo_continue`
 actually reads from — the same relationship source code has to a running
-deployment. Edits happen here; a compile step (not yet built) renders
-`canon/` into the same entity shape already live in OC today and imports
-it, the same way a deploy pushes source to production.
+deployment. Edits happen here; `scripts/compile-story.mjs` deterministically
+renders `canon/` into the same entity shape already live in OC and checks it
+against the versioned import contract offline. Promotion into OC remains a
+separate, operator-approved import, the same way a deploy is separate from a
+build.
 
 - **One file per character, location, or lore/worldbuilding entity.**
   Confirmed against live per-story entity counts (roughly 10-65 named
@@ -80,6 +92,27 @@ it, the same way a deploy pushes source to production.
   browsable at one file each. `characters/_minor.md` batches the compact
   minor/encounter tier (Living Canon Standard §3.3) into one file, one
   `##` heading per NPC, rather than one file per two-sentence bit player.
+- **One file per selectively promoted scene.**
+  `scenes/<catalog-key>--<slug>.md` is for
+  finished, locked, or otherwise explicitly established prose that should
+  remain a human-editable canon source and durable scene reference. It is not
+  a mirror of every generated beat: incidental output remains in OC and export
+  history until an operator deliberately promotes it. This is the filesystem
+  equivalent of IMPORT_PLAYBOOK's "finished/locked scenes only" rule.
+  `scaffold-story.mjs` therefore continues to skip scenes by default rather
+  than silently promoting every generated beat.
+- **Scene metadata stays in frontmatter; scene prose stays verbatim.** Preserve
+  `catalog_key`, `name`, the source `created_at`, explicit pin state, and only
+  tags beyond the base `mnemosyne`/`story`/`scene` set. `catalog_key` is a
+  compact human chronology/order/location shelf mark, not a content hash; its
+  lowercase value must prefix the filename and remains stable across prose
+  edits. A full `source_content_sha256`, when present, remains the separate
+  integrity field and changes with the source content. The Markdown body is the
+  entity's exact scene content, including any bracketed
+  chapter/participants/continuity header. A source-provenance note may
+  accompany the scene, but it must not rewrite the played prose. Backdating is
+  load-bearing: a legacy scene must not masquerade as the newest beat and
+  dominate RECENT SCENES.
 - **`rules.md` and `style.md` are each ONE file, one `##` heading per
   entity.** The one deliberate exception to one-file-per-entity: a
   story's rule/style entities run 15-21 per story at 200-1400 characters
@@ -97,14 +130,124 @@ it, the same way a deploy pushes source to production.
   flat `Label: value` convention had (a colon inside a bulleted
   relationship line is indistinguishable from a real field without a
   frontmatter delimiter). This changes only the *authoring* format — the
-  compile step renders frontmatter fields back into the same flat-line
+  compiler renders frontmatter fields back into the same flat-line
   shape already live in OC, so nothing downstream (recall, the validator,
   prompt assembly) changes.
 - **Owned by the operator/tooling, like `references/` and `art/`** — the
-  server never writes here directly. A (not yet built) `compile-story.mjs`
-  reads `canon/` and imports it to OC; a (not yet built) one-time
-  `scaffold-story.mjs` seeds `canon/` from a story's current OC/export
-  state the first time this layout is adopted for that story.
+  server never writes here directly. `compile-story.mjs` reads `canon/` and
+  produces or checks an importable export document; it does not connect to or
+  mutate OC. `scaffold-story.mjs` seeds `canon/` from a story's current
+  OC/export state the first time this layout is adopted for that story.
+
+### Compile and import-contract check
+
+Run `npm run build:server` first so the check can load the same compiled import
+schema and `planImport` preflight used by the server. Then run:
+
+```bash
+node scripts/compile-story.mjs <story-slug> --check
+```
+
+`--check` is also the default when neither `--check` nor `--out` is present. It
+compiles records in memory, serializes a `mnemosyne_export:1` document, and
+submits that document to the existing import parser and preflight against an
+empty destination set. It performs no filesystem or OC writes. The compiler
+handles frontmatter-backed character, location, lore, worldbuilding, and
+selectively promoted scene files; batched `characters/_minor.md`; and the
+heading-delimited rule/style files. Scene `created_at`, pin state, and tags are
+preserved. A meaningful batch-wide preamble in `_minor.md` is copied into each
+independent minor-character record so its retrieval qualification is not lost.
+
+Individual sections in `rules.md` and `style.md`, plus individual character
+sections in `characters/_minor.md`, may preserve record-specific import
+metadata with one directive immediately after the corresponding `##` heading:
+
+```markdown
+## Horror Ecology & Misdirection
+
+<!-- mnemosyne-meta: {"pinned":true,"tags":["horror-ecology","pinned-guidance"]} -->
+```
+
+The directive must be a single-line JSON object and may contain only `pinned`
+(boolean), `tags` (an array of non-empty one-line strings), and `created_at` (an
+ISO timestamp with `Z` or an explicit UTC offset). It is compiler metadata, not
+entity content, and is removed from the compiled record. Unknown keys, invalid
+JSON or values, duplicate directives, a directive before the first heading, or
+a directive placed anywhere except the start of that section's body fail
+compilation. Sections without a directive retain the existing defaults: rules
+are pinned, while style and minor-character entries are unpinned; no synthetic
+record timestamp is added.
+
+Use `--dir <canon-shaped-directory>` to check a staged tree. `--out <file>`
+performs the same schema/preflight proof and then creates one export document;
+its parent must already exist, the destination may not be inside the source
+tree, and an existing file is never overwritten. Neither mode performs a live
+import or grants promotion approval. README/control files and
+underscore-prefixed Markdown templates are ignored by compilation; draft
+markers, malformed metadata, duplicate `(type, name)` identities, and records
+beyond the OC content limit are hard failures.
+
+Ignored underscore templates are not import records, but the overlay verifier
+still validates their frontmatter before reporting them as safe: keys must be
+unique and every populated scalar must use the compiler's strict scalar subset.
+The verifier deliberately permits blank and HTML-comment placeholders in these
+templates. That is an authoring convention, not a completeness proof: authors
+must fill or remove each placeholder when creating a real canon entity, because
+a populated HTML comment otherwise parses as literal scalar text.
+
+`verify-draft-overlay.mjs` applies the overlay in a temporary staged tree and
+runs this check after its active, isolated, and merged structural validators.
+The verifier's before/after hash proof also covers this step, so a successful
+draft review demonstrates import compatibility with zero authoring-tree writes;
+it still does not promote or import the overlay.
+
+## Drafts — review-gated canon overlays
+
+`drafts/` is the only approved place for an unaccepted rewrite of existing
+canon. It is a sparse direct overlay: every proposed addition or replacement
+uses the same relative path it would have under `canon/`; unchanged canon need
+not be copied. Editorial evidence lives under `drafts/_control/`, outside the
+entity-shaped overlay, and is never compiled or promoted as story content.
+
+- **Drafts are inert.** Runtime retrieval, export, and import continue to read
+  active state, not `drafts/`. Creating or validating an overlay grants no
+  promotion or runtime-import approval.
+- **Every proposed Markdown entity is visibly marked.** Place
+  `> **DRAFT — NOT ACTIVE CANON**` immediately after valid YAML frontmatter, or
+  at byte zero for a batched file without frontmatter. Promotion strips only
+  that complete leading notice; a later blockquote is content and must not be
+  stripped.
+- **The manifest is the exact change set.** `_control/overlay.json` lists every
+  non-control proposal once as `add` or `replace`, plus any `remove` operation.
+  An addition has no baseline hash; a replacement or removal records the
+  active file's SHA-256. Additions and replacements record the draft SHA-256.
+  A removal has no tombstone file and its draft hash is `null`. The manifest
+  and non-control draft inventory must match exactly.
+- **Removal never means lost provenance.** Move editorial/source history into a
+  control record before proposing removal from story retrieval. A type or path
+  migration is one manifest removal plus one addition, with the identity and
+  reason recorded in the control ledger.
+- **Validate the real proposal, not only its fragments.** Tooling must validate
+  active canon, the isolated proposal entity set, and a temporary merged tree
+  produced by applying the manifest and stripping draft notices. It must also
+  verify ignored underscore batches, reference-pointer containment and
+  sidecars, image templates when references exist, exact hashes, and that active
+  canon did not change during review. A zero-reference story is valid only when
+  its asset review explicitly records the missing coverage.
+- **Promotion uses verified bytes.** Keep the verified staged tree through the
+  promotion decision, or rebuild and fully revalidate it. Inside the atomic
+  apply step, recheck baseline, draft, staged, and referenced-asset hashes.
+  Never validate one tree and later copy fresh authoring bytes into canon.
+- **Control evidence survives the decision.** Record final counts, deliberate
+  retcons, remaining unknowns, validation commands/results, adversarial verdict,
+  and operator approval or rejection. A completed authoring pass is not an
+  approval. `_control/` may be retained or archived as review history, but may
+  not enter `canon/` or runtime entities.
+
+`scripts/verify-draft-overlay.mjs <story-slug>` is the repository verifier for
+this contract. Its manifest schema version 2 supports additions, replacements,
+and removals; schema version 1 remains readable for earlier add/replace-only
+overlays.
 
 ## References — curated inputs
 
@@ -275,11 +418,13 @@ this file wholesale.
   (`2026-08-23T051200` or the shorter `T0512` prefix form for art, where
   the seq suffix already disambiguates).
 - **The server only ever writes** `config.json`, `story.json`, and
-  `exports/`. `canon/`, `references/`, and `art/` are operator/tooling
-  territory — the server (a future compile step, for `canon/`) reads
-  them but never mutates them directly.
+  `exports/`. `canon/`, `drafts/`, `references/`, and `art/` are
+  operator/tooling territory. `compile-story.mjs` reads `canon/` (or an
+  explicitly selected canon-shaped tree) but never mutates it; the server does
+  not read or write these authoring directories directly.
 - **`exports/` filenames are a plain `<slug>-<stamp>.json` timestamp,
   never a descriptive suffix.** An editorial pass's working content
-  belongs in `canon/`, not in a hand-named `exports/` file — that drift
+  belongs in `drafts/` until accepted and then in `canon/`, never in a
+  hand-named `exports/` file — that drift
   (`-mature-`, `-living-canon-`, `-remediation-`, etc.) is exactly what
   the 2026-08-27 amendment retired into `exports/archive/`.
