@@ -347,12 +347,19 @@ export async function recall(
   // memory_search requires non-empty query. When the caller doesn't supply
   // one, fall back to the type name (or "story") — the AND-tag filter does
   // the actual restriction; the query just affects ranking.
-  const query = args.query?.trim() || args.type || "story";
+  const suppliedQuery = args.query?.trim();
+  const query = suppliedQuery || args.type || "story";
   const memories = await oc.memorySearch({
     query,
     projectId: storyId,
     tags,
     topK: limit,
+    // A caller-supplied query is a relevance lookup, so OC v3's separate
+    // pinned prepend must not consume the small result window. Query-less
+    // browsing keeps OC's normal pin-first behavior. OC v4 accepts this
+    // compatibility parameter but treats it as inert after removing the
+    // prepend entirely.
+    ...(suppliedQuery ? { pinnedLimit: 0 } : {}),
     signal: args.signal,
   });
   // OC surfaces pinned memories even past topK; slice client-side so the
