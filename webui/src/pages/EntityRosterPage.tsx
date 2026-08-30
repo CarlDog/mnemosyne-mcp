@@ -9,6 +9,7 @@ import ErrorBanner from "../components/ErrorBanner";
 import EntityCard from "../components/EntityCard";
 import EntityTypeFilter from "../components/EntityTypeFilter";
 import SearchInput from "../components/SearchInput";
+import WorkspaceShell from "../components/WorkspaceShell";
 
 export default function EntityRosterPage() {
   const { storyId } = useParams<{ storyId: string }>();
@@ -41,23 +42,31 @@ export default function EntityRosterPage() {
     storyState.status === "ready" ? storyState.data.story.name : "…";
 
   return (
-    <div className="page">
-      <header className="topbar">
-        <div className="brand">
-          <span className="brand-mark">✦</span>
-          Mnemosyne
-        </div>
-        <nav className="crumbs">
-          <Link to="/">Stories</Link>
-          <span className="crumb-sep">/</span>
-          <span>{storyName}</span>
-          <span className="crumb-sep">/</span>
+    <WorkspaceShell
+      storyId={storyId}
+      storyName={storyName}
+      active="library"
+      eyebrow="Canon library"
+      title={storyName}
+      headerActions={
+        <div className="workspace-quick-actions">
           <Link to={`/stories/${storyId}/continue`} className="crumb-link">
-            Continue
+            Continue scene →
           </Link>
-        </nav>
-      </header>
-      <main className="content">
+        </div>
+      }
+    >
+      <div className="library-page">
+        <header className="library-intro library-intro--compact">
+          <span className="manuscript-overline">
+            Browse without side effects
+          </span>
+          <h1>The living canon</h1>
+          <p>
+            Characters, places, rules, scenes, and story knowledge. Opening a
+            record never starts a beat or spends context.
+          </p>
+        </header>
         {storyState.status === "error" && (
           <ErrorBanner error={storyState.error} />
         )}
@@ -87,7 +96,7 @@ export default function EntityRosterPage() {
               ))}
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </WorkspaceShell>
   );
 }

@@ -1,9 +1,27 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="archivist">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="color-scheme" content="dark light" />
+    <script>
+      (() => {
+        try {
+          const storedTheme = localStorage.getItem("mnemosyne.webui.theme.v1");
+          const schemes = {
+            archivist: "dark",
+            "white-garden": "light",
+            blackwood: "dark",
+          };
+          if (storedTheme && Object.hasOwn(schemes, storedTheme)) {
+            document.documentElement.dataset.theme = storedTheme;
+            document.documentElement.style.colorScheme = schemes[storedTheme];
+          }
+        } catch {
+          // Keep the server-rendered default when browser storage is blocked.
+        }
+      })();
+    </script>
     <title>Mnemosyne — Story Archive</title>
   </head>
   <body>

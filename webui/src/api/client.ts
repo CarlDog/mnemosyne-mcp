@@ -10,15 +10,21 @@ import type {
   ContinueRequest,
   ContinueResponse,
   EntityType,
+  RunOutcomeErrorResponse,
   StorySummary,
 } from "./types.js";
 
 export type { ContinueResponse };
 
+export type ApiErrorBody = {
+  error?: string;
+  message?: string;
+} & Partial<Omit<RunOutcomeErrorResponse, "error" | "message">>;
+
 export class ApiError extends Error {
   constructor(
     public status: number,
-    public body: { error?: string; message?: string } | undefined,
+    public body: ApiErrorBody | undefined,
   ) {
     super(body?.message ?? `API error ${status}`);
     this.name = "ApiError";

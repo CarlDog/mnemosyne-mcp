@@ -15,8 +15,12 @@ import "@fontsource/courier-prime/400.css";
 import "@fontsource/courier-prime/700.css";
 
 import "./styles/global.css";
+import "./styles/themes.css";
 
 import App from "./App";
+import { initializeTheme } from "./theme";
+
+initializeTheme();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

@@ -12,7 +12,7 @@ export default function EntityTypeFilter({
   const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
 
   return (
-    <nav className="rail" aria-label="Filter by entity type">
+    <div className="rail" role="group" aria-label="Filter by entity type">
       <div className="rail-label">The Roster</div>
       <button
         type="button"
@@ -33,6 +33,6 @@ export default function EntityTypeFilter({
           {type} <span className="rail-count">{counts[type] ?? 0}</span>
         </button>
       ))}
-    </nav>
+    </div>
   );
 }
