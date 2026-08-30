@@ -2,7 +2,8 @@
 // sibling revision that forked from the same parent -- see --merge), and
 // write the multi-file data/stories/<slug>/canon/ tree docs/DATA_LAYOUT.md
 // documents. This is the scaffold half of the canon/ workflow; the compile
-// half (canon/ -> mnemo_import_story) is a separate, not-yet-built script.
+// half is scripts/compile-story.mjs, which performs the deterministic offline
+// import-contract check without importing or mutating OpenChronicle.
 //
 // Usage:
 //   node scripts/scaffold-story.mjs <slug> --base <export.json> \
@@ -28,28 +29,82 @@
 // enough from characters' that a shared parser would be guessing, not
 // parsing.
 
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import {
+  lstat,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises";
+import { Buffer } from "node:buffer";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { toCanonScalar } from "./canon-frontmatter.mjs";
+import {
+  buildCompiledExportDocument,
+  checkImportCompatibility,
+  compileCanonDirectory,
+} from "./compile-story.mjs";
 
-function parseArgs(argv) {
+const SCRIPT_FILE = fileURLToPath(import.meta.url);
+export const REPO_ROOT = path.resolve(path.dirname(SCRIPT_FILE), "..");
+const STORY_SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
+const ENTITY_TYPES = new Set([
+  "character",
+  "location",
+  "lore",
+  "worldbuilding",
+  "rule",
+  "style",
+  "scene",
+]);
+const OUTPUT_DIRS = [
+  "characters",
+  "locations",
+  "lore",
+  "lore/objects",
+  "worldbuilding",
+];
+const WINDOWS_RESERVED_BASENAME_RE = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
+const ISO_WITH_OFFSET_RE =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+const BASE_TAGS = ["mnemosyne", "story"];
+const CHECK_SENTINEL_TIME = "1970-01-01T00:00:00.000Z";
+const IMPORT_MODULE = new URL("../dist/import.js", import.meta.url);
+
+function requireArgValue(rest, index, flag) {
+  const value = rest[index + 1];
+  if (!value || value.startsWith("--")) {
+    throw new Error(`${flag} requires a value`);
+  }
+  return value;
+}
+
+export function parseArgs(argv) {
   const [slug, ...rest] = argv;
   const opts = { merges: [], out: null, coreThreshold: 2500 };
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i];
-    if (a === "--base") opts.base = rest[++i];
-    else if (a === "--merge") opts.merges.push(rest[++i]);
-    else if (a === "--out") opts.out = rest[++i];
-    else if (a === "--core-threshold") opts.coreThreshold = Number(rest[++i]);
-    else throw new Error(`unknown arg: ${a}`);
+    if (a === "--base") opts.base = requireArgValue(rest, i++, a);
+    else if (a === "--merge") {
+      opts.merges.push(requireArgValue(rest, i++, a));
+    } else if (a === "--out") opts.out = requireArgValue(rest, i++, a);
+    else if (a === "--core-threshold") {
+      opts.coreThreshold = Number(requireArgValue(rest, i++, a));
+    } else throw new Error(`unknown arg: ${a}`);
   }
-  if (!slug || !opts.base) {
+  if (!slug || !STORY_SLUG_RE.test(slug) || !opts.base) {
     throw new Error(
       "usage: node scripts/scaffold-story.mjs <slug> --base <export.json> " +
         "[--merge <file>|<ancestor>] [--out <dir>] [--core-threshold <n>]",
     );
   }
-  opts.out ??= `data/stories/${slug}/canon`;
+  if (!Number.isSafeInteger(opts.coreThreshold) || opts.coreThreshold < 0) {
+    throw new Error("--core-threshold must be a non-negative integer");
+  }
+  opts.out ??= path.join(REPO_ROOT, "data", "stories", slug, "canon");
   return { slug, ...opts };
 }
 
@@ -63,27 +118,128 @@ function splitKey(k) {
 }
 
 async function loadExport(file) {
-  return JSON.parse(await readFile(file, "utf8"));
+  let raw;
+  try {
+    raw = await readFile(file, "utf8");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`${file}: could not read export (${message})`, {
+      cause: error,
+    });
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`${file}: could not read valid JSON (${message})`, {
+      cause: error,
+    });
+  }
+  try {
+    const contract = await loadBuiltImportContract();
+    contract.parseExportDocument(raw);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`${file}: ${message}`, { cause: error });
+  }
+  return parsed;
 }
 
 function key(e) {
   return `${e.type} ${e.name}`;
 }
 
-function toMap(exportDoc) {
+function portableIdentityKey(entity) {
+  return `${entity.type.normalize("NFC").toLowerCase()}\0${entity.name
+    .normalize("NFC")
+    .toLowerCase()}`;
+}
+
+function validateEntity(entity, index, sourceLabel) {
+  if (!entity || typeof entity !== "object" || Array.isArray(entity)) {
+    throw new Error(`${sourceLabel}: entities[${index}] must be an object`);
+  }
+  if (typeof entity.type !== "string" || !ENTITY_TYPES.has(entity.type)) {
+    throw new Error(
+      `${sourceLabel}: entities[${index}].type is not a supported entity type`,
+    );
+  }
+  if (
+    typeof entity.name !== "string" ||
+    !entity.name.trim() ||
+    entity.name !== entity.name.trim()
+  ) {
+    throw new Error(
+      `${sourceLabel}: entities[${index}].name must be a non-empty trimmed string`,
+    );
+  }
+  if (typeof entity.content !== "string" || !entity.content.trim()) {
+    throw new Error(
+      `${sourceLabel}: entities[${index}].content must be a non-empty string`,
+    );
+  }
+  if (entity.pinned !== undefined && typeof entity.pinned !== "boolean") {
+    throw new Error(
+      `${sourceLabel}: entities[${index}].pinned must be true or false`,
+    );
+  }
+  if (
+    entity.tags !== undefined &&
+    (!Array.isArray(entity.tags) ||
+      entity.tags.some(
+        (tag) => typeof tag !== "string" || !tag.trim() || /\r|\n/.test(tag),
+      ))
+  ) {
+    throw new Error(
+      `${sourceLabel}: entities[${index}].tags must be non-empty one-line strings`,
+    );
+  }
+  if (
+    entity.created_at !== undefined &&
+    (typeof entity.created_at !== "string" ||
+      !ISO_WITH_OFFSET_RE.test(entity.created_at) ||
+      Number.isNaN(Date.parse(entity.created_at)))
+  ) {
+    throw new Error(
+      `${sourceLabel}: entities[${index}].created_at must be an ISO datetime with Z or an explicit offset`,
+    );
+  }
+}
+
+function toMap(exportDoc, sourceLabel) {
+  if (!exportDoc || !Array.isArray(exportDoc.entities)) {
+    throw new Error(`${sourceLabel}: export must contain an entities array`);
+  }
   const m = new Map();
-  for (const e of exportDoc.entities) m.set(key(e), e);
+  const identities = new Map();
+  for (let index = 0; index < exportDoc.entities.length; index += 1) {
+    const entity = exportDoc.entities[index];
+    validateEntity(entity, index, sourceLabel);
+    const identity = portableIdentityKey(entity);
+    if (identities.has(identity)) {
+      throw new Error(
+        `${sourceLabel}: duplicate entity identity ${entity.type} ${JSON.stringify(
+          entity.name,
+        )} at entities[${identities.get(identity)}] and entities[${index}]`,
+      );
+    }
+    identities.set(identity, index);
+    m.set(key(entity), { ...entity });
+  }
   return m;
 }
 
-// Resolves a fork: for every entity in mergeMap, if its content is a clean
-// append over ancestorMap's version, and baseMap's version doesn't already
-// have that suffix, append it. Mutates baseMap in place. Returns a report.
+// Resolves a fork: for every entity in mergeMap, both the merge and base must
+// retain the ancestor as an exact prefix before a clean merge-only suffix can
+// be appended. A divergent base stays untouched and is reported for manual
+// resolution. Mutates baseMap in place. Returns a report.
 function mergeFork(baseMap, mergeMap, ancestorMap, sourceLabel) {
   const report = {
     appended: [],
     skippedAlreadyPresent: [],
     notCleanAppend: [],
+    baseDivergedFromAncestor: [],
     newInMerge: [],
   };
   for (const [k, mergeEntity] of mergeMap) {
@@ -100,7 +256,12 @@ function mergeFork(baseMap, mergeMap, ancestorMap, sourceLabel) {
     const suffix = mergeEntity.content.slice(ancestorEntity.content.length);
     if (!suffix.trim()) continue;
     if (!baseEntity) continue; // entity doesn't exist in base at all -- leave for human review
-    if (baseEntity.content.includes(suffix)) {
+    if (!baseEntity.content.startsWith(ancestorEntity.content)) {
+      report.baseDivergedFromAncestor.push(k);
+      continue;
+    }
+    const baseTail = baseEntity.content.slice(ancestorEntity.content.length);
+    if (baseTail.includes(suffix)) {
       report.skippedAlreadyPresent.push(k);
       continue;
     }
@@ -235,10 +396,45 @@ function renderFrontmatter(fields) {
   const lines = ["---"];
   for (const [k, v] of Object.entries(fields)) {
     if (v === undefined || v === null || v === "") continue;
-    lines.push(`${k}: ${toCanonScalar(v)}`);
+    const rendered =
+      typeof v === "string" ? toCanonScalar(v) : JSON.stringify(v);
+    lines.push(`${k}: ${rendered}`);
   }
   lines.push("---");
   return lines.join("\n");
+}
+
+function canonicalRecordMetadata(entity) {
+  const tags = [...BASE_TAGS, entity.type];
+  const seen = new Set(tags);
+  for (const tag of entity.tags ?? []) {
+    if (seen.has(tag)) continue;
+    seen.add(tag);
+    tags.push(tag);
+  }
+  return {
+    pinned: entity.pinned ?? entity.type === "rule",
+    tags,
+    created_at: entity.created_at,
+  };
+}
+
+function authoringImportMetadata(entity) {
+  const metadata = {};
+  if (entity.pinned !== undefined) metadata.pinned = entity.pinned;
+  if (entity.tags !== undefined) {
+    const base = new Set([...BASE_TAGS, entity.type]);
+    metadata.tags = [...new Set(entity.tags.filter((tag) => !base.has(tag)))];
+  }
+  if (entity.created_at !== undefined) metadata.created_at = entity.created_at;
+  return metadata;
+}
+
+function batchMetadataDirective(entity) {
+  const metadata = authoringImportMetadata(entity);
+  return Object.keys(metadata).length > 0
+    ? `<!-- mnemosyne-meta: ${JSON.stringify(metadata)} -->\n\n`
+    : "";
 }
 
 // Diacritics (e.g. "Karl von Jäger") must be transliterated before the
@@ -254,14 +450,48 @@ function slugify(name) {
     .replace(/^-+|-+$/g, "");
 }
 
-async function writeCoreCharacter(outDir, entity) {
-  const { frontmatter, body } = splitHeaderBody(entity.content);
-  frontmatter.name ??= entity.name;
+function checkedSlug(entity) {
   const slug = slugify(entity.name);
-  const file = path.join(outDir, "characters", `${slug}.md`);
-  const rendered = `${renderFrontmatter(frontmatter)}\n\n${normalizeHeadings(body)}\n`;
-  await writeFile(file, rendered, "utf8");
-  return file;
+  if (!slug) {
+    throw new Error(
+      `${key(entity)} cannot produce a non-empty portable filename slug`,
+    );
+  }
+  if (WINDOWS_RESERVED_BASENAME_RE.test(slug)) {
+    throw new Error(
+      `${key(entity)} produces reserved portable filename slug ${JSON.stringify(slug)}`,
+    );
+  }
+  if (Buffer.byteLength(`${slug}.md`, "utf8") > 255) {
+    throw new Error(`${key(entity)} produces a filename longer than 255 bytes`);
+  }
+  return slug;
+}
+
+function renderCoreCharacter(entity) {
+  const { frontmatter, body } = splitHeaderBody(entity.content);
+  // The export entity key is the runtime identity. Preserve a differing
+  // embedded `Name:` as the established `current_name` display field rather
+  // than letting it silently replace the key and create a second character.
+  const embeddedName = frontmatter.name;
+  if (embeddedName && embeddedName !== entity.name) {
+    if (
+      frontmatter.current_name !== undefined &&
+      frontmatter.current_name !== embeddedName
+    ) {
+      throw new Error(
+        `${key(entity)} has conflicting embedded Name and Current Name fields`,
+      );
+    }
+    frontmatter.current_name = embeddedName;
+  }
+  frontmatter.name = entity.name;
+  Object.assign(frontmatter, authoringImportMetadata(entity));
+  const slug = checkedSlug(entity);
+  return {
+    relativePath: `characters/${slug}.md`,
+    content: `${renderFrontmatter(frontmatter)}\n\n${normalizeHeadings(body)}\n`,
+  };
 }
 
 // A minor entity's own content sometimes contains its own "## " sub-headings
@@ -273,53 +503,44 @@ function demoteHeadings(body) {
   return body.replace(/^## /gm, "### ");
 }
 
-async function appendMinorCharacter(minorLines, entity) {
+function appendMinorCharacter(minorLines, entity) {
   minorLines.push(
-    `## ${entity.name}\n\n${demoteHeadings(entity.content.trim())}\n`,
+    `## ${entity.name}\n\n${batchMetadataDirective(entity)}${demoteHeadings(
+      entity.content.trim(),
+    )}\n`,
   );
 }
 
-async function writeSimpleEntity(outDir, subdir, entity) {
-  const slug = slugify(entity.name);
-  const file = path.join(outDir, subdir, `${slug}.md`);
-  const rendered = `---\nname: ${toCanonScalar(entity.name)}\n---\n\n${entity.content.trim()}\n`;
-  await writeFile(file, rendered, "utf8");
-  return file;
+function renderSimpleEntity(subdir, entity) {
+  const slug = checkedSlug(entity);
+  return {
+    relativePath: `${subdir}/${slug}.md`,
+    content: `${renderFrontmatter({
+      name: entity.name,
+      ...authoringImportMetadata(entity),
+    })}\n\n${entity.content.trim()}\n`,
+  };
 }
 
-async function main() {
-  const opts = parseArgs(process.argv.slice(2));
+function portableOutputKey(relativePath) {
+  return relativePath.replaceAll("\\", "/").normalize("NFC").toLowerCase();
+}
 
-  const base = await loadExport(opts.base);
-  const baseMap = toMap(base);
-
-  const mergeReports = [];
-  for (const spec of opts.merges) {
-    const [mergeFile, ancestorFile] = spec.split("|");
-    if (!mergeFile || !ancestorFile) {
-      throw new Error(`--merge expects <file>|<ancestor>, got: ${spec}`);
-    }
-    const mergeDoc = await loadExport(mergeFile);
-    const ancestorDoc = await loadExport(ancestorFile);
-    const report = mergeFork(
-      baseMap,
-      toMap(mergeDoc),
-      toMap(ancestorDoc),
-      path.basename(mergeFile),
+function addPlannedFile(files, owners, file, owner) {
+  const collisionKey = portableOutputKey(file.relativePath);
+  const previous = owners.get(collisionKey);
+  if (previous) {
+    throw new Error(
+      `output path collision at ${file.relativePath}: ${previous} and ${owner}`,
     );
-    mergeReports.push({ source: mergeFile, ancestor: ancestorFile, ...report });
   }
+  owners.set(collisionKey, owner);
+  files.push(file);
+}
 
-  for (const dir of [
-    "characters",
-    "locations",
-    "lore",
-    "lore/objects",
-    "worldbuilding",
-  ]) {
-    await mkdir(path.join(opts.out, dir), { recursive: true });
-  }
-
+export function buildScaffoldPlan(baseMap, coreThreshold) {
+  const files = [];
+  const owners = new Map();
   const written = {
     core: [],
     minor: 0,
@@ -330,59 +551,249 @@ async function main() {
   const minorLines = [];
   const rulesLines = [];
   const styleLines = [];
+  const expectedIdentities = new Map();
+  const expectedMetadata = new Map();
 
   for (const entity of baseMap.values()) {
+    if (entity.type !== "scene") {
+      const identity = portableIdentityKey(entity);
+      expectedIdentities.set(identity, key(entity));
+      expectedMetadata.set(identity, {
+        label: key(entity),
+        ...canonicalRecordMetadata(entity),
+      });
+    }
     if (entity.type === "character") {
-      if (entity.content.length >= opts.coreThreshold) {
-        written.core.push(await writeCoreCharacter(opts.out, entity));
+      if (entity.content.length >= coreThreshold) {
+        const file = renderCoreCharacter(entity);
+        addPlannedFile(files, owners, file, key(entity));
+        written.core.push(file.relativePath);
       } else {
-        await appendMinorCharacter(minorLines, entity);
-        written.minor++;
+        appendMinorCharacter(minorLines, entity);
+        written.minor += 1;
       }
     } else if (entity.type === "location") {
-      written.locations.push(
-        await writeSimpleEntity(opts.out, "locations", entity),
-      );
+      const file = renderSimpleEntity("locations", entity);
+      addPlannedFile(files, owners, file, key(entity));
+      written.locations.push(file.relativePath);
     } else if (entity.type === "lore") {
-      written.lore.push(await writeSimpleEntity(opts.out, "lore", entity));
+      const file = renderSimpleEntity("lore", entity);
+      addPlannedFile(files, owners, file, key(entity));
+      written.lore.push(file.relativePath);
     } else if (entity.type === "worldbuilding") {
-      written.worldbuilding.push(
-        await writeSimpleEntity(opts.out, "worldbuilding", entity),
-      );
+      const file = renderSimpleEntity("worldbuilding", entity);
+      addPlannedFile(files, owners, file, key(entity));
+      written.worldbuilding.push(file.relativePath);
     } else if (entity.type === "rule") {
       rulesLines.push(
-        `## ${entity.name}\n\n${demoteHeadings(entity.content.trim())}\n`,
+        `## ${entity.name}\n\n${batchMetadataDirective(entity)}${demoteHeadings(
+          entity.content.trim(),
+        )}\n`,
       );
     } else if (entity.type === "style") {
       styleLines.push(
-        `## ${entity.name}\n\n${demoteHeadings(entity.content.trim())}\n`,
+        `## ${entity.name}\n\n${batchMetadataDirective(entity)}${demoteHeadings(
+          entity.content.trim(),
+        )}\n`,
       );
     } else if (entity.type === "scene") {
-      // deliberately excluded from canon/ -- generated output, not hand-authored (see DATA_LAYOUT.md)
+      // Not promoted automatically: canon/scenes/ is reserved for finished,
+      // locked, or explicitly established scenes. See DATA_LAYOUT.md.
     }
   }
 
   if (minorLines.length > 0) {
-    await writeFile(
-      path.join(opts.out, "characters", "_minor.md"),
-      minorLines.join("\n"),
-      "utf8",
+    addPlannedFile(
+      files,
+      owners,
+      {
+        relativePath: "characters/_minor.md",
+        content: minorLines.join("\n"),
+      },
+      "minor character batch",
     );
   }
   if (rulesLines.length > 0) {
-    await writeFile(
-      path.join(opts.out, "rules.md"),
-      rulesLines.join("\n"),
-      "utf8",
+    addPlannedFile(
+      files,
+      owners,
+      { relativePath: "rules.md", content: rulesLines.join("\n") },
+      "rule batch",
     );
   }
   if (styleLines.length > 0) {
-    await writeFile(
-      path.join(opts.out, "style.md"),
-      styleLines.join("\n"),
-      "utf8",
+    addPlannedFile(
+      files,
+      owners,
+      { relativePath: "style.md", content: styleLines.join("\n") },
+      "style batch",
     );
   }
+  if (files.length === 0) {
+    throw new Error("export contains no scaffoldable canon entities");
+  }
+
+  files.sort((left, right) =>
+    left.relativePath.localeCompare(right.relativePath, "en"),
+  );
+  return {
+    files,
+    written,
+    ruleCount: rulesLines.length,
+    styleCount: styleLines.length,
+    expectedIdentities,
+    expectedMetadata,
+  };
+}
+
+async function lstatOrNull(file) {
+  try {
+    return await lstat(file);
+  } catch (error) {
+    if (error && typeof error === "object" && error.code === "ENOENT") {
+      return null;
+    }
+    throw error;
+  }
+}
+
+async function assertTargetAbsent(outDir) {
+  if (await lstatOrNull(outDir)) {
+    throw new Error(
+      `refusing to overwrite existing scaffold target: ${outDir}`,
+    );
+  }
+}
+
+function humanizeSlug(slug) {
+  return slug
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+async function loadBuiltImportContract() {
+  try {
+    return await import(`${IMPORT_MODULE.href}?scaffold-check=${Date.now()}`);
+  } catch (error) {
+    throw new Error(
+      "full scaffold preflight requires dist/import.js; run `npm run build:server` first",
+      { cause: error },
+    );
+  }
+}
+
+async function preflightStagedTree(slug, stage, plan) {
+  const compiled = await compileCanonDirectory({ slug, dir: stage });
+  const actualRecords = new Map(
+    compiled.records.map((record) => [portableIdentityKey(record), record]),
+  );
+  const missing = [...plan.expectedIdentities]
+    .filter(([identity]) => !actualRecords.has(identity))
+    .map(([, label]) => label);
+  const unexpected = [...actualRecords]
+    .filter(([identity]) => !plan.expectedIdentities.has(identity))
+    .map(([, record]) => key(record));
+  if (missing.length > 0 || unexpected.length > 0) {
+    throw new Error(
+      `staged compiler identity mismatch` +
+        `${missing.length ? `; missing: ${missing.join(", ")}` : ""}` +
+        `${unexpected.length ? `; unexpected: ${unexpected.join(", ")}` : ""}`,
+    );
+  }
+
+  const metadataMismatches = [];
+  for (const [identity, expected] of plan.expectedMetadata) {
+    const actual = actualRecords.get(identity);
+    if (
+      actual.pinned !== expected.pinned ||
+      JSON.stringify(actual.tags) !== JSON.stringify(expected.tags) ||
+      actual.created_at !== expected.created_at
+    ) {
+      metadataMismatches.push(expected.label);
+    }
+  }
+  if (metadataMismatches.length > 0) {
+    throw new Error(
+      `staged compiler metadata mismatch: ${metadataMismatches.join(", ")}`,
+    );
+  }
+
+  const document = buildCompiledExportDocument({
+    records: compiled.records,
+    storyName: humanizeSlug(slug),
+    storyCreatedAt: CHECK_SENTINEL_TIME,
+    exportedAt: CHECK_SENTINEL_TIME,
+  });
+  return checkImportCompatibility(document, await loadBuiltImportContract());
+}
+
+async function publishPlanAtomically(slug, outDir, plan) {
+  await assertTargetAbsent(outDir);
+  const parent = path.dirname(outDir);
+  await mkdir(parent, { recursive: true });
+  let stage = await mkdtemp(
+    path.join(parent, `.${path.basename(outDir)}.scaffold-`),
+  );
+  try {
+    for (const dir of OUTPUT_DIRS) {
+      await mkdir(path.join(stage, dir), { recursive: true });
+    }
+    for (const file of plan.files) {
+      const destination = path.join(stage, ...file.relativePath.split("/"));
+      await mkdir(path.dirname(destination), { recursive: true });
+      await writeFile(destination, file.content, {
+        encoding: "utf8",
+        flag: "wx",
+      });
+    }
+
+    const importCheck = await preflightStagedTree(slug, stage, plan);
+
+    // Repeat the no-overwrite check immediately before publication. rename()
+    // is atomic on one filesystem; staging beside the destination keeps it on
+    // that filesystem and prevents a failed write from exposing partial canon.
+    await assertTargetAbsent(outDir);
+    await rename(stage, outDir);
+    stage = null;
+    return importCheck;
+  } finally {
+    if (stage) await rm(stage, { recursive: true, force: true });
+  }
+}
+
+export async function scaffoldStory(options) {
+  const opts = { ...options, out: path.resolve(options.out) };
+  await assertTargetAbsent(opts.out);
+
+  const base = await loadExport(opts.base);
+  const baseMap = toMap(base, opts.base);
+
+  const mergeReports = [];
+  for (const spec of opts.merges) {
+    const parts = spec.split("|");
+    if (parts.length !== 2 || !parts[0] || !parts[1]) {
+      throw new Error(`--merge expects <file>|<ancestor>, got: ${spec}`);
+    }
+    const [mergeFile, ancestorFile] = parts;
+    const mergeDoc = await loadExport(mergeFile);
+    const ancestorDoc = await loadExport(ancestorFile);
+    const report = mergeFork(
+      baseMap,
+      toMap(mergeDoc, mergeFile),
+      toMap(ancestorDoc, ancestorFile),
+      path.basename(mergeFile),
+    );
+    mergeReports.push({ source: mergeFile, ancestor: ancestorFile, ...report });
+  }
+
+  const plan = buildScaffoldPlan(baseMap, opts.coreThreshold);
+  const importCheck = await publishPlanAtomically(opts.slug, opts.out, plan);
+  return { ...plan, out: opts.out, mergeReports, importCheck };
+}
+
+function printReport(opts, result) {
+  const { importCheck, written, mergeReports, ruleCount, styleCount } = result;
 
   console.log(`Scaffolded ${opts.slug} -> ${opts.out}`);
   console.log(`  core characters: ${written.core.length}`);
@@ -390,7 +801,10 @@ async function main() {
   console.log(`  locations: ${written.locations.length}`);
   console.log(`  lore: ${written.lore.length}`);
   console.log(`  worldbuilding: ${written.worldbuilding.length}`);
-  console.log(`  rules: ${rulesLines.length}, style: ${styleLines.length}`);
+  console.log(`  rules: ${ruleCount}, style: ${styleCount}`);
+  console.log(
+    `  import contract: schema accepted; dry-run planned ${importCheck.records} creates; writes=0`,
+  );
 
   for (const r of mergeReports) {
     console.log(`\nMerge report: ${r.source} (ancestor ${r.ancestor})`);
@@ -407,6 +821,15 @@ async function main() {
         console.log(`    - ${t}: ${n}`);
       }
     }
+    if (r.baseDivergedFromAncestor.length > 0) {
+      console.log(
+        `  base diverged from ancestor -- unresolved: ${r.baseDivergedFromAncestor.length}`,
+      );
+      for (const k of r.baseDivergedFromAncestor) {
+        const [t, n] = splitKey(k);
+        console.log(`    - ${t}: ${n}`);
+      }
+    }
     if (r.newInMerge.length > 0) {
       console.log(
         `  new in merge source (no ancestor entity) -- needs manual review: ${r.newInMerge.length}`,
@@ -419,7 +842,21 @@ async function main() {
   }
 }
 
-await main().catch((err) => {
-  console.error(`scaffold-story: ${err.message}`);
-  process.exit(1);
-});
+async function main() {
+  const opts = parseArgs(process.argv.slice(2));
+  const result = await scaffoldStory(opts);
+  printReport(opts, result);
+}
+
+const invokedScript = process.argv[1] ? path.resolve(process.argv[1]) : null;
+if (
+  invokedScript &&
+  (process.platform === "win32"
+    ? invokedScript.toLowerCase() === SCRIPT_FILE.toLowerCase()
+    : invokedScript === SCRIPT_FILE)
+) {
+  await main().catch((err) => {
+    console.error(`scaffold-story: ${err.message}`);
+    process.exitCode = 1;
+  });
+}

@@ -13,13 +13,12 @@ Status lives in [STATUS.md](STATUS.md) — read it first. This section names
 only what is in flight; it must never restate STATUS.md's Done log. (When
 the two disagree, STATUS.md is newer.)
 
-**Nothing is in flight (2026-08-29).** The external-system research program
-is fully executed: decision queue enumerated, every open queue item
-shipped, the four design-heavy candidates ratified (with measurement gates
-run first) and built. The one pending operator ask is labeling the
-enrichment-benchmark fixtures (`MNEMO_QUERY_ENRICHMENT` stays off until a
-recorded win). Read [STATUS.md](STATUS.md) first; the standing context
-below still applies.
+**Nothing is in flight (2026-08-30).** The Living Canon overlay pass is closed
+at its operator-approval boundary; no draft was promoted or imported. The
+external-system research program also remains closed. Its one pending operator
+ask is labeling the enrichment-benchmark fixtures (`MNEMO_QUERY_ENRICHMENT`
+stays off until a recorded win). Read [STATUS.md](STATUS.md) first; the standing
+context below still applies.
 
 `canon/` is the permanent human-editable source
 for a story's narrative content ([docs/DATA_LAYOUT.md](docs/DATA_LAYOUT.md));
@@ -27,14 +26,18 @@ OC stays canonical for *live* story state. Five stories are consolidated onto
 it; Star Wars: The Black Ledger is not, and is structurally unlike the others
 (ongoing, already partly live via Botify, no ChatGPT-project origin).
 
-**Draft scaffolds on disk (2026-08-27), documented nowhere else.** Four
-Botify-derived `canon/` trees exist and are validator-clean but appear in no
-ratified doc: `brass-and-nerve` (36 entities), `midnight-is-a-suggestion` (38),
-`the-adjustment-protocol` (38), `the-noctis-veil` (38). A fifth,
-`trigun-scarlet-mercy` (55), is tracked in
-[STORYLINE_RESEARCH_BACKLOG.md](docs/STORYLINE_RESEARCH_BACKLOG.md). None has
-been imported to OC. Their status is undecided — do not build on them or
-scaffold over them without asking.
+**Eight review-gated Living Canon overlays are complete on disk (2026-08-30):**
+BattleChasers (71 operations → 143 entities), Brass & Nerve (20 → 43), Chaos
+Saga (60 → 73), GhostHunters (60 → 105), Midnight Is a Suggestion (41 → 70),
+Shadowflame (40 → 74), The Adjustment Protocol (19 → 41), and The Noctis Veil
+(13 → 39). Each retains PASS/control evidence and passed the zero-write import
+preflight. None was promoted or imported, active canon remained hash-stable,
+and promotion still requires explicit operator approval. GhostHunters also has
+a control-only Dovecoast prequel seed bank.
+
+`trigun-scarlet-mercy` (55 entities) remains tracked in
+[STORYLINE_RESEARCH_BACKLOG.md](docs/STORYLINE_RESEARCH_BACKLOG.md); do not build
+on or scaffold over it without asking.
 
 **Read `data/stories/` before trusting any story inventory.** `data/` is
 gitignored, so `git status` stays clean while story trees you have not read
@@ -178,12 +181,22 @@ assessments listed under "Layout" below.
   without going through Claude Desktop. They import from `dist/`, so
   rebuild first (a long-running MCP server holds the old `dist/`).
 - `scripts/scaffold-story.mjs` — one-time export-JSON → `canon/` seeding
-  for a story adopting the authoring layer.
-- `scripts/validate-canon.mjs <slug>` — structural check of a story's
-  `canon/` tree (no duplicate entities, no empty bodies). Content
-  correctness still needs a human pass. Exits 0 only when the tree exists,
-  is readable, and holds at least one entity; a missing, unreadable, or
-  empty `canon/` exits 1.
+  for a story adopting the authoring layer. It skips generated scenes unless
+  they are explicitly promoted and preserves the export entity key as a
+  character's runtime identity even when its body contains a display/current
+  `Name:` field.
+- `scripts/validate-canon.mjs <slug> [--dir <canon-dir>]` — structural check of
+  active or staged canon: entity/frontmatter shape, duplicate identities,
+  scene catalog keys, reference/image containment, and non-empty bodies.
+  Content correctness still needs a human pass. Missing, unreadable, or empty
+  trees exit 1.
+- `scripts/compile-story.mjs <slug> [--dir <canon-dir>] --check` — compiles a
+  canon-shaped tree and runs the built server's real import schema/preflight
+  with `writes=0`; `--out <file>` exclusively creates a checked export artifact
+  but never imports it.
+- `scripts/verify-draft-overlay.mjs <slug>` — verifies a manifest-driven draft
+  overlay's operation inventory and hashes, validates active/isolated/merged
+  trees, and runs the merged import preflight without promotion or import.
 - `scripts/canon-frontmatter.mjs` — the canon frontmatter scalar format in one
   place (`toCanonScalar`/`fromCanonScalar`), imported by both the writer and
   the reader so they cannot disagree about quoting again.
@@ -216,13 +229,14 @@ assessments listed under "Layout" below.
   implementation commitment.
 - `docs/RUN_OUTCOMES_DESIGN.md`, `docs/CONTEXT_PLAN_DESIGN.md`,
   `docs/GENERATOR_CAPABILITIES_DESIGN.md`, `docs/RETRIEVAL_CONTROLS_DESIGN.md`
-  — design proposals (written 2026-08-28, **none ratified**) for the four
-  design-heavy open candidates in the research decision queue: cancellation +
+  — the four designs written 2026-08-28, adversarially reviewed, ratified after
+  their measurement gates, and implemented: cancellation +
   replay-safe typed outcomes, structured/budgeted context admission,
   static provider capability descriptors, and OC retrieval controls +
-  vague-direction enrichment. Each records concrete types, chosen semantics,
-  slice order, acceptance tests, and an explicit decisions-needed list;
-  each cites its assessment for rationale rather than restating it.
+  vague-direction enrichment. Query enrichment remains flag-off until the
+  operator-labeled benchmark records a win. Each document records the concrete
+  types, chosen semantics, slice order, and acceptance tests, and cites its
+  assessment for rationale rather than restating it.
 - `docs/RESEARCH_DECISION_QUEUE.md` — the enumerated decision queue from the
   2026-08-28 research triage: every recommendation-table row of the four
   adoption assessments with its disposition (shipped / rejected at triage /
@@ -450,7 +464,7 @@ npm run typecheck      # tsc -p tsconfig.typecheck.json (src + tests)
 npm run lint           # eslint .
 npm run format         # prettier --write .
 npm run format:check   # prettier --check . (CI gates on this -- run before pushing)
-npm test               # vitest run (62 of 254 tests are env-gated; see below)
+npm test               # vitest run (64 of 463 tests are env-gated; see below)
 ```
 
 `npm test` green does **not** mean the integration surface ran. Every

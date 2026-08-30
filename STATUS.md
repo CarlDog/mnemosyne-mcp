@@ -1,9 +1,33 @@
 # Status
 
-**Last updated:** 2026-08-29.
+**Last updated:** 2026-08-30.
 
-**Current checkpoint: the external-system research program is fully
-executed.** One continuous 2026-08-28→29 arc took the four adoption
+**Story-authoring checkpoint (2026-08-30): eight review-gated Living Canon
+overlays are complete.** BattleChasers has 71 operations → 143 entities; Brass
+& Nerve 20 → 43; Chaos Saga 60 → 73; GhostHunters 60 → 105; Midnight Is a
+Suggestion 41 → 70; Shadowflame 40 → 74; The Adjustment Protocol 19 → 41;
+and The Noctis Veil 13 → 39. Each retains source/asset/scorecard/PASS evidence,
+adversarial closure at P0=0/P1=0, and a zero-write import preflight. None was
+promoted or imported, all active canon trees remained hash-stable, and
+promotion remains an explicit operator decision. The scaffold also preserves
+the export entity key as character identity so a display/current `Name:` field
+cannot silently create a duplicate runtime character. Repository verification
+is green at 399 passing / 64 skipped tests (463 total) plus typecheck, lint, and
+Prettier.
+GhostHunters also gained a control-only Dovecoast prequel seed bank covering a
+Golden Age of Piracy story (1650–1730) and a geographically western,
+Dovecoast-linked Old West story (1865–1895). The ideas establish no past event
+or mystery answer.
+
+**Session close (2026-08-30).** Nothing is in flight. The Living Canon overlays
+remain inert at their explicit operator-approval boundaries, the GhostHunters
+prequel ideas remain control-only seeds, and no active canon or live OC state
+changed. New work starts only on an explicit promotion/rejection decision or a
+new operator-selected story task; the enrichment benchmark remains gated on
+operator-labeled fixtures.
+
+**Previous engineering checkpoint (2026-08-28→29): the external-system research
+program is fully executed.** One continuous 2026-08-28→29 arc took the four adoption
 assessments from "validate these docs" to done: the claimed decision queue
 enumerated as a real artifact
 ([docs/RESEARCH_DECISION_QUEUE.md](docs/RESEARCH_DECISION_QUEUE.md)) and
@@ -542,12 +566,72 @@ Dovecoast smoke test against `nous-hermes2-mixtral` + `phi4:14b`:
 
 37/37 tests passed at the time.
 
-Current local count (2026-08-28): 192 passing, 62 integration/live-provider
-tests skipping cleanly without their external-service environment (254 total).
-Typecheck and lint are green. Historical counts below remain attached to the
-milestones at which they were measured.
+Current local count (2026-08-30): 399 passing, 64 integration/live-provider
+tests skipping cleanly without their external-service environment (463 total).
+Typecheck, lint, and Prettier are green. Historical counts below remain attached
+to the milestones at which they were measured.
 
 ## Done
+
+- **Living Canon draft-overlay closeout completed** (2026-08-30).
+  Eight adversarially closed overlays now retain PASS evidence: BattleChasers
+  (71 operations → 143 entities), Brass & Nerve (20 → 43), Chaos Saga
+  (60 → 73), GhostHunters (60 → 105), Midnight Is a Suggestion (41 → 70),
+  Shadowflame (40 → 74), The Adjustment Protocol (19 → 41), and The Noctis
+  Veil (13 → 39). Each passed the zero-write import preflight. GhostHunters
+  also gained a control-only Dovecoast prequel seed bank. All work remains
+  unpromoted and unimported behind explicit operator approval; active canon
+  stayed hash-stable.
+  A final adversarial tooling pass also closed every confirmed P1/P2: scaffold
+  inputs require the real version-1 export envelope; append merges compare only
+  the post-ancestor tail; batch fences honor marker length and must close;
+  metadata-only records and malformed scalars fail consistently; output
+  containment follows junctions/symlinks; and underscore templates reject
+  duplicate keys or malformed populated values while retaining intentional
+  placeholders.
+
+- **The canon authoring layer now has a deterministic, zero-write import-contract
+  check** (2026-08-29). `scripts/compile-story.mjs` maps the canon-shaped
+  directory into valid `mnemosyne_export:1` records, including structured
+  character frontmatter, batched minor characters, heading-delimited rules and
+  style, nested lore, locations/worldbuilding, and selectively promoted scenes
+  with their source timestamps. Its default/`--check` mode submits the in-memory
+  document to the built server's actual import parser and `planImport` preflight
+  without connecting to OpenChronicle; optional `--out` uses exclusive creation,
+  refuses source-tree destinations and overwrites, and still performs no import.
+  Draft residue, malformed metadata, case-insensitive duplicate keys, invalid
+  scene chronology metadata, links, invalid UTF-8, empty or oversized records,
+  and unsafe output paths fail closed. `verify-draft-overlay.mjs` now runs the
+  same check over its hash-protected merged staging tree after structural
+  validation. Focused tests cover quoted/array frontmatter, batch-wide minor
+  qualifications, every compiled entity shape, scene timestamps, no-write
+  behavior, duplicates, size limits, draft rejection, and output containment;
+  the real 143-entity BattleChasers staged overlay and 65-entity active Chaos
+  Saga tree both pass the runtime schema/preflight with `writes=0`. This closes
+  the Living Canon Standard §11/§13 authoring-to-import dry-run gap; promotion
+  approval and live import remain deliberately separate operations.
+
+- **Established scenes joined the `canon/` authoring surface** (2026-08-29).
+  Per operator direction, `canon/scenes/<catalog-key>--<slug>.md` now holds
+  selectively promoted finished/locked scenes; generated beats are still not
+  promoted automatically. Chaos Saga's three export-established scene bodies —
+  `Do I Smell Trouble?`, `Home Ground`, and `The Calm After Claiming` — were extracted
+  verbatim from the latest revision-10 export with original timestamps, pin
+  state, source revision, and content hashes preserved. All repeated export
+  copies were byte-identical. The original tracking log/template plus four raw
+  ChatGPT archives were parsed separately: the one locked native record enriches
+  `Do I Smell Trouble?`; 103 source-confirmed Recovery beats and four new Raw 4
+  candidates are line-addressed in a review manifest without bulk-promoting
+  them; Raw 1/2 continuity hazards are documented. Scene filenames now begin
+  with compact `CS-<timeline>-<beat>-<location>` catalog keys, while SHA-256
+  remains integrity-only. A local README, catalog, source inventory, and
+  `_template.md` capture the reusable format and chronology. `DATA_LAYOUT.md`
+  now documents the category,
+  `scaffold-story.mjs` names the explicit-promotion boundary, and
+  `validate-canon.mjs` scans `scenes/` as `type:scene`, checks catalog-key
+  uniqueness and filename prefixes, and accepts digits after the first
+  character in valid frontmatter keys (needed by `sha256`). Chaos Saga validates
+  at 65/65 entities; all ten on-disk canon trees remain clean.
 
 - **The two remaining mechanical hardening items shipped** (2026-08-29).
   Typed Ollama error classification (`classifyOllamaHttpError`: 404 →

@@ -39,6 +39,10 @@ live-verification status per provider. Related docs:
   what's done, what's next
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — locked architectural
   decisions and the reasoning behind them
+- [docs/DATA_LAYOUT.md](docs/DATA_LAYOUT.md) — canonical authoring layout,
+  compile contract, and review-gated draft-overlay workflow
+- [docs/LIVING_CANON_STANDARD.md](docs/LIVING_CANON_STANDARD.md) — ratified
+  editorial minimum for complete, playable, provenance-backed story canon
 - [docs/OLLAMA_ADOPTION_ASSESSMENT.md](docs/OLLAMA_ADOPTION_ASSESSMENT.md)
   — pinned source/API/runtime comparison of Ollama against Mnemosyne's
   existing integration; research recommendations only, not ratified architecture
@@ -171,7 +175,24 @@ npm run format:check   # prettier --check . (CI gates on this -- run before push
 npm test               # vitest run
 ```
 
-`npm test` green does **not** mean the integration surface ran. 62 of the 254
+Canon authoring has a separate offline import-contract check. Build the server
+first so the script can use the runtime's real import parser and preflight:
+
+```bash
+npm run build:server
+node scripts/compile-story.mjs <story-slug> --check
+node scripts/verify-draft-overlay.mjs <story-slug>
+```
+
+The check compiles `data/stories/<story-slug>/canon/` in memory and performs
+zero writes. Pass `--dir <path>` for a staged canon-shaped tree. The `--out
+<file>` mode exclusively creates a checked `mnemosyne_export:1` artifact
+without importing it. See [docs/DATA_LAYOUT.md](docs/DATA_LAYOUT.md) for the
+authoring mapping and rejection rules. The overlay verifier checks the exact
+manifest, baseline/draft hashes, active/isolated/merged structures, and merged
+import preflight; it performs no promotion or import.
+
+`npm test` green does **not** mean the integration surface ran. 64 of the 463
 tests are env-gated and skip unless their variables are exported **into the
 shell** — `vitest.config.ts` loads no dotenv, so a populated `.env` does not
 enable them. Use `OC_URL=...` for the OpenChronicle suites, adding
