@@ -171,6 +171,70 @@ describe("entities — retagValidation (pure)", () => {
   });
 });
 
+describe("entities — recall pin-float boundary (pure)", () => {
+  it("keeps pinned rules from consuming a query lookup's small result window", async () => {
+    const memorySearch = vi.fn(async (opts: { pinnedLimit?: number }) =>
+      opts.pinnedLimit === 0
+        ? [
+            {
+              id: "nyx",
+              content:
+                "[Character] Nyx Valencia\n\nOwner of The Circuit Shrine tattoo parlor and nightclub.",
+              project_id: "chaos-saga",
+              tags: ["mnemosyne", "story", "character"],
+              pinned: false,
+              created_at: "2026-08-23T02:34:41Z",
+            },
+          ]
+        : [
+            {
+              id: "rule-1",
+              content: "[Rule] Presence Rule\n\nRe-anchor every scene.",
+              project_id: "chaos-saga",
+              tags: ["mnemosyne", "story", "rule"],
+              pinned: true,
+              created_at: "2026-08-23T02:34:44Z",
+            },
+            {
+              id: "rule-2",
+              content: "[Rule] POV Rule\n\nClose on the tone-holder.",
+              project_id: "chaos-saga",
+              tags: ["mnemosyne", "story", "rule"],
+              pinned: true,
+              created_at: "2026-08-23T02:34:45Z",
+            },
+          ],
+    );
+    const oc = { memorySearch } as unknown as OcClient;
+
+    const result = await recall(oc, "chaos-saga", {
+      query: "who runs the tattoo parlor nightclub",
+      limit: 2,
+    });
+
+    expect(result.map((entity) => entity.name)).toEqual(["Nyx Valencia"]);
+    expect(memorySearch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: "who runs the tattoo parlor nightclub",
+        projectId: "chaos-saga",
+        topK: 2,
+        pinnedLimit: 0,
+      }),
+    );
+  });
+
+  it("preserves normal pin-first behavior for query-less browsing", async () => {
+    const memorySearch = vi.fn().mockResolvedValue([]);
+    const oc = { memorySearch } as unknown as OcClient;
+
+    await recall(oc, "story-1", { type: "rule", limit: 2 });
+
+    const request = memorySearch.mock.calls[0]?.[0];
+    expect(request).toMatchObject({ query: "rule", topK: 2 });
+    expect(request).not.toHaveProperty("pinnedLimit");
+  });
+});
+
 describe("entities — saveEntity preserves validation tag on overwrite (pure)", () => {
   it("carries an existing validation:* tag forward when overwriting via saveEntity, since memory_update replaces tags wholesale", async () => {
     const existingContent = "[Scene] Scene 2026-01-01T00:00:00Z\n\nOld body.";

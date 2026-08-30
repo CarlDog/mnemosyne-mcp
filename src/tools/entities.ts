@@ -122,7 +122,7 @@ export function registerEntityTools(server: McpServer, oc: OcClient): void {
     {
       title: "Recall Story Entities",
       description:
-        "Recall entities from the active story via OpenChronicle's hybrid semantic + keyword search. Pass `query` for a search term; pass `type` to filter to one entity type; pass both for type-scoped semantic search. With no query, results are ranked by tag-match and recency. Default limit 10, cap 100.",
+        "Recall entities from the active story via OpenChronicle's hybrid semantic + keyword search. Pass `query` for a relevance-ranked lookup that does not let pinned rules consume the result limit; pass `type` to filter to one entity type; pass both for type-scoped semantic search. With no query, normal pin-first browsing is preserved and results are otherwise ranked by tag-match and recency. Default limit 10, cap 100.",
       inputSchema: {
         query: z
           .string()

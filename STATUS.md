@@ -2949,10 +2949,12 @@ consider only when real use exposes the corresponding pressure:
   **Campaign complete (2026-08-23):** GhostHunters, BattleChasers,
   Wonderland, and a new fifth story (Shadowflame) all landed the same
   process — five live stories, ~369 entities total. See the dated Done
-  entry above for the full per-story writeup. (Dogfooding note filed:
-  unfiltered `mnemo_recall` with a small limit gets its window consumed by
-  OC's pinned-prepend in rule-heavy stories; type-filtered recall is
-  unaffected.)
+  entry above for the full per-story writeup. **Dogfooding remediation
+  implemented 2026-08-30:** a caller-supplied `mnemo_recall` query now sends
+  `pinnedLimit: 0`, preventing OC v3's pinned prepend from consuming a small
+  relevance window; query-less browsing deliberately preserves normal
+  pin-first behavior. A pure regression test models the observed rule-heavy
+  Chaos Saga failure, while type-filtered recall remains unaffected.
   `mnemo_seed_from_template` is retired as a planned tool — seeding is a
   host conversation plus one import call.
 - **Atlas Cloud illustration integration (scope recorded 2026-08-05,
