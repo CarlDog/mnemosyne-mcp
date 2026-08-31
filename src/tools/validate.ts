@@ -19,8 +19,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
 import type { LlmProvider } from "../llm.js";
-import { gatherContext } from "../prompt.js";
-import { validateContent } from "../validator.js";
+import { validateStoryContent } from "../application/validate-story.js";
 import { resolveStoryId } from "../stories.js";
 import { log } from "../log.js";
 import { asText, withLogging } from "./helpers.js";
@@ -56,26 +55,13 @@ export function registerValidateTool(
       "mnemo_validate",
       async (args: { content: string; story?: string }) => {
         const storyId = await resolveStoryId(oc, args.story);
-        // Reuse continue's gatherContext so the validator sees the same
-        // shape of context, but validation-only: validateContent's
-        // constraintsBlock consumes rules / style / characters /
-        // locations and never reads scenes / lore / worldbuilding, so
-        // those pulls (the scene pool being the most expensive fetch in
-        // the bundle) are skipped entirely. This is also why the tool
-        // exposes no scene_context_strategy params: with no scene pull,
-        // they would be knobs that control nothing.
-        const context = await gatherContext(oc, storyId, args.content, {
-          validationOnly: true,
-        });
-        // Guard the validator pass: a validator-LLM failure or non-JSON
-        // output degrades to a structured error instead of a raw MCP tool
-        // error — symmetric with mnemo_continue's validation_error field.
+        // Guard the validation use case: a context or validator failure
+        // degrades to a structured error instead of a raw MCP tool error —
+        // symmetric with mnemo_continue's validation_error field.
         try {
-          const report = await validateContent(
-            validator,
-            context,
-            args.content,
-          );
+          const report = await validateStoryContent(oc, validator, storyId, {
+            content: args.content,
+          });
           return asText(report);
         } catch (err) {
           const msg = (err as Error).message;

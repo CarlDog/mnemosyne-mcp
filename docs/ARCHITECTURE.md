@@ -1,6 +1,6 @@
 # Mnemosyne — Architecture
 
-**Status:** Locked decisions; implementation-state refresh 2026-08-28.
+**Status:** Locked decisions; implementation-state refresh 2026-08-31.
 
 This document preserves the initial architectural decisions while describing
 their current implementation. [STATUS.md](../STATUS.md) remains authoritative
@@ -31,6 +31,36 @@ continue/validate flow; later mode-specific controls remain design input.
 share Mnemosyne's internal libraries (entity stores, prompt builders,
 validator orchestration). No code is duplicated; the two surfaces are
 thin adapters over the same core.
+
+### Hexagonal boundary direction
+
+Mnemosyne is migrating incrementally toward hexagonal architecture. The
+current dependency direction is:
+
+```text
+MCP tools (src/tools/) ─┐
+                       ├─> application use cases (src/application/)
+REST API (src/api/) ───┘              │
+                                      v
+                         existing domain/integration modules
+```
+
+- `src/tools/` and `src/api/` are inbound driver adapters. They parse
+  transport input, map errors, and shape responses; they must not import each
+  other.
+- `src/application/` owns shared orchestration use cases. Continuation,
+  standalone validation, and bulk scene revalidation live here so both inbound
+  adapters execute the same policy.
+- Existing root modules still combine domain policy with concrete OC and LLM
+  integration types. Extracting explicit outbound ports and adapters is a later
+  migration slice, so the repository is not yet fully hexagonal.
+- `src/index.ts` remains the composition root where concrete clients,
+  providers, and inbound transports are assembled.
+
+New shared behavior should enter through an application use case rather than
+one inbound adapter importing another. Compatibility re-exports may preserve
+old import paths during migration, but new callers should import from
+`src/application/`.
 
 **What Mnemosyne is NOT:**
 - Not an extension to OpenChronicle. OC v3 deliberately stayed lean and
