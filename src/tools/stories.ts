@@ -5,14 +5,13 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
+import { listStoryCatalog } from "../application/list-stories.js";
 import {
   combineKindroidTarget,
   createStory,
   findStory,
-  listStories,
   setKindroidTarget,
   toStorySummary,
-  type MnemoStory,
   type StorySummary,
 } from "../stories.js";
 import { getCurrentStoryId, setCurrentStoryId } from "../config.js";
@@ -26,10 +25,10 @@ import { asText, withLogging } from "./helpers.js";
 type AnnotatedStory = StorySummary & { current: boolean };
 
 function toAnnotated(
-  story: MnemoStory,
+  story: StorySummary,
   currentId: string | undefined,
 ): AnnotatedStory {
-  return { ...toStorySummary(story), current: story.id === currentId };
+  return { ...story, current: story.id === currentId };
 }
 
 export function registerStoryTools(server: McpServer, oc: OcClient): void {
@@ -42,11 +41,11 @@ export function registerStoryTools(server: McpServer, oc: OcClient): void {
       inputSchema: {},
     },
     withLogging("mnemo_story_list", async () => {
-      const [stories, currentId] = await Promise.all([
-        listStories(oc),
+      const [catalog, currentId] = await Promise.all([
+        listStoryCatalog(oc),
         getCurrentStoryId(),
       ]);
-      const annotated = stories.map((s) => toAnnotated(s, currentId));
+      const annotated = catalog.stories.map((s) => toAnnotated(s, currentId));
       return asText({ stories: annotated, count: annotated.length });
     }),
   );

@@ -5,14 +5,8 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
-import {
-  deleteEntity,
-  ENTITY_TYPES,
-  filterListedEntities,
-  listAllEntities,
-  recall,
-  saveEntity,
-} from "../entities.js";
+import { listEntityCatalog } from "../application/list-entities.js";
+import { deleteEntity, ENTITY_TYPES, recall, saveEntity } from "../entities.js";
 import { requireCurrentStoryId } from "../config.js";
 import { findStory, resolveStoryId } from "../stories.js";
 import { asText, withLogging } from "./helpers.js";
@@ -216,20 +210,11 @@ export function registerEntityTools(server: McpServer, oc: OcClient): void {
             { isError: true },
           );
         }
-        const result = await listAllEntities(
-          oc,
-          story.id,
-          story.marker_memory_id,
-        );
-        const entities = filterListedEntities(result.entities, {
+        const catalog = await listEntityCatalog(oc, story, {
           type: args.type,
           includeBody: args.include_body,
         });
-        return asText({
-          entities,
-          count: entities.length,
-          skipped_memory_ids: result.skipped_memory_ids,
-        });
+        return asText(catalog);
       },
     ),
   );

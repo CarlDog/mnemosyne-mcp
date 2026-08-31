@@ -2,8 +2,8 @@
 // slice 1): GET /stories/:storyId/entities (roster, filterable/searchable),
 // GET /stories/:storyId/entities/:memoryId (single entity, full body).
 //
-// Thin JSON adapters over the same domain functions mnemo_list_entities
-// already wraps (listAllEntities/filterListedEntities, src/entities.ts).
+// Thin JSON adapters over the same application read use case as
+// mnemo_list_entities.
 // includeBody is hard-false on the roster route -- never exposed as a
 // query param here -- matching filterListedEntities' own stated intent
 // that a browse response should stay light, not a content dump.
@@ -11,12 +11,8 @@
 import type { Router } from "express";
 import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
-import {
-  ENTITY_TYPES,
-  filterListedEntities,
-  getEntityByMemoryId,
-  listAllEntities,
-} from "../entities.js";
+import { listEntityCatalog } from "../application/list-entities.js";
+import { ENTITY_TYPES, getEntityByMemoryId } from "../entities.js";
 import { asyncRoute, parseOr400, requireStory } from "./helpers.js";
 
 const rosterQuerySchema = z.object({
@@ -40,21 +36,13 @@ export function registerEntityRoutes(router: Router, oc: OcClient): void {
       );
       if (!query) return;
 
-      const result = await listAllEntities(
-        oc,
-        story.id,
-        story.marker_memory_id,
+      res.json(
+        await listEntityCatalog(oc, story, {
+          type: query.type,
+          query: query.q,
+          includeBody: false,
+        }),
       );
-      const entities = filterListedEntities(result.entities, {
-        type: query.type,
-        query: query.q,
-        includeBody: false,
-      });
-      res.json({
-        entities,
-        count: entities.length,
-        skipped_memory_ids: result.skipped_memory_ids,
-      });
     }),
   );
 

@@ -96,8 +96,11 @@ assessments listed under "Layout" below.
   `helpers.ts` (`asyncRoute()`, input/error handling).
 - `src/application/` — transport-independent application use cases shared by
   MCP and REST drivers. Continuation, standalone validation, and bulk scene
-  revalidation live here. This is the first incremental hexagonal slice;
-  concrete OC/LLM outbound ports remain to be extracted.
+  revalidation plus story/entity catalog reads live here. These are the first
+  incremental hexagonal slices; concrete OC/LLM outbound ports remain to be
+  extracted. `tests/architecture-boundaries.test.ts` prevents imports between
+  the MCP/REST drivers and prevents application use cases from importing either
+  driver tree.
 - `webui/` — the actual web UI: entity-library browse/detail plus the
   interactive continue/validate flow. A separate npm package — React 19 +
   Vite + react-router,
