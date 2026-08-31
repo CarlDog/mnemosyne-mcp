@@ -97,10 +97,16 @@ assessments listed under "Layout" below.
 - `src/application/` — transport-independent application use cases shared by
   MCP and REST drivers. Continuation, standalone validation, and bulk scene
   revalidation plus story/entity catalog reads live here. These are the first
-  incremental hexagonal slices; concrete OC/LLM outbound ports remain to be
-  extracted. `tests/architecture-boundaries.test.ts` prevents imports between
-  the MCP/REST drivers and prevents application use cases from importing either
-  driver tree.
+  incremental hexagonal slices. `application/ports/story-validation.ts` defines
+  the first explicit outbound contracts; other use cases still need their
+  concrete OC/LLM dependencies migrated. `tests/architecture-boundaries.test.ts`
+  prevents imports between the MCP/REST drivers, prevents application use cases
+  from importing either driver tree, and pins standalone validation to its
+  ports.
+- `src/adapters/` — concrete outbound adapters. `story-validation.ts` binds the
+  existing OC context loader and local LLM validator to application ports;
+  `src/index.ts` constructs this binding once and injects the use case into both
+  inbound drivers.
 - `webui/` — the actual web UI: entity-library browse/detail plus the
   interactive continue/validate flow. A separate npm package — React 19 +
   Vite + react-router,

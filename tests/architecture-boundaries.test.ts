@@ -22,6 +22,13 @@ function importsIn(directory: string): string[] {
   });
 }
 
+function importSpecifiers(path: string): string[] {
+  const source = readFileSync(path, "utf8");
+  return [...source.matchAll(/\bfrom\s+["']([^"']+)["']/g)].map(
+    (match) => match[1]!,
+  );
+}
+
 describe("hexagonal source boundaries", () => {
   it("keeps the MCP and REST inbound drivers independent", () => {
     expect(importsIn(join(srcDir, "api"))).not.toEqual(
@@ -38,5 +45,12 @@ describe("hexagonal source boundaries", () => {
         expect.stringMatching(/:\s+.*\/(?:api|tools)(?:\/|$)/),
       ]),
     );
+  });
+
+  it("keeps standalone validation behind its outbound ports", () => {
+    const imports = importSpecifiers(
+      join(srcDir, "application", "validate-story.ts"),
+    );
+    expect(imports).toEqual(["./ports/story-validation.js"]);
   });
 });

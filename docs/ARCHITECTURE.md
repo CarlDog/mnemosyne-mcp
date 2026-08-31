@@ -41,8 +41,13 @@ current dependency direction is:
 MCP tools (src/tools/) ─┐
                        ├─> application use cases (src/application/)
 REST API (src/api/) ───┘              │
-                                      v
-                         existing domain/integration modules
+                                      ├─> outbound ports
+                                      │   (src/application/ports/)
+                                      │             ^
+                                      v             │
+                         existing domain modules    │
+                                                    │
+                         adapters (src/adapters/) ──┘
 ```
 
 - `src/tools/` and `src/api/` are inbound driver adapters. They parse
@@ -52,18 +57,23 @@ REST API (src/api/) ───┘              │
   standalone validation, bulk scene revalidation, and story/entity catalog
   reads live here so both inbound adapters execute the same policy and response
   projections.
-- Existing root modules still combine domain policy with concrete OC and LLM
-  integration types. Extracting explicit outbound ports and adapters is a later
-  migration slice, so the repository is not yet fully hexagonal.
+- Standalone validation now depends on explicit story-constraint-reader and
+  content-validator ports. `src/adapters/story-validation.ts` implements them
+  with the existing OpenChronicle context loader and local LLM validator.
+- Other application use cases and existing root modules still combine domain
+  policy with concrete OC and LLM integration types. Their outbound-port
+  extraction remains incremental, so the repository is not yet fully
+  hexagonal.
 - `src/index.ts` remains the composition root where concrete clients,
-  providers, and inbound transports are assembled.
+  providers, outbound adapters, and inbound transports are assembled.
 
 New shared behavior should enter through an application use case rather than
 one inbound adapter importing another. Compatibility re-exports may preserve
 old import paths during migration, but new callers should import from
 `src/application/`. `tests/architecture-boundaries.test.ts` enforces that MCP,
 REST, and application source trees do not acquire inward-facing imports from
-one another.
+one another, and that the migrated standalone-validation use case only imports
+its port contracts.
 
 **What Mnemosyne is NOT:**
 - Not an extension to OpenChronicle. OC v3 deliberately stayed lean and

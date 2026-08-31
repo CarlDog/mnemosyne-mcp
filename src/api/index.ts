@@ -4,6 +4,7 @@
 import { Router } from "express";
 import type { OcClient } from "../oc-client.js";
 import type { LlmProvider } from "../llm.js";
+import type { ValidateStory } from "../application/validate-story.js";
 import {
   DEFAULT_SCENE_CONTEXT_STRATEGY,
   type SceneContextStrategy,
@@ -18,6 +19,7 @@ import { resolveCapabilities } from "../capabilities.js";
 export interface ApiRouterOptions {
   generator?: LlmProvider;
   validator?: LlmProvider;
+  validateStory?: ValidateStory;
   sceneContextStrategy?: SceneContextStrategy;
   sceneContextFallbackStrategy?: SceneContextStrategy;
 }
@@ -36,6 +38,11 @@ export function createApiRouter(
   registerEntityRoutes(router, oc);
 
   if (options.generator && options.validator) {
+    if (!options.validateStory) {
+      throw new Error(
+        "validateStory is required when interactive API routes are enabled",
+      );
+    }
     // Protected semantic readiness (NEMOCLAW_ADOPTION_ASSESSMENT §3):
     // sits behind the same apiSecurity middleware as every /api route --
     // /health stays the only public surface, and stays liveness-only.
@@ -71,6 +78,7 @@ export function createApiRouter(
       oc,
       options.generator,
       options.validator,
+      options.validateStory,
       sceneContextStrategy,
       sceneContextFallbackStrategy,
     );

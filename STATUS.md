@@ -573,6 +573,17 @@ to the milestones at which they were measured.
 
 ## Done
 
+- **Standalone validation gained explicit outbound ports** (2026-08-31).
+  The application use case now depends only on story-constraint-reader and
+  content-validator contracts. A concrete adapter wraps the existing
+  OpenChronicle context gathering and the required local LLM validator, and
+  `src/index.ts` binds that adapter once for both MCP and REST injection. Focused
+  tests pin port ordering and binding, while the architecture test prevents the
+  migrated use case from regaining concrete client/provider imports. This is the
+  first outbound-port slice; continuation, revalidation, and catalog reads still
+  have concrete OC/LLM dependencies and keep the repository short of full
+  hexagonal compliance.
+
 - **Story and entity catalog reads crossed the application boundary**
   (2026-08-31). Shared catalog use cases now own story-summary projection and
   complete entity enumeration/filtering, including body stripping and
