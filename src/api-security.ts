@@ -7,16 +7,23 @@
 // path-exclusion logic of its own; registration order is the exclusion
 // mechanism.
 //
-// Deliberately duplicates hostAllowed()/tokenMatches() from
+// Deliberately duplicates tokenMatches()/the host-check wiring from
 // shared/http-transport.ts rather than importing them -- that file is a
 // byte-verbatim, hash-compared copy of kindroid-mcp's fleet-canonical
 // module (see its own header comment) and must not gain mnemosyne-only
 // exports. This is a small, accepted, deliberate duplication against the
-// canonical file, not accidental drift.
+// canonical file, not accidental drift. The actual host-matching primitive
+// (parseAllowedHosts/requestAuthorityAllowed) lives in the separate,
+// already-shared shared/mcp-environment.ts, so importing that does not
+// touch http-transport.ts's byte-verbatim status.
 
 import { createHash, timingSafeEqual } from "node:crypto";
 import type { NextFunction, Request, RequestHandler, Response } from "express";
 import type { HttpConfig } from "./http-config.js";
+import {
+  parseAllowedHosts,
+  requestAuthorityAllowed,
+} from "./shared/mcp-environment.js";
 
 /** Constant-time bearer comparison over SHA-256 digests. */
 function tokenMatches(provided: string, expected: string): boolean {
@@ -26,20 +33,14 @@ function tokenMatches(provided: string, expected: string): boolean {
 }
 
 function hostAllowed(req: Request, allowed: string[] | undefined): boolean {
-  if (!allowed || allowed.length === 0) return true; // not configured: open
-  const host = (req.headers.host ?? "").split(":")[0]?.toLowerCase() ?? "";
-  if (allowed.some((h) => h.toLowerCase() === host)) return true;
-
-  const origin = req.headers.origin;
-  if (typeof origin === "string" && origin) {
-    try {
-      const originHost = new URL(origin).hostname.toLowerCase();
-      return allowed.some((h) => h.toLowerCase() === originHost);
-    } catch {
-      return false;
-    }
-  }
-  return false;
+  const headers: { host?: string; origin?: string } = {};
+  if (typeof req.headers.host === "string") headers.host = req.headers.host;
+  if (typeof req.headers.origin === "string")
+    headers.origin = req.headers.origin;
+  return requestAuthorityAllowed(
+    headers,
+    allowed ?? parseAllowedHosts(undefined),
+  );
 }
 
 export function apiSecurity(

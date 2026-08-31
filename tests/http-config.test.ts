@@ -78,24 +78,20 @@ describe("loadHttpConfig", () => {
     expect(() => loadHttpConfig()).toThrow(/MCP_ALLOWED_HOSTS/);
   });
 
-  it("strips a :port suffix from MCP_ALLOWED_HOSTS entries (matching is hostname-only)", () => {
+  it("rejects a host:port MCP_ALLOWED_HOSTS entry outright (matching is hostname-only, port-independent)", () => {
+    // Delegated to shared/mcp-environment.ts's parseAllowedHosts, which
+    // treats a colon-bearing entry (other than a bare IPv6 literal) as
+    // invalid syntax rather than silently stripping it -- the old
+    // port-stripping regex here could never safely handle a bracketed
+    // IPv6 entry, so it left those permanently unmatchable. A hard error
+    // at startup replaces that silent gap.
     process.env.MCP_ALLOWED_HOSTS = "example-nas:3010";
-    expect(loadHttpConfig().allowedHosts).toEqual(["example-nas"]);
-
-    process.env.MCP_ALLOWED_HOSTS = "localhost,example-nas:3010";
-    expect(loadHttpConfig().allowedHosts).toEqual(["localhost", "example-nas"]);
-  });
-
-  it("leaves IPv6-shaped MCP_ALLOWED_HOSTS entries unmangled", () => {
-    // hostAllowed() can't match IPv6 Host headers anyway; the point is only
-    // that the port-strip never corrupts an entry holding another colon.
-    process.env.MCP_ALLOWED_HOSTS = "::1,[::1]:3000";
-    expect(loadHttpConfig().allowedHosts).toEqual(["::1", "[::1]:3000"]);
-  });
-
-  it("throws when a lone :port MCP_ALLOWED_HOSTS entry strips to nothing", () => {
-    process.env.MCP_ALLOWED_HOSTS = ":3010";
     expect(() => loadHttpConfig()).toThrow(/MCP_ALLOWED_HOSTS/);
+  });
+
+  it("normalizes bracketed and bare IPv6 MCP_ALLOWED_HOSTS entries, deduplicated", () => {
+    process.env.MCP_ALLOWED_HOSTS = "::1,[::1]";
+    expect(loadHttpConfig().allowedHosts).toEqual(["::1"]);
   });
 
   it("treats an empty-string MCP_AUTH_TOKEN as unset (auth disabled)", () => {
