@@ -8,8 +8,9 @@ editorial-pass files under undocumented descriptive-suffix names, e.g.
 `mnemo_export_story`); amended 2026-08-29 to add selectively promoted,
 finished scenes to `canon/scenes/` and review-gated `drafts/` overlays;
 amended 2026-08-31 to add `companion-logs/` for provenance-carrying
-captures pulled from an external addon/plugin (see "Companion logs"
-below). The
+captures pulled from an external addon/plugin, including the raw-vs-normalized
+split for a source-side identity/persona field that varies within one capture
+(see "Companion logs" below). The
 organization and naming standard for everything under `<data dir>` (default `<repo>/data`, gitignored,
 `MNEMO_DATA_DIR` override — see `src/config.ts`). Two guiding principles:
 
@@ -75,7 +76,9 @@ data/
     │   └── 2026-08-23T0512-warehouse-confrontation-nano-banana-2-01.json
     └── companion-logs/               # raw pulls from an external addon/plugin (read-only capture)
         ├── plex-companion-watchalong-transcript-2026-08-31.json
-        └── plex-companion-watchalong-transcript-2026-08-31.md
+        ├── plex-companion-watchalong-transcript-2026-08-31.md
+        ├── plex-companion-watchalong-transcript-normalized-2026-08-31.json  # optional: see below
+        └── plex-companion-watchalong-transcript-normalized-2026-08-31.md
 ```
 
 ## Canon — the human-editable authoring surface
@@ -454,6 +457,37 @@ external, one internal:
 - **Owned by the operator/tooling, like `references/` and `art/`** — the
   server never writes here. A session populates it ad hoc, on request, not
   on any schedule.
+
+### A source-side identity/persona field is captured raw, never edited in place
+
+Some sources let the operator's displayed name vary within one capture —
+Kindroid's per-chat/group persona toggle is the confirmed case (2026-08-31,
+Chaos Saga): the operator's `display_name` on each message reflects whatever
+persona was active in Kindroid *at send time*, not a fixed account name, and
+it can and did change mid-conversation (a deliberate rename, plus brief
+accidental activations while the operator was adding new personas to the
+account). Kindroid exposes no read-back for the current persona setting
+(`kindroid_update_info`'s `user_name` is write-only, and it's scoped to a
+single AI, not a group) — the per-message `display_name` returned by
+`kindroid_get_chat_messages` is therefore the *only* faithful record of which
+persona was in effect when, and losing it loses real information.
+
+- **The raw capture keeps every value exactly as returned**, including a
+  since-corrected typo, an old name, or a one-off accidental value. Do not
+  patch it in place even when the operator confirms it was a mistake —
+  that mistake, and exactly when it happened, is what the raw file is for.
+- **Record the transitions explicitly in the raw file's provenance**, as a
+  `persona_history` entry (`field`, a plain-language `note` explaining *why*
+  the value varies for this source, and a `segments` array of
+  `{persona, count, from, to}` runs) — so a reader doesn't have to scan
+  every message to find where the identity changed.
+- **A single-identity reading copy is a separate, clearly named derivative**
+  — `<source-slug>-<content-descriptor>-normalized-<stamp>.<ext>` — never a
+  destructive edit to the raw file. Its own provenance names `derived_from`
+  (the raw file), the exact `normalization` applied (`field`, `target_value`,
+  `reason`, and `substituted_values` with counts), and when it was produced.
+  Regenerate it from the raw file rather than hand-editing if the target
+  identity changes.
 
 ## story.json — the identity card
 
