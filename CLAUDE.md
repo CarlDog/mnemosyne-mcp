@@ -254,7 +254,8 @@ assessments listed under "Layout" below.
   story foundation; raw salvage remains in the Hook Vault.
 - `docs/DATA_LAYOUT.md` — the data-directory organization and naming
   standard: per-story `references/` and `art/` conventions, generation
-  sidecars, and the server-written `story.json` identity card.
+  sidecars, `companion-logs/`'s external-addon/plugin provenance
+  requirement, and the server-written `story.json` identity card.
 - `docs/LIVING_CANON_STANDARD.md` — the ratified editorial quality contract
   for curated story references and polished export derivatives: proportional
   character depth, playable locations, material objects, relationship and
