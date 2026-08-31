@@ -16,6 +16,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import type { Server } from "node:http";
 import express from "express";
 import { createApiRouter } from "../src/api/index.js";
+import { createStoryValidationAdapter } from "../src/adapters/story-validation.js";
 import type { OcClient, OcMemory } from "../src/oc-client.js";
 import type { LlmProvider } from "../src/llm.js";
 
@@ -99,6 +100,10 @@ describe("interactive routes — scene-context strategy plumbing (mock OC)", () 
       createApiRouter(recording.oc, {
         generator: stubGenerator,
         validator: stubValidator,
+        validateStory: createStoryValidationAdapter(
+          recording.oc,
+          stubValidator,
+        ),
         sceneContextStrategy: "query-ranked",
         sceneContextFallbackStrategy: "query-ranked",
       }),

@@ -14,6 +14,7 @@ import type { Server } from "node:http";
 import express from "express";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { createApiRouter } from "../src/api/index.js";
+import { createStoryValidationAdapter } from "../src/adapters/story-validation.js";
 import type { LlmProvider } from "../src/llm.js";
 import { saveEntity } from "../src/entities.js";
 import { setupTestStory, teardownStory } from "./helpers.js";
@@ -80,6 +81,7 @@ suite("/api routes (real OC)", () => {
       createApiRouter(oc, {
         generator: stubGenerator,
         validator: stubValidator,
+        validateStory: createStoryValidationAdapter(oc, stubValidator),
       }),
     );
     httpServer = await new Promise((resolve) => {

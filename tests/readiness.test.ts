@@ -95,6 +95,9 @@ describe("GET /api/status", () => {
       createApiRouter(fakeOc(async () => {}) as unknown as OcClient, {
         generator: cloudProvider,
         validator: readyProvider("ollama"),
+        validateStory: async () => {
+          throw new Error("validation is not exercised by this test");
+        },
       }),
     );
     const server: Server = await new Promise((resolve) => {

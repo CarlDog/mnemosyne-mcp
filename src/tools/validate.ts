@@ -18,8 +18,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
-import type { LlmProvider } from "../llm.js";
-import { validateStoryContent } from "../application/validate-story.js";
+import type { ValidateStory } from "../application/validate-story.js";
 import { resolveStoryId } from "../stories.js";
 import { log } from "../log.js";
 import { asText, withLogging } from "./helpers.js";
@@ -27,7 +26,7 @@ import { asText, withLogging } from "./helpers.js";
 export function registerValidateTool(
   server: McpServer,
   oc: OcClient,
-  validator: LlmProvider,
+  validateStory: ValidateStory,
 ): void {
   server.registerTool(
     "mnemo_validate",
@@ -59,7 +58,7 @@ export function registerValidateTool(
         // degrades to a structured error instead of a raw MCP tool error —
         // symmetric with mnemo_continue's validation_error field.
         try {
-          const report = await validateStoryContent(oc, validator, storyId, {
+          const report = await validateStory(storyId, {
             content: args.content,
           });
           return asText(report);

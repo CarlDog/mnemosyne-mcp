@@ -19,7 +19,7 @@ import {
 import { combineKindroidTarget, type KindroidTarget } from "../stories.js";
 import { continueScene } from "../application/continue-scene.js";
 import { revalidateScenes } from "../application/revalidate-scenes.js";
-import { validateStoryContent } from "../application/validate-story.js";
+import type { ValidateStory } from "../application/validate-story.js";
 import {
   MIN_GROUP_MAX_TURNS,
   MAX_GROUP_MAX_TURNS,
@@ -87,6 +87,7 @@ export function registerInteractiveRoutes(
   oc: OcClient,
   generator: LlmProvider,
   validator: LlmProvider,
+  validateStory: ValidateStory,
   sceneContextStrategy: SceneContextStrategy,
   sceneContextFallbackStrategy: SceneContextStrategy,
 ): void {
@@ -182,7 +183,7 @@ export function registerInteractiveRoutes(
       const body = parseOr400(validateSchema, req.body, res);
       if (!body) return;
 
-      const report = await validateStoryContent(oc, validator, story.id, {
+      const report = await validateStory(story.id, {
         content: body.content,
       });
       res.json(report);

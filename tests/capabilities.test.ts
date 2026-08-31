@@ -168,6 +168,9 @@ describe("GET /api/capabilities", () => {
       createApiRouter({ memorySearch: async () => [] } as unknown as OcClient, {
         generator: stubProvider("anthropic"),
         validator: stubProvider("stub-validator"),
+        validateStory: async () => {
+          throw new Error("validation is not exercised by this test");
+        },
       }),
     );
     const server: Server = await new Promise((resolve) => {
