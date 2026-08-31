@@ -49,8 +49,9 @@ REST API (src/api/) ───┘              │
   transport input, map errors, and shape responses; they must not import each
   other.
 - `src/application/` owns shared orchestration use cases. Continuation,
-  standalone validation, and bulk scene revalidation live here so both inbound
-  adapters execute the same policy.
+  standalone validation, bulk scene revalidation, and story/entity catalog
+  reads live here so both inbound adapters execute the same policy and response
+  projections.
 - Existing root modules still combine domain policy with concrete OC and LLM
   integration types. Extracting explicit outbound ports and adapters is a later
   migration slice, so the repository is not yet fully hexagonal.
@@ -60,7 +61,9 @@ REST API (src/api/) ───┘              │
 New shared behavior should enter through an application use case rather than
 one inbound adapter importing another. Compatibility re-exports may preserve
 old import paths during migration, but new callers should import from
-`src/application/`.
+`src/application/`. `tests/architecture-boundaries.test.ts` enforces that MCP,
+REST, and application source trees do not acquire inward-facing imports from
+one another.
 
 **What Mnemosyne is NOT:**
 - Not an extension to OpenChronicle. OC v3 deliberately stayed lean and

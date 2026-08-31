@@ -573,6 +573,15 @@ to the milestones at which they were measured.
 
 ## Done
 
+- **Story and entity catalog reads crossed the application boundary**
+  (2026-08-31). Shared catalog use cases now own story-summary projection and
+  complete entity enumeration/filtering, including body stripping and
+  `skipped_memory_ids`; MCP and REST drivers only add their transport-specific
+  concerns. Focused tests cover both projections, and an executable architecture
+  test now prevents MCP/REST drivers from importing one another or application
+  use cases from importing either inbound driver tree. Concrete OC/LLM outbound
+  ports remain the next architectural boundary rather than being implied done.
+
 - **First hexagonal application-boundary slice completed** (2026-08-31).
   `mnemo_continue`, `mnemo_validate`, and `mnemo_revalidate_scenes` now place
   shared orchestration in `src/application/`; the MCP tools and matching REST
