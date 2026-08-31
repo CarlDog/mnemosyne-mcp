@@ -291,6 +291,14 @@ assessments listed under "Layout" below.
   (weather, events) reaching kins, optionally per storyline/bot, via a
   standalone `*-companion` app (mirroring the plex-companion split) rather
   than code inside mnemosyne. Not started, not scheduled.
+- `docs/COMPANION_PROVIDER_CANDIDATES.md` — research-only survey (2026-08-31)
+  of Nomi.ai, SpicyChat.ai, and Candy.ai as candidate `GENERATOR_PROVIDER`
+  additions alongside Kindroid/Botify: API availability, capability surface,
+  and ToS stance on automation for each. Only Nomi.ai has a documented
+  official API; SpicyChat.ai's ToS is silent on automation (reverse-engineered
+  access only); Candy.ai's ToS explicitly prohibits off-platform AI use of
+  its content. Not ratified architecture, no MCP server started for any of
+  the three.
 - `SECURITY.md` — disclosure policy. Private vulnerability reporting is
   enabled; the file lists the three known limitations (unconfined filesystem
   authority by transport is now closed for HTTP, what Host/Origin + bearer auth

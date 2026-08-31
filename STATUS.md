@@ -1,6 +1,6 @@
 # Status
 
-**Last updated:** 2026-08-30.
+**Last updated:** 2026-08-31.
 
 **Story-authoring checkpoint (2026-08-30): eight review-gated Living Canon
 overlays are complete.** BattleChasers has 71 operations → 143 entities; Brass
@@ -3038,6 +3038,24 @@ consider only when real use exposes the corresponding pressure:
   vs. pull, where the companion app itself would live) in
   [docs/WORLD_CONTEXT_COMPANION.md](docs/WORLD_CONTEXT_COMPANION.md) —
   update that file, not this bullet, when the design itself changes.
+- **Companion provider candidates: Nomi.ai, SpicyChat.ai, Candy.ai**
+  (research recorded 2026-08-31 — survey only, no build started). The
+  operator created testing accounts on all three as candidates for the
+  `GENERATOR_PROVIDER` roster alongside Kindroid/Botify (each would need
+  its own sibling MCP server, mirroring `kindroid-mcp`/`botify-mcp`). Full
+  findings — API availability, capability surface, ToS stance on
+  automation, per-platform sourcing — in
+  [docs/COMPANION_PROVIDER_CANDIDATES.md](docs/COMPANION_PROVIDER_CANDIDATES.md).
+  In brief: **Nomi.ai** has a documented official REST API (thinner than
+  Kindroid/Botify — chat + group "rooms" only, no persona/voice/image/
+  webhook endpoints) but its general ToS bans automation with no explicit
+  API carve-out, worth a clarifying email to support before building.
+  **SpicyChat.ai** has no official API; only reverse-engineered clients
+  against undocumented endpoints exist, against a ToS that's silent
+  (not permissive) on automation. **Candy.ai** has no official API and
+  its ToS explicitly prohibits using platform content with off-platform
+  AI/ML technologies — no legitimate integration path today. Update that
+  file, not this bullet, when the research or a build decision changes.
 
 ## Open Decisions
 
