@@ -16,7 +16,7 @@
 // poisoning the companion's own memory of who said what. Bracket wording
 // and rationale (square brackets over parens/OOC, descriptive not
 // imperative framing) are researched, not guessed -- see the commit this
-// landed in. Mirrors plex-companion's own `[Plex Companion -- automated
+// landed in. Mirrors watch-companion's own `[Watch Companion -- automated
 // ... note, not ${userName} typing]` convention, already live there.
 
 import type { ContextBundle } from "./prompt.js";

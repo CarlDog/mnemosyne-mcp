@@ -265,7 +265,7 @@ assessments listed under "Layout" below.
 - `docs/WEBUI_NOTES.md` — design input for the shipped-but-incomplete web UI
   (explicitly not ratified beyond implemented slices): mode-adaptive layout,
   the storyline control plane, the retrieval-assembly panel, media in the beat
-  flow, plex-companion watch parties, and a parked graphic-novel reading
+  flow, watch-companion watch parties, and a parked graphic-novel reading
   format.
 - `docs/CONTENT_ROUTING_DESIGN.md` — proposal (not yet ratified) for
   implementing Living Canon Standard §10's SFW/NSFW routing boundary: a
@@ -290,7 +290,7 @@ assessments listed under "Layout" below.
   generation (out of scope per ARCHITECTURE.md §8; not reopened).
 - `docs/WORLD_CONTEXT_COMPANION.md` — parked idea for real-world facts
   (weather, events) reaching kins, optionally per storyline/bot, via a
-  standalone `*-companion` app (mirroring the plex-companion split) rather
+  standalone `*-companion` app (mirroring the watch-companion split) rather
   than code inside mnemosyne. Not started, not scheduled.
 - `docs/COMPANION_PROVIDER_CANDIDATES.md` — research-only survey (2026-08-31)
   of Nomi.ai, SpicyChat.ai, and Candy.ai as candidate `GENERATOR_PROVIDER`
