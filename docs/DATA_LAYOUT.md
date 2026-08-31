@@ -6,7 +6,10 @@ Ratified 2026-08-23; amended 2026-08-27 to add `canon/` and narrow
 editorial-pass files under undocumented descriptive-suffix names, e.g.
 `<slug>-mature-<stamp>.json`, none of them actually produced by
 `mnemo_export_story`); amended 2026-08-29 to add selectively promoted,
-finished scenes to `canon/scenes/` and review-gated `drafts/` overlays. The
+finished scenes to `canon/scenes/` and review-gated `drafts/` overlays;
+amended 2026-08-31 to add `companion-logs/` for provenance-carrying
+captures pulled from an external addon/plugin (see "Companion logs"
+below). The
 organization and naming standard for everything under `<data dir>` (default `<repo>/data`, gitignored,
 `MNEMO_DATA_DIR` override — see `src/config.ts`). Two guiding principles:
 
@@ -67,9 +70,12 @@ data/
     │       └── maddox-1942-indian-scout-741b/
     │           ├── reference.png     #   16:9 primary object plate
     │           └── reference.json
-    └── art/                          # external generation OUTPUTS (OpenArt etc.)
-        ├── 2026-08-23T0512-warehouse-confrontation-nano-banana-2-01.jpg
-        └── 2026-08-23T0512-warehouse-confrontation-nano-banana-2-01.json
+    ├── art/                          # external generation OUTPUTS (OpenArt etc.)
+    │   ├── 2026-08-23T0512-warehouse-confrontation-nano-banana-2-01.jpg
+    │   └── 2026-08-23T0512-warehouse-confrontation-nano-banana-2-01.json
+    └── companion-logs/               # raw pulls from an external addon/plugin (read-only capture)
+        ├── plex-companion-watchalong-transcript-2026-08-31.json
+        └── plex-companion-watchalong-transcript-2026-08-31.md
 ```
 
 ## Canon — the human-editable authoring surface
@@ -387,6 +393,68 @@ all new tooling must emit foldered paths.
   prompt must be reconstructed during a migration, label it explicitly with
   `prompt_capture: "reconstructed-after-generation"`.
 
+## Companion logs — external addon/plugin captures
+
+`companion-logs/` holds raw data pulled from an external addon/plugin for
+operator review — a Kindroid or Botify chat history, a plex-companion
+watch-along transcript, or any future sibling app's output that a session
+captures into a story's tree. It exists because that data lives on someone
+else's server (Kindroid's, Plex's) with its own retention and pagination
+behavior; capturing it here is the only way to keep a durable, reviewable
+copy. Two rules make every capture identifiable without opening it — one
+external, one internal:
+
+- **Filename carries source and content, not just a timestamp:**
+  `<source-slug>-<content-descriptor>-<stamp>.<ext>`, e.g.
+  `plex-companion-watchalong-transcript-2026-08-31.md`. `source-slug` is the
+  addon/plugin the data came from (`plex-companion`, `kindroid`, `botify`),
+  never the underlying transport (`kindroid-mcp` is how it was pulled, not
+  what it's data *of* — see the provenance block below for that
+  distinction). `content-descriptor` says what kind of capture it is
+  (`watchalong-transcript`, `chat-history`). `stamp` follows the shared UTC
+  convention. This lets a directory listing alone answer "what is this and
+  where did it come from" — the same motivation as `art/`'s filename
+  convention, extended to captures instead of generations.
+- **Every file carries a provenance block internally, not just externally.**
+  A filename can be renamed or copied; the data must still self-identify
+  once opened. A JSON capture puts a top-level `provenance` object beside
+  its payload:
+
+  ```json
+  {
+    "provenance": {
+      "source": "plex-companion",
+      "pulled_via": "kindroid-mcp kindroid_get_chat_messages",
+      "source_ref": { "kind": "kindroid_group_id", "value": "chaos-house" },
+      "captured_at": "2026-08-31T07:40:00Z",
+      "range": {
+        "earliest": "2026-08-02T18:24:12.917Z",
+        "latest": "2026-08-31T06:09:28.901Z"
+      },
+      "complete": true
+    },
+    "messages": [ ... ]
+  }
+  ```
+
+  A Markdown capture opens with the same facts in prose — source, how it was
+  pulled, the source-side identifier, capture date, covered range, and
+  whether the source confirmed there was nothing older/newer left to page
+  through (`complete`) or the pull stopped early (rate limit, cap, error —
+  state the reason). `complete: false` is not a defect; an honest partial
+  capture beats a silent one that reads as full.
+- **Read-only capture, never canon.** Like `drafts/_control/`, this is
+  evidence for the operator's own review — not an entity, not something
+  `compile-story.mjs` reads, and not something any tool imports. If a
+  reviewed transcript surfaces something worth keeping (a voice
+  inconsistency, a line worth preserving), that goes through the normal
+  authoring path into `canon/` as its own deliberate step; the raw capture
+  stays exactly as pulled, since editing it after the fact would defeat the
+  point of a provenance record.
+- **Owned by the operator/tooling, like `references/` and `art/`** — the
+  server never writes here. A session populates it ad hoc, on request, not
+  on any schedule.
+
 ## story.json — the identity card
 
 Holds **only what is not derivable** from the filesystem or OC — chiefly
@@ -418,10 +486,11 @@ this file wholesale.
   (`2026-08-23T051200` or the shorter `T0512` prefix form for art, where
   the seq suffix already disambiguates).
 - **The server only ever writes** `config.json`, `story.json`, and
-  `exports/`. `canon/`, `drafts/`, `references/`, and `art/` are
-  operator/tooling territory. `compile-story.mjs` reads `canon/` (or an
-  explicitly selected canon-shaped tree) but never mutates it; the server does
-  not read or write these authoring directories directly.
+  `exports/`. `canon/`, `drafts/`, `references/`, `art/`, and
+  `companion-logs/` are operator/tooling territory. `compile-story.mjs`
+  reads `canon/` (or an explicitly selected canon-shaped tree) but never
+  mutates it; the server does not read or write these authoring directories
+  directly.
 - **`exports/` filenames are a plain `<slug>-<stamp>.json` timestamp,
   never a descriptive suffix.** An editorial pass's working content
   belongs in `drafts/` until accepted and then in `canon/`, never in a
