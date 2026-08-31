@@ -55,23 +55,34 @@ describe("apiSecurity", () => {
     expect(res.status).toBe(403);
   });
 
-  // The Origin branch had no coverage on either copy of this check. These
-  // pin its ACTUAL contract, which is an OR-fallback rather than a second
-  // gate: hostAllowed() returns early the moment the Host matches, so Origin
-  // is consulted ONLY to rescue a request whose Host is not allowed.
-  test("Origin is not consulted when the Host already matches", async () => {
+  // hostAllowed() now delegates to shared/mcp-environment.ts's
+  // requestAuthorityAllowed, whose contract is an AND, not an OR-fallback:
+  // Host must always match, and a present Origin must independently ALSO
+  // match -- it can never rescue a Host that doesn't. This is a real
+  // hardening over the old behavior these tests used to pin (Host-match
+  // short-circuited past Origin entirely): Origin is far harder for a
+  // DNS-rebinding attacker to spoof than Host, so letting a matching Host
+  // alone satisfy the check discarded the stronger signal.
+  test("a present Origin must also match, even when Host is allowed", async () => {
     const { url } = await start({ allowedHosts: ["127.0.0.1"] });
     const res = await fetch(`${url}/probe`, {
       headers: { Origin: "http://evil.example" },
     });
-    // Deliberately 200: Host matched, so the early return fires first.
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(403);
   });
 
-  test("a permitted Origin rescues a Host that is not allowed", async () => {
+  test("Origin cannot rescue a Host that is not allowed", async () => {
     const { url } = await start({ allowedHosts: ["allowed.example"] });
     const res = await fetch(`${url}/probe`, {
       headers: { Origin: "http://allowed.example" },
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test("a matching Host and a matching Origin both pass", async () => {
+    const { url } = await start({ allowedHosts: ["127.0.0.1"] });
+    const res = await fetch(`${url}/probe`, {
+      headers: { Origin: "http://127.0.0.1" },
     });
     expect(res.status).toBe(200);
   });

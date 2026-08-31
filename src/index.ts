@@ -328,12 +328,20 @@ if (httpConfig.port === undefined) {
       transport: "http",
       bind: `${httpConfig.bindHost}:${httpConfig.port}`,
       auth: httpConfig.authToken ? "bearer" : "none",
-      allowed_hosts: httpConfig.allowedHosts?.join(",") ?? "any",
+      allowed_hosts:
+        httpConfig.allowedHosts?.join(",") ??
+        "localhost,127.0.0.1,[::1],host.docker.internal (default)",
     });
     if (!httpConfig.authToken) {
       log.warn(
         "server",
         "MCP_AUTH_TOKEN is unset -- the HTTP endpoint accepts unauthenticated requests",
+      );
+    }
+    if (!httpConfig.allowedHosts) {
+      log.warn(
+        "server",
+        "MCP_ALLOWED_HOSTS is unset -- falling back to localhost,127.0.0.1,[::1],host.docker.internal, which rejects a real remote client",
       );
     }
     startWarmup();
