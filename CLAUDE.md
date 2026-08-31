@@ -92,8 +92,12 @@ assessments listed under "Layout" below.
 - `src/api/` — the REST layer the web UI talks to: `index.ts`
   (`createApiRouter()`, mirrors `tools/index.ts`'s orchestrator shape),
   `stories.ts`, `entities.ts`, and `interactive.ts` (route handlers — thin
-  JSON adapters over the same domain functions the MCP tools wrap),
+  JSON driver adapters over the same application use cases the MCP tools wrap),
   `helpers.ts` (`asyncRoute()`, input/error handling).
+- `src/application/` — transport-independent application use cases shared by
+  MCP and REST drivers. Continuation, standalone validation, and bulk scene
+  revalidation live here. This is the first incremental hexagonal slice;
+  concrete OC/LLM outbound ports remain to be extracted.
 - `webui/` — the actual web UI: entity-library browse/detail plus the
   interactive continue/validate flow. A separate npm package — React 19 +
   Vite + react-router,
@@ -138,7 +142,9 @@ assessments listed under "Layout" below.
   `src/openai-compat-provider.ts` — direct HTTP cloud generators (no
   SDKs). The OpenAI-compatible class serves both `openai` and
   `atlascloud` (and any compatible host via `OPENAI_BASE_URL`).
-- `src/tools/*.ts` — tool registrations (one file per tool surface).
+- `src/tools/*.ts` — MCP driver registrations (one file per tool surface),
+  responsible for protocol schemas and response mapping rather than shared
+  orchestration policy.
 - `src/run-context.ts` / `src/run-outcome.ts` — run identity + typed
   replay-safe outcomes (RUN_OUTCOMES_DESIGN, ratified): `RunContext`
   carries the caller's abort signal (consulted at phase boundaries only —

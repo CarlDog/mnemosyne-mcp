@@ -573,6 +573,16 @@ to the milestones at which they were measured.
 
 ## Done
 
+- **First hexagonal application-boundary slice completed** (2026-08-31).
+  `mnemo_continue`, `mnemo_validate`, and `mnemo_revalidate_scenes` now place
+  shared orchestration in `src/application/`; the MCP tools and matching REST
+  routes are inbound driver adapters over those use cases and no longer import
+  behavior from one another. Existing tool-module exports remain as migration
+  compatibility edges. The architecture guide and repository map now document
+  the dependency direction and explicitly record that concrete OC/LLM outbound
+  ports are still future work, so this milestone does not claim full hexagonal
+  compliance.
+
 - **Living Canon draft-overlay closeout completed** (2026-08-30).
   Eight adversarially closed overlays now retain PASS evidence: BattleChasers
   (71 operations → 143 entities), Brass & Nerve (20 → 43), Chaos Saga

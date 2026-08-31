@@ -13,19 +13,18 @@ import type { LlmProvider } from "../llm.js";
 import {
   MODES,
   SCENE_CONTEXT_STRATEGIES,
-  gatherContext,
   resolveSceneContextStrategies,
   type SceneContextStrategy,
 } from "../prompt.js";
 import { combineKindroidTarget, type KindroidTarget } from "../stories.js";
+import { continueScene } from "../application/continue-scene.js";
+import { revalidateScenes } from "../application/revalidate-scenes.js";
+import { validateStoryContent } from "../application/validate-story.js";
 import {
   MIN_GROUP_MAX_TURNS,
   MAX_GROUP_MAX_TURNS,
 } from "../kindroid-provider.js";
-import { continueScene } from "../tools/continue.js";
 import { makeRunContext } from "../run-context.js";
-import { revalidateScenes } from "../tools/revalidate.js";
-import { validateContent } from "../validator.js";
 import { asyncRoute, parseOr400, requireStory } from "./helpers.js";
 import {
   MAX_GENERATION_TOKENS,
@@ -183,10 +182,9 @@ export function registerInteractiveRoutes(
       const body = parseOr400(validateSchema, req.body, res);
       if (!body) return;
 
-      const context = await gatherContext(oc, story.id, body.content, {
-        validationOnly: true,
+      const report = await validateStoryContent(oc, validator, story.id, {
+        content: body.content,
       });
-      const report = await validateContent(validator, context, body.content);
       res.json(report);
     }),
   );
