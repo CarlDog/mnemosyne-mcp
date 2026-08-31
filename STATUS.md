@@ -339,7 +339,7 @@ text"; Kindroid's community independently reports brackets outperforming
 parens), and the literal word "OOC" is deliberately dropped since heavy
 `OOC:`-tagging is reported to train a Kin into echoing it back unprompted.
 Framing is descriptive, not imperative — Kindroid's docs warn imperative
-directives over-trigger. plex-companion's own `[Plex Companion — automated
+directives over-trigger. watch-companion's own `[Watch Companion — automated
 ... note, not Carl typing]` header already matched this shape exactly and
 needed zero changes — it was the reference implementation the research
 validated. Paired with a `prompt.ts` addition: every mode directive now
@@ -355,7 +355,7 @@ Done entry below) — a bracketed direction read as a scene event, not
 Carl typing, and asterisk-for-action came back unprompted, though two
 active regression threads mean Botify's own team was mid-fix on the
 exact mechanism at the time. 5 new/updated tests (142/142 passing); a separate same-day
-plex-companion timeout fix (`KINDROID_ENGAGEMENT_TIMEOUT_MS`, split from
+watch-companion timeout fix (`KINDROID_ENGAGEMENT_TIMEOUT_MS`, split from
 `REQUEST_TIMEOUT_MS`) is documented in that repo's own STATUS.md.) Earlier,
 same day — **the import campaign is complete — five
 live stories, ~369 entities**. All four original ChatGPT projects are
@@ -1945,7 +1945,7 @@ to the milestones at which they were measured.
   `DEFAULT_USER_NAME`) so existing call sites and tests didn't need to
   thread it through everywhere. The old short-circuit
   (`if (!hasContextBlock && !opts?.groupNote) return userMessage`) is gone
-  — every message now does real work, matching the invariant plex-companion
+  — every message now does real work, matching the invariant watch-companion
   already had.
   Wording is researched, not guessed: a 4-agent Workflow catalogued
   Kindroid's and AI Dungeon's official docs, Character.AI/SillyTavern/
@@ -1967,10 +1967,10 @@ to the milestones at which they were measured.
   docs are an unreachable client-rendered SPA; Reddit/Discord were
   categorically unreachable by the research tooling) — flagged as a
   follow-up empirical probe via `botify_send_message`, not assumed safe.
-  **plex-companion needed zero changes** — its three message builders
+  **watch-companion needed zero changes** — its three message builders
   (`buildReactionMessage`/`buildStartMessage`/`buildSuggestionMessage` in
   `src/backends/kindroid.ts`) already open every message with
-  `[Plex Companion — automated ... note, not ${userName} typing]`; it was
+  `[Watch Companion — automated ... note, not ${userName} typing]`; it was
   the reference implementation the research validated, not a second thing
   to fix.
   A companion change landed in `prompt.ts`: every mode directive now ends
@@ -2062,7 +2062,7 @@ to the milestones at which they were measured.
 
 - **A timed-out Kindroid call no longer looks like a failed one**
   (2026-08-23). Found by running a real group beat, not by review. On a group
-  fed daily by plex-companion, `advanceGroup` timed out at the MCP SDK's
+  fed daily by watch-companion, `advanceGroup` timed out at the MCP SDK's
   default 60s — *after* both AI turns had generated and persisted. mnemosyne
   saw a bare transport error and reported total failure; retrying would have
   duplicated real messages in a real conversation. Exactly the hazard the
@@ -2466,7 +2466,7 @@ to the milestones at which they were measured.
   live verification above actually surfaced a real problem on its first
   run: one kin took two of four turns in a row, both replying
   independently to the direction rather than to each other. Cross-repo
-  comparison with `plex-companion`'s `KindroidBackend` (a sibling
+  comparison with `watch-companion`'s `KindroidBackend` (a sibling
   private repo with its own group-chat "watch party" use case) found it
   had hit and fixed the identical behavior via a static
   `groupConversationNote()` appended to every group-target message.
@@ -2904,7 +2904,7 @@ consider only when real use exposes the corresponding pressure:
   [docs/WEBUI_NOTES.md](docs/WEBUI_NOTES.md) — three modes as three
   postures, a storyline control plane alongside the character one,
   showing the retrieval assembly, media generation inside the beat
-  flow, plex-companion watch parties, and a parked graphic-novel
+  flow, watch-companion watch parties, and a parked graphic-novel
   reading format.
 - ~~**Botify provider**~~ / ~~**Anthropic provider**~~ — **shipped
   2026-08-21** along with OpenAI, Gemini, and Atlas Cloud; see the Done
@@ -3029,8 +3029,8 @@ consider only when real use exposes the corresponding pressure:
   (idea recorded 2026-08-31 — idea only, not started, not scheduled).
   Whether a bot/kin should be able to ground a scene in real-world facts,
   optionally per storyline or per bot. Recommendation: a standalone
-  `*-companion` app (following the plex-companion split already decided in
-  [docs/PLEX_COMPANION_INTEGRATION_PLAN.md](docs/PLEX_COMPANION_INTEGRATION_PLAN.md)),
+  `*-companion` app (following the watch-companion split already decided in
+  [docs/WATCH_COMPANION_INTEGRATION_PLAN.md](docs/WATCH_COMPANION_INTEGRATION_PLAN.md)),
   not code inside mnemosyne — the companion owns the external API calls and
   the "is this worth surfacing" judgment, mnemosyne only ever receives an
   already-curated fact to fold into context admission. Full notes, rejected

@@ -1,13 +1,13 @@
-# Plex Companion Integration Plan
+# Watch Companion Integration Plan
 
 **Status:** Reviewed proposal, recorded 2026-08-29 and revised through
 independent authority/security and failure/crash adversarial passes. Final
 review verdict: **PASS**. This is not ratified or scheduled.
 [STATUS.md](../STATUS.md) remains authoritative for current project state.
 
-This plan is grounded in Mnemosyne at `fbaf5f8` and plex-companion at
+This plan is grounded in Mnemosyne at `fbaf5f8` and watch-companion at
 `402f037`. It supersedes the raw-`mnemo_continue` integration sketched in
-[WEBUI_NOTES.md §7](WEBUI_NOTES.md#7-watch-parties--mnemosyne-as-plex-companions-passthrough).
+[WEBUI_NOTES.md §7](WEBUI_NOTES.md#7-watch-parties--mnemosyne-as-watch-companions-passthrough).
 
 ## Decision
 
@@ -15,14 +15,14 @@ Mnemosyne should be **both before and after companion delivery**, but through
 one owner-wrapped interaction call rather than separate prepare and record
 hooks:
 
-1. plex-companion decides that an event deserves an engagement and sends one
+1. watch-companion decides that an event deserves an engagement and sends one
    structured interaction to Mnemosyne;
 2. Mnemosyne authorizes and freezes the story route, admits story context, and
    calls the bound companion provider at most once;
 3. Mnemosyne classifies the provider outcome and, when a reply is confirmed,
    attempts the route's narrative-record policy before returning a structured
    result;
-4. plex-companion records bounded outcome pointers and applies its cooldown.
+4. watch-companion records bounded outcome pointers and applies its cooldown.
 
 Mnemosyne is the **lifecycle owner**, not an atomic transaction coordinator.
 Kindroid and Botify offer no transaction spanning provider delivery and
@@ -33,7 +33,7 @@ sending it again.
 
 Only **approved engagements** cross this boundary. Filtered or gated webhooks,
 status/history reads, pause/resume, Plex/Tautulli lookups, and lore gathering
-remain entirely in plex-companion. “Every interaction passes through
+remain entirely in watch-companion. “Every interaction passes through
 Mnemosyne” means every backend-admitted companion engagement, not every Plex
 event or control-plane operation.
 
@@ -68,7 +68,7 @@ automatic route stays disabled if any component cannot preserve them.
 
 ## Why the existing seam is right, but `mnemo_continue` is not
 
-The cross-repository seam is plex-companion's
+The cross-repository seam is watch-companion's
 `CompanionBackend.engage(CompanionContext)`. Its pipeline already owns webhook
 filtering, account/library rules, cooldown/chance gates, Plex and Tautulli
 facts, completion confidence, lore, suggestion semantics, and manual-gate
@@ -83,7 +83,7 @@ Mnemosyne's `continueScene()` contains useful inner operations, but the public
 - it has no durable interaction ID or replay fence;
 - Kindroid/Botify do not see the assembled prompt, rules, style, or mode;
 - its Kindroid group nudge unconditionally asks participants to keep talking,
-  conflicting with plex-companion's `natural`, `post_only`, and `forced`
+  conflicting with watch-companion's `natural`, `post_only`, and `forced`
   behavior;
 - provider and Botify target selection are process-global, not story-bound;
 - story-name lookup is non-unique and chooses the first match; and
@@ -98,22 +98,22 @@ behind a dedicated domain contract. It does not change the meaning of
 
 | Component | Owns | Must not own |
 | --- | --- | --- |
-| Plex / plex-companion | Webhook intake and network restriction; filtering and gating; Plex/Tautulli facts; completion and spoiler classification; lore lookup; strict source reservation; cooldown; bounded history | Story lookup; OC writes; caller-selected provider/target; provider retry/fallback |
+| Plex / watch-companion | Webhook intake and network restriction; filtering and gating; Plex/Tautulli facts; completion and spoiler classification; lore lookup; strict source reservation; cooldown; bounded history | Story lookup; OC writes; caller-selected provider/target; provider retry/fallback |
 | Mnemosyne | Source authorization; immutable story route; context admission; server-owned rendering; target verification; shared provider dispatch; replay ledger; typed outcome; candidate/promotion lifecycle | Plex polling; raw-webhook interpretation; inventing completion/spoiler facts |
 | Companion adapter | One provider-specific mutation and typed boundary/read-back result | Application retry; fallback; route or narrative-admission decisions |
 | OpenChronicle | Story-scoped candidates and admitted live scenes | Provider-delivery idempotency or operational replay ledger |
 
 The request carries normalized Plex **data**, not a rendered instruction. The
-original draft left Plex-specific prompt wording in plex-companion; review
+original draft left Plex-specific prompt wording in watch-companion; review
 showed that an opaque `source_note` would be a prompt-injection and policy
 authority channel. Mnemosyne v1 instead owns a versioned renderer while
-plex-companion remains authoritative for the structured facts it emits.
+watch-companion remains authoritative for the structured facts it emits.
 
 ## End-to-end lifecycle
 
 ```text
 Plex webhook / manual companion command
-    -> plex-companion filter + gate + facts + lore
+    -> watch-companion filter + gate + facts + lore
     -> strict local interaction/cooldown reservation
     -> one authenticated structured request
     -> Mnemosyne schema/auth/profile/route preflight
@@ -124,7 +124,7 @@ Plex webhook / manual companion command
     -> one provider mutation and typed outcome
     -> isolated candidate write, then optional in-place promotion
     -> structured result
-    -> bounded plex-companion history update
+    -> bounded watch-companion history update
 ```
 
 The caller disconnect rule follows the existing run-outcome posture: cancel a
@@ -136,7 +136,7 @@ caller disconnects.
 
 Add a shared `companionInteract()` domain function. Automatic traffic uses a
 dedicated least-privilege REST endpoint such as
-`POST /api/integrations/plex-companion/v1/interactions`. An optional
+`POST /api/integrations/watch-companion/v1/interactions`. An optional
 `mnemo_companion_interact` MCP tool may wrap the same function for manual tests,
 but the full MCP credential is never authorized for the unattended daemon.
 
@@ -146,7 +146,7 @@ raw lore object, rendered prompt, or arbitrary instruction field:
 ```ts
 interface PlexCompanionInteractionV1 {
   schema_version: 1;
-  interaction_id: string; // UUIDv7, reserved by plex-companion before the call
+  interaction_id: string; // UUIDv7, reserved by watch-companion before the call
   source_key?: string; // required for automatic ingress; optional for manual calls
   story_id: string; // exact OC project UUID, allowlisted by the credential profile
   occurred_at: string; // RFC 3339; bounded by the acceptance window
@@ -239,7 +239,7 @@ context, and response policy are versioned server instructions outside that
 block. Dynamic data is never interpolated into an instruction sentence.
 
 This is risk reduction, not a claim that delimiters make an LLM secure.
-Cross-repository golden fixtures must preserve plex-companion's current
+Cross-repository golden fixtures must preserve watch-companion's current
 `near_complete`/`complete`, suggestion provenance, and “do not presume shared
 attendance” semantics. Adversarial fixtures include instruction-like titles,
 lore, Unicode controls, delimiter strings, oversized arrays, and conflicting
@@ -300,7 +300,7 @@ for a terminal failure proven to precede that boundary. A terminal replay sets
 pointers, but never reply text. A duplicate of an active row returns
 `duplicate_in_progress`; the caller does not start a second waiter with an
 independent deadline. Source-key coalescing returns the pre-existing canonical
-interaction ID so plex-companion repairs its local mapping rather than minting
+interaction ID so watch-companion repairs its local mapping rather than minting
 another operation.
 
 Any exception after `dispatching` is `provider_dispatch_unknown` and
@@ -328,14 +328,14 @@ Automatic use is blocked until all of these are true:
 - traffic is same-host or on a private authenticated-TLS link. If a reverse
   proxy terminates TLS, it restricts the source IP and strips untrusted
   forwarding headers; and
-- plex-companion's currently unsigned Plex webhook ingress is restricted to
+- watch-companion's currently unsigned Plex webhook ingress is restricted to
   the configured Plex server by host firewall or authenticated reverse proxy
   before automatic engagement is enabled. “On the LAN” alone is not a gate.
 
 A stolen integration token can therefore spam or prompt-influence its fixed
 conversation even though it cannot choose another target. Each profile has a
 low daily mutation cap, burst limit, immediate server-side kill switch, and
-revocation/rotation procedure; the plex-companion kill switch is defense in
+revocation/rotation procedure; the watch-companion kill switch is defense in
 depth, not the only revocation mechanism.
 
 The route accepts no filesystem path, provider name, account ID, target ID,
@@ -475,7 +475,7 @@ must update those records before implementation. This document alone does not
 silently override them.
 
 V1 uses a single-process filesystem ledger under a new versioned subtree such
-as `data/integrations/plex-companion/v1/ledger/`. It has an interaction-key row
+as `data/integrations/watch-companion/v1/ledger/`. It has an interaction-key row
 and an HMACed source-key index for automatic ingress:
 
 - reserve `source/<source-hmac>.json` first and then
@@ -564,9 +564,9 @@ contract, the prose may be lost. Future durable outbox recovery requires a
 separate retention, encryption, ACL, and deletion decision; it is not smuggled
 into v1.
 
-## Strict plex-companion reservation and cooldown
+## Strict watch-companion reservation and cooldown
 
-plex-companion's current best-effort `StateStore` writer swallows write errors
+watch-companion's current best-effort `StateStore` writer swallows write errors
 and cannot support automatic admission. Replace it with one strict serialized
 persistence owner for existing state plus pending interactions, cooldowns, and
 the HMACed source-key index; SQLite transactions are the preferred shape. A
@@ -604,7 +604,7 @@ a fresh non-deduped ID unless the manual caller explicitly reuses one. The
 HMACed source mapping is retained through the same ingress replay window as
 Mnemosyne's source index.
 
-plex-companion applies the same key-ID/keyring rule: a source lookup probes all
+watch-companion applies the same key-ID/keyring rule: a source lookup probes all
 retained source-index keys transactionally before inserting under the active
 key, and key removal is blocked while an admission row references it.
 
@@ -624,7 +624,7 @@ candidate model in the story's OC project:
   `[Plex Interaction Candidate v1] <interaction-id>` and contains only the
   compact normalized event plus exact attributed reply, not the full prompt,
   admitted lore, or provider response object;
-- tags are exactly `mnemosyne`, `plex-companion`, `interaction-candidate`,
+- tags are exactly `mnemosyne`, `watch-companion`, `interaction-candidate`,
   `interaction:<uuid>`, and `admission:review` at creation;
 - it deliberately has no `scene`, `story`, or recognized entity-type header/
   tag, so current recent-scene gathering, entity listing, and story export do
@@ -669,7 +669,7 @@ included in that disclosure.
 - Integration request/reply prose is always suppressed from Mnemosyne access,
   application, error, and quarantine logs, even when general
   `MNEMO_LOG_CONTENT=true`; logs carry sizes, state, and HMACed pointers only.
-- plex-companion history and both operational ledgers are content-free.
+- watch-companion history and both operational ledgers are content-free.
 - Review/live-scene prose exists in OC, its backups, and the companion
   provider's conversation; those are the declared durable content stores.
 - Invalid bodies are rejected without persistence. Crash dumps and process
@@ -716,14 +716,14 @@ to the user-visible companion conversation.
 | 2. Route, auth, ledger, recovery | 1 | Fail-closed persistence/corruption/restart tests pass with fake provider count zero where required |
 | 3. Candidate lifecycle | 2 | Isolation, exact-tag reconciliation, in-place promotion/reject, export/context leakage tests pass |
 | 4. Kindroid adapter/coordinator | 2 | Identity, boundary, capability, queue/deadline/shutdown, and ordinary-`mnemo_continue` serialization tests pass |
-| 5. plex-companion backend | 1–4 | Strict reservation/cooldown race tests and no-fallback backend selection pass |
+| 5. watch-companion backend | 1–4 | Strict reservation/cooldown race tests and no-fallback backend selection pass |
 | 6. Manual canary | 5 | Dedicated target in `review`; same-ID replay creates one provider mutation and at most one candidate |
 | 7. Minimum operator surface | 6 | Authenticated list/promote/reject/purge status and retention/backup disclosure work without prose logs |
 | 8. Automatic canary | 7 | One source kind/story behind kill switch; restart, timeout, quarantine, ambiguity, retention, and cooldown drills pass |
 | 9. Review Web UI / wider rollout | 8 | Pending/blocked candidates, exact route/target posture, validation, quarantine, and retention are visible |
 | 10. Botify | Botify gates + 9 | Separate manual and automatic canaries pass |
 
-Do not remove plex-companion's direct Kindroid backend during canary. It
+Do not remove watch-companion's direct Kindroid backend during canary. It
 remains an operator-selected rollback backend and is never a per-interaction
 fallback.
 
@@ -757,7 +757,7 @@ fallback.
   that quarantine. Elapsed local timeout never clears it.
 - Single-AI and group targets reject unsupported policies before dispatch;
   natural zero-turn and post-only are successful silence and create no scene.
-- plex-companion consumes cooldown for every backend-admitted attempt and its
+- watch-companion consumes cooldown for every backend-admitted attempt and its
   strict reservation failure makes zero Mnemosyne calls.
 - `ambient` writes no OC prose. Candidate prose is absent from all current
   context/entity/export content; export may list its memory ID only as an
@@ -776,14 +776,14 @@ fallback.
 
 ## Rollout and quiescent rollback
 
-Automatic routes and the plex-companion Mnemosyne backend default off. Rollout
+Automatic routes and the watch-companion Mnemosyne backend default off. Rollout
 is fake provider, contract-only manual call, one real manual mutation on a
 dedicated target, then one low-volume automatic source kind/story. Widen only
 after an ambiguity drill and a full tombstone/TTL observation window.
 
 Rollback is not an immediate backend toggle on the same target:
 
-1. close new Mnemosyne-backend admission in plex-companion;
+1. close new Mnemosyne-backend admission in watch-companion;
 2. stop new integration admission in Mnemosyne;
 3. reject queued work and drain story/provider lanes;
 4. reconcile every `dispatching`, unknown, and record-pending row using a
@@ -840,7 +840,7 @@ A second pass then found narrower residuals and caused further revisions:
   advisory model-generated enrichment;
 - terminal replay returns the original outcome, while source replay uses
   distinct full-request and semantic-payload HMACs, a durable source index,
-  multi-key lookup across rotation, and one authoritative plex-companion
+  multi-key lookup across rotation, and one authoritative watch-companion
   transaction owner;
 - client timeout no longer masquerades as remote completion: unresolved work
   durably quarantines its target/account domain, and same-target rollback
@@ -869,8 +869,8 @@ ratification, implementation approval, or authorization for a live send.
   admission and manifests
 - [COMPANION_PROFILE_DESIGN.md](COMPANION_PROFILE_DESIGN.md) — provider-neutral
   profile/binding separation
-- [WEBUI_NOTES.md §7](WEBUI_NOTES.md#7-watch-parties--mnemosyne-as-plex-companions-passthrough)
+- [WEBUI_NOTES.md §7](WEBUI_NOTES.md#7-watch-parties--mnemosyne-as-watch-companions-passthrough)
   — original watch-party direction
-- plex-companion `src/pipeline/run.ts`, `src/state.ts`,
+- watch-companion `src/pipeline/run.ts`, `src/state.ts`,
   `src/backends/backend.ts`, and `src/backends/kindroid.ts` at `402f037` —
   current source workflow and delivery semantics

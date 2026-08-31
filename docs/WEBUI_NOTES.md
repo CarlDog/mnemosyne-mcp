@@ -61,7 +61,7 @@ changes had to precede the UI.
   and generation tool, with no scoping by session or caller —
   `requireCurrentStoryId()` throws if it's unset, and nothing distinguishes
   one caller's active story from another's. §7 already half-diagnoses this for
-  the plex-companion case ("a webhook-driven caller must not stomp a pointer
+  the watch-companion case ("a webhook-driven caller must not stomp a pointer
   some concurrent Claude session is also using") but frames it as narrow. It
   isn't: slice 1's own "browse... across all stories" (§1: "one operator, five
   stories... discovery is a solved problem when the whole corpus fits on one
@@ -432,9 +432,9 @@ consumers of the resulting likeness. See the parked image-pipeline note in OC.
 
 ---
 
-## 7. Watch parties — mnemosyne as plex-companion's passthrough
+## 7. Watch parties — mnemosyne as watch-companion's passthrough
 
-[plex-companion](https://github.com/CarlDog/plex-companion) is already
+[watch-companion](https://github.com/CarlDog/watch-companion) is already
 deployed: a Plex webhook wakes it when you finish something, it pulls the
 item's metadata and optionally a spoiler-aware lore brief, and a Kindroid kin —
 or a whole group, which is already a watch party — reacts in the app in its own
@@ -442,7 +442,7 @@ voice. It has an MCP surface: `companion_status`, `companion_history`,
 `companion_pause`, `companion_resume`, `companion_engage`, `companion_suggest`.
 
 **Operator intent, stated 2026-08-23 and load-bearing for everything below:
-mnemosyne is the passthrough.** plex-companion should not deliver to Kindroid
+mnemosyne is the passthrough.** watch-companion should not deliver to Kindroid
 itself — it hands the engagement to mnemosyne, and mnemosyne delivers. Two
 reasons, and the second is the one that's easy to under-read.
 
@@ -455,13 +455,13 @@ The half that actually motivates the architecture is **canon → watch**. A kin
 reacting to a film through mnemosyne reacts *as that character in that story* —
 carrying its history, its voice, its relationships, everything `gatherContext`
 pulls — instead of as a bare companion persona that remembers none of it.
-plex-companion structurally cannot do this: it has no story, no entities, and
+watch-companion structurally cannot do this: it has no story, no entities, and
 no OC connection at all. Passthrough isn't plumbing convenience. It's the only
 way the reaction is in character.
 
 ### The seam
 
-plex-companion **keeps** everything about Plex and about knowing what you
+watch-companion **keeps** everything about Plex and about knowing what you
 watched: the webhook and its parser, the account/library filter, the per-item
 and global cooldowns and the `ENGAGEMENT_CHANCE` roll, the plex-mcp metadata
 pull, the lore brief with its subtitle grounding, old-content awareness, the
@@ -480,21 +480,21 @@ Clean seam, and it falls out of what each service already is.
 | Reacting in character | Impossible — no story, no entities | **Free** — the same context gathering every beat gets |
 | Switching kin or group | **New API** — env var plus a redeploy; `companion_engage` takes no target argument | **Exists** — `mnemo_continue`'s per-call `kindroid_kin` / `kindroid_group_id` |
 | Setting the scene | **New API** — the templates carry no place | **Free** — text in `direction`, from the story's own locations (§3) |
-| Botify instead of Kindroid | **New API** — plex-companion is Kindroid-only | **Free** — seven generators already sit behind `GENERATOR_PROVIDER` |
+| Botify instead of Kindroid | **New API** — watch-companion is Kindroid-only | **Free** — seven generators already sit behind `GENERATOR_PROVIDER` |
 
 That last row is why the operator said "kins *(or botify bots)*." Under
-passthrough plex-companion never learns what Botify is — it never needs a
+passthrough watch-companion never learns what Botify is — it never needs a
 backend abstraction at all.
 
 The first row is worth dwelling on: the capture problem doesn't get *solved* by
 passthrough, it **dissolves**. Direct delivery would need either a chat
 read-back keyed on the record's timestamp (possible, unverified) or a new field
-on plex-companion's record. Neither is necessary if mnemosyne is holding the
+on watch-companion's record. Neither is necessary if mnemosyne is holding the
 reply already.
 
 ### The interface, and the one thing that's actually new
 
-plex-companion calls us, not the reverse — it is already an MCP client to
+watch-companion calls us, not the reverse — it is already an MCP client to
 plex-mcp, kindroid-mcp and filesystem-mcp, so a mnemosyne backend is a shape it
 already has, while mnemosyne is a passive server with no scheduler and couldn't
 poll if it wanted to. The call is `mnemo_continue` with a direction built from
@@ -1285,6 +1285,6 @@ portrait-driven layouts remain outside the present v0 boundary in
   the generation sidecar this design assumes
 - [IMPORT_PLAYBOOK.md](IMPORT_PLAYBOOK.md) — the curation discipline the
   entity library has to preserve
-- [plex-companion](https://github.com/CarlDog/plex-companion) — the watch-along
+- [watch-companion](https://github.com/CarlDog/watch-companion) — the watch-along
   service §7 integrates with; its README documents the kin/group delivery modes
   and the full MCP surface

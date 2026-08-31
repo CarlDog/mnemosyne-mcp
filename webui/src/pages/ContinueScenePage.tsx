@@ -703,7 +703,7 @@ export default function ContinueScenePage() {
 
     return (
       <PaneEmpty title="Watch-along not enabled" mark="W">
-        The Plex companion bridge is a reviewed proposal, not a running WebUI
+        The Watch Companion bridge is a reviewed proposal, not a running WebUI
         integration. Live status, chat, and canon promotion will appear here
         only after its dedicated replay-safe API ships.
       </PaneEmpty>

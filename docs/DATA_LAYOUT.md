@@ -75,10 +75,10 @@ data/
     │   ├── 2026-08-23T0512-warehouse-confrontation-nano-banana-2-01.jpg
     │   └── 2026-08-23T0512-warehouse-confrontation-nano-banana-2-01.json
     └── companion-logs/               # raw pulls from an external addon/plugin (read-only capture)
-        ├── plex-companion-watchalong-transcript-2026-08-31.json
-        ├── plex-companion-watchalong-transcript-2026-08-31.md
-        ├── plex-companion-watchalong-transcript-normalized-2026-08-31.json  # optional: see below
-        └── plex-companion-watchalong-transcript-normalized-2026-08-31.md
+        ├── watch-companion-watchalong-transcript-2026-08-31.json
+        ├── watch-companion-watchalong-transcript-2026-08-31.md
+        ├── watch-companion-watchalong-transcript-normalized-2026-08-31.json  # optional: see below
+        └── watch-companion-watchalong-transcript-normalized-2026-08-31.md
 ```
 
 ## Canon — the human-editable authoring surface
@@ -399,7 +399,7 @@ all new tooling must emit foldered paths.
 ## Companion logs — external addon/plugin captures
 
 `companion-logs/` holds raw data pulled from an external addon/plugin for
-operator review — a Kindroid or Botify chat history, a plex-companion
+operator review — a Kindroid or Botify chat history, a watch-companion
 watch-along transcript, or any future sibling app's output that a session
 captures into a story's tree. It exists because that data lives on someone
 else's server (Kindroid's, Plex's) with its own retention and pagination
@@ -409,8 +409,8 @@ external, one internal:
 
 - **Filename carries source and content, not just a timestamp:**
   `<source-slug>-<content-descriptor>-<stamp>.<ext>`, e.g.
-  `plex-companion-watchalong-transcript-2026-08-31.md`. `source-slug` is the
-  addon/plugin the data came from (`plex-companion`, `kindroid`, `botify`),
+  `watch-companion-watchalong-transcript-2026-08-31.md`. `source-slug` is the
+  addon/plugin the data came from (`watch-companion`, `kindroid`, `botify`),
   never the underlying transport (`kindroid-mcp` is how it was pulled, not
   what it's data *of* — see the provenance block below for that
   distinction). `content-descriptor` says what kind of capture it is
@@ -426,7 +426,7 @@ external, one internal:
   ```json
   {
     "provenance": {
-      "source": "plex-companion",
+      "source": "watch-companion",
       "pulled_via": "kindroid-mcp kindroid_get_chat_messages",
       "source_ref": { "kind": "kindroid_group_id", "value": "chaos-house" },
       "captured_at": "2026-08-31T07:40:00Z",

@@ -62,7 +62,7 @@ export const MAX_GROUP_MAX_TURNS = 8;
 
 // Group chats default to funneling every reaction at the direction/situation
 // rather than at each other -- discovered via cross-repo comparison with
-// plex-companion's KindroidBackend, which found and fixed the identical
+// watch-companion's KindroidBackend, which found and fixed the identical
 // behavior for its own group-chat "watch party" use case (its
 // groupConversationNote(), src/backends/kindroid.ts). Without an explicit
 // nudge, kins tend to each independently react to the same input rather than
@@ -71,7 +71,7 @@ export const MAX_GROUP_MAX_TURNS = 8;
 // unconditionally to every group-target message; single-AI targets never
 // see it (there's no "each other" to talk to).
 //
-// mnemosyne can do one better than plex-companion's static version: it
+// mnemosyne can do one better than watch-companion's static version: it
 // already keyphrase-matches which characters the direction actually names
 // (see `matched` below), so the nudge can name them specifically rather than
 // gesture at "each other" -- a concrete instruction beats a vague one. Falls

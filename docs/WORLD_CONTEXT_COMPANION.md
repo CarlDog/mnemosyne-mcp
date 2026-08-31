@@ -25,9 +25,9 @@ wouldn't, and it should never be forced on.
 
 Recommendation: **a standalone `*-companion` app, not code inside mnemosyne**
 — the same shape already decided for Plex in
-[PLEX_COMPANION_INTEGRATION_PLAN.md](PLEX_COMPANION_INTEGRATION_PLAN.md).
+[WATCH_COMPANION_INTEGRATION_PLAN.md](WATCH_COMPANION_INTEGRATION_PLAN.md).
 
-That plan's core split is the template: plex-companion owns all Plex/Tautulli
+That plan's core split is the template: watch-companion owns all Plex/Tautulli
 domain knowledge, event filtering, and gating, and hands mnemosyne one
 structured, already-decided interaction; mnemosyne stays the narrative
 lifecycle owner (context admission, provider dispatch, OC recording) and
@@ -36,7 +36,7 @@ never learns anything about Plex itself. The same split applies here:
 - A standalone companion (call it `worldinfo-companion` for now, name not
   chosen) would own the external API calls (weather, news feeds), any
   polling/caching/rate-limiting, and the judgment call of "is this fact
-  worth surfacing right now" — the same kind of gating plex-companion does
+  worth surfacing right now" — the same kind of gating watch-companion does
   for cooldowns and chance gates.
 - Mnemosyne would receive a small, already-curated fact (or a short list of
   them) and fold it into context admission the same way it already folds in
@@ -87,7 +87,7 @@ against:
   setting (a story with both a Kindroid AI and a group might want it on
   for one and not the other)?
 - **How does mnemosyne receive the fact** — pushed in in the same call as
-  a companion interaction (Plex-companion's "one structured interaction"
+  a companion interaction (Watch Companion's "one structured interaction"
   pattern), or pulled by mnemosyne from the companion app at context-gather
   time? The Plex plan uses push (companion decides, mnemosyne receives);
   push likely fits here too, but hasn't been thought through.
