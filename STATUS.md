@@ -3025,6 +3025,19 @@ consider only when real use exposes the corresponding pressure:
   (RNG doesn't need an origin anchor the way space/time do). Needs its
   own design pass: RNG scope, and where seeds/results get recorded for
   reproducibility. Surfaced 2026-08-24 by the operator.
+- **World-context companion: real-world facts (weather, events) for kins**
+  (idea recorded 2026-08-31 — idea only, not started, not scheduled).
+  Whether a bot/kin should be able to ground a scene in real-world facts,
+  optionally per storyline or per bot. Recommendation: a standalone
+  `*-companion` app (following the plex-companion split already decided in
+  [docs/PLEX_COMPANION_INTEGRATION_PLAN.md](docs/PLEX_COMPANION_INTEGRATION_PLAN.md)),
+  not code inside mnemosyne — the companion owns the external API calls and
+  the "is this worth surfacing" judgment, mnemosyne only ever receives an
+  already-curated fact to fold into context admission. Full notes, rejected
+  alternative, and open questions (which facts, toggle granularity, push
+  vs. pull, where the companion app itself would live) in
+  [docs/WORLD_CONTEXT_COMPANION.md](docs/WORLD_CONTEXT_COMPANION.md) —
+  update that file, not this bullet, when the design itself changes.
 
 ## Open Decisions
 

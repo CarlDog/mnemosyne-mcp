@@ -287,6 +287,10 @@ assessments listed under "Layout" below.
   mapping playbook for a curated import, and the authoring templates.
 - `docs/ILLUSTRATION_INTEGRATION.md` — parked design for scene-tied image
   generation (out of scope per ARCHITECTURE.md §8; not reopened).
+- `docs/WORLD_CONTEXT_COMPANION.md` — parked idea for real-world facts
+  (weather, events) reaching kins, optionally per storyline/bot, via a
+  standalone `*-companion` app (mirroring the plex-companion split) rather
+  than code inside mnemosyne. Not started, not scheduled.
 - `SECURITY.md` — disclosure policy. Private vulnerability reporting is
   enabled; the file lists the three known limitations (unconfined filesystem
   authority by transport is now closed for HTTP, what Host/Origin + bearer auth
