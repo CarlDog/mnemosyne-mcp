@@ -52,10 +52,12 @@ REST API (src/api/) ───┘              │
 - `src/tools/` and `src/api/` are inbound driver adapters. They parse
   transport input, map errors, and shape responses; they must not import each
   other.
-- `src/application/` owns shared orchestration use cases. Continuation,
+- `src/application/` owns shared orchestration use cases and their structural
+  models. Continuation,
   standalone validation, bulk scene revalidation, and story/entity catalog
   reads live here so both inbound adapters execute the same policy and response
-  projections.
+  projections. Prompt rendering, scene-context selection, catalog projection,
+  and validation verdicts are application-owned pure policy modules.
 - `src/application/ports/` owns use-case-shaped contracts for continuation,
   catalogs, validation, scene persistence, and observability. Pure catalog and
   verdict policy also lives in `src/application/`; application code has no
@@ -67,11 +69,17 @@ REST API (src/api/) ───┘              │
   providers, outbound adapters, the bound `ApplicationUseCases` contract, and
   inbound transports are assembled.
 
+Provider-specific Ollama sizing, keep-alive normalization, and HTTP-error
+classification live in `src/adapters/ollama-policy.ts`; retrieval remains in
+`src/prompt.ts`, while application prompt rendering and scene strategy policy
+remain independent of OC and model-provider infrastructure.
+
 New shared behavior enters through an application use case rather than one
 inbound adapter importing another. Architectural compatibility re-exports are
 not retained. `tests/architecture-boundaries.test.ts` uses the TypeScript
-compiler AST to enforce MCP/REST independence, prevent application-to-driver or
-infrastructure imports, require each use case's outbound ports, and verify that
+compiler AST to enforce MCP/REST independence, resolve application-internal
+relative imports by path, reject bare framework packages and unapproved outer
+modules for both runtime and type-only imports, require each use case's outbound ports, and verify that
 concrete adapter factories are called only by `src/index.ts`.
 
 **What Mnemosyne is NOT:**
