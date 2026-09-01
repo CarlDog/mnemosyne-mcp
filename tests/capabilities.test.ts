@@ -18,7 +18,7 @@ import {
   capabilityWarnings,
 } from "../src/capabilities.js";
 import { OllamaProvider, type LlmProvider } from "../src/llm.js";
-import { continueScene } from "../src/tools/continue.js";
+import { continueScene, testUseCases } from "./helpers/application.js";
 import { createApiRouter } from "../src/api/index.js";
 import type { OcClient, OcMemory } from "../src/oc-client.js";
 
@@ -166,14 +166,19 @@ describe("GET /api/capabilities", () => {
     app.use(
       "/api",
       createApiRouter({ memorySearch: async () => [] } as unknown as OcClient, {
+        useCases: testUseCases(
+          { memorySearch: async () => [] } as unknown as OcClient,
+          stubProvider("anthropic"),
+          stubProvider("stub-validator"),
+          async () => {
+            throw new Error("validation is not exercised by this test");
+          },
+          async () => {
+            throw new Error("revalidation is not exercised by this test");
+          },
+        ),
         generator: stubProvider("anthropic"),
         validator: stubProvider("stub-validator"),
-        validateStory: async () => {
-          throw new Error("validation is not exercised by this test");
-        },
-        revalidateScenes: async () => {
-          throw new Error("revalidation is not exercised by this test");
-        },
       }),
     );
     const server: Server = await new Promise((resolve) => {

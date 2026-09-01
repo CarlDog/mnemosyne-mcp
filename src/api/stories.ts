@@ -3,15 +3,19 @@
 
 import type { Router } from "express";
 import type { OcClient } from "../oc-client.js";
-import { listStoryCatalog } from "../application/list-stories.js";
+import type { ListStoryCatalog } from "../application/list-stories.js";
 import { toStorySummary } from "../stories.js";
 import { asyncRoute, requireStory } from "./helpers.js";
 
-export function registerStoryRoutes(router: Router, oc: OcClient): void {
+export function registerStoryRoutes(
+  router: Router,
+  oc: OcClient,
+  listStoryCatalog: ListStoryCatalog,
+): void {
   router.get(
     "/stories",
     asyncRoute(async (_req, res) => {
-      res.json(await listStoryCatalog(oc));
+      res.json(await listStoryCatalog());
     }),
   );
 

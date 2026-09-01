@@ -4,8 +4,7 @@
 import { Router } from "express";
 import type { OcClient } from "../oc-client.js";
 import type { LlmProvider } from "../llm.js";
-import type { ValidateStory } from "../application/validate-story.js";
-import type { RevalidateScenes } from "../application/revalidate-scenes.js";
+import type { ApplicationUseCases } from "../application/use-cases.js";
 import {
   DEFAULT_SCENE_CONTEXT_STRATEGY,
   type SceneContextStrategy,
@@ -18,17 +17,16 @@ import { createReadinessProber } from "../readiness.js";
 import { resolveCapabilities } from "../capabilities.js";
 
 export interface ApiRouterOptions {
+  useCases: ApplicationUseCases;
   generator?: LlmProvider;
   validator?: LlmProvider;
-  validateStory?: ValidateStory;
-  revalidateScenes?: RevalidateScenes;
   sceneContextStrategy?: SceneContextStrategy;
   sceneContextFallbackStrategy?: SceneContextStrategy;
 }
 
 export function createApiRouter(
   oc: OcClient,
-  options: ApiRouterOptions = {},
+  options: ApiRouterOptions,
 ): Router {
   const router = Router();
   const sceneContextStrategy =
@@ -36,15 +34,10 @@ export function createApiRouter(
   const sceneContextFallbackStrategy =
     options.sceneContextFallbackStrategy ?? sceneContextStrategy;
 
-  registerStoryRoutes(router, oc);
-  registerEntityRoutes(router, oc);
+  registerStoryRoutes(router, oc, options.useCases.listStoryCatalog);
+  registerEntityRoutes(router, oc, options.useCases.listEntityCatalog);
 
   if (options.generator && options.validator) {
-    if (!options.validateStory || !options.revalidateScenes) {
-      throw new Error(
-        "validateStory and revalidateScenes are required when interactive API routes are enabled",
-      );
-    }
     // Protected semantic readiness (NEMOCLAW_ADOPTION_ASSESSMENT §3):
     // sits behind the same apiSecurity middleware as every /api route --
     // /health stays the only public surface, and stays liveness-only.
@@ -78,10 +71,9 @@ export function createApiRouter(
     registerInteractiveRoutes(
       router,
       oc,
-      options.generator,
-      options.validator,
-      options.validateStory,
-      options.revalidateScenes,
+      options.useCases.continueScene,
+      options.useCases.validateStory,
+      options.useCases.revalidateScenes,
       sceneContextStrategy,
       sceneContextFallbackStrategy,
     );

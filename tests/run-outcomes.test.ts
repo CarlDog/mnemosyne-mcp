@@ -15,7 +15,7 @@
 
 import { describe, it, expect, vi } from "vitest";
 import type { Response, Request, NextFunction } from "express";
-import { continueScene } from "../src/tools/continue.js";
+import { continueScene } from "./helpers/application.js";
 import { makeRunContext } from "../src/run-context.js";
 import {
   RunOutcomeError,

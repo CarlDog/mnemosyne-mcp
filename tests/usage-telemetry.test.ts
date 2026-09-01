@@ -18,7 +18,7 @@ import { extractAnthropicText } from "../src/anthropic-provider.js";
 import { extractChatCompletionText } from "../src/openai-compat-provider.js";
 import { extractGeminiText } from "../src/gemini-provider.js";
 import { validateContentWithUsage } from "../src/validator.js";
-import { continueScene } from "../src/tools/continue.js";
+import { continueScene } from "./helpers/application.js";
 import type { OcClient, OcMemory } from "../src/oc-client.js";
 
 const realFetch = globalThis.fetch;

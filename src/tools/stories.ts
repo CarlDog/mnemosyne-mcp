@@ -5,7 +5,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
-import { listStoryCatalog } from "../application/list-stories.js";
+import type { ListStoryCatalog } from "../application/list-stories.js";
 import {
   combineKindroidTarget,
   createStory,
@@ -31,7 +31,11 @@ function toAnnotated(
   return { ...story, current: story.id === currentId };
 }
 
-export function registerStoryTools(server: McpServer, oc: OcClient): void {
+export function registerStoryTools(
+  server: McpServer,
+  oc: OcClient,
+  listStoryCatalog: ListStoryCatalog,
+): void {
   server.registerTool(
     "mnemo_story_list",
     {
@@ -42,7 +46,7 @@ export function registerStoryTools(server: McpServer, oc: OcClient): void {
     },
     withLogging("mnemo_story_list", async () => {
       const [catalog, currentId] = await Promise.all([
-        listStoryCatalog(oc),
+        listStoryCatalog(),
         getCurrentStoryId(),
       ]);
       const annotated = catalog.stories.map((s) => toAnnotated(s, currentId));

@@ -1,7 +1,7 @@
 // Shared story-catalog read use case for inbound drivers.
 
-import type { OcClient } from "../oc-client.js";
-import { listStories, toStorySummary, type StorySummary } from "../stories.js";
+import { toStorySummary, type StorySummary } from "../stories.js";
+import type { StoryCatalogPort } from "./ports/catalog.js";
 
 export interface StoryCatalogResult {
   stories: StorySummary[];
@@ -9,8 +9,16 @@ export interface StoryCatalogResult {
 }
 
 export async function listStoryCatalog(
-  oc: OcClient,
+  catalog: StoryCatalogPort,
 ): Promise<StoryCatalogResult> {
-  const stories = (await listStories(oc)).map(toStorySummary);
+  const stories = (await catalog.listStories()).map(toStorySummary);
   return { stories, count: stories.length };
+}
+
+export type ListStoryCatalog = () => Promise<StoryCatalogResult>;
+
+export function createListStoryCatalog(
+  catalog: StoryCatalogPort,
+): ListStoryCatalog {
+  return () => listStoryCatalog(catalog);
 }

@@ -25,6 +25,15 @@ import { OpenAICompatProvider } from "./openai-compat-provider.js";
 import { registerTools } from "./tools/index.js";
 import { createStoryValidationAdapter } from "./adapters/story-validation.js";
 import { createSceneRevalidationAdapter } from "./adapters/scene-validation.js";
+import { createContinuationAdapter } from "./adapters/continuation.js";
+import {
+  createEntityCatalogAdapter,
+  createStoryCatalogAdapter,
+} from "./adapters/catalog.js";
+import { createContinueScene } from "./application/continue-scene.js";
+import { createListEntityCatalog } from "./application/list-entities.js";
+import { createListStoryCatalog } from "./application/list-stories.js";
+import type { ApplicationUseCases } from "./application/use-cases.js";
 import {} from "./prompt.js";
 import { MNEMOSYNE_VERSION } from "./version.js";
 import { INSTRUCTIONS } from "./instructions.js";
@@ -171,6 +180,15 @@ const validator = new OllamaProvider({
 });
 const validateStory = createStoryValidationAdapter(oc, validator);
 const revalidateScenes = createSceneRevalidationAdapter(oc, validator);
+const useCases: ApplicationUseCases = {
+  continueScene: createContinueScene(
+    createContinuationAdapter(oc, generator, validator),
+  ),
+  listEntityCatalog: createListEntityCatalog(createEntityCatalogAdapter(oc)),
+  listStoryCatalog: createListStoryCatalog(createStoryCatalogAdapter(oc)),
+  revalidateScenes,
+  validateStory,
+};
 log.info("startup", "ollama validator configured", {
   url: OLLAMA_URL,
   validator_model: ollamaValidatorModel,
@@ -239,10 +257,7 @@ function makeServer(): McpServer {
   registerTools(
     server,
     oc,
-    generator,
-    validator,
-    validateStory,
-    revalidateScenes,
+    useCases,
     SCENE_CONTEXT_STRATEGY,
     SCENE_CONTEXT_FALLBACK_STRATEGY,
     // stdio is a local-operator channel; HTTP is not. Same tool surface, so
@@ -293,10 +308,9 @@ if (httpConfig.port === undefined) {
   app.use(
     "/api",
     createApiRouter(oc, {
+      useCases,
       generator,
       validator,
-      validateStory,
-      revalidateScenes,
       sceneContextStrategy: SCENE_CONTEXT_STRATEGY,
       sceneContextFallbackStrategy: SCENE_CONTEXT_FALLBACK_STRATEGY,
     }),
