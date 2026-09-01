@@ -1,9 +1,10 @@
 import type {
   EntitySummary,
   ListEntitiesFilter,
+  MnemoStory,
   RecalledEntity,
-} from "../entities.js";
-import type { MnemoStory, StorySummary } from "../stories.js";
+  StorySummary,
+} from "./model.js";
 
 export function toStorySummary(story: MnemoStory): StorySummary {
   return {

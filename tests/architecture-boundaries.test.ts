@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { basename, join, relative } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
@@ -24,18 +24,38 @@ function sourceFile(path: string): ts.SourceFile {
   );
 }
 
-function importSpecifiers(path: string): string[] {
-  const imports: string[] = [];
+interface SourceImport {
+  specifier: string;
+  typeOnly: boolean;
+}
+
+function sourceImports(path: string): SourceImport[] {
+  const imports: SourceImport[] = [];
   sourceFile(path).forEachChild((node) => {
     if (
       (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
       node.moduleSpecifier !== undefined &&
       ts.isStringLiteral(node.moduleSpecifier)
     ) {
-      imports.push(node.moduleSpecifier.text);
+      const clause = ts.isImportDeclaration(node)
+        ? node.importClause
+        : undefined;
+      const namedImports = clause?.namedBindings;
+      const typeOnly = ts.isExportDeclaration(node)
+        ? node.isTypeOnly
+        : clause?.isTypeOnly === true ||
+          (namedImports !== undefined &&
+            ts.isNamedImports(namedImports) &&
+            namedImports.elements.length > 0 &&
+            namedImports.elements.every((element) => element.isTypeOnly));
+      imports.push({ specifier: node.moduleSpecifier.text, typeOnly });
     }
   });
   return imports;
+}
+
+function importSpecifiers(path: string): string[] {
+  return sourceImports(path).map(({ specifier }) => specifier);
 }
 
 function importsIn(directory: string): string[] {
@@ -69,11 +89,29 @@ describe("hexagonal source boundaries", () => {
   });
 
   it("keeps application use cases independent of drivers and infrastructure", () => {
-    const forbidden =
-      /:\s+.*\/(?:api|tools|adapters|oc-client|log|generator-config|(?:anthropic|botify|gemini|kindroid|openai-compat)-provider)(?:\.js|\/|$)/;
-    expect(importsIn(join(srcDir, "application"))).not.toEqual(
-      expect.arrayContaining([expect.stringMatching(forbidden)]),
+    const applicationDir = join(srcDir, "application");
+    const allowedExternalModules = new Set([
+      join(srcDir, "context-plan.js"),
+      join(srcDir, "run-context.js"),
+      join(srcDir, "run-outcome.js"),
+    ]);
+    const violations = sourceFiles(join(srcDir, "application")).flatMap(
+      (path) =>
+        sourceImports(path)
+          .filter(({ specifier }) => {
+            if (!specifier.startsWith(".")) return true;
+            const resolved = resolve(dirname(path), specifier);
+            const insideApplication =
+              resolved === applicationDir ||
+              resolved.startsWith(`${applicationDir}\\`);
+            return !insideApplication && !allowedExternalModules.has(resolved);
+          })
+          .map(
+            ({ specifier, typeOnly }) =>
+              `${relative(srcDir, path)}: ${typeOnly ? "type" : "runtime"} ${specifier}`,
+          ),
     );
+    expect(violations).toEqual([]);
   });
 
   it("routes each use case through application-owned ports", () => {

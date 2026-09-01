@@ -6,20 +6,20 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
 import type { ListStoryCatalog } from "../application/list-stories.js";
+import { toStorySummary } from "../application/catalog-policy.js";
+import type { StorySummary } from "../application/model.js";
 import {
   combineKindroidTarget,
   createStory,
   findStory,
   setKindroidTarget,
-  toStorySummary,
-  type StorySummary,
 } from "../stories.js";
 import { getCurrentStoryId, setCurrentStoryId } from "../config.js";
 import { asText, withLogging } from "./helpers.js";
 
 // AnnotatedStory = StorySummary + "current" (which story the local
 // active-story pointer points at) -- meaningful only here, since these
-// tools are the ones reading that pointer. toStorySummary (src/stories.ts)
+// tools are the ones reading that pointer. toStorySummary (application policy)
 // is shared with the web API, which never annotates "current" (see its
 // doc comment for why).
 type AnnotatedStory = StorySummary & { current: boolean };

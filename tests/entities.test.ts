@@ -5,13 +5,13 @@ import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import type { OcClient } from "../src/oc-client.js";
 import {
   deleteEntity,
-  filterListedEntities,
   parseEntityContent,
   recall,
   retagValidation,
   saveEntity,
   type RecalledEntity,
 } from "../src/entities.js";
+import { filterListedEntities } from "../src/application/catalog-policy.js";
 import { setupTestStory, teardownStory } from "./helpers.js";
 
 describe("entities — pure", () => {

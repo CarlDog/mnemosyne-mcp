@@ -3,9 +3,9 @@
 import type {
   EntitySummary,
   ListEntitiesFilter,
+  MnemoStory,
   RecalledEntity,
-} from "../entities.js";
-import type { MnemoStory } from "../stories.js";
+} from "./model.js";
 import { filterListedEntities } from "./catalog-policy.js";
 import type { EntityCatalogPort } from "./ports/catalog.js";
 

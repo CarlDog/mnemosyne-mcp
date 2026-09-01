@@ -4,9 +4,12 @@
 // transport-independent. MCP and HTTP callers are thin adapters that
 // only provide transport-level input parsing and logging.
 
-import type { Mode, SceneContextStrategy } from "../prompt.js";
-import type { KindroidTarget } from "../stories.js";
-import type { ValidationReport } from "../validator.js";
+import type {
+  KindroidTarget,
+  Mode,
+  SceneContextStrategy,
+  ValidationReport,
+} from "./model.js";
 import { makeRunContext, type RunContext } from "../run-context.js";
 import { assertNotAborted, RunOutcomeError } from "../run-outcome.js";
 import {
