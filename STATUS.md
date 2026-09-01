@@ -2,12 +2,14 @@
 
 **Last updated:** 2026-08-31.
 
-**Dependency baseline upgrade complete (2026-08-31).** PR #23 now targets
-Express 5, Zod 4, TypeScript 6, and the fleet's Node 24/npm 11.19.0 baseline.
-Node declarations are held to major 24, and Dependabot will defer future major
-`@types/node` updates until the runtime and CI floor advance together. The full
-local gate is green: 418 passing / 64 intentionally skipped tests, typecheck,
-server and Web UI build, root and Web UI lint, and Prettier.
+**Dependency baseline upgrade merged (2026-08-31).** PR #23 merged to `main` as
+`1e07bc8`, bringing Express 5, Zod 4, TypeScript 6, and the fleet's Node 24/npm
+11.19.0 baseline. Node declarations are held to major 24, and Dependabot will
+defer future major `@types/node` updates until the runtime and CI floor advance
+together. The full local gate is green: 418 passing / 64 intentionally skipped
+tests, typecheck, server and Web UI build, root and Web UI lint, and Prettier.
+GitHub passed Ubuntu, Windows, macOS, lint/format, Dependabot configuration, and
+gitleaks before merge.
 
 **Post-push CI follow-up closed (2026-08-31).** The architecture boundary
 test now uses platform-neutral containment and exercises both Windows and
@@ -1036,9 +1038,10 @@ to the milestones at which they were measured.
   another ignored field on `LlmGenerateOptions`), live-verified accepted
   and shape-enforced against the deployed daemon (0.32.15) before wiring.
   A drift-guard test compares the two schema copies structurally so
-  editing one fails until the other follows (zod 3 has no `toJSONSchema`;
-  not upgrading zod for this, per the assessment). 16 new tests in
-  `tests/validator-schema.test.ts`; the live validator suite (real OC +
+  editing one fails until the other follows. At shipment time this used Zod 3
+  and deliberately avoided a dependency upgrade; the later Zod 4 baseline
+  upgrade retained the explicit provider contract and drift guard. 16 new
+  tests in `tests/validator-schema.test.ts`; the live validator suite (real OC +
   NAS Ollama) ran green through the new path. Deliberately deferred, per
   the doc's own sequencing: validator `think: false` (needs its own
   compatibility check), `truncate:false`/`shift:false` (P1), and the full
