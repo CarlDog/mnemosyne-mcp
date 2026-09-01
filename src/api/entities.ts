@@ -11,7 +11,7 @@
 import type { Router } from "express";
 import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
-import { listEntityCatalog } from "../application/list-entities.js";
+import type { ListEntityCatalog } from "../application/list-entities.js";
 import { ENTITY_TYPES, getEntityByMemoryId } from "../entities.js";
 import { asyncRoute, parseOr400, requireStory } from "./helpers.js";
 
@@ -20,7 +20,11 @@ const rosterQuerySchema = z.object({
   q: z.string().min(1).optional(),
 });
 
-export function registerEntityRoutes(router: Router, oc: OcClient): void {
+export function registerEntityRoutes(
+  router: Router,
+  oc: OcClient,
+  listEntityCatalog: ListEntityCatalog,
+): void {
   router.get(
     "/stories/:storyId/entities",
     asyncRoute(async (req, res) => {
@@ -37,7 +41,7 @@ export function registerEntityRoutes(router: Router, oc: OcClient): void {
       if (!query) return;
 
       res.json(
-        await listEntityCatalog(oc, story, {
+        await listEntityCatalog(story, {
           type: query.type,
           query: query.q,
           includeBody: false,

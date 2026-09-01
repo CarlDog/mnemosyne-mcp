@@ -4,40 +4,26 @@
 // transport-independent. MCP and HTTP callers are thin adapters that
 // only provide transport-level input parsing and logging.
 
-import type { OcClient } from "../oc-client.js";
-import type { GeneratedBeat, LlmProvider, ModelUsage } from "../llm.js";
+import type { GeneratedBeat, ModelUsage } from "../llm.js";
 import {
   buildSystemPrompt,
-  gatherContext,
   type Mode,
   type SceneContextStrategy,
   renderAdmittedBundle,
 } from "../prompt.js";
-import { saveEntity, retagValidation } from "../entities.js";
-import { findStory, type KindroidTarget } from "../stories.js";
-import { resolveKindroidTarget } from "../kindroid-provider.js";
-import {
-  classifyVerdict,
-  validateContentWithUsage,
-  type ValidationReport,
-} from "../validator.js";
-import { log } from "../log.js";
+import type { KindroidTarget } from "../stories.js";
+import { classifyVerdict, type ValidationReport } from "../validator.js";
 import { makeRunContext, type RunContext } from "../run-context.js";
 import { assertNotAborted, RunOutcomeError } from "../run-outcome.js";
 import { capabilityWarnings } from "../capabilities.js";
 import {
-  admissionModeFromEnv,
   estimateTokens,
-  logCalibration,
   planContext,
   toManifest,
   type ContextPlanManifest,
 } from "../context-plan.js";
-import {
-  DEFAULT_MAX_TOKENS,
-  NUM_CTX_MARGIN_TOKENS,
-  OllamaProvider,
-} from "../llm.js";
+import { DEFAULT_MAX_TOKENS, NUM_CTX_MARGIN_TOKENS } from "../llm.js";
+import type { ContinuationPort } from "./ports/continuation.js";
 
 export const DEFAULT_MODE: Mode = "director";
 
@@ -133,9 +119,7 @@ export interface ContinueSceneResult {
  * Both MCP and HTTP route paths call this.
  */
 export async function continueScene(
-  oc: OcClient,
-  generator: LlmProvider,
-  validator: LlmProvider,
+  port: ContinuationPort,
   storyId: string,
   opts: ContinueSceneOptions,
   run: RunContext = makeRunContext("mcp", { storyId }),
@@ -149,7 +133,7 @@ export async function continueScene(
   assertNotAborted(run, "context gathering");
 
   const gatherStart = Date.now();
-  const context = await gatherContext(oc, storyId, opts.direction, {
+  const context = await port.gatherContext(storyId, opts.direction, {
     sceneStrategy: opts.sceneStrategy,
     sceneFallbackStrategy: opts.sceneFallbackStrategy,
     signal: run.signal,
@@ -161,10 +145,8 @@ export async function continueScene(
   // /api/show); cloud windows are all-unknown by ratified decision, so
   // those plans instrument without dropping.
   let inputBudget: number | undefined;
-  if (generator instanceof OllamaProvider) {
-    const window = await generator.getEffectiveContextWindow(opts.model);
-    if (typeof window === "number") inputBudget = window;
-  }
+  const window = await port.effectiveContextWindow(opts.model);
+  if (typeof window === "number") inputBudget = window;
   const emptyBundle = {
     rules: [],
     style: [],
@@ -175,7 +157,7 @@ export async function continueScene(
     worldbuilding: [],
   };
   const planResult = planContext(context.entries ?? [], {
-    provider: generator.name,
+    provider: port.generatorName,
     model: opts.model,
     inputBudget,
     outputReserve: opts.maxTokens ?? DEFAULT_MAX_TOKENS,
@@ -192,10 +174,10 @@ export async function continueScene(
       "Nothing droppable would make this fit -- trim rules/style, raise " +
       "OLLAMA_NUM_CTX (within the model's trained context), or use a " +
       "larger-context model.";
-    if (admissionModeFromEnv() === "enforce") {
+    if (port.admissionMode === "enforce") {
       throw new RunOutcomeError("rejected_before_dispatch", detail);
     }
-    log.warn("continueScene", "context plan rejected (warn mode)", {
+    port.warn("continueScene", "context plan rejected (warn mode)", {
       run_id: run.runId,
       input_budget: inputBudget,
     });
@@ -215,21 +197,18 @@ export async function continueScene(
   if (
     !opts.storyKindroidTargetPrefetched &&
     opts.explicitKindroidTarget === undefined &&
-    generator.name === "kindroid"
+    port.generatorName === "kindroid"
   ) {
-    const story = await findStory(oc, storyId);
-    storyTarget = story?.kindroid_target;
+    storyTarget = await port.storyKindroidTarget(storyId);
   }
-  const kindroidTarget = resolveKindroidTarget(
-    opts.explicitKindroidTarget,
-    generator.name,
-    storyTarget,
-  );
+  const kindroidTarget =
+    opts.explicitKindroidTarget ??
+    (port.generatorName === "kindroid" ? storyTarget : undefined);
 
   // Warn-don't-break (GENERATOR_CAPABILITIES_DESIGN, ratified): options
   // the provider ignores produce a response warning, never an error --
   // legacy callers keep working.
-  const capability_warnings = capabilityWarnings(generator.name, {
+  const capability_warnings = capabilityWarnings(port.generatorName, {
     temperature: opts.temperature,
     maxTokens: opts.maxTokens,
     model: opts.model,
@@ -238,7 +217,7 @@ export async function continueScene(
   assertNotAborted(run, "the generate dispatch");
 
   const generateStart = Date.now();
-  const beat = await generator.generate({
+  const beat = await port.generate({
     systemPrompt,
     userMessage: opts.direction,
     temperature: opts.temperature,
@@ -254,7 +233,7 @@ export async function continueScene(
     contextPlan.companion_selection = beat.context_selection;
   }
   // Estimator calibration (stage 1): logged, never substituted.
-  logCalibration(
+  port.calibration(
     planResult.plan.est_fixed_tokens +
       planResult.plan.est_direction_tokens +
       planResult.admitted.reduce((sum, e) => sum + e.est_tokens, 0),
@@ -338,21 +317,17 @@ export async function continueScene(
   // can retry the persist (e.g., via mnemo_save_entity) without
   // regenerating.
   const saveStart = Date.now();
-  const beatName = `Scene ${new Date().toISOString()}`;
+  const beatName = `Scene ${port.nowIso()}`;
   let memoryId: string | undefined;
   let savedTags: string[] | undefined;
   let saveError: string | undefined;
   try {
-    const saved = await saveEntity(oc, storyId, {
-      type: "scene",
-      name: beatName,
-      body: beatText,
-    });
+    const saved = await port.saveScene(storyId, beatName, beatText);
     memoryId = saved.memory_id;
     savedTags = saved.tags;
   } catch (err) {
     saveError = (err as Error).message;
-    log.warn("continueScene", "scene save failed", { msg: saveError });
+    port.warn("continueScene", "scene save failed", { msg: saveError });
   }
   // A dispatched-save failure leaves the canonical write outcome UNKNOWN
   // (RUN_OUTCOMES_DESIGN, ratified): the transport may have failed after
@@ -371,16 +346,12 @@ export async function continueScene(
   if (opts.validate) {
     const validateStart = Date.now();
     try {
-      const outcome = await validateContentWithUsage(
-        validator,
-        context,
-        beatText,
-      );
+      const outcome = await port.validate(context, beatText);
       validation = outcome.report;
       validatorUsage = outcome.usage;
     } catch (err) {
       validationError = (err as Error).message;
-      log.warn("continueScene", "validation pass failed", {
+      port.warn("continueScene", "validation pass failed", {
         msg: validationError,
       });
     } finally {
@@ -400,14 +371,13 @@ export async function continueScene(
     validation !== undefined
   ) {
     try {
-      await retagValidation(
-        oc,
+      await port.retagValidation(
         memoryId,
         savedTags,
         classifyVerdict(validation),
       );
     } catch (err) {
-      log.warn("continueScene", "validation retag failed", {
+      port.warn("continueScene", "validation retag failed", {
         msg: (err as Error).message,
       });
     }
@@ -450,4 +420,14 @@ export async function continueScene(
     },
     ...groupMeta,
   };
+}
+
+export type ContinueScene = (
+  storyId: string,
+  options: ContinueSceneOptions,
+  run?: RunContext,
+) => Promise<ContinueSceneResult>;
+
+export function createContinueScene(port: ContinuationPort): ContinueScene {
+  return (storyId, options, run) => continueScene(port, storyId, options, run);
 }

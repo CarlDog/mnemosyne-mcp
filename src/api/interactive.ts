@@ -9,7 +9,6 @@
 import type { Router } from "express";
 import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
-import type { LlmProvider } from "../llm.js";
 import {
   MODES,
   SCENE_CONTEXT_STRATEGIES,
@@ -17,7 +16,7 @@ import {
   type SceneContextStrategy,
 } from "../prompt.js";
 import { combineKindroidTarget, type KindroidTarget } from "../stories.js";
-import { continueScene } from "../application/continue-scene.js";
+import type { ContinueScene } from "../application/continue-scene.js";
 import type { RevalidateScenes } from "../application/revalidate-scenes.js";
 import type { ValidateStory } from "../application/validate-story.js";
 import {
@@ -85,8 +84,7 @@ function requestErrorBody(
 export function registerInteractiveRoutes(
   router: Router,
   oc: OcClient,
-  generator: LlmProvider,
-  validator: LlmProvider,
+  continueScene: ContinueScene,
   validateStory: ValidateStory,
   revalidateStoryScenes: RevalidateScenes,
   sceneContextStrategy: SceneContextStrategy,
@@ -146,9 +144,6 @@ export function registerInteractiveRoutes(
       });
 
       const result = await continueScene(
-        oc,
-        generator,
-        validator,
         story.id,
         {
           direction: body.direction,

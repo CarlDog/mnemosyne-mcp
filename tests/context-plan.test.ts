@@ -17,7 +17,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { planContext, type ContextEntry } from "../src/context-plan.js";
 import { renderAdmittedBundle, type ContextBundle } from "../src/prompt.js";
-import { continueScene } from "../src/tools/continue.js";
+import { continueScene } from "./helpers/application.js";
 import { OllamaProvider, type LlmProvider } from "../src/llm.js";
 import type { OcClient, OcMemory } from "../src/oc-client.js";
 

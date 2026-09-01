@@ -5,7 +5,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
-import { listEntityCatalog } from "../application/list-entities.js";
+import type { ListEntityCatalog } from "../application/list-entities.js";
 import { deleteEntity, ENTITY_TYPES, recall, saveEntity } from "../entities.js";
 import { requireCurrentStoryId } from "../config.js";
 import { findStory, resolveStoryId } from "../stories.js";
@@ -15,7 +15,11 @@ const ENTITY_TYPE_DESCRIPTIONS = `Entity type. One of: ${ENTITY_TYPES.join(", ")
 const STORY_OVERRIDE_DESCRIPTION =
   "Story name or OC project UUID. Overrides the active story for this call only; omit to use the active story (mnemo_story_use).";
 
-export function registerEntityTools(server: McpServer, oc: OcClient): void {
+export function registerEntityTools(
+  server: McpServer,
+  oc: OcClient,
+  listEntityCatalog: ListEntityCatalog,
+): void {
   server.registerTool(
     "mnemo_save_entity",
     {
@@ -210,7 +214,7 @@ export function registerEntityTools(server: McpServer, oc: OcClient): void {
             { isError: true },
           );
         }
-        const catalog = await listEntityCatalog(oc, story, {
+        const catalog = await listEntityCatalog(story, {
           type: args.type,
           includeBody: args.include_body,
         });

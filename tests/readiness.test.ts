@@ -15,6 +15,7 @@ import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { createReadinessProber } from "../src/readiness.js";
 import { createApiRouter } from "../src/api/index.js";
+import { testUseCases } from "./helpers/application.js";
 import type { OcClient } from "../src/oc-client.js";
 import type { LlmProvider } from "../src/llm.js";
 
@@ -93,14 +94,19 @@ describe("GET /api/status", () => {
     app.use(
       "/api",
       createApiRouter(fakeOc(async () => {}) as unknown as OcClient, {
+        useCases: testUseCases(
+          fakeOc(async () => {}) as unknown as OcClient,
+          cloudProvider,
+          readyProvider("ollama"),
+          async () => {
+            throw new Error("validation is not exercised by this test");
+          },
+          async () => {
+            throw new Error("revalidation is not exercised by this test");
+          },
+        ),
         generator: cloudProvider,
         validator: readyProvider("ollama"),
-        validateStory: async () => {
-          throw new Error("validation is not exercised by this test");
-        },
-        revalidateScenes: async () => {
-          throw new Error("revalidation is not exercised by this test");
-        },
       }),
     );
     const server: Server = await new Promise((resolve) => {

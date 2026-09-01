@@ -11,7 +11,7 @@
 
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { OllamaProvider, type LlmProvider } from "../src/llm.js";
-import { continueScene } from "../src/tools/continue.js";
+import { continueScene } from "./helpers/application.js";
 import { validateContent } from "../src/validator.js";
 import type { OcClient, OcMemory } from "../src/oc-client.js";
 

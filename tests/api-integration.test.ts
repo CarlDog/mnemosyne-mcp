@@ -19,6 +19,7 @@ import { createSceneRevalidationAdapter } from "../src/adapters/scene-validation
 import type { LlmProvider } from "../src/llm.js";
 import { saveEntity } from "../src/entities.js";
 import { setupTestStory, teardownStory } from "./helpers.js";
+import { testUseCases } from "./helpers/application.js";
 
 const OC_URL = process.env.OC_URL;
 const suite = OC_URL ? describe : describe.skip;
@@ -80,10 +81,15 @@ suite("/api routes (real OC)", () => {
     app.use(
       "/api",
       createApiRouter(oc, {
+        useCases: testUseCases(
+          oc,
+          stubGenerator,
+          stubValidator,
+          createStoryValidationAdapter(oc, stubValidator),
+          createSceneRevalidationAdapter(oc, stubValidator),
+        ),
         generator: stubGenerator,
         validator: stubValidator,
-        validateStory: createStoryValidationAdapter(oc, stubValidator),
-        revalidateScenes: createSceneRevalidationAdapter(oc, stubValidator),
       }),
     );
     httpServer = await new Promise((resolve) => {

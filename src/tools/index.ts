@@ -2,9 +2,7 @@
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { OcClient } from "../oc-client.js";
-import type { LlmProvider } from "../llm.js";
-import type { ValidateStory } from "../application/validate-story.js";
-import type { RevalidateScenes } from "../application/revalidate-scenes.js";
+import type { ApplicationUseCases } from "../application/use-cases.js";
 import {
   DEFAULT_SCENE_CONTEXT_STRATEGY,
   type SceneContextStrategy,
@@ -20,10 +18,7 @@ import { registerRevalidateTool } from "./revalidate.js";
 export function registerTools(
   server: McpServer,
   oc: OcClient,
-  generator: LlmProvider,
-  validator: LlmProvider,
-  validateStory: ValidateStory,
-  revalidateScenes: RevalidateScenes,
+  useCases: ApplicationUseCases,
   sceneContextStrategy: SceneContextStrategy = DEFAULT_SCENE_CONTEXT_STRATEGY,
   sceneContextFallbackStrategy: SceneContextStrategy = sceneContextStrategy,
   // Caller-supplied filesystem paths are a local-operator capability. Default
@@ -31,15 +26,14 @@ export function registerTools(
   // false when serving HTTP.
   allowFilesystemPaths = true,
 ): void {
-  registerStoryTools(server, oc);
-  registerEntityTools(server, oc);
+  registerStoryTools(server, oc, useCases.listStoryCatalog);
+  registerEntityTools(server, oc, useCases.listEntityCatalog);
   registerExportTool(server, oc, allowFilesystemPaths);
   registerImportTool(server, oc, allowFilesystemPaths);
   registerContinueTool(
     server,
     oc,
-    generator,
-    validator,
+    useCases.continueScene,
     sceneContextStrategy,
     sceneContextFallbackStrategy,
   );
@@ -47,6 +41,6 @@ export function registerTools(
   // validation-only (no scene pull -- see gatherContext's
   // validationOnly), so scene-context strategy has nothing to control
   // there.
-  registerValidateTool(server, oc, validateStory);
-  registerRevalidateTool(server, oc, revalidateScenes);
+  registerValidateTool(server, oc, useCases.validateStory);
+  registerRevalidateTool(server, oc, useCases.revalidateScenes);
 }

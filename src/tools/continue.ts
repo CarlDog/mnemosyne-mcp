@@ -3,7 +3,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
-import type { LlmProvider } from "../llm.js";
 import {
   MODES,
   SCENE_CONTEXT_STRATEGIES,
@@ -27,16 +26,8 @@ import {
 import { asText, withLogging } from "./helpers.js";
 import { makeRunContext } from "../run-context.js";
 import { resolveStoryId } from "../stories.js";
-import type {
-  ContinueSceneOptions,
-  ContinueSceneResult,
-} from "../application/continue-scene.js";
-import { continueScene, DEFAULT_MODE } from "../application/continue-scene.js";
-export type { ContinueSceneOptions, ContinueSceneResult };
-
-// Re-export the use-case function at the previous import path so existing
-// tests and call sites remain stable while we keep moving gradually.
-export { continueScene };
+import type { ContinueScene } from "../application/continue-scene.js";
+import { DEFAULT_MODE } from "../application/continue-scene.js";
 
 /**
  * MCP wrapper around continueScene: validates arguments, resolves defaults
@@ -45,8 +36,7 @@ export { continueScene };
 export function registerContinueTool(
   server: McpServer,
   oc: OcClient,
-  generator: LlmProvider,
-  validator: LlmProvider,
+  continueScene: ContinueScene,
   sceneContextStrategy: SceneContextStrategy,
   sceneContextFallbackStrategy: SceneContextStrategy,
 ): void {
@@ -198,9 +188,6 @@ export function registerContinueTool(
         );
 
         const result = await continueScene(
-          oc,
-          generator,
-          validator,
           storyId,
           {
             direction: args.direction,

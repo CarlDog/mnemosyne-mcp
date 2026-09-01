@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import { listEntityCatalog } from "../src/application/list-entities.js";
 import { listStoryCatalog } from "../src/application/list-stories.js";
 import type { OcClient, OcMemory } from "../src/oc-client.js";
+import {
+  createEntityCatalogAdapter,
+  createStoryCatalogAdapter,
+} from "../src/adapters/catalog.js";
 
 function memory(id: string, content: string, projectId = "story-1"): OcMemory {
   return {
@@ -26,7 +30,9 @@ describe("application catalog use cases", () => {
       memorySearch: async () => [marker],
     } as unknown as OcClient;
 
-    await expect(listStoryCatalog(oc)).resolves.toEqual({
+    await expect(
+      listStoryCatalog(createStoryCatalogAdapter(oc)),
+    ).resolves.toEqual({
       stories: [
         {
           id: "story-1",
@@ -50,7 +56,7 @@ describe("application catalog use cases", () => {
 
     await expect(
       listEntityCatalog(
-        oc,
+        createEntityCatalogAdapter(oc),
         { id: "story-1", marker_memory_id: "marker-1" },
         { query: "observatory", includeBody: false },
       ),
