@@ -1,5 +1,15 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { basename, dirname, join, relative, resolve } from "node:path";
+import {
+  basename,
+  dirname,
+  isAbsolute,
+  join,
+  relative,
+  resolve,
+  sep,
+  posix,
+  win32,
+} from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
@@ -78,7 +88,26 @@ function calledIdentifiers(path: string): string[] {
   return calls;
 }
 
+function staysWithinDirectory(
+  relativePath: string,
+  pathApi: Pick<typeof posix, "isAbsolute" | "sep">,
+): boolean {
+  return (
+    relativePath === "" ||
+    (relativePath !== ".." &&
+      !relativePath.startsWith(`..${pathApi.sep}`) &&
+      !pathApi.isAbsolute(relativePath))
+  );
+}
+
 describe("hexagonal source boundaries", () => {
+  it("recognizes contained paths with Windows and POSIX separators", () => {
+    expect(staysWithinDirectory("ports/catalog.js", posix)).toBe(true);
+    expect(staysWithinDirectory("ports\\catalog.js", win32)).toBe(true);
+    expect(staysWithinDirectory("../adapters/catalog.js", posix)).toBe(false);
+    expect(staysWithinDirectory("..\\adapters\\catalog.js", win32)).toBe(false);
+  });
+
   it("keeps the MCP and REST inbound drivers independent", () => {
     expect(importsIn(join(srcDir, "api"))).not.toEqual(
       expect.arrayContaining([expect.stringMatching(/:\s+.*\/tools(?:\/|$)/)]),
@@ -101,9 +130,11 @@ describe("hexagonal source boundaries", () => {
           .filter(({ specifier }) => {
             if (!specifier.startsWith(".")) return true;
             const resolved = resolve(dirname(path), specifier);
-            const insideApplication =
-              resolved === applicationDir ||
-              resolved.startsWith(`${applicationDir}\\`);
+            const applicationRelative = relative(applicationDir, resolved);
+            const insideApplication = staysWithinDirectory(
+              applicationRelative,
+              { isAbsolute, sep },
+            );
             return !insideApplication && !allowedExternalModules.has(resolved);
           })
           .map(
