@@ -22,7 +22,8 @@ import {
 import Loading from "../components/Loading";
 import ErrorBanner from "../components/ErrorBanner";
 import BodyText from "../components/BodyText";
-import ModeSwitcher, { MODE_COPY } from "../components/ModeSwitcher";
+import ModeSwitcher from "../components/ModeSwitcher";
+import { MODE_COPY } from "../components/mode-copy";
 import WorkspacePane from "../components/WorkspacePane";
 import WorkspaceShell from "../components/WorkspaceShell";
 import { canonStatusLabel, contextEntityCount } from "../result-status";
