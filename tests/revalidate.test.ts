@@ -15,7 +15,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import type { OcClient } from "../src/oc-client.js";
 import { OllamaProvider } from "../src/llm.js";
 import { saveEntity, recall } from "../src/entities.js";
-import { revalidateScenes } from "../src/tools/revalidate.js";
+import { createSceneRevalidationAdapter } from "../src/adapters/scene-validation.js";
 import { setupTestStory, teardownStory } from "./helpers.js";
 
 const OC_URL = process.env.OC_URL;
@@ -64,7 +64,8 @@ suite("v0.1.3 step 4 — mnemo_revalidate_scenes (real OC + real Ollama)", () =>
   it(
     "tags the violating scene validation:errors and the compliant scene validation:clean",
     async () => {
-      const result = await revalidateScenes(oc, validator, storyId);
+      const revalidateScenes = createSceneRevalidationAdapter(oc, validator);
+      const result = await revalidateScenes(storyId);
 
       expect(result.scenes_checked).toBe(2);
       expect(result.failures).toEqual([]);

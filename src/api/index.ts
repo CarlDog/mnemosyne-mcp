@@ -5,6 +5,7 @@ import { Router } from "express";
 import type { OcClient } from "../oc-client.js";
 import type { LlmProvider } from "../llm.js";
 import type { ValidateStory } from "../application/validate-story.js";
+import type { RevalidateScenes } from "../application/revalidate-scenes.js";
 import {
   DEFAULT_SCENE_CONTEXT_STRATEGY,
   type SceneContextStrategy,
@@ -20,6 +21,7 @@ export interface ApiRouterOptions {
   generator?: LlmProvider;
   validator?: LlmProvider;
   validateStory?: ValidateStory;
+  revalidateScenes?: RevalidateScenes;
   sceneContextStrategy?: SceneContextStrategy;
   sceneContextFallbackStrategy?: SceneContextStrategy;
 }
@@ -38,9 +40,9 @@ export function createApiRouter(
   registerEntityRoutes(router, oc);
 
   if (options.generator && options.validator) {
-    if (!options.validateStory) {
+    if (!options.validateStory || !options.revalidateScenes) {
       throw new Error(
-        "validateStory is required when interactive API routes are enabled",
+        "validateStory and revalidateScenes are required when interactive API routes are enabled",
       );
     }
     // Protected semantic readiness (NEMOCLAW_ADOPTION_ASSESSMENT §3):
@@ -79,6 +81,7 @@ export function createApiRouter(
       options.generator,
       options.validator,
       options.validateStory,
+      options.revalidateScenes,
       sceneContextStrategy,
       sceneContextFallbackStrategy,
     );

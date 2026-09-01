@@ -171,6 +171,9 @@ describe("GET /api/capabilities", () => {
         validateStory: async () => {
           throw new Error("validation is not exercised by this test");
         },
+        revalidateScenes: async () => {
+          throw new Error("revalidation is not exercised by this test");
+        },
       }),
     );
     const server: Server = await new Promise((resolve) => {

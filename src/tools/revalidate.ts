@@ -3,21 +3,19 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
-import type { LlmProvider } from "../llm.js";
 import { asText, withLogging } from "./helpers.js";
 import { resolveStoryId } from "../stories.js";
 import type {
   RevalidateFailure,
   RevalidateResult,
+  RevalidateScenes,
 } from "../application/revalidate-scenes.js";
-import { revalidateScenes } from "../application/revalidate-scenes.js";
 export type { RevalidateFailure, RevalidateResult };
-export { revalidateScenes };
 
 export function registerRevalidateTool(
   server: McpServer,
   oc: OcClient,
-  validator: LlmProvider,
+  revalidateScenes: RevalidateScenes,
 ): void {
   server.registerTool(
     "mnemo_revalidate_scenes",
@@ -37,7 +35,7 @@ export function registerRevalidateTool(
     },
     withLogging("mnemo_revalidate_scenes", async (args: { story?: string }) => {
       const storyId = await resolveStoryId(oc, args.story);
-      const result = await revalidateScenes(oc, validator, storyId);
+      const result = await revalidateScenes(storyId);
       return asText(result);
     }),
   );

@@ -53,4 +53,15 @@ describe("hexagonal source boundaries", () => {
     );
     expect(imports).toEqual(["./ports/story-validation.js"]);
   });
+
+  it("keeps scene revalidation behind ports plus pure verdict policy", () => {
+    const imports = importSpecifiers(
+      join(srcDir, "application", "revalidate-scenes.ts"),
+    );
+    expect(imports).toEqual([
+      "./ports/scene-validation.js",
+      "./ports/story-validation.js",
+      "../validator.js",
+    ]);
+  });
 });
