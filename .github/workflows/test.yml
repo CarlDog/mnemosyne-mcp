@@ -7,10 +7,10 @@ on:
     branches: [main]
 
 env:
-  # node 22 ships npm 10.9.8. A newer local npm is lenient about a lockfile
+  # Node 24 ships npm 11.19.0. A newer local npm may be lenient about a lockfile
   # this npm rejects, so pin both sides (here + package.json "packageManager")
   # to keep local == CI. See claude-fleet-kit fleet/lessons/npm-version-skew.
-  PINNED_NPM: "10.9.8"
+  PINNED_NPM: "11.19.0"
 jobs:
   test:
     name: ${{ matrix.os }}
@@ -26,7 +26,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           cache: "npm"
 
       - name: Pin npm (match local — see lessons/npm-version-skew)
@@ -60,7 +60,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           cache: "npm"
 
       - name: Pin npm (match local — see lessons/npm-version-skew)

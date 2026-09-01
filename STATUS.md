@@ -2,6 +2,13 @@
 
 **Last updated:** 2026-08-31.
 
+**Dependency baseline upgrade complete (2026-08-31).** PR #23 now targets
+Express 5, Zod 4, TypeScript 6, and the fleet's Node 24/npm 11.19.0 baseline.
+Node declarations are held to major 24, and Dependabot will defer future major
+`@types/node` updates until the runtime and CI floor advance together. The full
+local gate is green: 418 passing / 64 intentionally skipped tests, typecheck,
+server and Web UI build, root and Web UI lint, and Prettier.
+
 **Post-push CI follow-up closed (2026-08-31).** The architecture boundary
 test now uses platform-neutral containment and exercises both Windows and
 POSIX path dialects, fixing the Ubuntu/macOS-only failure. Dependabot now
@@ -17,7 +24,7 @@ imports. Duplicate story/entity catalog projections were consolidated into
 application policy. Prompt rendering, scene-context selection, and Ollama
 request policy were extracted from mixed large modules. README/CLAUDE counts
 and setup guidance are current, the stale confidence badge is gone, and the Web
-UI runs ESLint 10 with zero warnings. Node 22 and npm 10.9.8 are declared via
+UI runs ESLint 10 with zero warnings. Node 24 and npm 11.19.0 are declared via
 `.nvmrc`, `engines`, and `packageManager`; clean installs use `npm ci`.
 
 **Hexagonal architecture milestone complete (2026-08-31).** MCP tools and REST

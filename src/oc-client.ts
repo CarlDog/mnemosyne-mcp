@@ -58,7 +58,7 @@ const OcProjectSchema = z.object({
   id: z.string(),
   name: z.string(),
   created_at: z.string().nullish(),
-  metadata: z.record(z.unknown()).nullish(),
+  metadata: z.record(z.string(), z.unknown()).nullish(),
 });
 export type OcProject = z.infer<typeof OcProjectSchema>;
 
