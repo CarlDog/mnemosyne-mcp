@@ -10,7 +10,8 @@ below is judgment guidance for the conversation, not code.
 
 The rules here were derived from the material this feature exists to
 import: the operator's four original ChatGPT storytelling projects
-(Chaos Saga, GhostHunters, BattleChasers, Wonderland), cross-checked
+(Chaos Saga, The Miskatonic Archives: The Blackwood Case (then GhostHunters),
+BattleChasers, Wonderland), cross-checked
 against OpenChronicle v1's template research and v2's import-pipeline
 post-mortem. Every "don't" below is a mistake one of those systems
 actually made.
@@ -42,9 +43,11 @@ The single most important rule. Observed in the real corpus:
   compendium with faction rosters, named NPC leadership, and
   cross-references, wearing a location folder label.
 - Chaos Saga's top-level `Project Instructions` file is a **misfiled
-  stray** — it's actually an early GhostHunters draft.
-- GhostHunters' real Project Instructions file is **two drafts
-  concatenated** — a rewrite pasted in without deleting the original.
+  stray** — it's actually an early The Blackwood Case draft from the source
+  project then called GhostHunters.
+- The Blackwood Case's source Project Instructions file, from the project then
+  called GhostHunters, is **two drafts concatenated** — a rewrite pasted in
+  without deleting the original.
   Import the newer version only.
 
 An importer that trusted names over content (v2's filename-substring

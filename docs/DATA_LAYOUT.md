@@ -81,6 +81,24 @@ data/
         └── watch-companion-watchalong-transcript-normalized-2026-08-31.md
 ```
 
+## Draft-only story packages
+
+An exploratory storyline may begin as a package containing only a drafts/
+directory. This is a deliberate pre-canon shape: it may hold control metadata
+and thin category scaffolds for characters, locations, lore, worldbuilding,
+rules, and style, but it has no canon/ directory, story.json identity card,
+runtime export, or live OpenChronicle story record. It is not an active story
+and must not be compiled or imported until an operator separately selects and
+develops it.
+
+The Miskatonic Archives historical prequels use this shape:
+
+- data/stories/miskatonic-archives-the-black-salt-compact/drafts/
+- data/stories/miskatonic-archives-the-last-eastbound-run/drafts/
+
+Their source seed notes remain in The Blackwood Case's draft control folder.
+The package boundary is editorial, not a continuity assertion.
+
 ## Canon — the human-editable authoring surface
 
 `canon/` is the permanent working layer for a story's narrative content —
@@ -515,7 +533,10 @@ this file wholesale.
 
 - **Slugs:** always `storySlug()` (`src/export.ts`) — lowercase
   `[a-z0-9-]`, id-prefix fallback. One definition names story folders,
-  export filenames, and art subject slugs.
+  export filenames, and art subject slugs. In a setting-qualified display
+  title such as *The Miskatonic Archives: The Blackwood Case*, the setting's
+  leading **The** is display-only and drops from the slug
+  (`miskatonic-archives-the-blackwood-case`); internal articles remain.
 - **Timestamps:** UTC, ISO to the second, colons stripped for Windows
   (`2026-08-23T051200` or the shorter `T0512` prefix form for art, where
   the seq suffix already disambiguates).

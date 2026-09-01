@@ -271,10 +271,10 @@ The plane with no equivalent in either reference app.
 - **Open threads as one-click directions.** Ours alone, and the best idea in
   this document. The canon already records its own unfired guns: BattleChasers'
   "open threads, deliberately unfired"; the **Open Questions** entities in
-  Wonderland and Shadowflame; GhostHunters' unmatched mirror, unlocated circle
-  centre, and Gloria's never-found book. Surface them as direction chips. No
-  other tool can do this, because no other tool has a curated canon to read
-  them from.
+  Wonderland and Shadowflame; The Blackwood Case's unmatched mirror, unlocated
+  circle centre, and Gloria's never-found book. Surface them as direction
+  chips. No other tool can do this, because no other tool has a curated canon
+  to read them from.
 
 ---
 
@@ -535,9 +535,9 @@ greeting, so it isn't even a silent fence.
 
 Three of the five live stories are fantasy — BattleChasers, Wonderland,
 Shadowflame — and an in-canon watch party drags real-world film titles into
-them. Only Chaos Saga and GhostHunters are contemporary enough for it to land.
-So canon-eligibility is a per-story opt-in defaulting to off; a story that opts
-out never shows the control at all.
+them. Only Chaos Saga and The Blackwood Case are contemporary enough for it to
+land. So canon-eligibility is a per-story opt-in defaulting to off; a story
+that opts out never shows the control at all.
 
 ### In the UI
 
@@ -702,7 +702,7 @@ beat-linked pane geometry:
 |---|---|---|
 | **Archivist's Light Table** | The existing warm night desk; amber indexing, cold audience marks, violet participant marks | Punched archive cards and a warm manuscript leaf |
 | **White Garden Courtesy** | Wonderland's shadowless porcelain order — deliberately severe rather than creamy, luxurious, or “wellness” minimal | Near-symmetrical pale rules interrupted by one bruise-purple petal/notch on the active destination |
-| **Blackwood Glass Plate** | GhostHunters' photographic evidence room — darkroom chrome around a pale case sheet, not a generic paranormal HUD | Static registration corners, a faint doubled plate edge, and one EMF-red registration dot on a generated beat |
+| **Blackwood Glass Plate** | The Blackwood Case's photographic evidence room — darkroom chrome around a pale case sheet, not a generic paranormal HUD | Static registration corners, a faint doubled plate edge, and one EMF-red registration dot on a generated beat |
 
 All three reuse the self-hosted Fraunces, Literata, and Courier Prime faces.
 Blackwood makes the evidence/metadata role more prominent, while White Garden

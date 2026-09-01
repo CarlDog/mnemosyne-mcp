@@ -1,6 +1,33 @@
 # Status
 
-**Last updated:** 2026-08-31.
+**Last updated:** 2026-09-01.
+
+**Story setting and storyline renamed (2026-09-01).** The former
+**GhostHunters** package is now **The Miskatonic Archives: The Blackwood Case**:
+**The Miskatonic Archives** is the shared-world setting, **The Blackwood Case**
+is the active present-day storyline, and **The GhostHunters** remains the
+in-world investigative team. The filesystem root is
+`data/stories/miskatonic-archives-the-blackwood-case/`; display-only leading
+**The** is omitted from qualified setting filenames and folders. Historical
+exports and the sealed revision-11 identifier retain their original
+`ghosthunters-` names as provenance. The Black-Salt Compact and The Last
+Eastbound Run remain draft-only packages; their thin seed notes and separate
+scaffolds contain no canon/ or story.json, and neither was promoted to canon.
+The live OpenChronicle project and Mnemosyne marker were renamed in place, and
+three existing style records received title-only wording updates. No story
+entity was added, deleted, imported, or promoted. Both affected review-overlay
+manifests were rehashed and passed their full merged-tree checks.
+
+**Historical prequel scaffolds added (2026-09-01).** The Black-Salt Compact and
+The Last Eastbound Run now each have a separate draft-only package with control
+metadata plus thin characters, locations, lore, worldbuilding, rules, and style
+scaffolds. Their original seed notes remain under The Blackwood Case's control
+folder. Neither package has canon/ or story.json, neither is active context,
+and no OpenChronicle story record was created.
+
+Historical entries below retain GhostHunters when they describe source-era
+records, imports, commits, or decisions; the current storyline name is The
+Blackwood Case within The Miskatonic Archives.
 
 **Dependency baseline upgrade merged (2026-08-31).** PR #23 merged to `main` as
 `1e07bc8`, bringing Express 5, Zod 4, TypeScript 6, and the fleet's Node 24/npm
@@ -44,8 +71,9 @@ build.
 
 **Story-authoring checkpoint (2026-08-30): eight review-gated Living Canon
 overlays are complete.** BattleChasers has 71 operations → 143 entities; Brass
-& Nerve 20 → 43; Chaos Saga 60 → 73; GhostHunters 60 → 105; Midnight Is a
-Suggestion 41 → 70; Shadowflame 40 → 74; The Adjustment Protocol 19 → 41;
+& Nerve 20 → 43; Chaos Saga 60 → 73; The Miskatonic Archives: The Blackwood
+Case (formerly GhostHunters) 60 → 105; Midnight Is a Suggestion 41 → 70;
+Shadowflame 40 → 74; The Adjustment Protocol 19 → 41;
 and The Noctis Veil 13 → 39. Each retains source/asset/scorecard/PASS evidence,
 adversarial closure at P0=0/P1=0, and a zero-write import preflight. None was
 promoted or imported, all active canon trees remained hash-stable, and
@@ -53,17 +81,17 @@ promotion remains an explicit operator decision. The scaffold also preserves
 the export entity key as character identity so a display/current `Name:` field
 cannot silently create a duplicate runtime character. Repository verification
 was green at 399 passing / 64 skipped tests (463 total) at that historical checkpoint.
-GhostHunters also gained a control-only Dovecoast prequel seed bank covering a
-Golden Age of Piracy story (1650–1730) and a geographically western,
-Dovecoast-linked Old West story (1865–1895). The ideas establish no past event
-or mystery answer.
+The Miskatonic Archives also has a control-only Dovecoast-linked historical
+storyline seed bank covering a Golden Age of Piracy story (1650–1730) and a
+geographically western, Dovecoast-linked Old West story (1865–1895). The ideas
+establish no past event or mystery answer.
 
 **Session close (2026-08-30).** Nothing is in flight. The Living Canon overlays
-remain inert at their explicit operator-approval boundaries, the GhostHunters
-prequel ideas remain control-only seeds, and no active canon or live OC state
-changed. New work starts only on an explicit promotion/rejection decision or a
-new operator-selected story task; the enrichment benchmark remains gated on
-operator-labeled fixtures.
+remain inert at their explicit operator-approval boundaries, the Miskatonic
+Archives historical-storyline ideas remain control-only seeds, and no active
+canon or live OC state changed. New work starts only on an explicit
+promotion/rejection decision or a new operator-selected story task; the
+enrichment benchmark remains gated on operator-labeled fixtures.
 
 **Previous engineering checkpoint (2026-08-28→29): the external-system research
 program is fully executed.** One continuous 2026-08-28→29 arc took the four adoption

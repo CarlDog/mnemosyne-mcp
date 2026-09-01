@@ -273,8 +273,8 @@ Examples from the current collection:
 
 - **BattleChasers:** mythic adventure, regional breadth, dangerous wonder, and
   encounter momentum;
-- **GhostHunters:** restrained investigative horror, fair evidence, incomplete
-  explanations, and unrelated hauntings;
+- **The Miskatonic Archives: The Blackwood Case:** restrained investigative
+  horror, fair evidence, incomplete explanations, and unrelated hauntings;
 - **Chaos Saga:** grounded contemporary realism with no magic; heightened
   emotion must retain a physical or human cause;
 - **Wonderland:** surreal transformation with intimate, traceable causes and
@@ -462,7 +462,7 @@ fully captured only when both agree.
 When comparing stories, transfer **craft patterns**, not canon:
 
 - BattleChasers demonstrates scalable population and world breadth.
-- GhostHunters demonstrates mystery ecology and misdirection.
+- The Blackwood Case demonstrates mystery ecology and misdirection.
 - Chaos Saga demonstrates lived relationships, rooms, and mundane aftermath.
 - Wonderland demonstrates stateful objects, locations, and transformation.
 - Shadowflame demonstrates truth tiers, agency guardrails, and canon promotion.
