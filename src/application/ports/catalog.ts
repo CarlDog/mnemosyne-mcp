@@ -1,5 +1,4 @@
-import type { ListAllEntitiesResult } from "../../entities.js";
-import type { MnemoStory } from "../../stories.js";
+import type { ListAllEntitiesResult, MnemoStory } from "../model.js";
 
 export interface StoryCatalogPort {
   listStories(): Promise<MnemoStory[]>;

@@ -1,16 +1,14 @@
-import type { AdmissionMode } from "../../context-plan.js";
 import type {
-  GeneratedBeat,
-  LlmGenerateOptions,
-  ModelUsage,
-} from "../../llm.js";
-import type {
+  AdmissionMode,
   ContextBundle,
   GatherContextOptions,
+  GenerateBeatOptions,
+  GeneratedBeat,
+  KindroidTarget,
   Mode,
-} from "../../prompt.js";
-import type { KindroidTarget } from "../../stories.js";
-import type { ValidationReport } from "../../validator.js";
+  ModelUsage,
+  ValidationReport,
+} from "../model.js";
 
 export type ContinuationBeat = GeneratedBeat;
 export type ContinuationUsage = ModelUsage;
@@ -43,7 +41,7 @@ export interface ContinuationPort {
     model?: string;
   }): string[];
   storyKindroidTarget(storyId: string): Promise<KindroidTarget | undefined>;
-  generate(options: LlmGenerateOptions): Promise<GeneratedBeat>;
+  generate(options: GenerateBeatOptions): Promise<GeneratedBeat>;
   saveScene(storyId: string, name: string, body: string): Promise<SavedScene>;
   validate(
     context: ContextBundle,

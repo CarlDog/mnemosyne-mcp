@@ -29,72 +29,29 @@ import {
   type EntityType,
   type RecalledEntity,
 } from "./entities.js";
-
-export const MODES = ["participant", "director", "audience"] as const;
-export type Mode = (typeof MODES)[number];
-
-const MODE_DIRECTIVES: Record<Mode, string> = {
-  participant:
-    "You are a character in this story. The user will tell you which character they are playing. Stay in character and respond naturally as their scene partner — perform other characters in the scene as supporting cast, but your primary voice is theirs.",
-  director:
-    "You are a scene director. The user will describe a scene setup or give direction. You perform ALL characters in the scene — give each their own voice, mannerisms, and dialogue. Narrate actions, describe the environment, and advance the scene based on the user's direction.",
-  audience:
-    "You are a narrator telling a story. The user is your audience. Write vivid, immersive narrative prose. Perform all characters with distinct voices. Advance the plot naturally. The user may offer light guidance but is primarily here to enjoy the story.",
-};
-
-export const SCENE_CONTEXT_STRATEGIES = [
-  "recency-first",
-  "query-ranked",
-] as const;
-export type SceneContextStrategy = (typeof SCENE_CONTEXT_STRATEGIES)[number];
-export const DEFAULT_SCENE_CONTEXT_STRATEGY: SceneContextStrategy =
-  "recency-first";
-
-// Shared schema-description strings for the per-call strategy params.
-// Every surface that exposes the params (three MCP tools, three API
-// routes' docs) must describe the SAME semantics, and those semantics
-// live in resolveSceneContextStrategies below -- keeping the words next
-// to the code stops the copies drifting into contradiction again.
-export const SCENE_CONTEXT_STRATEGY_DESCRIPTION =
-  "When selecting RECENT SCENES for context, choose either recency-first " +
-  "(project-scoped created-at order) or query-ranked (query-ranked " +
-  "memory_search). Overrides the server default " +
-  "MNEMO_SCENE_CONTEXT_STRATEGY for this call only. If unset, the server " +
-  "default applies.";
-export const SCENE_CONTEXT_FALLBACK_DESCRIPTION =
-  "Optional fallback strategy tried when the primary yields no eligible " +
-  "scenes. If unset while scene_context_strategy IS set on this call, no " +
-  "fallback occurs (the chosen strategy runs pure); if both are unset, " +
-  "the server's MNEMO_SCENE_CONTEXT_FALLBACK_STRATEGY applies.";
-
-// The one place per-call strategy overrides meet the server-configured
-// defaults. Contract (documented in the strings above):
-// - an explicit per-call fallback always wins;
-// - a per-call PRIMARY with no per-call fallback means NO fallback --
-//   the caller opted into that strategy's pure semantics, and silently
-//   inheriting a mismatched server fallback would contaminate it;
-// - neither set: the server pair applies (a server fallback equal to the
-//   server primary collapses to "no fallback").
-export function resolveSceneContextStrategies(
-  perCall: {
-    strategy?: SceneContextStrategy;
-    fallback?: SceneContextStrategy;
-  },
-  server: {
-    strategy: SceneContextStrategy;
-    fallback: SceneContextStrategy;
-  },
-): { strategy: SceneContextStrategy; fallback?: SceneContextStrategy } {
-  const strategy = perCall.strategy ?? server.strategy;
-  let fallback: SceneContextStrategy | undefined;
-  if (perCall.fallback !== undefined) {
-    fallback = perCall.fallback;
-  } else if (perCall.strategy === undefined) {
-    fallback = server.fallback;
-  }
-  if (fallback === strategy) fallback = undefined;
-  return { strategy, ...(fallback !== undefined && { fallback }) };
-}
+import type {
+  ContextBundle,
+  SceneContextStrategy,
+} from "./application/model.js";
+export type {
+  ContextBundle,
+  Mode,
+  SceneContextStrategy,
+} from "./application/model.js";
+export {
+  buildSystemPrompt,
+  MODES,
+  neutralizeSectionDelimiters,
+  renderAdmittedBundle,
+} from "./application/prompt-policy.js";
+export {
+  DEFAULT_SCENE_CONTEXT_STRATEGY,
+  resolveSceneContextStrategies,
+  SCENE_CONTEXT_FALLBACK_DESCRIPTION,
+  SCENE_CONTEXT_STRATEGIES,
+  SCENE_CONTEXT_STRATEGY_DESCRIPTION,
+} from "./application/scene-context-policy.js";
+import { DEFAULT_SCENE_CONTEXT_STRATEGY } from "./application/scene-context-policy.js";
 
 // Per-type pull caps. Rules and style are typically small and important —
 // pull all (OC's pinned-always-surface bias gives us all pinned rules
@@ -120,23 +77,6 @@ const TYPE_LIMITS: Record<EntityType, number> = {
 // cap" shape as entities.ts's SAVE_DEDUPE_SEARCH_TOPK -- see that
 // comment for the precedent.
 const SCENE_POOL_SIZE = 20;
-
-export interface ContextBundle {
-  rules: string[];
-  style: string[];
-  characters: string[];
-  locations: string[];
-  scenes: string[];
-  lore: string[];
-  worldbuilding: string[];
-  /** Structured admission entries (CONTEXT_PLAN_DESIGN, ratified):
-   * memory ids, tags, relevance, sizes -- everything the string arrays
-   * above discard. Present on every gatherContext result; optional in
-   * the type so hand-built test bundles stay valid. The string arrays
-   * reflect ALL gathered entries; plan-driven rendering re-derives the
-   * admitted subset in continueScene. */
-  entries?: ContextEntry[];
-}
 
 async function pullByType(
   oc: OcClient,
@@ -182,30 +122,6 @@ function toContextEntry(e: RecalledEntity, reason: string): ContextEntry {
  * planned payload. Within a type, gather order and entry order are the
  * same by construction (gatherContext builds both from one pull), so a
  * positional zip is sound. */
-export function renderAdmittedBundle(
-  context: ContextBundle,
-  admittedIds: ReadonlySet<string>,
-): ContextBundle {
-  const entries = context.entries ?? [];
-  const filterType = (strings: string[], type: EntityType): string[] => {
-    const typed = entries.filter((e) => e.entity_type === type);
-    return strings.filter((_, i) => {
-      const entry = typed[i];
-      return entry === undefined || admittedIds.has(entry.memory_id);
-    });
-  };
-  return {
-    rules: filterType(context.rules, "rule"),
-    style: filterType(context.style, "style"),
-    characters: filterType(context.characters, "character"),
-    locations: filterType(context.locations, "location"),
-    scenes: filterType(context.scenes, "scene"),
-    lore: filterType(context.lore, "lore"),
-    worldbuilding: filterType(context.worldbuilding, "worldbuilding"),
-    entries: entries.filter((e) => admittedIds.has(e.memory_id)),
-  };
-}
-
 // Scene pulls have two strategies, each with the same validation-safe
 // post-filter:
 // - recency-first (default): a compact project scan (tags + created_at
@@ -598,73 +514,4 @@ export async function gatherContext(
     worldbuilding: worldbuilding.map(flattenEntity),
     entries,
   };
-}
-
-/**
- * Neutralize lines inside entity content that would collide with the
- * `=== HEADER ===` section delimiters used by buildSystemPrompt and the
- * validator's constraints block. Without this, an entity body containing
- * its own `=== RULES ===` line can spoof a section boundary and inject
- * instructions (e.g., steer the validator). Any line that looks like a
- * delimiter has its `=` runs replaced with `-`, which preserves the text's
- * visual shape while breaking the collision.
- */
-export function neutralizeSectionDelimiters(text: string): string {
-  return text
-    .split("\n")
-    .map((line) =>
-      /^\s*={3,}.*={3,}\s*$/.test(line) ? line.replace(/=/g, "-") : line,
-    )
-    .join("\n");
-}
-
-function block(header: string, entries: string[]): string | null {
-  if (entries.length === 0) return null;
-  const safe = entries.map(neutralizeSectionDelimiters);
-  return `=== ${header} ===\n${safe.join("\n\n")}`;
-}
-
-// Appended to every mode directive so mnemosyne's own generated output
-// (the five direct-LLM providers -- Kindroid/Botify ignore systemPrompt
-// entirely and format replies per their own persona config) stays
-// visually consistent with the wider companion-chat convention: Kindroid's
-// own docs document exactly this split for a Kin's Example Message
-// ("actions in asterisks, speech in quotes"), and cross-platform research
-// (2026-08-23) found no surveyed convention ever collides action-asterisks
-// with bracket/OOC markup. Consistency is the point, not just style --
-// making generated output uniform across every generator this project
-// supports makes a bad reaction easier to attribute to a specific
-// generator rather than to inconsistent formatting. Phrased descriptively
-// ("X are written in Y"), not as an imperative directive -- Kindroid's own
-// docs warn imperative phrasing (e.g. "narrate in 3rd person") over-triggers
-// into unwanted narration walls; RULES/STYLE below can still override it
-// per RULE_PRECEDENCE_STATEMENT, same as any other narration convention.
-const ACTION_FORMATTING_STATEMENT =
-  "Physical actions are written in *asterisks*; spoken dialogue stays plain text.";
-
-// Inserted between the mode directive and the constraint blocks when the
-// story has rules or style entries. The mode directives use action verbs
-// ("Narrate actions, describe the environment...") that the LLM tends to
-// read as priming for present-tense narrative prose. Without this
-// statement, even instruction-tuned models like nous-hermes2-mixtral
-// follow both the mode and the rules awkwardly — picking up the mode's
-// implicit conventions as a default and the rules as overlay. Stating
-// the precedence explicitly fixes that.
-const RULE_PRECEDENCE_STATEMENT =
-  "The RULES and STYLE blocks below are absolute. Follow them exactly. They override any narration conventions implied by the mode directive above (tense, voice, point of view, register).";
-
-export function buildSystemPrompt(mode: Mode, context: ContextBundle): string {
-  const hasConstraints = context.rules.length > 0 || context.style.length > 0;
-  const parts: (string | null)[] = [
-    `${MODE_DIRECTIVES[mode]} ${ACTION_FORMATTING_STATEMENT}`,
-    hasConstraints ? RULE_PRECEDENCE_STATEMENT : null,
-    block("RULES", context.rules),
-    block("STYLE", context.style),
-    block("CHARACTERS", context.characters),
-    block("LOCATIONS", context.locations),
-    block("RECENT SCENES", context.scenes),
-    block("LORE", context.lore),
-    block("WORLDBUILDING", context.worldbuilding),
-  ];
-  return parts.filter((p): p is string => p !== null).join("\n\n");
 }

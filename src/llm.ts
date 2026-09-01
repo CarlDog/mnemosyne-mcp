@@ -11,6 +11,30 @@
 import { log } from "./log.js";
 import type { ContextBundle } from "./prompt.js";
 import type { KindroidTarget } from "./stories.js";
+import {
+  classifyOllamaHttpError,
+  computeNumCtx,
+  DEFAULT_KEEP_ALIVE,
+  DEFAULT_MAX_NUM_CTX,
+  DEFAULT_MAX_TOKENS,
+  DEFAULT_OLLAMA_TIMEOUT_MS,
+  DEFAULT_TEMPERATURE,
+  normalizeKeepAlive,
+} from "./adapters/ollama-policy.js";
+export {
+  classifyOllamaHttpError,
+  computeNumCtx,
+  DEFAULT_KEEP_ALIVE,
+  DEFAULT_MAX_TOKENS,
+  DEFAULT_OLLAMA_TIMEOUT_MS,
+  MAX_GENERATION_TOKENS,
+  MAX_TEMPERATURE,
+  MIN_GENERATION_TOKENS,
+  MIN_TEMPERATURE,
+  normalizeKeepAlive,
+  NUM_CTX_MARGIN_TOKENS,
+  type NumCtxPlan,
+} from "./adapters/ollama-policy.js";
 
 /**
  * Describe a transport-level failure with its real cause.
@@ -251,124 +275,6 @@ export interface OllamaConfig {
    * Set for the validator instance -- its requests carry the story's full
    * canon and the pass is documented as local and free. */
   requireLocal?: boolean;
-}
-
-export const DEFAULT_OLLAMA_TIMEOUT_MS = 5 * 60 * 1000;
-
-/** Typed, actionable classification of Ollama /api/chat HTTP failures
- * (Ollama assessment §7, ratified as a mechanical item). Pure. No
- * automatic retry anywhere: Ollama queues work itself, so retrying
- * overload amplifies it, and an ambiguous failure must never be replayed
- * blind. */
-export function classifyOllamaHttpError(
-  status: number,
-  bodyText: string,
-  model: string,
-): Error {
-  if (status === 404) {
-    return new Error(
-      `Ollama model "${model}" is not installed on this daemon -- model ` +
-        "names must be EXACT installed tags (list them with `ollama list` " +
-        "or GET /api/tags)",
-    );
-  }
-  if (status === 400 && bodyText.includes("exceed_context_size_error")) {
-    // The daemon nests JSON inside a JSON string, so the counts arrive as
-    // \"n_prompt_tokens\":6016 -- tolerate both escaped and plain forms.
-    const tokens = /n_prompt_tokens\\?":\s*(\d+)/.exec(bodyText)?.[1];
-    const ctx = /n_ctx\\?":\s*(\d+)/.exec(bodyText)?.[1];
-    return new Error(
-      `Ollama rejected the request as over the context window` +
-        (tokens && ctx ? ` (${tokens} tokens vs num_ctx ${ctx})` : "") +
-        ` -- this is the deliberate reject-don't-truncate contract. Raise ` +
-        "OLLAMA_NUM_CTX (within the model's trained context) or trim story " +
-        "context; the context-plan manifest shows what was admitted.",
-    );
-  }
-  if (status === 429 || status === 503) {
-    return new Error(
-      `Ollama is overloaded (HTTP ${status}). It queues work itself, so ` +
-        "this call is NOT retried automatically (a retry storm amplifies " +
-        "the overload) -- wait for in-flight generations to finish and " +
-        "retry manually.",
-    );
-  }
-  return new Error(`Ollama HTTP ${status}: ${bodyText || String(status)}`);
-}
-// Exported so index.ts's OLLAMA_KEEP_ALIVE env fallback and this
-// provider-level fallback are one value, not two independently-owned
-// "30m" literals that drift.
-export const DEFAULT_KEEP_ALIVE = "30m";
-
-/**
- * Ollama's `keep_alive` accepts a duration STRING ("30m", "90s", "0") or a
- * NUMBER of seconds -- but it rejects the string "-1" outright with HTTP 400,
- * while the number -1 (pin indefinitely) is accepted. Verified live against
- * Ollama 2026-08-28: `"keep_alive":"-1"` -> 400, `"keep_alive":-1` -> 200,
- * with "0"/"30m"/"90s" all fine as strings.
- *
- * That matters because .env.example documents `OLLAMA_KEEP_ALIVE=-1` as the
- * way to pin a model indefinitely, and env vars are always strings -- so
- * following the documentation produced a server that 400s on every
- * generation.
- *
- * Any wholly numeric value is therefore sent as a number; everything else
- * passes through as the duration string Ollama expects.
- */
-export function normalizeKeepAlive(value: string): string | number {
-  const trimmed = value.trim();
-  return /^-?\d+$/.test(trimmed) ? Number(trimmed) : trimmed;
-}
-
-// Sampling bounds shared by every surface that accepts them. The MCP tool and
-// the REST route validated the same three numbers independently, which is the
-// drift the group-turn constants in kindroid-provider.ts already exist to
-// prevent. (webui keeps its own copies: it is a separate package and cannot
-// import server modules.)
-export const MIN_GENERATION_TOKENS = 1;
-export const MAX_GENERATION_TOKENS = 8192;
-export const MIN_TEMPERATURE = 0;
-export const MAX_TEMPERATURE = 2;
-const DEFAULT_TEMPERATURE = 0.8;
-export const DEFAULT_MAX_TOKENS = 2048;
-
-// Ollama's own default num_ctx is ~4096 — far below what a fully-imported
-// story assembles (Chaos Saga's system prompt alone is ~60KB ≈ 16k
-// tokens). A prompt past the window doesn't error: llama.cpp truncates /
-// slides, and the model generates confident word salad off a mangled
-// view of the prompt — live-observed on the first mnemo_continue against
-// a large imported story (2026-08-22). So every request sizes num_ctx to
-// its actual prompt (plus the generation budget), capped by
-// maxContextWindow. The cap matters in the other direction too: pushing
-// num_ctx far past a model's TRAINED context (e.g. a llama2-era 4k
-// model) degrades output via RoPE stretching — operators running
-// small-context models should set OLLAMA_NUM_CTX accordingly.
-const DEFAULT_MAX_NUM_CTX = 32_768;
-const MIN_NUM_CTX = 4_096;
-// Conservative prose estimate — better to over-provision KV cache than
-// to truncate: English prose runs ~3.5-4 chars/token.
-const EST_CHARS_PER_TOKEN = 3.5;
-export const NUM_CTX_MARGIN_TOKENS = 256;
-
-export interface NumCtxPlan {
-  numCtx: number;
-  estPromptTokens: number;
-  /** True when the cap forced numCtx below what the prompt likely
-   * needs — the generation may degrade; the log says how to fix it. */
-  capped: boolean;
-}
-
-/** Pure sizing so it's unit-testable: fit the window to the actual
- * request, never below Ollama's own default, never above the cap. */
-export function computeNumCtx(
-  promptChars: number,
-  numPredict: number,
-  maxContextWindow = DEFAULT_MAX_NUM_CTX,
-): NumCtxPlan {
-  const estPromptTokens = Math.ceil(promptChars / EST_CHARS_PER_TOKEN);
-  const wanted = estPromptTokens + numPredict + NUM_CTX_MARGIN_TOKENS;
-  const numCtx = Math.min(Math.max(MIN_NUM_CTX, wanted), maxContextWindow);
-  return { numCtx, estPromptTokens, capped: numCtx < wanted };
 }
 
 interface OllamaChatResponse {

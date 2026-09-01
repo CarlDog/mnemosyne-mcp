@@ -4,7 +4,7 @@
 import type { Router } from "express";
 import type { OcClient } from "../oc-client.js";
 import type { ListStoryCatalog } from "../application/list-stories.js";
-import { toStorySummary } from "../stories.js";
+import { toStorySummary } from "../application/catalog-policy.js";
 import { asyncRoute, requireStory } from "./helpers.js";
 
 export function registerStoryRoutes(

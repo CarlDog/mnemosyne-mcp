@@ -1,5 +1,4 @@
-import type { ContextBundle } from "../../prompt.js";
-import type { ValidationReport } from "../../validator.js";
+import type { ContextBundle, ValidationReport } from "../model.js";
 
 export type StoryValidationResult = ValidationReport;
 
