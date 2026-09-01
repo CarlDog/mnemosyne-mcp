@@ -50,10 +50,9 @@ export type ValidationReport = z.infer<typeof ValidationReportSchema>;
 // The same contract as literal JSON Schema, sent as Ollama's top-level
 // `format` field so the daemon constrains generation to the shape (verified
 // accepted and enforced against the deployed daemon, 0.32.15, 2026-08-28).
-// Hand-maintained rather than derived: this repo is on zod 3, which has no
-// toJSONSchema (assessment's explicit guidance -- do not upgrade zod for
-// this). tests/validator-schema.test.ts pins the two copies against each
-// other so they cannot drift silently.
+// Hand-maintained as the explicit provider request contract.
+// tests/validator-schema.test.ts pins it against the runtime zod schema so the
+// two copies cannot drift silently.
 export const VALIDATION_REPORT_JSON_SCHEMA = {
   type: "object",
   properties: {

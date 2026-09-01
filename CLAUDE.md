@@ -60,7 +60,7 @@ assessments listed under "Layout" below.
 
 ## Stack
 
-- TypeScript (Node 22+, ESM, `NodeNext` module resolution)
+- TypeScript (Node 24+, ESM, `NodeNext` module resolution)
 - `@modelcontextprotocol/sdk` (high-level `McpServer` API)
 - `zod` for tool input schemas
 - `vitest` for tests
@@ -485,7 +485,7 @@ Key architectural decisions (see ARCHITECTURE.md for full reasoning):
 ## Common Commands
 
 ```bash
-npm ci                 # deterministic install (Node 22, npm 10.9.8)
+npm ci                 # deterministic install (Node 24, npm 11.19.0)
 npm run build          # compile server + build/copy Web UI into dist/
 npm run dev            # tsx src/index.ts
 npm run typecheck      # tsc -p tsconfig.typecheck.json (src + tests)

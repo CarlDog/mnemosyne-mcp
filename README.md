@@ -120,7 +120,7 @@ cp .env.example .env      # then edit -- see below
 process environment, so pass it one of three ways:
 
 ```bash
-node --env-file=.env dist/index.js   # Node 22+, manual run
+node --env-file=.env dist/index.js   # Node 24+, manual run
 ```
 
 …or export the vars into your shell before `npm run dev`, or — most commonly —
@@ -158,7 +158,7 @@ started by `npm run dev`.
 
 ## Stack
 
-- TypeScript (Node 22+, ESM, `NodeNext` module resolution)
+- TypeScript (Node 24+, ESM, `NodeNext` module resolution)
 - `@modelcontextprotocol/sdk` (high-level `McpServer` API)
 - `zod` for tool input schemas
 - `vitest` for tests
@@ -178,7 +178,7 @@ safe remote capability. See the
 ## Common Commands
 
 ```bash
-npm ci                 # deterministic install (Node 22, npm 10.9.8)
+npm ci                 # deterministic install (Node 24, npm 11.19.0)
 npm run build          # compile server + build/copy Web UI into dist/
 npm run dev            # tsx src/index.ts
 npm run typecheck      # tsc -p tsconfig.typecheck.json (src + tests)
