@@ -8,7 +8,7 @@ import type {
   StoryConstraintReader,
   StoryContentValidator,
 } from "./ports/story-validation.js";
-import { classifyVerdict } from "../validator.js";
+import { classifyVerdict } from "./validation-policy.js";
 
 export interface RevalidateFailure {
   name: string;

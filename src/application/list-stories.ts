@@ -1,6 +1,7 @@
 // Shared story-catalog read use case for inbound drivers.
 
-import { toStorySummary, type StorySummary } from "../stories.js";
+import type { StorySummary } from "../stories.js";
+import { toStorySummary } from "./catalog-policy.js";
 import type { StoryCatalogPort } from "./ports/catalog.js";
 
 export interface StoryCatalogResult {
