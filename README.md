@@ -1,10 +1,5 @@
 # mnemosyne-mcp
 
-<!-- fleet-confidence -->
-![code confidence](https://img.shields.io/badge/code_confidence-fair-orange) <sub>· `claude-opus-4-8[1m]` · 2026-07-07 · [details](https://github.com/CarlDog/mnemosyne-mcp/issues/1)</sub>
-<!-- /fleet-confidence -->
-
-
 MCP server for long-form storytelling on top of OpenChronicle memory.
 
 Mnemosyne owns narrative logic; OpenChronicle (OC) owns persistent memory.
@@ -89,8 +84,8 @@ live-verification status per provider. Related docs:
 
 Mnemosyne is hexagonal: `src/tools/` and `src/api/` are independent inbound
 drivers over the same bound application contract. `src/application/` owns the
-continuation, validation, scene-revalidation, and catalog use cases plus their
-outbound ports and pure policy. `src/adapters/` implements OC, model-provider,
+continuation, validation, scene-revalidation, and catalog use cases, their
+structural models, outbound ports, and pure policy. `src/adapters/` implements OC, model-provider,
 persistence, environment, clock, and logging capabilities. `src/index.ts` is
 the only composition root: it builds concrete adapters, binds
 `ApplicationUseCases`, and injects that bundle into both drivers.
@@ -98,7 +93,9 @@ the only composition root: it builds concrete adapters, binds
 `tests/architecture-boundaries.test.ts` parses the TypeScript AST to prevent
 driver cross-imports and infrastructure dependencies from entering the
 application layer, require port routing, and keep concrete construction at the
-composition root. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full
+composition root. Application-internal relative imports are resolved by path;
+only an explicit allowlist of pure legacy modules may sit outside that layer.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full
 dependency rules.
 
 ## Setup
@@ -114,7 +111,7 @@ and the server exits at startup without the first:
    either way.
 
 ```bash
-npm install
+npm ci
 npm run build
 cp .env.example .env      # then edit -- see below
 ```
@@ -181,7 +178,7 @@ safe remote capability. See the
 ## Common Commands
 
 ```bash
-npm install            # install deps
+npm ci                 # deterministic install (Node 22, npm 10.9.8)
 npm run build          # compile server + build/copy Web UI into dist/
 npm run dev            # tsx src/index.ts
 npm run typecheck      # tsc -p tsconfig.typecheck.json (src + tests)
@@ -208,7 +205,7 @@ authoring mapping and rejection rules. The overlay verifier checks the exact
 manifest, baseline/draft hashes, active/isolated/merged structures, and merged
 import preflight; it performs no promotion or import.
 
-`npm test` green does **not** mean the integration surface ran. 64 of the 463
+`npm test` green does **not** mean the integration surface ran. 64 of the 481
 tests are env-gated and skip unless their variables are exported **into the
 shell** — `vitest.config.ts` loads no dotenv, so a populated `.env` does not
 enable them. Use `OC_URL=...` for the OpenChronicle suites, adding

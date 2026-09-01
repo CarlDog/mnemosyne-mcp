@@ -13,8 +13,8 @@ Status lives in [STATUS.md](STATUS.md) — read it first. This section names
 only what is in flight; it must never restate STATUS.md's Done log. (When
 the two disagree, STATUS.md is newer.)
 
-**Nothing is in flight (2026-08-31).** The hexagonal architecture refactor is
-complete and locally verified; the Living Canon overlay pass is also closed
+**Nothing is in flight (2026-08-31).** The hexagonal architecture refactor and
+phase-end audit remediation are complete and locally verified; the Living Canon overlay pass is also closed
 at its operator-approval boundary; no draft was promoted or imported. The
 external-system research program also remains closed. Its one pending operator
 ask is labeling the enrichment-benchmark fixtures (`MNEMO_QUERY_ENRICHMENT`
@@ -485,14 +485,14 @@ Key architectural decisions (see ARCHITECTURE.md for full reasoning):
 ## Common Commands
 
 ```bash
-npm install            # install deps
+npm ci                 # deterministic install (Node 22, npm 10.9.8)
 npm run build          # compile server + build/copy Web UI into dist/
 npm run dev            # tsx src/index.ts
 npm run typecheck      # tsc -p tsconfig.typecheck.json (src + tests)
 npm run lint           # eslint .
 npm run format         # prettier --write .
 npm run format:check   # prettier --check . (CI gates on this -- run before pushing)
-npm test               # vitest run (64 of 463 tests are env-gated; see below)
+npm test               # vitest run (64 of 481 tests are env-gated; see below)
 ```
 
 `npm test` green does **not** mean the integration surface ran. Every

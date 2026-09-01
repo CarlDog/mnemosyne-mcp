@@ -2,6 +2,16 @@
 
 **Last updated:** 2026-08-31.
 
+**Phase-end audit punch list closed (2026-08-31).** Application ports now use
+application-owned structural models; the AST guard resolves relative paths and
+rejects bare packages plus unapproved outer modules for runtime and type-only
+imports. Duplicate story/entity catalog projections were consolidated into
+application policy. Prompt rendering, scene-context selection, and Ollama
+request policy were extracted from mixed large modules. README/CLAUDE counts
+and setup guidance are current, the stale confidence badge is gone, and the Web
+UI runs ESLint 10 with zero warnings. Node 22 and npm 10.9.8 are declared via
+`.nvmrc`, `engines`, and `packageManager`; clean installs use `npm ci`.
+
 **Hexagonal architecture milestone complete (2026-08-31).** MCP tools and REST
 routes are independent inbound drivers over one composition-root-built
 `ApplicationUseCases` contract. Continuation, validation, scene revalidation,
@@ -25,7 +35,7 @@ promoted or imported, all active canon trees remained hash-stable, and
 promotion remains an explicit operator decision. The scaffold also preserves
 the export entity key as character identity so a display/current `Name:` field
 cannot silently create a duplicate runtime character. Repository verification
-was green at 399 passing / 64 skipped tests (463 total) at that checkpoint.
+was green at 399 passing / 64 skipped tests (463 total) at that historical checkpoint.
 GhostHunters also gained a control-only Dovecoast prequel seed bank covering a
 Golden Age of Piracy story (1650–1730) and a geographically western,
 Dovecoast-linked Old West story (1865–1895). The ideas establish no past event

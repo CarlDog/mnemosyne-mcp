@@ -16,6 +16,11 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 - Replaced regex source checks with TypeScript-AST architecture enforcement for
   driver independence, application dependency direction, port routing, and
   composition-root ownership.
+- Moved boundary models and pure catalog, prompt-rendering, scene-strategy, and
+  Ollama request policy into focused modules; removed duplicate projections.
+- Upgraded the Web UI to ESLint 10-compatible plugins with zero-warning lint,
+  and declared the Node 22/npm 10.9.8 deterministic install baseline.
+- Removed the stale confidence badge and refreshed setup and test-count docs.
 
 ### Verification
 
