@@ -208,11 +208,11 @@ describe("structured-output path", () => {
 
 describe("JSON Schema / zod schema drift guard", () => {
   // The literal JSON Schema (sent to Ollama) is hand-maintained because
-  // this repo is on zod 3 (no toJSONSchema). These assertions compare it
-  // structurally against the zod source of truth so an edit to one copy
+  // The request contract remains an explicit literal. These assertions compare
+  // it structurally against the zod source of truth so an edit to one copy
   // fails here until the other follows.
   const reportShape = ValidationReportSchema.shape;
-  const issueShape = (reportShape.issues as z.ZodArray<z.AnyZodObject>).element
+  const issueShape = (reportShape.issues as z.ZodArray<z.ZodObject>).element
     .shape;
 
   it("report-level keys and required list match", () => {
@@ -233,8 +233,7 @@ describe("JSON Schema / zod schema drift guard", () => {
   });
 
   it("severity enum matches", () => {
-    const zodEnum = (issueShape.severity as z.ZodEnum<[string, ...string[]]>)
-      .options;
+    const zodEnum = (issueShape.severity as z.ZodEnum).options;
     expect([
       ...VALIDATION_REPORT_JSON_SCHEMA.properties.issues.items.properties
         .severity.enum,

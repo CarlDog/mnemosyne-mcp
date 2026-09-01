@@ -53,6 +53,10 @@ updates:
       # current while deferring only the incompatible TypeScript 7 line.
       - dependency-name: typescript
         versions: ["7.x"]
+      # Keep declaration majors aligned with the Node runtime floor. Remove
+      # this only when engines.node and CI move in the same change.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       npm-dev:
         dependency-type: development
@@ -85,6 +89,10 @@ updates:
       # current while deferring only the incompatible TypeScript 7 line.
       - dependency-name: typescript
         versions: ["7.x"]
+      # Keep declaration majors aligned with the Node runtime floor. Remove
+      # this only when engines.node and CI move in the same change.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       npm-dev:
         dependency-type: development
