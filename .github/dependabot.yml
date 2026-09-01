@@ -48,6 +48,11 @@ updates:
     labels:
       - dependencies
       - npm
+    ignore:
+      # typescript-eslint 8.65 accepts TypeScript <6.1. Keep TypeScript 6
+      # current while deferring only the incompatible TypeScript 7 line.
+      - dependency-name: typescript
+        versions: ["7.x"]
     groups:
       npm-dev:
         dependency-type: development
@@ -75,6 +80,11 @@ updates:
     labels:
       - dependencies
       - npm
+    ignore:
+      # typescript-eslint 8.69 accepts TypeScript <6.1. Keep TypeScript 6
+      # current while deferring only the incompatible TypeScript 7 line.
+      - dependency-name: typescript
+        versions: ["7.x"]
     groups:
       npm-dev:
         dependency-type: development
