@@ -288,10 +288,11 @@ semantic prompt and quote-grounding instructions, then parse the result with
 the runtime schema. JSON Schema constrains shape; it does not prove that a
 quoted passage exists or that a judgment is correct.
 
-Mnemosyne currently uses Zod 3. Do not assume the Zod 4 `toJSONSchema` API or
-upgrade Zod only for this feature. A hand-maintained literal schema plus a
-drift/fixture test is adequate, or a small compatible converter can be
-considered if several structured contracts later exist.
+Mnemosyne upgraded to Zod 4 with dependency PR #23 on 2026-08-31. The provider
+request contract remains a hand-maintained literal schema with a drift test
+against the runtime schema. Zod 4's `toJSONSchema` is now available, but using
+it would be a separate contract migration and is unnecessary while this single
+explicit wire schema remains readable and fully covered.
 
 Do not add Ollama's `format`, `think`, `truncate`, and future native flags to
 the already overloaded generic provider input. Prefer either a narrow
