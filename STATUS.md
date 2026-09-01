@@ -2,6 +2,14 @@
 
 **Last updated:** 2026-08-31.
 
+**Post-push CI follow-up closed (2026-08-31).** The architecture boundary
+test now uses platform-neutral containment and exercises both Windows and
+POSIX path dialects, fixing the Ubuntu/macOS-only failure. Dependabot now
+defers only TypeScript 7 in both npm ecosystems while `typescript-eslint`
+requires TypeScript `<6.1`; TypeScript 5/6 updates remain enabled. Local
+verification is green at 418 passing / 64 intentionally skipped tests (482
+total), plus typecheck, lint, and Prettier.
+
 **Phase-end audit punch list closed (2026-08-31).** Application ports now use
 application-owned structural models; the AST guard resolves relative paths and
 rejects bare packages plus unapproved outer modules for runtime and type-only
@@ -21,8 +29,8 @@ environment, clock, and logging behavior lives under `src/adapters/` and is
 constructed only in `src/index.ts`. Compatibility re-exports used during the
 migration are removed. The architecture guard parses TypeScript ASTs to enforce
 driver independence, port routing, and composition-root ownership. Repository
-verification is green at 417 passing / 64 intentionally env-gated skipped tests
-(481 total), plus typecheck, lint, Prettier, and the production server/Web UI
+verification is green at 418 passing / 64 intentionally env-gated skipped tests
+(482 total), plus typecheck, lint, Prettier, and the production server/Web UI
 build.
 
 **Story-authoring checkpoint (2026-08-30): eight review-gated Living Canon
@@ -588,8 +596,8 @@ Dovecoast smoke test against `nous-hermes2-mixtral` + `phi4:14b`:
 
 37/37 tests passed at the time.
 
-Current local count (2026-08-31): 417 passing, 64 integration/live-provider
-tests skipping cleanly without their external-service environment (481 total).
+Current local count (2026-08-31): 418 passing, 64 integration/live-provider
+tests skipping cleanly without their external-service environment (482 total).
 Typecheck, lint, and Prettier are green. Historical counts below remain attached
 to the milestones at which they were measured.
 
