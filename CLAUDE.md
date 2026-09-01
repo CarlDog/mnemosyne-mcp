@@ -492,7 +492,7 @@ npm run typecheck      # tsc -p tsconfig.typecheck.json (src + tests)
 npm run lint           # eslint .
 npm run format         # prettier --write .
 npm run format:check   # prettier --check . (CI gates on this -- run before pushing)
-npm test               # vitest run (64 of 481 tests are env-gated; see below)
+npm test               # vitest run (64 of 482 tests are env-gated; see below)
 ```
 
 `npm test` green does **not** mean the integration surface ran. Every

@@ -205,7 +205,7 @@ authoring mapping and rejection rules. The overlay verifier checks the exact
 manifest, baseline/draft hashes, active/isolated/merged structures, and merged
 import preflight; it performs no promotion or import.
 
-`npm test` green does **not** mean the integration surface ran. 64 of the 481
+`npm test` green does **not** mean the integration surface ran. 64 of the 482
 tests are env-gated and skip unless their variables are exported **into the
 shell** — `vitest.config.ts` loads no dotenv, so a populated `.env` does not
 enable them. Use `OC_URL=...` for the OpenChronicle suites, adding

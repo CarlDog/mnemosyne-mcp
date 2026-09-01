@@ -21,9 +21,13 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 - Upgraded the Web UI to ESLint 10-compatible plugins with zero-warning lint,
   and declared the Node 22/npm 10.9.8 deterministic install baseline.
 - Removed the stale confidence badge and refreshed setup and test-count docs.
+- Made architecture path-containment enforcement portable across Windows and
+  POSIX, with both path dialects covered by regression tests.
+- Deferred only TypeScript 7 in both Dependabot npm ecosystems until the
+  TypeScript ESLint peer range supports it; TypeScript 5/6 remain eligible.
 
 ### Verification
 
-- 417 tests pass; 64 live-service tests skip intentionally without their
+- 418 tests pass; 64 live-service tests skip intentionally without their
   external-service environment.
 - Typecheck, lint, Prettier, production build, gitleaks, and PII checks pass.
