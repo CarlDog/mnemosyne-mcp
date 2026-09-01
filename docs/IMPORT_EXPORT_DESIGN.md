@@ -11,9 +11,16 @@ The design was derived from a three-lane research pass (2026-08-21) plus an
 independent two-reviewer second-opinion pass (one blind derivation, one
 adversarial critique), all archived in the session record. Sources:
 
+The historical source list below retains GhostHunters where it identifies the
+project's name at the time. Its current storyline name is The Blackwood Case
+within The Miskatonic Archives; preserved source filenames and export
+identifiers remain provenance rather than current naming.
+
 1. **The operator's original ChatGPT storytelling projects**
    (`D:\OneDrive\Technology\ChatGPT\Projects` — Story 03, GhostHunters,
-   story-01, story-14). One evolving idiom, not a fixed format: only
+   story-01, story-14). The source project named GhostHunters is now
+   The Blackwood Case within The Miskatonic Archives; the old name is retained
+   here as source provenance. One evolving idiom, not a fixed format: only
    Project Instructions + Style Guide appear in all four; folder names
    actively lie (story-01' "Profiles/Location" files are worldbuilding
    content); files are composites (every Project Instructions file mixes

@@ -98,13 +98,16 @@ export function buildExportDocument(
 }
 
 /** Filesystem-safe story slug — [a-z0-9-] only, so it works on every
- * filesystem the data dir can live on. A name that slugs to nothing
- * (e.g. entirely non-Latin) falls back to the story id's prefix rather
- * than a shared "story" bucket, so two such stories can't collide.
+ * filesystem the data dir can live on. For a setting-qualified title of
+ * the form "The Setting: The Storyline", the setting's display-only leading
+ * article is omitted while internal articles remain. A name that slugs to
+ * nothing (e.g. entirely non-Latin) falls back to the story id's prefix
+ * rather than a shared "story" bucket, so two such stories can't collide.
  * Names both the per-story exports subfolder and the file itself. */
 export function storySlug(storyName: string, storyId?: string): string {
   return (
     storyName
+      .replace(/^The (?=[^:]+:)/i, "")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "") ||

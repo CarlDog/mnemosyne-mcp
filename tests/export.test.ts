@@ -184,6 +184,12 @@ describe("storySlug (pure)", () => {
   it("names the per-story exports subfolder identically to the filename slug", () => {
     expect(storySlug("Story 03")).toBe("story-03");
     expect(storySlug("Kimmy's Night Shift")).toBe("kimmy-s-night-shift");
+    expect(storySlug("The Miskatonic Archives: The Blackwood Case")).toBe(
+      "story-06",
+    );
+    expect(storySlug("Story 10")).toBe(
+      "story-10",
+    );
   });
 
   it("shares the filename builder's id-prefix fallback", () => {

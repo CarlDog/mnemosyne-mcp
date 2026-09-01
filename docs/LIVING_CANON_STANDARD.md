@@ -273,8 +273,8 @@ Examples from the current collection:
 
 - **story-01:** mythic adventure, regional breadth, dangerous wonder, and
   encounter momentum;
-- **GhostHunters:** restrained investigative horror, fair evidence, incomplete
-  explanations, and unrelated hauntings;
+- **The Miskatonic Archives: The Blackwood Case:** restrained investigative
+  horror, fair evidence, incomplete explanations, and unrelated hauntings;
 - **Story 03:** grounded contemporary realism with no magic; heightened
   emotion must retain a physical or human cause;
 - **story-14:** surreal transformation with intimate, traceable causes and
@@ -462,7 +462,7 @@ fully captured only when both agree.
 When comparing stories, transfer **craft patterns**, not canon:
 
 - story-01 demonstrates scalable population and world breadth.
-- GhostHunters demonstrates mystery ecology and misdirection.
+- The Blackwood Case demonstrates mystery ecology and misdirection.
 - Story 03 demonstrates lived relationships, rooms, and mundane aftermath.
 - story-14 demonstrates stateful objects, locations, and transformation.
 - story-08 demonstrates truth tiers, agency guardrails, and canon promotion.

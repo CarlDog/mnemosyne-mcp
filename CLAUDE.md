@@ -29,12 +29,17 @@ it; Star Wars: The Black Ledger is not, and is structurally unlike the others
 
 **Eight review-gated Living Canon overlays are complete on disk (2026-08-30):**
 story-01 (71 operations → 143 entities), Brass & Nerve (20 → 43), Chaos
-Saga (60 → 73), GhostHunters (60 → 105), Story 04 (41 → 70),
+Saga (60 → 73), The Miskatonic Archives: The Blackwood Case (formerly
+GhostHunters; 60 → 105), Story 04 (41 → 70),
 story-08 (40 → 74), Story 10 (19 → 41), and Story 12
 (13 → 39). Each retains PASS/control evidence and passed the zero-write import
-preflight. None was promoted or imported, active canon remained hash-stable,
-and promotion still requires explicit operator approval. GhostHunters also has
-a control-only Dovecoast prequel seed bank.
+preflight. At that checkpoint none was promoted or imported, active canon
+remained hash-stable, and promotion still required explicit operator approval.
+The 2026-09-01 title-only rename refreshed the affected canon wording and
+manifest hashes without promoting an overlay or importing canon. The Miskatonic
+Archives also has a control-only historical-storyline seed bank linked to
+Dovecoast, plus separate draft-only packages for The Black-Salt Compact and The
+Last Eastbound Run; neither package has canon/ or story.json.
 
 `story-13` (55 entities) remains tracked in
 [STORYLINE_RESEARCH_BACKLOG.md](docs/STORYLINE_RESEARCH_BACKLOG.md); do not build
