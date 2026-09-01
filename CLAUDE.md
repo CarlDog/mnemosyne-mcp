@@ -13,7 +13,8 @@ Status lives in [STATUS.md](STATUS.md) — read it first. This section names
 only what is in flight; it must never restate STATUS.md's Done log. (When
 the two disagree, STATUS.md is newer.)
 
-**Nothing is in flight (2026-08-30).** The Living Canon overlay pass is closed
+**Nothing is in flight (2026-08-31).** The hexagonal architecture refactor is
+complete and locally verified; the Living Canon overlay pass is also closed
 at its operator-approval boundary; no draft was promoted or imported. The
 external-system research program also remains closed. Its one pending operator
 ask is labeling the enrichment-benchmark fixtures (`MNEMO_QUERY_ENRICHMENT`
@@ -96,19 +97,16 @@ assessments listed under "Layout" below.
   `helpers.ts` (`asyncRoute()`, input/error handling).
 - `src/application/` — transport-independent application use cases shared by
   MCP and REST drivers. Continuation, standalone validation, and bulk scene
-  revalidation plus story/entity catalog reads live here. These are the first
-  incremental hexagonal slices. `application/ports/story-validation.ts` and
-  `application/ports/scene-validation.ts` define explicit validation and scene
-  persistence/observability contracts; continuation and catalog reads still
-  need their concrete OC/LLM dependencies migrated.
-  `tests/architecture-boundaries.test.ts` prevents imports between the MCP/REST
-  drivers, prevents application use cases from importing either driver tree,
-  and pins migrated validation use cases to their permitted contracts.
-- `src/adapters/` — concrete outbound adapters. `story-validation.ts` binds the
-  existing OC context loader and local LLM validator; `scene-validation.ts`
-  provides capped scene enumeration, verdict retagging, and failure logging.
-  `src/index.ts` constructs these bindings once and injects the use cases into
-  both inbound drivers.
+  revalidation plus story/entity catalog reads live here. `application/ports/`
+  owns the continuation, catalog, validation, scene-persistence, and observer
+  contracts; catalog/verdict policy is pure and application-owned.
+  `tests/architecture-boundaries.test.ts` parses TypeScript ASTs to enforce
+  driver independence, application dependency direction, port routing, and
+  composition-root ownership.
+- `src/adapters/` — concrete outbound adapters for OC, generators, validation,
+  persistence, environment, clock, and logging. `src/index.ts` constructs these
+  bindings once, assembles one `ApplicationUseCases` contract, and injects it
+  into both inbound drivers.
 - `webui/` — the actual web UI: entity-library browse/detail plus the
   interactive continue/validate flow. A separate npm package — React 19 +
   Vite + react-router,

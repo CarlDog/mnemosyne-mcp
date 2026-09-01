@@ -2,6 +2,19 @@
 
 **Last updated:** 2026-08-31.
 
+**Hexagonal architecture milestone complete (2026-08-31).** MCP tools and REST
+routes are independent inbound drivers over one composition-root-built
+`ApplicationUseCases` contract. Continuation, validation, scene revalidation,
+and story/entity catalogs depend on application-owned outbound ports and pure
+application policy; concrete OpenChronicle, model-provider, persistence,
+environment, clock, and logging behavior lives under `src/adapters/` and is
+constructed only in `src/index.ts`. Compatibility re-exports used during the
+migration are removed. The architecture guard parses TypeScript ASTs to enforce
+driver independence, port routing, and composition-root ownership. Repository
+verification is green at 417 passing / 64 intentionally env-gated skipped tests
+(481 total), plus typecheck, lint, Prettier, and the production server/Web UI
+build.
+
 **Story-authoring checkpoint (2026-08-30): eight review-gated Living Canon
 overlays are complete.** BattleChasers has 71 operations → 143 entities; Brass
 & Nerve 20 → 43; Chaos Saga 60 → 73; GhostHunters 60 → 105; Midnight Is a
@@ -12,8 +25,7 @@ promoted or imported, all active canon trees remained hash-stable, and
 promotion remains an explicit operator decision. The scaffold also preserves
 the export entity key as character identity so a display/current `Name:` field
 cannot silently create a duplicate runtime character. Repository verification
-is green at 399 passing / 64 skipped tests (463 total) plus typecheck, lint, and
-Prettier.
+was green at 399 passing / 64 skipped tests (463 total) at that checkpoint.
 GhostHunters also gained a control-only Dovecoast prequel seed bank covering a
 Golden Age of Piracy story (1650–1730) and a geographically western,
 Dovecoast-linked Old West story (1865–1895). The ideas establish no past event
@@ -566,12 +578,22 @@ Dovecoast smoke test against `nous-hermes2-mixtral` + `phi4:14b`:
 
 37/37 tests passed at the time.
 
-Current local count (2026-08-30): 399 passing, 64 integration/live-provider
-tests skipping cleanly without their external-service environment (463 total).
+Current local count (2026-08-31): 417 passing, 64 integration/live-provider
+tests skipping cleanly without their external-service environment (481 total).
 Typecheck, lint, and Prettier are green. Historical counts below remain attached
 to the milestones at which they were measured.
 
 ## Done
+
+- **Hexagonal architecture refactor completed** (2026-08-31). Five application
+  use cases are exposed through one `ApplicationUseCases` contract assembled in
+  `src/index.ts`: continuation, standalone validation, scene revalidation, and
+  story/entity catalogs. Application-owned ports isolate OC, generation,
+  validation, persistence, environment, clock, and logging concerns behind
+  concrete adapters. MCP and REST drivers receive bound use cases, the former
+  compatibility exports are gone, and an AST-based dependency test enforces the
+  resulting boundaries and composition-root ownership. Full local verification:
+  417 pass, 64 intentionally gated skip, typecheck/lint/format/build green.
 
 - **Bulk scene revalidation moved behind outbound ports** (2026-08-31).
   The use case now reuses the story-constraint-reader and content-validator
@@ -581,8 +603,7 @@ to the milestones at which they were measured.
   remains sequential, records one failed scene without aborting later scenes,
   and assigns clean/error verdicts correctly. `src/index.ts` injects the bound
   use case into both MCP and REST drivers. Continuation and catalog reads remain
-  the concrete-dependency frontier, so full hexagonal compliance is still not
-  claimed.
+  that was the final precursor to the completed milestone recorded above.
 
 - **Standalone validation gained explicit outbound ports** (2026-08-31).
   The application use case now depends only on story-constraint-reader and
@@ -591,28 +612,25 @@ to the milestones at which they were measured.
   `src/index.ts` binds that adapter once for both MCP and REST injection. Focused
   tests pin port ordering and binding, while the architecture test prevents the
   migrated use case from regaining concrete client/provider imports. This is the
-  first outbound-port slice; continuation, revalidation, and catalog reads still
-  have concrete OC/LLM dependencies and keep the repository short of full
-  hexagonal compliance.
+  first outbound-port slice; the remaining dependencies were migrated in the
+  completed milestone recorded above.
 
 - **Story and entity catalog reads crossed the application boundary**
   (2026-08-31). Shared catalog use cases now own story-summary projection and
   complete entity enumeration/filtering, including body stripping and
   `skipped_memory_ids`; MCP and REST drivers only add their transport-specific
   concerns. Focused tests cover both projections, and an executable architecture
-  test now prevents MCP/REST drivers from importing one another or application
-  use cases from importing either inbound driver tree. Concrete OC/LLM outbound
-  ports remain the next architectural boundary rather than being implied done.
+  test prevented MCP/REST drivers from importing one another or application use
+  cases from importing either inbound driver tree; explicit catalog ports and
+  AST enforcement followed in the completed milestone above.
 
 - **First hexagonal application-boundary slice completed** (2026-08-31).
   `mnemo_continue`, `mnemo_validate`, and `mnemo_revalidate_scenes` now place
   shared orchestration in `src/application/`; the MCP tools and matching REST
   routes are inbound driver adapters over those use cases and no longer import
-  behavior from one another. Existing tool-module exports remain as migration
-  compatibility edges. The architecture guide and repository map now document
-  the dependency direction and explicitly record that concrete OC/LLM outbound
-  ports are still future work, so this milestone does not claim full hexagonal
-  compliance.
+  behavior from one another. This was the first slice; the compatibility edges
+  and remaining concrete dependencies were removed by the completed milestone
+  above.
 
 - **Living Canon draft-overlay closeout completed** (2026-08-30).
   Eight adversarially closed overlays now retain PASS evidence: BattleChasers

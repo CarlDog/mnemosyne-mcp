@@ -85,6 +85,22 @@ live-verification status per provider. Related docs:
   Botify projections, and snapshot-before-write workflow; design only, not
   implemented or ratified
 
+## Architecture
+
+Mnemosyne is hexagonal: `src/tools/` and `src/api/` are independent inbound
+drivers over the same bound application contract. `src/application/` owns the
+continuation, validation, scene-revalidation, and catalog use cases plus their
+outbound ports and pure policy. `src/adapters/` implements OC, model-provider,
+persistence, environment, clock, and logging capabilities. `src/index.ts` is
+the only composition root: it builds concrete adapters, binds
+`ApplicationUseCases`, and injects that bundle into both drivers.
+
+`tests/architecture-boundaries.test.ts` parses the TypeScript AST to prevent
+driver cross-imports and infrastructure dependencies from entering the
+application layer, require port routing, and keep concrete construction at the
+composition root. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full
+dependency rules.
+
 ## Setup
 
 Mnemosyne is a *client* of two services you run yourself. Neither is bundled,

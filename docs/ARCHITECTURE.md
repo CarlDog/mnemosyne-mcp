@@ -34,8 +34,7 @@ thin adapters over the same core.
 
 ### Hexagonal boundary direction
 
-Mnemosyne is migrating incrementally toward hexagonal architecture. The
-current dependency direction is:
+Mnemosyne uses hexagonal architecture. The enforced dependency direction is:
 
 ```text
 MCP tools (src/tools/) ─┐
@@ -45,7 +44,7 @@ REST API (src/api/) ───┘              │
                                       │   (src/application/ports/)
                                       │             ^
                                       v             │
-                         existing domain modules    │
+                         pure application policy    │
                                                     │
                          adapters (src/adapters/) ──┘
 ```
@@ -57,27 +56,23 @@ REST API (src/api/) ───┘              │
   standalone validation, bulk scene revalidation, and story/entity catalog
   reads live here so both inbound adapters execute the same policy and response
   projections.
-- Standalone validation and bulk scene revalidation depend on explicit
-  story-constraint-reader and content-validator ports. Revalidation adds a
-  scene-validation-store port for capped enumeration and verdict retagging plus
-  an observer port for isolated failure logging. `src/adapters/` implements
-  these contracts with the existing OpenChronicle, local LLM, and logging
+- `src/application/ports/` owns use-case-shaped contracts for continuation,
+  catalogs, validation, scene persistence, and observability. Pure catalog and
+  verdict policy also lives in `src/application/`; application code has no
+  concrete OC, provider, clock, environment, or logger dependency.
+- `src/adapters/` implements those ports with the existing OpenChronicle,
+  generator, validator, persistence, environment, clock, and logging
   infrastructure.
-- Continuation, catalog reads, and existing root modules still combine domain
-  policy with concrete OC and LLM integration types. Their outbound-port
-  extraction remains incremental, so the repository is not yet fully
-  hexagonal.
 - `src/index.ts` remains the composition root where concrete clients,
-  providers, outbound adapters, and inbound transports are assembled.
+  providers, outbound adapters, the bound `ApplicationUseCases` contract, and
+  inbound transports are assembled.
 
-New shared behavior should enter through an application use case rather than
-one inbound adapter importing another. Compatibility re-exports may preserve
-old import paths during migration, but new callers should import from
-`src/application/`. `tests/architecture-boundaries.test.ts` enforces that MCP,
-REST, and application source trees do not acquire inward-facing imports from
-one another, and that the migrated standalone-validation use case only imports
-its port contracts. The same test restricts bulk revalidation to its ports and
-the pure verdict-classification policy.
+New shared behavior enters through an application use case rather than one
+inbound adapter importing another. Architectural compatibility re-exports are
+not retained. `tests/architecture-boundaries.test.ts` uses the TypeScript
+compiler AST to enforce MCP/REST independence, prevent application-to-driver or
+infrastructure imports, require each use case's outbound ports, and verify that
+concrete adapter factories are called only by `src/index.ts`.
 
 **What Mnemosyne is NOT:**
 - Not an extension to OpenChronicle. OC v3 deliberately stayed lean and
