@@ -4,6 +4,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { OcClient } from "../oc-client.js";
 import type { LlmProvider } from "../llm.js";
 import type { ValidateStory } from "../application/validate-story.js";
+import type { RevalidateScenes } from "../application/revalidate-scenes.js";
 import {
   DEFAULT_SCENE_CONTEXT_STRATEGY,
   type SceneContextStrategy,
@@ -22,6 +23,7 @@ export function registerTools(
   generator: LlmProvider,
   validator: LlmProvider,
   validateStory: ValidateStory,
+  revalidateScenes: RevalidateScenes,
   sceneContextStrategy: SceneContextStrategy = DEFAULT_SCENE_CONTEXT_STRATEGY,
   sceneContextFallbackStrategy: SceneContextStrategy = sceneContextStrategy,
   // Caller-supplied filesystem paths are a local-operator capability. Default
@@ -46,5 +48,5 @@ export function registerTools(
   // validationOnly), so scene-context strategy has nothing to control
   // there.
   registerValidateTool(server, oc, validateStory);
-  registerRevalidateTool(server, oc, validator);
+  registerRevalidateTool(server, oc, revalidateScenes);
 }

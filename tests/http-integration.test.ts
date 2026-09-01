@@ -33,6 +33,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { mountMcpHttp } from "../src/shared/http-transport.js";
 import { registerTools } from "../src/tools/index.js";
 import { createStoryValidationAdapter } from "../src/adapters/story-validation.js";
+import { createSceneRevalidationAdapter } from "../src/adapters/scene-validation.js";
 import type { LlmProvider } from "../src/llm.js";
 import { createStory } from "../src/stories.js";
 import { setCurrentStoryId } from "../src/config.js";
@@ -106,6 +107,7 @@ suite("HTTP transport + story override (real OC, end to end)", () => {
           stubProvider,
           stubProvider,
           createStoryValidationAdapter(oc, stubProvider),
+          createSceneRevalidationAdapter(oc, stubProvider),
           undefined,
           undefined,
           // Serving HTTP -- same value index.ts's makeServer() passes

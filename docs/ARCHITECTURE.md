@@ -57,10 +57,13 @@ REST API (src/api/) ───┘              │
   standalone validation, bulk scene revalidation, and story/entity catalog
   reads live here so both inbound adapters execute the same policy and response
   projections.
-- Standalone validation now depends on explicit story-constraint-reader and
-  content-validator ports. `src/adapters/story-validation.ts` implements them
-  with the existing OpenChronicle context loader and local LLM validator.
-- Other application use cases and existing root modules still combine domain
+- Standalone validation and bulk scene revalidation depend on explicit
+  story-constraint-reader and content-validator ports. Revalidation adds a
+  scene-validation-store port for capped enumeration and verdict retagging plus
+  an observer port for isolated failure logging. `src/adapters/` implements
+  these contracts with the existing OpenChronicle, local LLM, and logging
+  infrastructure.
+- Continuation, catalog reads, and existing root modules still combine domain
   policy with concrete OC and LLM integration types. Their outbound-port
   extraction remains incremental, so the repository is not yet fully
   hexagonal.
@@ -73,7 +76,8 @@ old import paths during migration, but new callers should import from
 `src/application/`. `tests/architecture-boundaries.test.ts` enforces that MCP,
 REST, and application source trees do not acquire inward-facing imports from
 one another, and that the migrated standalone-validation use case only imports
-its port contracts.
+its port contracts. The same test restricts bulk revalidation to its ports and
+the pure verdict-classification policy.
 
 **What Mnemosyne is NOT:**
 - Not an extension to OpenChronicle. OC v3 deliberately stayed lean and

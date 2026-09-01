@@ -18,7 +18,7 @@ import {
 } from "../prompt.js";
 import { combineKindroidTarget, type KindroidTarget } from "../stories.js";
 import { continueScene } from "../application/continue-scene.js";
-import { revalidateScenes } from "../application/revalidate-scenes.js";
+import type { RevalidateScenes } from "../application/revalidate-scenes.js";
 import type { ValidateStory } from "../application/validate-story.js";
 import {
   MIN_GROUP_MAX_TURNS,
@@ -88,6 +88,7 @@ export function registerInteractiveRoutes(
   generator: LlmProvider,
   validator: LlmProvider,
   validateStory: ValidateStory,
+  revalidateStoryScenes: RevalidateScenes,
   sceneContextStrategy: SceneContextStrategy,
   sceneContextFallbackStrategy: SceneContextStrategy,
 ): void {
@@ -200,7 +201,7 @@ export function registerInteractiveRoutes(
       const body = parseOr400(revalidateScenesSchema, req.body, res);
       if (!body) return;
 
-      const result = await revalidateScenes(oc, validator, story.id);
+      const result = await revalidateStoryScenes(story.id);
       res.json(result);
     }),
   );

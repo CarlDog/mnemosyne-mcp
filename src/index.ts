@@ -24,6 +24,7 @@ import { GeminiProvider } from "./gemini-provider.js";
 import { OpenAICompatProvider } from "./openai-compat-provider.js";
 import { registerTools } from "./tools/index.js";
 import { createStoryValidationAdapter } from "./adapters/story-validation.js";
+import { createSceneRevalidationAdapter } from "./adapters/scene-validation.js";
 import {} from "./prompt.js";
 import { MNEMOSYNE_VERSION } from "./version.js";
 import { INSTRUCTIONS } from "./instructions.js";
@@ -169,6 +170,7 @@ const validator = new OllamaProvider({
   requireLocal: true,
 });
 const validateStory = createStoryValidationAdapter(oc, validator);
+const revalidateScenes = createSceneRevalidationAdapter(oc, validator);
 log.info("startup", "ollama validator configured", {
   url: OLLAMA_URL,
   validator_model: ollamaValidatorModel,
@@ -240,6 +242,7 @@ function makeServer(): McpServer {
     generator,
     validator,
     validateStory,
+    revalidateScenes,
     SCENE_CONTEXT_STRATEGY,
     SCENE_CONTEXT_FALLBACK_STRATEGY,
     // stdio is a local-operator channel; HTTP is not. Same tool surface, so
@@ -293,6 +296,7 @@ if (httpConfig.port === undefined) {
       generator,
       validator,
       validateStory,
+      revalidateScenes,
       sceneContextStrategy: SCENE_CONTEXT_STRATEGY,
       sceneContextFallbackStrategy: SCENE_CONTEXT_FALLBACK_STRATEGY,
     }),

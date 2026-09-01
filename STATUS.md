@@ -573,6 +573,17 @@ to the milestones at which they were measured.
 
 ## Done
 
+- **Bulk scene revalidation moved behind outbound ports** (2026-08-31).
+  The use case now reuses the story-constraint-reader and content-validator
+  contracts and adds a scene-validation-store port for the existing capped
+  enumeration/retag behavior. Its optional observer preserves per-scene warning
+  logs at the concrete adapter edge. A focused event-order test proves the walk
+  remains sequential, records one failed scene without aborting later scenes,
+  and assigns clean/error verdicts correctly. `src/index.ts` injects the bound
+  use case into both MCP and REST drivers. Continuation and catalog reads remain
+  the concrete-dependency frontier, so full hexagonal compliance is still not
+  claimed.
+
 - **Standalone validation gained explicit outbound ports** (2026-08-31).
   The application use case now depends only on story-constraint-reader and
   content-validator contracts. A concrete adapter wraps the existing
