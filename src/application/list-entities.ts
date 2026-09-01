@@ -1,12 +1,12 @@
 // Shared entity-catalog read use case for inbound drivers.
 
-import {
-  filterListedEntities,
-  type EntitySummary,
-  type ListEntitiesFilter,
-  type RecalledEntity,
+import type {
+  EntitySummary,
+  ListEntitiesFilter,
+  RecalledEntity,
 } from "../entities.js";
 import type { MnemoStory } from "../stories.js";
+import { filterListedEntities } from "./catalog-policy.js";
 import type { EntityCatalogPort } from "./ports/catalog.js";
 
 export interface EntityCatalogResult {

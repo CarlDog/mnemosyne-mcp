@@ -13,12 +13,11 @@
 // drops first, then oldest, then memory_id.
 
 import type { EntityType } from "./entities.js";
-import { log } from "./log.js";
 
 // Same deliberate prose estimate the Ollama sizing has always used
 // (~3.5-4 chars/token; over-provisioning beats truncation). Calibrated
-// against provider-reported input_tokens via logCalibration below --
-// logged, never silently replaced.
+// against provider-reported input_tokens by the outbound continuation adapter
+// -- logged, never silently replaced.
 export const EST_CHARS_PER_TOKEN = 3.5;
 
 export function estimateTokens(chars: number): number {
@@ -42,20 +41,6 @@ export interface ContextEntry {
 }
 
 export type AdmissionMode = "warn" | "enforce";
-
-/** MNEMO_CONTEXT_ADMISSION (ratified default: warn until estimator
- * calibration data accumulates). An unrecognized value falls back to warn
- * with a log line rather than crash-looping a container -- the
- * empty-string-env lesson. */
-export function admissionModeFromEnv(): AdmissionMode {
-  const raw = (process.env.MNEMO_CONTEXT_ADMISSION ?? "").trim().toLowerCase();
-  if (raw === "" || raw === "warn") return "warn";
-  if (raw === "enforce") return "enforce";
-  log.warn("context-plan", "unrecognized MNEMO_CONTEXT_ADMISSION; using warn", {
-    value: raw,
-  });
-  return "warn";
-}
 
 export interface ContextPlan {
   provider: string;
@@ -209,24 +194,4 @@ export function toManifest(
       .filter((e) => e.admission === "dropped")
       .map((e) => ({ memory_id: e.memory_id, reason: e.reason })),
   };
-}
-
-/** Estimator calibration (stage 1): log estimate-vs-actual when the
- * provider reported exact input tokens. Logged, never substituted. */
-export function logCalibration(
-  estTotalTokens: number,
-  reportedInputTokens: number | undefined,
-): void {
-  if (reportedInputTokens === undefined) return;
-  log.info("context-plan", "estimator calibration", {
-    est_tokens: estTotalTokens,
-    reported_input_tokens: reportedInputTokens,
-    delta_pct:
-      reportedInputTokens > 0
-        ? Math.round(
-            ((estTotalTokens - reportedInputTokens) / reportedInputTokens) *
-              100,
-          )
-        : 0,
-  });
 }

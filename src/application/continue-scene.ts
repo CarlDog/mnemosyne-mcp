@@ -4,26 +4,23 @@
 // transport-independent. MCP and HTTP callers are thin adapters that
 // only provide transport-level input parsing and logging.
 
-import type { GeneratedBeat, ModelUsage } from "../llm.js";
-import {
-  buildSystemPrompt,
-  type Mode,
-  type SceneContextStrategy,
-  renderAdmittedBundle,
-} from "../prompt.js";
+import type { Mode, SceneContextStrategy } from "../prompt.js";
 import type { KindroidTarget } from "../stories.js";
-import { classifyVerdict, type ValidationReport } from "../validator.js";
+import type { ValidationReport } from "../validator.js";
 import { makeRunContext, type RunContext } from "../run-context.js";
 import { assertNotAborted, RunOutcomeError } from "../run-outcome.js";
-import { capabilityWarnings } from "../capabilities.js";
 import {
   estimateTokens,
   planContext,
   toManifest,
   type ContextPlanManifest,
 } from "../context-plan.js";
-import { DEFAULT_MAX_TOKENS, NUM_CTX_MARGIN_TOKENS } from "../llm.js";
-import type { ContinuationPort } from "./ports/continuation.js";
+import type {
+  ContinuationBeat,
+  ContinuationPort,
+  ContinuationUsage,
+} from "./ports/continuation.js";
+import { classifyVerdict } from "./validation-policy.js";
 
 export const DEFAULT_MODE: Mode = "director";
 
@@ -99,8 +96,8 @@ export interface ContinueSceneResult {
    * (different models/prompts/cache semantics; a presentation layer can
    * sum). Absent when neither call reported any. */
   usage?: {
-    generator?: ModelUsage;
-    validator?: ModelUsage;
+    generator?: ContinuationUsage;
+    validator?: ContinuationUsage;
   };
   stages_ms: {
     gather_ms: number;
@@ -108,7 +105,7 @@ export interface ContinueSceneResult {
     save_ms: number;
     validate_ms: number;
   };
-  group_ended?: GeneratedBeat["groupEnded"];
+  group_ended?: ContinuationBeat["groupEnded"];
   group_turns?: number;
 }
 
@@ -160,10 +157,12 @@ export async function continueScene(
     provider: port.generatorName,
     model: opts.model,
     inputBudget,
-    outputReserve: opts.maxTokens ?? DEFAULT_MAX_TOKENS,
-    estFixedTokens: estimateTokens(buildSystemPrompt(mode, emptyBundle).length),
+    outputReserve: opts.maxTokens ?? port.defaultMaxTokens,
+    estFixedTokens: estimateTokens(
+      port.buildSystemPrompt(mode, emptyBundle).length,
+    ),
     directionChars: opts.direction.length,
-    marginTokens: NUM_CTX_MARGIN_TOKENS,
+    marginTokens: port.contextMarginTokens,
   });
   const contextPlan: ContextPlanManifest & { companion_selection?: string[] } =
     toManifest(planResult.plan, planResult.entries);
@@ -186,8 +185,8 @@ export async function continueScene(
   // Plan-driven rendering: the prompt contains exactly the admitted set,
   // so the manifest can never describe a payload the model didn't see.
   const admittedIds = new Set(planResult.admitted.map((e) => e.memory_id));
-  const renderedContext = renderAdmittedBundle(context, admittedIds);
-  const systemPrompt = buildSystemPrompt(mode, renderedContext);
+  const renderedContext = port.renderAdmittedContext(context, admittedIds);
+  const systemPrompt = port.buildSystemPrompt(mode, renderedContext);
 
   // Only fetch the story marker (an extra OC round trip) when it could
   // actually matter: no explicit override, a story-bound target is
@@ -208,7 +207,7 @@ export async function continueScene(
   // Warn-don't-break (GENERATOR_CAPABILITIES_DESIGN, ratified): options
   // the provider ignores produce a response warning, never an error --
   // legacy callers keep working.
-  const capability_warnings = capabilityWarnings(port.generatorName, {
+  const capability_warnings = port.capabilityWarnings({
     temperature: opts.temperature,
     maxTokens: opts.maxTokens,
     model: opts.model,
@@ -341,7 +340,7 @@ export async function continueScene(
 
   let validateMs = 0;
   let validation: ValidationReport | undefined;
-  let validatorUsage: ModelUsage | undefined;
+  let validatorUsage: ContinuationUsage | undefined;
   let validationError: string | undefined;
   if (opts.validate) {
     const validateStart = Date.now();

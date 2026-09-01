@@ -34,7 +34,6 @@ import { createContinueScene } from "./application/continue-scene.js";
 import { createListEntityCatalog } from "./application/list-entities.js";
 import { createListStoryCatalog } from "./application/list-stories.js";
 import type { ApplicationUseCases } from "./application/use-cases.js";
-import {} from "./prompt.js";
 import { MNEMOSYNE_VERSION } from "./version.js";
 import { INSTRUCTIONS } from "./instructions.js";
 // Importing this validates the environment and exits on a bad value; it must

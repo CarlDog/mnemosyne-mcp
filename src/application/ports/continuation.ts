@@ -4,9 +4,16 @@ import type {
   LlmGenerateOptions,
   ModelUsage,
 } from "../../llm.js";
-import type { ContextBundle, GatherContextOptions } from "../../prompt.js";
+import type {
+  ContextBundle,
+  GatherContextOptions,
+  Mode,
+} from "../../prompt.js";
 import type { KindroidTarget } from "../../stories.js";
 import type { ValidationReport } from "../../validator.js";
+
+export type ContinuationBeat = GeneratedBeat;
+export type ContinuationUsage = ModelUsage;
 
 export interface SavedScene {
   memory_id: string;
@@ -17,12 +24,24 @@ export interface SavedScene {
 export interface ContinuationPort {
   readonly generatorName: string;
   readonly admissionMode: AdmissionMode;
+  readonly defaultMaxTokens: number;
+  readonly contextMarginTokens: number;
   gatherContext(
     storyId: string,
     direction: string,
     options: GatherContextOptions,
   ): Promise<ContextBundle>;
   effectiveContextWindow(model?: string): Promise<number | undefined>;
+  buildSystemPrompt(mode: Mode, context: ContextBundle): string;
+  renderAdmittedContext(
+    context: ContextBundle,
+    admittedIds: ReadonlySet<string>,
+  ): ContextBundle;
+  capabilityWarnings(options: {
+    temperature?: number;
+    maxTokens?: number;
+    model?: string;
+  }): string[];
   storyKindroidTarget(storyId: string): Promise<KindroidTarget | undefined>;
   generate(options: LlmGenerateOptions): Promise<GeneratedBeat>;
   saveScene(storyId: string, name: string, body: string): Promise<SavedScene>;
