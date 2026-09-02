@@ -2,6 +2,29 @@
 
 **Last updated:** 2026-09-02.
 
+**`verify-provenance.mjs` failures fixed (2026-09-02).** Two causes, two
+fixes. The tool: its no-argument run picked each story's newest file in
+`exports/` root by modification time, which since phase 2 is always a
+server-written backup with no `editorial_revision` block, so it failed
+everywhere for a reason unrelated to provenance. It now selects each story's
+newest *editorial* export (one carrying the block) across `exports/` and
+`exports/archive/`, reports a story that has only server backups as `SKIP`
+(not a failure), and accepts a numeric-string revision. The files: 15 retired
+editorial exports had `notes` that never named their own revision (the exact
+defect the 2026-08-26 audit found, then documented instead of repairing), and
+4 lacked `final_entity_count`; each `notes` now opens with `Revision N: ` and
+each missing count is the actual entities array length, by a targeted textual
+edit that changed no other byte (verified by re-parsing). Nothing was
+invented: BattleChasers' two `expanded` exports predate numbered revisions and
+keep no `revision`, and the Black Ledger's five archived exports have no block
+at all (their provenance is `history/2026-08-26-living-canon-pass.md`); those
+seven still fail when named explicitly, on purpose, and the default run now
+reports Black Ledger as `SKIP`. Every edit is listed in each story's
+`history/2026-09-02-export-provenance-repair.md`, and the repair script is
+kept as a do-not-rerun record. The default run is green for the five stories
+with an editorial export (exit 0). Two migration open items remain: Trigun's
+malformed pointer (parked) and the promotion tool.
+
 **Staged art copies retired (2026-09-02).** On operator instruction, after
 `verify-references.mjs` passed again for all seven stories with visual
 assets, the phase 4 staging folder `data/workspace/2026-09-02-art-dedup/`

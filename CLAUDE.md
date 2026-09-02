@@ -252,8 +252,10 @@ assessments listed under "Layout" below.
   Import it statically, then reach for `dist/` with `await import(...)`: ESM
   resolves static imports before evaluating anything, so a static `dist/`
   import fails during linking before any guard could run.
-- `scripts/verify-provenance.mjs` — checks an export's reference/art
-  pointers against their JSON sidecars.
+- `scripts/verify-provenance.mjs` — checks that a curated export's
+  `editorial_revision` block describes the revision it is attached to; with no
+  arguments it picks each story's newest editorial export across `exports/`
+  and `exports/archive/` and reports server-backup-only stories as `SKIP`.
 - `scripts/verify-references.mjs` — checks every story's `references/` and
   `art/` trees: sidecar per image, `image_sha256` matches, hash cross-links
   resolve (the data architecture standard's one-image-one-place rule).
