@@ -2,6 +2,21 @@
 
 **Last updated:** 2026-09-02.
 
+**Phase 5 complete: `sources/` is a pointing view (2026-09-02).** Per decision
+2, `build_sources.py` no longer copies any byte that lives in `data/archive/`:
+Botify exports and media, ChatGPT originals, share captures, raw archives, and
+photos are now `pointers` rows in each story's `sources/_manifest.json`
+(schema 3: archive path, bytes, SHA-256), and what the folder holds is the
+readable form only, the per-entry splits of composite documents and a
+chronological transcript per Botify chat, with attached images linked by their
+archive path. Every one of the 760 pointers across thirteen stories matches
+its archive index row; 99 derived files (4.1 MB) are written, and the folder
+shrank from 98 MB to 4.7 MB. `sources/` is read-only and rebuilt from scratch
+(decision 8: atomic edits happen in `canon/`). The phase 4 to phase 5 snapshot
+diff of `canon/`, `references/`, `art/`, and `archive/` is empty, so nothing
+outside the derived view changed. Phase 6 (the normative layout doc) is the
+last phase.
+
 **Phase 4 complete: visual dedup, one image in one place (2026-09-02).** The
 only byte-deleting phase of the standard ran with its restore path in place:
 199 `art/` candidate images whose bytes were already approved plates under

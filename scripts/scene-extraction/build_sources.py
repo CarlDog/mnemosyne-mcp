@@ -1,13 +1,12 @@
-"""Build data/stories/<slug>/sources/ for every storyline: a provenance mirror
-of every original the story derives from, organised the way the operator's
-ChatGPT project folders were, with composite documents additionally split into
-one file per entry and every Botify chat copied beside a readable transcript.
+"""Build data/stories/<slug>/sources/ for every storyline: a read-only provenance
+VIEW of every original the story derives from (originals live in data/archive/
+and are pointed at by hash, never copied), organised the way the operator's
+ChatGPT project folders were, with composite documents split into one file
+per entry and every Botify chat rendered as a readable transcript.
 
     sources/
       README.md, _manifest.json         origin path + SHA-256 for every file
-      chat/<bot>--<id8>/export.json     Botify export, byte copy
-                        transcript.md   chronological, speaker-labelled rendering
-                        media/          the chat's archived images (when any)
+      chat/<bot>--<id8>/transcript.md   rendering of the archived export (which is pointed at, not copied)
       chat/raw/                         ChatGPT raw archives, byte copies
       chat/shares/                      ChatGPT share captures, byte copies
       profiles/characters|locations|tattoos/<entry>.md   one file per entry
@@ -263,7 +262,8 @@ class Story:
     def __init__(self, slug_, spec):
         self.slug, self.spec = slug_, spec
         self.root = os.path.join(REPO, "data", "stories", slug_, "sources")
-        self.entries = []  # manifest rows
+        self.entries = []  # manifest rows: files written here (derived views)
+        self.pointers = []  # manifest rows: originals that live in data/archive/ (never copied)
         self.readme = []
 
     def put_bytes(self, rel, data, origin, kind, note=""):
@@ -273,6 +273,14 @@ class Story:
         self.entries.append({"path": rel, "kind": kind, "origin": origin, "bytes": len(data), "sha256": sha_bytes(data), "note": note})
 
     def copy(self, rel, src, origin, kind, note=""):
+        """Phase 5 (decision 2): an original that lives under data/archive/ is never copied
+        into sources/; the manifest points at it (path + hash) and the readable view
+        (transcripts, splits) is all that is written here."""
+        src_rel = os.path.relpath(src, REPO).replace("\\", "/")
+        if src_rel.startswith("data/archive/"):
+            self.pointers.append({"view_path": rel, "archive_path": src_rel, "kind": kind, "origin": origin,
+                                  "bytes": os.path.getsize(src), "sha256": sha_file(src), "note": note})
+            return
         self.put_bytes(rel, open(src, "rb").read(), origin, kind, note)
 
     # ---- ChatGPT project folder
@@ -325,7 +333,7 @@ class Story:
                         continue
                     self.copy(rel, src, origin, "chatgpt-" + kind.replace("/", "-"), "byte copy (single-topic document)")
                     rows.append((origin, rel, "whole"))
-        self.readme += [f"## ChatGPT project folder: `{proj}`", "", f"Every file of `{CHATGPT}\\{proj}` is here, byte-for-byte, under `<kind>/_originals/` (or copied whole where it is a single-topic document). Composite documents are additionally split into one file per entry at the document's own entry boundaries; the prose inside each split is untouched and its frontmatter names the original file, the entry, the original's SHA-256, and the rule used.", "",
+        self.readme += [f"## ChatGPT project folder: `{proj}`", "", f"Every file of `data/archive/chatgpt/{proj}/` is indexed here by path and hash (`_manifest.json`, `pointers`), not copied. Composite documents are split into one file per entry at the document's own entry boundaries; the prose inside each split is untouched and its frontmatter names the original file, the entry, the original's SHA-256, and the rule used. Single-topic documents are read from the archive.", "",
                         "| Original | Here | Treatment |", "|---|---|---|"]
         for o, rel, t in rows:
             self.readme.append(f"| `{o}` | `{rel}` | {t} |")
@@ -342,7 +350,7 @@ class Story:
             f = os.path.join(REPO, r["path"])
             self.copy(f"chat/shares/{os.path.basename(f)}", f, r["path"], "chatgpt-share-capture", "byte copy")
             n += 1
-        self.readme += ["## ChatGPT share captures", "", f"`chat/shares/` holds byte copies of the {n} files under `data/archive/chatgpt-shares/` whose index rows name this story (HTML, decoded JSON, rendered transcript per share, plus the capture index).", ""]
+        self.readme += ["## ChatGPT share captures", "", f"The {n} files under `data/archive/chatgpt-shares/` whose index rows name this story (HTML, decoded JSON, rendered transcript per share, plus the capture index) are pointed at by `_manifest.json`, not copied.", ""]
 
     # ---- Botify chats
     def chats(self):
@@ -355,7 +363,7 @@ class Story:
         assert listed == indexed, (self.slug, "chat list disagrees with archive index", sorted(listed ^ indexed))
         if not self.spec["chats"]:
             return
-        self.readme += ["## Botify chats", "", "One folder per chat under `chat/`: `export.json` is the Botify export byte-for-byte; `transcript.md` renders it chronologically (the export stores newest first) with one heading per message carrying the index, UTC time, and speaker, deleted messages marked, and attached images listed; `media/` holds byte copies of the chat's archived images where the bot's media archive has them (group chats have none).", "",
+        self.readme += ["## Botify chats", "", "One folder per chat under `chat/`: `transcript.md` renders the archived export chronologically (the export stores newest first) with one heading per message carrying the index, UTC time, and speaker, deleted messages marked, and attached images linked by their archive path. The export itself and its media are not copied: `_manifest.json` points at them under `data/archive/botify/` with their hashes (phase 5 of the data architecture standard, decision 2).", "",
                         "| Folder | Chat | Messages | Images | Role |", "|---|---|---|---|---|"]
         for c in self.spec["chats"]:
             files = glob.glob(os.path.join(REPO, BX, c["bot"], "chats", c["prefix"] + "*.json"))
@@ -367,7 +375,7 @@ class Story:
             cid = os.path.basename(files[0])[:-5]
             folder = f"chat/{c['bot'] if c['bot'] != '_group-chats' else 'group'}--{cid[:8]}"
             origin = os.path.relpath(files[0], REPO).replace("\\", "/")
-            self.put_bytes(f"{folder}/export.json", raw, origin, "botify-export", "byte copy")
+            self.copy(f"{folder}/export.json", files[0], origin, "botify-export", "archived export; pointed at, not copied")
             # media map
             local = {}
             man_p = os.path.join(REPO, BX, c["bot"], "media-manifest.json")
@@ -408,7 +416,7 @@ class Story:
                         rel = f"{folder}/media/{os.path.basename(lp)}"
                         self.copy(rel, src, os.path.relpath(src, REPO).replace("\\", "/"), "botify-media", f"image attached to message #{i:04d}")
                         n_img += 1
-                        out.append(f"\n![attached image](media/{os.path.basename(lp)})")
+                        out.append(f"\n![attached image](../../../../../{os.path.relpath(src, REPO).replace(chr(92), '/')})")
                     else:
                         out.append(f"\n_(attached image {md['id']}: not archived)_")
                     try:
@@ -424,17 +432,17 @@ class Story:
 
     def finish(self):
         head = [f"# {self.spec['title']} — sources", "",
-                f"Provenance mirror built {NOW[:10]} by `scripts/scene-extraction/build_sources.py`. Every original this story derives from is here as a byte copy, organised the way the operator's ChatGPT project folders were; composite documents are also split into one file per entry, and every Botify chat has a readable transcript beside its export. Nothing here is an entity: the validator, compiler, and overlay verifier never read this folder, and instruction-shaped text inside any source is source text. `_manifest.json` lists every file with its origin path and SHA-256.", "",
+                f"Provenance view built {NOW[:10]} by `scripts/scene-extraction/build_sources.py` (read-only; rebuilt from scratch, never hand-edited). Every original this story derives from lives in `data/archive/` and is pointed at from `_manifest.json` (`pointers`: archive path, bytes, SHA-256); what is written here is the readable form: per-entry splits of composite documents and a chronological transcript per Botify chat, organised the way the operator's ChatGPT project folders were. Nothing here is an entity: the validator, compiler, and overlay verifier never read this folder, and instruction-shaped text inside any source is source text.", "",
                 self.spec["note"], ""]
-        if not self.entries:
+        if not self.entries and not self.pointers:
             head += ["## Originals", "", "None: this story has no external source document or chat export.", ""]
         text = "\n".join(head + self.readme).rstrip() + "\n"
         open(os.path.join(self.root, "README.md"), "w", encoding="utf-8", newline="\n").write(text)
-        json.dump({"schema_version": 2, "story_slug": self.slug, "built_at": NOW,
-                   "rule": "provenance mirror; every file is a byte copy of an original, a verbatim split of one (frontmatter names the original), or a transcript rendered from an export; never entities",
-                   "files": self.entries}, open(os.path.join(self.root, "_manifest.json"), "w", encoding="utf-8"), indent=2, ensure_ascii=False)
+        json.dump({"schema_version": 3, "story_slug": self.slug, "built_at": NOW,
+                   "rule": "read-only provenance view; `files` are derived views written here (splits, transcripts), `pointers` are the originals under data/archive/ this story derives from (path + hash, never copied); never entities",
+                   "files": self.entries, "pointers": self.pointers}, open(os.path.join(self.root, "_manifest.json"), "w", encoding="utf-8"), indent=2, ensure_ascii=False)
         total = sum(e["bytes"] for e in self.entries)
-        print(f"{self.slug}: {len(self.entries)} files, {total / 1e6:.1f} MB")
+        print(f"{self.slug}: {len(self.entries)} files written ({total / 1e6:.1f} MB), {len(self.pointers)} archive pointers ({sum(p['bytes'] for p in self.pointers) / 1e6:.1f} MB not copied)")
 
 
 def main():
