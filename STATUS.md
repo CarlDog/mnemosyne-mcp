@@ -2,6 +2,34 @@
 
 **Last updated:** 2026-09-02.
 
+**Source provenance folders for every storyline (2026-09-02).** The operator
+asked what the original ChatGPT Projects export folders (OneDrive: Chaos Saga,
+GhostHunters, BattleChasers, Wonderland; 57 documents) still held that
+`data/stories` did not. A line-sample check of every document against the
+whole `data/stories` tree found all but three already captured: the profiles,
+locations, world-building tables, style guides, instructions, directives,
+templates, the scene tracking log, the one draft scene, and the two reference
+photos are in `canon/`, `drafts/_control/`, `canon/scenes/`, or `references/`.
+The three with no other copy (Chaos Saga's "The Story Before the Story"
+prequel; the GhostHunters group chat log configuration and canon tracking
+directive) and the four Chaos Saga raw chat archives (2.4 MB; the bytes the
+canon scene inventory's hashes refer to) were copied verbatim into a new
+per-story `sources/` folder. Every storyline now has `sources/README.md` and
+`sources/_manifest.json`: verbatim copies with origin path and SHA-256 where
+any were needed, and a hashed list of every external original the story
+derives from (the Botify private and group chats under
+`data/botify-exports/`, marked extracted, named-but-not-extracted, or present-
+but-unreviewed; the ChatGPT share captures; the companion logs). Trigun's
+entries are matched by cast only and say so; the two Miskatonic prequel
+packages record that they have no external source. `docs/DATA_LAYOUT.md`
+gains the `sources/` folder and a Sources section, and its "master copies"
+rule now names `data/` as the master, retiring the provisional OneDrive
+wording. The folder is provenance only: nothing in it is an entity, and the
+validator, compiler, and overlay verifier never read it (re-verified for Chaos
+Saga and The Blackwood Case). The builder is
+`scripts/scene-extraction/build_sources.py`. `data/` is gitignored, so this
+entry and the layout doc are the git record.
+
 **Botify scene recovery, six stories (2026-09-02).** On operator instruction,
 the remaining Botify-sourced stories were cut into per-scene draft files, each
 chat as its own thread and never blended, so the chats can be analysed and

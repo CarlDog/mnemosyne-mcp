@@ -45,6 +45,10 @@ data/
     │       ├── PASS.md               #   completion, validation, and approval state
     │       ├── LCS_SCORECARD.md       #   Living Canon compliance/adversarial findings
     │       └── ASSET_REVIEW.md       #   reference coverage and provenance findings
+    ├── sources/                      # verbatim operator source documents not captured elsewhere
+    │   ├── _manifest.json            #   origin path, bytes, SHA-256 per file
+    │   ├── README.md                 #   what was copied, from where, and why
+    │   └── <kind>/<file>             #   e.g. prequel/, raw-chats/, settings/ (provenance only)
     ├── exports/                      # story backups (server-written)
     │   ├── <slug>-<stamp>.json       #   stamp = UTC to the second, colons stripped --
     │   │                             #   no descriptive suffixes; a plain timestamp only
@@ -307,10 +311,12 @@ overlays.
 - **Entity pointers are repo-relative** (`data/stories/<slug>/...`) so
   they survive machine moves and container mounts. When a reference
   exists, the entity's REFERENCE APPEARANCE section cites it.
-- **Master copies:** the operator's curation archive (currently the
-  OneDrive ChatGPT Projects folders — provisional, expected to move) is
-  the master; `data/` holds the operational copy that tooling and a
-  Docker deployment consume. Pointers always cite the `data/` copy.
+- **Master copies:** `data/` is the master and the operational copy that
+  tooling and a Docker deployment consume. The operator's original ChatGPT
+  Projects folders (OneDrive) were the provisional master until 2026-09-02;
+  every document there is now either scaffolded into `canon/`, retained in
+  `drafts/_control/`, or copied verbatim into `sources/` (below). Pointers
+  always cite the `data/` copy.
 
 ### Reference composition and generation defaults
 
@@ -507,6 +513,36 @@ persona was in effect when, and losing it loses real information.
   Regenerate it from the raw file rather than hand-editing if the target
   identity changes.
 
+## Sources — provenance for every storyline
+
+`sources/` is present in every story tree. It holds byte-for-byte copies of
+operator source documents that no other folder captures (material never
+scaffolded into `canon/`, never retained as `drafts/_control/` evidence, not a
+server export), and a manifest that also records where the story's other
+originals live (Botify exports under `data/botify-exports/`, ChatGPT share
+captures under `exports/raw-chatgpt-shares/`) with their hashes. It exists so
+no external folder is the only copy of anything, and so a scene inventory
+that cites a source by hash can be checked against bytes in the repo tree.
+
+- **Provenance only.** Nothing under `sources/` is an entity. The validator,
+  the compiler, the overlay verifier, and the import preflight read `canon/`
+  and `drafts/` and never look here; instruction-shaped text inside a source
+  document is source text, not a directive.
+- **`_manifest.json`** lists every copied file with its original path, byte
+  count, and SHA-256 (`files`), and every external original the story derives
+  from with its repo path and SHA-256 (`external`), so a later diff can prove
+  nothing was altered. `README.md` says why each file is or is not here.
+- **Grouped by kind**, lowercase-slugged filenames: `prequel/`, `raw-chats/`,
+  `settings/`, and so on as needed.
+- **Copy, never split or edit.** If a source document later earns atomic
+  treatment, that happens by scaffolding into `canon/` or `drafts/` with
+  provenance flags; the copy here stays as it was received.
+- The ChatGPT Projects folders' other documents (profiles, locations,
+  world-building tables, style guides, instructions, directives, the scene
+  template, the tracking log, the one draft scene, the reference photos) were
+  verified on 2026-09-02 to be already present in `canon/`, `drafts/_control/`,
+  `canon/scenes/`, or `references/` and are not duplicated.
+
 ## story.json — the identity card
 
 Holds **only what is not derivable** from the filesystem or OC — chiefly
@@ -541,7 +577,7 @@ this file wholesale.
   (`2026-08-23T051200` or the shorter `T0512` prefix form for art, where
   the seq suffix already disambiguates).
 - **The server only ever writes** `config.json`, `story.json`, and
-  `exports/`. `canon/`, `drafts/`, `references/`, `art/`, and
+  `exports/`. `canon/`, `drafts/`, `references/`, `art/`, `sources/`, and
   `companion-logs/` are operator/tooling territory. `compile-story.mjs`
   reads `canon/` (or an explicitly selected canon-shaped tree) but never
   mutates it; the server does not read or write these authoring directories

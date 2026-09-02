@@ -38,6 +38,14 @@ manifest entries; `doc_suffix` keeps a story's existing scene docs untouched
 Configs kept: `cuts_black_ledger.py`, `cuts_adjustment.py`, `cuts_noctis.py`,
 `cuts_wonderland.py`, `cuts_chaos.py`.
 
+## `build_sources.py`
+
+Rebuilds every storyline's `data/stories/<slug>/sources/` provenance folder
+(README plus `_manifest.json`): it re-verifies any verbatim copies already
+placed there and hashes every external original the story derives from. The
+per-story source lists live in the script; edit them when a new export or
+capture joins a story, then re-run.
+
 ## `earlier/`
 
 The one-off scripts that preceded the engine: the Brass & Nerve, Blackwood
