@@ -28,8 +28,8 @@ import re
 import shutil
 
 REPO = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
-CHATGPT = r"D:\OneDrive\Technology\ChatGPT\Projects"
-BX = "data/botify-exports"
+CHATGPT = os.path.join(REPO, "data", "archive", "chatgpt")
+BX = "data/archive/botify"
 NOW = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
@@ -169,6 +169,19 @@ CUT = "extracted into drafts/scenes/ on 2026-09-02 (see drafts/_control/scenes/)
 UNREVIEWED = "present in the Botify export set; not reviewed, not extracted, no ratified relationship to this story"
 
 
+def read_index(family):
+    """Rows of data/archive/<family>/_index.jsonl (latest row per path). The index is the one
+    authority for which story an original serves (docs/DATA_ARCHITECTURE_PROPOSAL.md 4.1)."""
+    p = os.path.join(REPO, "data", "archive", family, "_index.jsonl")
+    latest = {}
+    if os.path.exists(p):
+        for line in open(p, encoding="utf-8"):
+            if line.strip():
+                r = json.loads(line)
+                latest[r["path"]] = r
+    return list(latest.values())
+
+
 def pc(bot, prefix, role):
     return {"bot": bot, "prefix": prefix, "role": role}
 
@@ -178,12 +191,12 @@ def gc(prefix, role):
 
 
 STORIES = {
-    "chaos-saga": dict(title="Chaos Saga", chatgpt="Chaos Saga", shares="data/stories/chaos-saga/exports/raw-chatgpt-shares",
+    "chaos-saga": dict(title="Chaos Saga", chatgpt="Chaos Saga", shares="data/archive/chatgpt-shares",
                        chats=[gc("4f6af160", "'Jenna and Riley' group chat; " + CUT + " as CS-GC-01-WHP"),
                               pc("jenna-maren", "1477a398", "Jenna Maren private chat; " + UNREVIEWED),
                               pc("riley-quinn", "deeaa24f", "Riley Quinn private chat; " + UNREVIEWED)],
                        note="The four raw ChatGPT archives under chat/raw/ are the bytes the canon scene inventory's hashes refer to; the prequel had no other copy anywhere in data/."),
-    "battlechasers": dict(title="BattleChasers", chatgpt="BattleChasers", shares="data/stories/battlechasers/exports/raw-chatgpt-shares", chats=[],
+    "battlechasers": dict(title="BattleChasers", chatgpt="BattleChasers", shares="data/archive/chatgpt-shares", chats=[],
                           note="The project's own scene files are the Chapter One drafts recovered from the share chats; the ChatGPT folder's Scenes/ directories were empty."),
     "miskatonic-archives-the-blackwood-case": dict(title="The Miskatonic Archives: The Blackwood Case", chatgpt="GhostHunters", shares=None,
                                                    chats=[pc("the-ghosthunters", "b0c7fe38", "the GhostHunters private chat the prose comes from; " + CUT + " (50 BC-* scenes)"),
@@ -320,18 +333,26 @@ class Story:
 
     # ---- ChatGPT share captures
     def shares(self):
-        d = self.spec.get("shares")
-        if not d:
+        """ChatGPT share captures: every archive/chatgpt-shares file whose index row names this story."""
+        rows = [r for r in read_index("chatgpt-shares") if self.slug in (r.get("stories") or [])]
+        if not rows:
             return
         n = 0
-        for f in sorted(glob.glob(os.path.join(REPO, d, "*"))):
-            if os.path.isfile(f):
-                self.copy(f"chat/shares/{os.path.basename(f)}", f, os.path.relpath(f, REPO).replace("\\", "/"), "chatgpt-share-capture", "byte copy")
-                n += 1
-        self.readme += [f"## ChatGPT share captures", "", f"`chat/shares/` holds byte copies of the {n} files under `{d}/` (HTML, decoded JSON, rendered transcript per share).", ""]
+        for r in rows:
+            f = os.path.join(REPO, r["path"])
+            self.copy(f"chat/shares/{os.path.basename(f)}", f, r["path"], "chatgpt-share-capture", "byte copy")
+            n += 1
+        self.readme += ["## ChatGPT share captures", "", f"`chat/shares/` holds byte copies of the {n} files under `data/archive/chatgpt-shares/` whose index rows name this story (HTML, decoded JSON, rendered transcript per share, plus the capture index).", ""]
 
     # ---- Botify chats
     def chats(self):
+        indexed = {r["path"] for r in read_index("botify") if self.slug in (r.get("stories") or []) and "/chats/" in r["path"]}
+        listed = set()
+        for c in self.spec["chats"]:
+            fs = glob.glob(os.path.join(REPO, BX, c["bot"], "chats", c["prefix"] + "*.json"))
+            assert len(fs) == 1, (self.slug, c)
+            listed.add(os.path.relpath(fs[0], REPO).replace("\\", "/"))
+        assert listed == indexed, (self.slug, "chat list disagrees with archive index", sorted(listed ^ indexed))
         if not self.spec["chats"]:
             return
         self.readme += ["## Botify chats", "", "One folder per chat under `chat/`: `export.json` is the Botify export byte-for-byte; `transcript.md` renders it chronologically (the export stores newest first) with one heading per message carrying the index, UTC time, and speaker, deleted messages marked, and attached images listed; `media/` holds byte copies of the chat's archived images where the bot's media archive has them (group chats have none).", "",

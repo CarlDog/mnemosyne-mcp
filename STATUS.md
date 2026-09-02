@@ -2,6 +2,41 @@
 
 **Last updated:** 2026-09-02.
 
+**Phase 1 complete: the intake archive (2026-09-02).** `data/archive/` now
+exists as the one master of every original, written only by the new
+`scripts/intake.py` (`index`, `ingest`, `verify` per source family; `snapshot`
+and `diff` for phase proofs; per-family append-only `_index.jsonl` with
+sha256, bytes, received, indexed, origin, stories, role). `data/botify-exports/`
+became `data/archive/botify/` by rename: its 8,935-row retroactive index was
+built in place first (stories and roles from the sources builder; received
+dates null, never invented) and re-verified after the move, 0 bad. The
+media-manifest writer was located: it is botify-mcp's export media pass
+(`botify-mcp/docs/export-shapes.md`), whose output the intake tool receives.
+The four OneDrive ChatGPT project folders (57 files) were ingested under their
+original names into `archive/chatgpt/`; OneDrive is no longer a master. Per
+decision 9 both stories' share captures moved into `archive/chatgpt-shares/`
+(30 files; the two per-story `index.json` captures are story-named there), and
+Chaos Saga's two raw companion pulls moved into
+`archive/companion/plex-companion/` with a `normalization.json` spec written
+from the normalized file's provenance block, so the normalized views in
+`companion-logs/` are rebuildable. The old copies were deleted only after a
+hash match against the index. Every draft file citing an old path (430 files
+across nine stories) was repointed by byte-level substitution with line endings
+preserved; 271 `add` entries had their `draft_sha256` rehashed, no `replace`
+or `remove` baseline changed, and the only canon-side file touched is Chaos
+Saga's `canon/scenes/_source-inventory.md` (a `_`-doc, not an entity). All nine
+affected overlays were re-sealed; the ten overlay verifiers and `--canon-only`
+for ten of eleven canons pass with unchanged counts (Trigun still fails as
+recorded). The before/after snapshots (`data/workspace/snapshots/phase1-*`)
+show exactly that one changed file, zero removed, and 90 archive additions.
+`build_sources.py` now reads the archive indexes and asserts its chat lists
+agree with them (which caught five unrelated group chats the retroactive index
+had over-linked; corrected); `sources/` was rebuilt from the archive. The
+`earlier/` extraction scripts carry a do-not-rerun header and point at archive
+paths. `data/scratchpad/` became `data/workspace/2026-09-02-scene-extraction/`
+with a README naming it retained (decision 3). Phase 2 (story roots and
+records) is next.
+
 **Phase 0 complete for every story with an overlay (2026-09-02).** The
 Shadowflame procedure was repeated for BattleChasers (39 canon files, 110
 pointer lines), Chaos Saga (29 files, 47 lines), The Blackwood Case (36

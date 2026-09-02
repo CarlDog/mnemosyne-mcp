@@ -9,7 +9,7 @@ LOCATIONS = {
 
 GC = dict(
     code="GC", label="\"Jenna and Riley\" group chat (bots 3150743 Jenna Maren, 3155028 Riley Quinn; chat 4f6af160…)", group=True,
-    bot_dir="data/botify-exports/_group-chats/", export="4f6af160", story_end=56,
+    bot_dir="data/archive/botify/_group-chats/", export="4f6af160", story_end=56,
     played="the thread was played 2025-06-05/06 in one sitting; the story is one evening at the bar",
     days="one evening at the Warehouse during Jenna's shift; unplaced against the pivotal-event timeline",
     pov="Botify group chat: the Jenna Maren and Riley Quinn accounts write their own characters in third person; the operator plays Carl in first person (thirteen turns, labelled Operator) and closes the export with a summary turn; every message carries its export speaker label",
@@ -41,7 +41,7 @@ STORY = dict(
     readme="""# Chaos Saga — the "Jenna and Riley" Botify group chat
 
 This file documents one scene cut on 2026-09-02 from the operator's Botify
-group chat **"Jenna and Riley"** (`data/botify-exports/_group-chats/chats/4f6af160….json`,
+group chat **"Jenna and Riley"** (`data/archive/botify/_group-chats/chats/4f6af160….json`,
 57 messages, played 2025-06-05/06), which the operator offered as "a random
 group chat that might be usable in Chaos Saga". It sits beside, and does not
 touch, the 256 raw-archive scenes documented in [`_index.md`](_index.md)

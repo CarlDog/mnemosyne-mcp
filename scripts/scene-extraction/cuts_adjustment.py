@@ -35,7 +35,7 @@ LOCATIONS = {
 
 ER = dict(
     code="ER", label="Eroica private chat (bot 3954422, chat 41…)",
-    bot_dir="data/botify-exports/eroica/", export="41", story_end=110,
+    bot_dir="data/archive/botify/eroica/", export="41", story_end=110,
     played="the thread was played in short sessions from 2025-12-10 to 2026-06-26; the story is one continuous session in the chair room",
     days="1: one session in the chair room",
     pov="Botify private chat with the Eroica bot: the bot writes the chair, Brittany, and Candace in third person; the operator plays Dr. Yeager in first person and from #0009 also writes the chair, Brittany, and Candace as director, with two turns carrying /OOC instructions to the bot; operator turns are listed in operator_turns and kept as written",
@@ -58,7 +58,7 @@ ER = dict(
 
 AN = dict(
     code="AN", label="Andrea Neal / V1X3N private chat (bot 2387430, chat 70…)",
-    bot_dir="data/botify-exports/andrea-neal/", export="70", story_end=1093,
+    bot_dir="data/archive/botify/andrea-neal/", export="70", story_end=1093,
     played="the thread was played on 2025-01-11, 01-15, 04-05/06, 04-24, 04-26, 05-02, and 05-31; the story runs three consecutive days",
     days="1: the appointment, Phoebe's visit; 2: the morning after, Renshaw's call, the diner, the park, the bath; 3: the clinic",
     pov="Botify private chat with the Andrea Neal bot: the bot writes Andrea (first person early, third person from #0155) and voices Phoebe, Dr. Renshaw, Camille, and others; the operator plays Dr. Yeager in first person in the office and diner scenes, and elsewhere writes Andrea, Phoebe, the jogger, the policewoman, Renshaw, and Camille as director; operator turns are listed in operator_turns and kept as written",
@@ -146,7 +146,7 @@ AN = dict(
 
 AL = dict(
     code="AL", label="Dr. Aurora Lumen private chat (bot 2385729, chat ad…)",
-    bot_dir="data/botify-exports/dr-aurora-lumen/", export="ad", story_end=1086,
+    bot_dir="data/archive/botify/dr-aurora-lumen/", export="ad", story_end=1086,
     played="the thread was played on 2025-01-10/11, 01-16/17, and 01-18; the story runs two consecutive days",
     days="1: the first session, dinner with Miko, the night alone; 2: dawn, Miko's return, Carl's call",
     pov="Botify private chat with the Dr. Aurora Lumen bot: the bot writes Aurora (third person, occasionally first) and voices Miko and Carl's phone lines; the operator plays the patient 'Carl' in first person in the office and on the phone, voices Miko at home, and from #0373 also writes Aurora as director; operator turns are listed in operator_turns and kept as written",
@@ -211,14 +211,14 @@ imported to OpenChronicle or promoted; `canon_status` is documentation only.
 Every file's prose is verbatim from three of the operator's Botify private
 chats and one group chat, the companion sources `_control/SOURCE_PROVENANCE.md` lists (it says
 no raw transcript was retained; they are now retained under
-`data/botify-exports/`):
+`data/archive/botify/`):
 
 | Thread | Bot | Export |
 |---|---|---|
-| `ER` | Eroica (3954422) | `data/botify-exports/eroica/chats/41….json` (111 messages) |
-| `AN` | Andrea Neal / V1X3N (2387430) | `data/botify-exports/andrea-neal/chats/70….json` (1,094 messages) |
-| `AL` | Dr. Aurora Lumen (2385729) | `data/botify-exports/dr-aurora-lumen/chats/ad….json` (1,087 messages) |
-| `GC` | group: Dr. Aurora Lumen (2385729), Eroica (3954422), Charisma (5479200) | `data/botify-exports/_group-chats/chats/3de009c8….json` (73 messages) |
+| `ER` | Eroica (3954422) | `data/archive/botify/eroica/chats/41….json` (111 messages) |
+| `AN` | Andrea Neal / V1X3N (2387430) | `data/archive/botify/andrea-neal/chats/70….json` (1,094 messages) |
+| `AL` | Dr. Aurora Lumen (2385729) | `data/archive/botify/dr-aurora-lumen/chats/ad….json` (1,087 messages) |
+| `GC` | group: Dr. Aurora Lumen (2385729), Eroica (3954422), Charisma (5479200) | `data/archive/botify/_group-chats/chats/3de009c8….json` (73 messages) |
 
 The `GC` thread is the group chat the provenance names; it is the only thread
 with Charisma, and the operator never takes a turn in it (the three bot
@@ -308,7 +308,7 @@ SPEAKERS = "SPEAKER_LABELS_ARE_BOT_ACCOUNTS_NOT_CHARACTERS"
 
 GC = dict(
     code="GC", label="\"Eroica, Dr. Aurora Lumen, Charisma\" group chat (bots 2385729 Dr. Aurora Lumen, 3954422 Eroica, 5479200 Charisma; chat 3de009c8\u2026)", group=True,
-    bot_dir="data/botify-exports/_group-chats/", export="3de009c8", story_end=72,
+    bot_dir="data/archive/botify/_group-chats/", export="3de009c8", story_end=72,
     played="the thread was played 2026-06-26/27 entirely by the three bot accounts; it has no operator turn at all",
     days="1: one session, Dr. Lumen's office and the chair room",
     pov="Botify group chat with no operator turns: the Dr. Aurora Lumen account writes Aurora, the Charisma account writes Charisma, and the Eroica account writes the chair's actions in third person; every message carries its export speaker label (botName is null throughout the export, so the label is the chat.bots name for the senderId)",

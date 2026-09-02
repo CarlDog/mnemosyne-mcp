@@ -1,3 +1,6 @@
+# DO NOT RERUN: historical record of how files under data/stories/*/{canon,drafts} were produced.
+# Several of these write into canon/scenes/; re-running would put draft prose back into canon.
+# See docs/DATA_ARCHITECTURE_PROPOSAL.md 4.8.
 """Move recovered scene files from canon/scenes/ into drafts/scenes/ as overlay
 add operations, and their documentation into drafts/_control/scenes/.
 

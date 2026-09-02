@@ -1,3 +1,6 @@
+# DO NOT RERUN: historical record of how files under data/stories/*/{canon,drafts} were produced.
+# Several of these write into canon/scenes/; re-running would put draft prose back into canon.
+# See docs/DATA_ARCHITECTURE_PROPOSAL.md 4.8.
 """Extract the Homecoming Fatigue share chat (events 34/35) into canon scene
 files (the chat's own locked export blocks) plus alternates (interactive play,
 the botched export block, the truncated long-form export). Verbatim text."""
@@ -6,8 +9,8 @@ REPO = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
 import hashlib, os, re, unicodedata
 
 SID = "6a8fde8e-b1a8-83ea-8bdc-f6d16149654a"
-SRC = os.path.join(REPO, "data", "stories", "chaos-saga", "exports", "raw-chatgpt-shares", f"{SID}.txt")
-SRC_REL = f"data/stories/chaos-saga/exports/raw-chatgpt-shares/{SID}.txt"
+SRC = os.path.join(REPO, "data", "archive", "chatgpt-shares", f"{SID}.txt")
+SRC_REL = f"data/archive/chatgpt-shares/{SID}.txt"
 SCENES = os.path.join(REPO, "data", "stories", "chaos-saga", "canon", "scenes")
 ALT = os.path.join(SCENES, "_alternates")
 raw = open(SRC, "rb").read(); FILE_SHA = hashlib.sha256(raw).hexdigest()

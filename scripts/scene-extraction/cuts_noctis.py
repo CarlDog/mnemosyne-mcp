@@ -47,7 +47,7 @@ LOCATIONS = {
 
 MT = dict(
     code="MT", label="Mary Thorne private chat (bot 3472620, chat b2…)",
-    bot_dir="data/botify-exports/mary-thorne/", export="b2", story_end=777,
+    bot_dir="data/archive/botify/mary-thorne/", export="b2", story_end=777,
     played="the thread was played on 2025-07-07/08, 07-10, 07-14/15, 09-04..09, 12-02, 2026-04-06..13, and 2026-06-04/05; the story runs three days with summarised days between the second and third",
     days="1: mesmerism, Amelia, the evening at home; 2: the night and the days after (summarised); 3: the hallway, the gym, the office, the sisters, the sanctum",
     pov="Botify private chat with the Mary Thorne bot: the bot writes Mary in third person and voices Amelia, the sisters, and others; the operator plays Father Yeager in first person and elsewhere writes Mary, Amelia, Candace, Tina, Mr. Thorne, the sisters, and Sophia as director; operator turns are listed in operator_turns and kept as written",
@@ -132,7 +132,7 @@ MT = dict(
 
 SL = dict(
     code="SL", label="Sister Lucia private chat (bot 4095850, chat ae…)",
-    bot_dir="data/botify-exports/sister-lucia/", export="ae", story_end=312,
+    bot_dir="data/archive/botify/sister-lucia/", export="ae", story_end=312,
     played="the thread was played on 2025-10-27..31, 11-05..10, and 12-05/11; the story is one evening in the chapel; #0313-#0314 (2026-04-21) is a later picture request outside the story",
     days="1: one evening in the chapel",
     pov="Botify private chat with the Sister Lucia bot: the bot writes Lucia in first person (third person in places) and voices the Mother Superior and the novice; the operator plays the visitor in first person and in three turns writes Lucia and the novice as director; operator turns are listed in operator_turns and kept as written",
@@ -155,7 +155,7 @@ SL = dict(
 
 KM = dict(
     code="KM", label="Kaitlyn MacDonald private chat (bot 4096103, chat 4c…)",
-    bot_dir="data/botify-exports/kaitlyn-macdonald/", export="4c", story_end=116,
+    bot_dir="data/archive/botify/kaitlyn-macdonald/", export="4c", story_end=116,
     played="the thread was played on 2025-12-04/05, 12-08, and 2026-04-06..05-01; the story runs a first day, summarised days, a later evening, and a Thursday morning",
     days="1: the library, the lab, the server closet; 2: some days later, the evening; 3: Thursday morning",
     pov="Botify private chat with the Kaitlyn MacDonald bot: the bot writes Kaitlyn in third person; the operator plays the new head of IT in first person and in several turns writes Kaitlyn as director; operator turns are listed in operator_turns and kept as written",
@@ -200,14 +200,14 @@ imported to OpenChronicle or promoted; `canon_status` is documentation only.
 Every file's prose is verbatim from three of the operator's Botify private
 chats and one group chat with companions `_control/SOURCE_PROVENANCE.md` names as the story's
 sources (their transcripts were not retained in the story folder; they are
-now retained under `data/botify-exports/`):
+now retained under `data/archive/botify/`):
 
 | Thread | Bot | Export |
 |---|---|---|
-| `MT` | Mary Thorne (3472620) | `data/botify-exports/mary-thorne/chats/b2….json` (778 messages) |
-| `SL` | Sister Lucia (4095850) | `data/botify-exports/sister-lucia/chats/ae….json` (315 messages) |
-| `KM` | Kaitlyn MacDonald (4096103) | `data/botify-exports/kaitlyn-macdonald/chats/4c….json` (117 messages) |
-| `GC` | group: Mary Thorne (3472620), Noctis Veil (4080268), Kaitlyn MacDonald (4096103), Sister Lucia (4095850) | `data/botify-exports/_group-chats/chats/518affe6….json` (479 messages) |
+| `MT` | Mary Thorne (3472620) | `data/archive/botify/mary-thorne/chats/b2….json` (778 messages) |
+| `SL` | Sister Lucia (4095850) | `data/archive/botify/sister-lucia/chats/ae….json` (315 messages) |
+| `KM` | Kaitlyn MacDonald (4096103) | `data/archive/botify/kaitlyn-macdonald/chats/4c….json` (117 messages) |
+| `GC` | group: Mary Thorne (3472620), Noctis Veil (4080268), Kaitlyn MacDonald (4096103), Sister Lucia (4095850) | `data/archive/botify/_group-chats/chats/518affe6….json` (479 messages) |
 
 The `GC` thread is the group chat canon's provenance names as the story's
 primary source and the only thread in which Noctis Veil appears; the three
@@ -324,7 +324,7 @@ GARDENER = "'Carl Yeager', the convent's new gardener (the operator's own name; 
 
 GC = dict(
     code="GC", label="\"Mary and Noctis Veil\" group chat (bots 3472620 Mary Thorne, 4080268 Noctis Veil, 4096103 Kaitlyn MacDonald, 4095850 Sister Lucia; chat 518affe6\u2026)", group=True,
-    bot_dir="data/botify-exports/_group-chats/", export="518affe6", story_end=478,
+    bot_dir="data/archive/botify/_group-chats/", export="518affe6", story_end=478,
     played="the thread was played 2025-10-22..27 almost entirely by the bot accounts talking to each other (467 of 479 messages); the operator's twelve turns are all the gardener at #0453-#0477",
     days="1: the chapel, the dormitory; 2-7: the week after, summarised; 7: the garden, the window seat; 8: the gardens, evening prayers, the corridor, Mary's room, Kaitlyn's room; ~12: the days after, the garden, lights-out",
     pov="Botify group chat: four bot accounts write their own characters in third person and sometimes each other's (the Mary Thorne account writes Sister Lucia's half of #0088-#0201 and her entrance at #0324; the Sister Lucia account itself first speaks at #0229); the operator plays the gardener 'Carl Yeager' in first person at #0453-#0477 only, labelled Operator; every message carries its export speaker label",

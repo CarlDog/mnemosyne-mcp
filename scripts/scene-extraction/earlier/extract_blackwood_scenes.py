@@ -1,3 +1,6 @@
+# DO NOT RERUN: historical record of how files under data/stories/*/{canon,drafts} were produced.
+# Several of these write into canon/scenes/; re-running would put draft prose back into canon.
+# See docs/DATA_ARCHITECTURE_PROPOSAL.md 4.8.
 """Cut The Blackwood Case Botify transcript into per-scene canon files.
 
 Usage (from the repo root):
@@ -19,9 +22,9 @@ import re
 import sys
 
 REPO = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")).replace("\\", "/")
-EXPORT_REL = "data/botify-exports/the-ghosthunters/chats/b0c7fe38-6014-498c-b4f3-19819544ce22.json"
-MANIFEST_REL = "data/botify-exports/the-ghosthunters/media-manifest.json"
-MEDIA_DIR_REL = "data/botify-exports/the-ghosthunters/"
+EXPORT_REL = "data/archive/botify/the-ghosthunters/chats/b0c7fe38-6014-498c-b4f3-19819544ce22.json"
+MANIFEST_REL = "data/archive/botify/the-ghosthunters/media-manifest.json"
+MEDIA_DIR_REL = "data/archive/botify/the-ghosthunters/"
 STORY = "miskatonic-archives-the-blackwood-case"
 SCENES_DIR = f"{REPO}/data/stories/{STORY}/canon/scenes"
 ALT_DIR = f"{SCENES_DIR}/_alternates"
@@ -375,7 +378,7 @@ def render_scene(s):
     if s["deleted"]:
         fm.append(f"discarded_branches_file: {jstr('_alternates/' + alt_filename(s))}")
     fm.append(f"media: {jstr([x['path'] or ('unarchived:' + x['id']) for x in s['media']])}")
-    fm.append("media_basis: " + jstr("images the bot attached to messages in this range, archived under data/botify-exports/the-ghosthunters/media/images/; see _media-index.md"))
+    fm.append("media_basis: " + jstr("images the bot attached to messages in this range, archived under data/archive/botify/the-ghosthunters/media/images/; see _media-index.md"))
     fm.append(f"source_file_sha256: {s['file_sha']}")
     fm.append(f"source_content_sha256: {sha256_bytes(s['body'].encode('utf-8'))}")
     return "---\n" + "\n".join(fm) + "\n---\n" + s["body"]
@@ -508,8 +511,8 @@ def main():
     open(os.path.join(SCENES_DIR, "_media-index.md"), "w", encoding="utf-8", newline="\n").write(
         "# The Blackwood Case media index\n\n"
         "Every image the bot attached to a live message, in transcript order, with the scene it falls in. "
-        "Files live under `data/botify-exports/the-ghosthunters/media/images/` (archived 2026-09-02; "
-        "manifest `data/botify-exports/the-ghosthunters/media-manifest.json`). Images attached to deleted "
+        "Files live under `data/archive/botify/the-ghosthunters/media/images/` (archived 2026-09-02; "
+        "manifest `data/archive/botify/the-ghosthunters/media-manifest.json`). Images attached to deleted "
         "replies are listed inside the `_alternates/` file for their scene. Prompts are the bot's own image "
         "prompts, decoded from the message's `mediaId`; most messages carry none.\n\n"
         + "\n".join(media_rows) + "\n")

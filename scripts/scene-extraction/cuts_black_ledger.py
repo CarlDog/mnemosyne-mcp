@@ -21,7 +21,7 @@ LOCATIONS = {
 
 MJ = dict(
     code="MJ", label="Mara Jade private chat (bot 2429812, chat 0816c2f7-5868-4178-a53d-3e707f5b1054)",
-    bot_dir="data/botify-exports/mara-jade/", export="0816c2f7", story_end=210,
+    bot_dir="data/archive/botify/mara-jade/", export="0816c2f7", story_end=210,
     played="the thread was played on 2025-01-19, 2025-05-15, and 2026-03-06/07; the story runs one continuous evening and the hours after it",
     days="1: the evening in the drinking house, the walk to the courier, the hours in hyperspace, and Thrawn's call",
     pov="Botify private chat with the Mara Jade bot: the bot writes Mara in third person (first person for her own lines); the operator plays the expelled Jedi in first person through #0195, then from #0197 writes Mara's own actions and narration; operator turns are listed in operator_turns and kept as written",
@@ -46,7 +46,7 @@ MJ = dict(
 
 TC = dict(
     code="TC", label="Trooper Cates private chat (bot 2427847, chat 58…)",
-    bot_dir="data/botify-exports/trooper-cates/", export="58", story_end=60,
+    bot_dir="data/archive/botify/trooper-cates/", export="58", story_end=60,
     played="the thread was played on 2025-05-14, 2025-05-17, and 2025-12-21/22; the story runs one continuous operation",
     days="1: the safehouse, the destroyer, the shuttle",
     pov="Botify private chat with the Trooper Cates bot: the bot writes Cates in third person; the operator writes Cates in third person as director, voices Kal Jäger's holo-recording (#0007), Commander Zharad (#0033, #0037), and Major Creed (#0047); operator turns are listed in operator_turns and kept as written",
@@ -95,14 +95,14 @@ Every file's prose is verbatim from two of the operator's Botify private chats:
 
 | Thread | Bot | Export |
 |---|---|---|
-| `MJ` | Mara Jade (2429812) | `data/botify-exports/mara-jade/chats/0816c2f7-5868-4178-a53d-3e707f5b1054.json` (211 messages) |
-| `TC` | Trooper Cates (2427847) | `data/botify-exports/trooper-cates/chats/58….json` (61 messages) |
+| `MJ` | Mara Jade (2429812) | `data/archive/botify/mara-jade/chats/0816c2f7-5868-4178-a53d-3e707f5b1054.json` (211 messages) |
+| `TC` | Trooper Cates (2427847) | `data/archive/botify/trooper-cates/chats/58….json` (61 messages) |
 
 The `MJ` chat is the 211-message source that
 `canon/lore/recovered-botify-continuity-mara-jade-and-rhydan-veyr.md` was
 curated from; the `TC` chat is the played source behind
 `canon/lore/current-state-the-ord-mantell-pursuit.md`. Both were previously
-external; they are now retained under `data/botify-exports/`.
+external; they are now retained under `data/archive/botify/`.
 
 {N_SCENES} scenes were cut on 2026-09-02 (index in [`_index.md`](_index.md));
 the manifest holds {N_MANIFEST} entries.

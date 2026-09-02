@@ -1,3 +1,6 @@
+# DO NOT RERUN: historical record of how files under data/stories/*/{canon,drafts} were produced.
+# Several of these write into canon/scenes/; re-running would put draft prose back into canon.
+# See docs/DATA_ARCHITECTURE_PROPOSAL.md 4.8.
 """Cut the Shadowflame Botify transcript (Dark Queen Lilith private chat) into
 per-scene draft files under drafts/scenes/ as overlay add operations.
 
@@ -17,7 +20,7 @@ import re
 import sys
 
 REPO = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")).replace("\\", "/")
-BOT_DIR = "data/botify-exports/dark-queen-lilith/"
+BOT_DIR = "data/archive/botify/dark-queen-lilith/"
 EXPORT_REL = BOT_DIR + "chats/1b4aae74-6348-4a59-b17a-2c3ebfd7cf24.json"
 MANIFEST_REL = BOT_DIR + "media-manifest.json"
 STORY = "shadowflame"
@@ -384,7 +387,7 @@ def render_scene(s):
         fm.append(f"discarded_branches_file: {jstr('_control/scenes/_alternates/' + altname(s))}")
     fm += [
         f"media: {jstr([x['path'] or ('unarchived:' + x['id']) for x in s['media']])}",
-        "media_basis: " + jstr("images the bot attached to live messages in this range, archived under data/botify-exports/dark-queen-lilith/media/images/; see _control/scenes/_media-index.md"),
+        "media_basis: " + jstr("images the bot attached to live messages in this range, archived under data/archive/botify/dark-queen-lilith/media/images/; see _control/scenes/_media-index.md"),
         f"source_file_sha256: {s['file_sha']}",
         f"source_content_sha256: {sha(s['body'].encode('utf-8'))}",
     ]
@@ -477,7 +480,7 @@ def main():
         "# Shadowflame alternates index\n\nGenerated " + CUT_DATE + ".\n\n" + "\n".join(alt_rows) + "\n")
     open(os.path.join(CTRL_DIR, "_media-index.md"), "w", encoding="utf-8", newline="\n").write(
         "# Shadowflame media index\n\nEvery image the bot attached to a live message, in transcript order, with the scene it falls in. "
-        "Files live under `data/botify-exports/dark-queen-lilith/media/images/` (manifest `data/botify-exports/dark-queen-lilith/media-manifest.json`). "
+        "Files live under `data/archive/botify/dark-queen-lilith/media/images/` (manifest `data/archive/botify/dark-queen-lilith/media-manifest.json`). "
         "Images attached to deleted replies are listed inside the `_alternates/` file for their scene. Prompts are the bot's own image prompts decoded from the message's `mediaId`; "
         "most messages carry none. These are Botify renderings, not approved reference art.\n\n" + "\n".join(media_rows) + "\n")
     print(f"wrote {len(scenes)} scenes; manifest entries now {len(man['files'])}")

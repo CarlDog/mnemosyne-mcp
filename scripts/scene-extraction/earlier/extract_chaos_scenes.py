@@ -1,3 +1,6 @@
+# DO NOT RERUN: historical record of how files under data/stories/*/{canon,drafts} were produced.
+# Several of these write into canon/scenes/; re-running would put draft prose back into canon.
+# See docs/DATA_ARCHITECTURE_PROPOSAL.md 4.8.
 """Chaos Saga scene extractor (dry run by default; --write emits files).
 
 Sources: the operator's raw ChatGPT archive (read-only) plus the reviewed
@@ -11,7 +14,7 @@ import csv, hashlib, os, re, sys, unicodedata
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 
-RAW = r"D:\OneDrive\Technology\ChatGPT\Projects\Chaos Saga\Chat\Archived\Raw"
+RAW = os.path.join(REPO, "data", "archive", "chatgpt", "Chaos Saga", "Chat", "Archived", "Raw")
 STORY = os.path.join(REPO, "data", "stories", "chaos-saga")
 SCENES = os.path.join(STORY, "canon", "scenes")
 OUT_TSV = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chaos-scenes-dryrun.tsv")

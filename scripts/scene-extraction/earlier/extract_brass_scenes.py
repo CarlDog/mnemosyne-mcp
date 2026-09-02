@@ -1,3 +1,6 @@
+# DO NOT RERUN: historical record of how files under data/stories/*/{canon,drafts} were produced.
+# Several of these write into canon/scenes/; re-running would put draft prose back into canon.
+# See docs/DATA_ARCHITECTURE_PROPOSAL.md 4.8.
 """Cut the Brass & Nerve Botify transcript (Evelyn Starling private chat) into
 per-scene draft files under drafts/scenes/ as overlay add operations.
 
@@ -18,7 +21,7 @@ import re
 import sys
 
 REPO = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")).replace("\\", "/")
-BOT_DIR = "data/botify-exports/evelyn-starling/"
+BOT_DIR = "data/archive/botify/evelyn-starling/"
 EXPORT_REL = BOT_DIR + "chats/d3212413-d54d-4016-a6ea-3c8129e65504.json"
 MANIFEST_REL = BOT_DIR + "media-manifest.json"
 STORY = "brass-and-nerve"

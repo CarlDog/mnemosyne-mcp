@@ -28,7 +28,7 @@ scene ranges are contiguous and cover `#0000` to the story end; deleted
 messages go to `_alternates/`; bare `Continue` turns, pure directives, and
 image-only bot messages are dropped from bodies and counted; prose is
 verbatim apart from line endings. Group chats (`group=True`, exports under
-`data/botify-exports/_group-chats/`) have no media manifest and a null
+`data/archive/botify/_group-chats/`) have no media manifest and a null
 `botName`, so every message is prefixed with a bold speaker label from
 `chat.bots` (operator turns are labelled `Operator`). File ownership is scoped
 to `<prefix>-<thread>-`, so a run only replaces its own threads' files and
@@ -50,6 +50,9 @@ and re-run. Never hand-edit inside `sources/`.
 
 ## `earlier/`
 
+**Do not rerun.** Every script here carries a header saying so: several
+write into `canon/scenes/`, where those scenes lived before the move.
+
 The one-off scripts that preceded the engine: the Brass & Nerve, Blackwood
 Case, and Shadowflame cuts (same rules, one chat each), the Chaos Saga
 raw-archive and Homecoming extractions (ChatGPT raw text, not Botify), and
@@ -60,3 +63,10 @@ engine supersedes them for Botify sources.
 The full working scratchpad of that session (rendered transcripts, dry-run
 tables, helper scripts) is preserved on disk under
 `data/scratchpad/2026-09-02-scene-extraction/` (gitignored).
+
+## `../intake.py`
+
+The archive's only writer (`docs/DATA_ARCHITECTURE_PROPOSAL.md` 4.1):
+`index`, `ingest`, `verify` per source family, plus `snapshot` and `diff`
+for the phase proofs. `build_sources.py` reads the archive indexes and
+asserts its chat lists agree with them.

@@ -19,7 +19,7 @@ LOCATIONS = {
 
 AG = dict(
     code="AG", label="Alice Grimm private chat (bot from bot.json, chat 1c71db26…)",
-    bot_dir="data/botify-exports/alice-grimm/", export="1c71db26", story_end=814,
+    bot_dir="data/archive/botify/alice-grimm/", export="1c71db26", story_end=814,
     played="the thread was played in sessions across 2025-2026; the story runs three days and a fourth of unknown length",
     days="1: the flight, the Vale, the cave; 2: foraging, the Wrong-Song Child, the mill; 3: the carriage, the palace; 4: the bedchamber",
     pov="Botify private chat with the Alice Grimm bot: the bot writes Alice in first or third person; the operator plays Carl in first person and, from #0720, writes Alice and the palace in third person as director; operator turns are listed in operator_turns and kept as written",
@@ -115,7 +115,7 @@ Every file's prose is verbatim from one of the operator's Botify private chats:
 
 | Thread | Bot | Export |
 |---|---|---|
-| `AG` | Alice Grimm | `data/botify-exports/alice-grimm/chats/1c71db26….json` (815 messages) |
+| `AG` | Alice Grimm | `data/archive/botify/alice-grimm/chats/1c71db26….json` (815 messages) |
 
 {N_SCENES} scenes were cut on 2026-09-02 (index in [`_index.md`](_index.md));
 the manifest holds {N_MANIFEST} entries (the story's r10 overlay plus these).
