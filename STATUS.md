@@ -2,6 +2,31 @@
 
 **Last updated:** 2026-09-02.
 
+**Data architecture standard ratified; phase 0 begun (2026-09-02).** The
+operator asked for a ground-up redesign of the whole `data/` root rather than
+further patching of the story trees. `docs/DATA_ARCHITECTURE_PROPOSAL.md`
+went through four adversarial reviews (each logged in the document, each
+claim checked against the tree and the scripts; the fourth found no further
+architectural flaw) and was ratified at revision 4 with all nine decisions
+taken per recommendation: rename `botify-exports/` to `archive/botify/` in
+phase 1; `sources/` stops holding byte copies in phase 5; the saved
+2026-09-02 scratchpad is retained under `workspace/`; move, not copy, on
+art approval; keep rejected generations; `history/` is a separate primary;
+no content-addressed store; atomic edits happen in `canon/` with `sources/`
+read-only; the ChatGPT share captures move into the archive during the
+phase 0/1 re-seal. The design in one breath: a write-nothing-over intake
+`archive/` as the one master of every original, `canon/` holding canon only
+and verifiable on its own, `drafts/` as this overlay's proposal and
+evidence, `history/` for permanent records, `sources/` as a read-only
+derived view, one copy of every approved image, and an explicit
+primary/derived classification so the backup set is mechanical. Measured
+baseline: 4.5 GB, of which canon is 2.4 MB and about 1.3 GB is avoidable
+duplication. `docs/STORY_TREE_ORGANIZATION.md` (the earlier story-level
+punch list and its review) is kept as superseded. Phase 0 (a `--canon-only`
+verifier mode, then normalization of the 149 bare-pointer canon files in
+five stories with rehash and re-seal) starts with Shadowflame as the test
+case; the outcome is recorded in the next entry.
+
 **Source provenance mirror for every storyline (2026-09-02).** On operator
 instruction, every story tree gained `sources/`, a byte-for-byte mirror of
 every original the story derives from, organised the way the operator's
