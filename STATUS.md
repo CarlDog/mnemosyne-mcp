@@ -1,6 +1,30 @@
 # Status
 
-**Last updated:** 2026-09-01.
+**Last updated:** 2026-09-02.
+
+**The Blackwood Case scene recovery (2026-09-02).** On operator instruction,
+the played investigation was cut into per-scene files under
+`data/stories/miskatonic-archives-the-blackwood-case/canon/scenes/` for later
+storybook or graphic-novel rendering. The source is not a ChatGPT raw archive
+but the operator's Botify private chat with the GhostHunters bot, exported to
+`data/botify-exports/the-ghosthunters/chats/` (1,882 messages, the same
+transcript `lore/the-blackwood-case.md` was derived from; the 200-message
+"GhostHunters" group chat is a separate side story and was not used). Botify
+exports carry no scene headers, so the boundaries are invented delineators
+agreed with the operator: a new scene where the story changes place, jumps in
+time, or the cast changes, never at a play-session gap. Fifty scenes carry
+keys `BC-D0n-bb-LOC` (case day as anchor, location registry in `_catalog.md`),
+verbatim prose with bare `Continue` turns dropped, real Botify timestamps,
+exact message-index ranges and IDs, listed operator turns, auto-derived
+participants, review flags for every source-versus-canon difference
+(Millfield/Yeager, coffee shop versus Ex Libris, muscle car versus Reaper,
+victim ages, the year-later library beat that canon already supersedes), and
+the bot's attached images (`_media-index.md`, 78 images with decoded prompts).
+All 129 regenerated branches live in `canon/scenes/_alternates/`. `validate-canon`
+reports 151 entities; the overlay still verifies with manifest and hashes
+unchanged (merged preflight 155), and PASS.md gained an active-canon note.
+Nothing was promoted or imported; `data/` is gitignored, so this entry is the
+only git record.
 
 **Chaos Saga source-document validation (2026-09-02).** The operator's
 ChatGPT share chats were mined for the project documents behind the drafts.
