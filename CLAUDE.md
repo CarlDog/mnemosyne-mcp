@@ -22,7 +22,10 @@ frontmatter; indexes, catalogs, and `_alternates/` under
 `drafts/_control/scenes/`). Story 03's three export-established scenes stay in
 `canon/scenes/`; The Blackwood Case has no `canon/scenes/` folder. story-08's
 59 scenes (cut the same day from the Dark Queen Lilith Botify chat) were written
-straight to `drafts/scenes/`. Any future scene extraction goes to `drafts/scenes/`. Both overlays were rehashed and
+straight to `drafts/scenes/`, as were story-01' nine Chapter One scenes (cut
+the same day from the operator's two ChatGPT shares; earlier drafts and pasted
+config documents sit under `drafts/_control/scenes/`). Any future scene
+extraction goes to `drafts/scenes/`. Both overlays were rehashed and
 re-sealed; nothing was promoted. The 2026-09-01 draft review pass is
 closed: six overlays were corrected, rehashed, and re-sealed; both Miskatonic
 prequel scaffolds were built out with their first choices ratified; story-14
@@ -43,7 +46,8 @@ it; Star Wars: The Black Ledger is not, and is structurally unlike the others
 
 **Nine review-gated Living Canon overlays are complete on disk (eight from
 2026-08-30, story-14 r10 added 2026-09-01 at 35 operations → 77 entities):**
-story-01 (71 operations → 143 entities), Brass & Nerve (20 → 43), Chaos
+story-01 (71 operations → 143 entities; 80 → 152 since the scene
+extraction), Brass & Nerve (20 → 43), Chaos
 Saga (60 → 73; 316 → 329 since the 2026-09-02 scene move), The Miskatonic Archives: The
 Blackwood Case (formerly GhostHunters; 60 → 105; 110 → 155 since the scene move), Story 04 (41 → 70),
 story-08 (40 → 74; 99 → 133 since the scene extraction), Story 10 (19 → 41), and Story 12

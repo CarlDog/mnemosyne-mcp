@@ -2,6 +2,34 @@
 
 **Last updated:** 2026-09-02.
 
+**story-01 scene recovery (2026-09-02).** On operator instruction, the
+Chapter One scenes drafted in the story-01 ChatGPT project were cut into
+nine per-scene files under `data/stories/story-01/drafts/scenes/` as
+overlay `add` operations (draft banner after the frontmatter; 80 manifest
+entries; PASS.md re-sealed), with their README, catalog, index, source
+inventory, superseded drafts (`_alternates/`), and the operator-pasted
+configuration documents (`_source-documents/`) under `drafts/_control/scenes/`.
+The source is the two ChatGPT share links the operator supplied, saved verbatim
+(HTML, decoded JSON, rendered transcript) under
+`data/stories/story-01/exports/raw-chatgpt-shares/`: "Adventure Begins
+Unnoticed" holds every scene; "Configuration File Review" holds region
+build-outs and the Canon Tracking Directive but no scenes. A ChatGPT project
+chat is a drafting session, not play, so the cut rule differs from the Botify
+stories: each scene file is the draft the operator locked or moved past (header
+to last prose line, assistant framing and chat offers stripped), the eighteen
+earlier drafts are kept as superseded alternates with the operator critique
+that sank each, and the pasted style-guide and directive versions are archived
+as source documents. Keys are `BTC-C01-nn-LOC` in acceptance order; the source's
+own numbering (One to Four, an unnumbered Lilith scene, Five to Eight) is kept
+as flags. Prose keeps the played names (Thorne Vex, Spark); the mapping to
+Character 051 and Fenna "Spark" Darrin, Thorne's thread jumping from Western
+Veyra to the Frostfell Fringe with no travel, and the superseded drafts' "Day
+17" against Karl's "Thessalune 7" are carried as review flags, not resolved.
+Only the Reach Below has a canon location record; the other eight places are
+new. `verify-draft-overlay.mjs story-01` passes: 143 active and 152 merged
+entities, active canon hashes unchanged, writes=0. Nothing was promoted or
+imported; `data/` is gitignored, so this entry is the only git record.
+
 **story-08 scene recovery (2026-09-02).** On operator instruction, the
 played story-08 arc was cut into 59 per-scene files under
 `data/stories/story-08/drafts/scenes/` as overlay `add` operations (draft
