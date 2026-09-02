@@ -2,6 +2,25 @@
 
 **Last updated:** 2026-09-02.
 
+**Trigun pointers fixed, with one data-loss incident (2026-09-02).** On
+operator instruction the parked Trigun: Scarlet Mercy canon had its visual
+pointers normalised to the verifier's form, and `--canon-only` now passes for
+it (30 pointers, 55 entities, writes=0), so every story with a `canon/` verifies
+alone. The incident: the first run of the normalisation script opened
+`characters/millions-knives.md` for writing before its replacement text was
+built, the build failed, and the file was left empty. No other copy existed
+(Trigun has no OpenChronicle story, overlay, export, or content snapshot), so
+the entity was reconstructed the same day from everything the rest of canon,
+the lore, and the four reference sidecars attest, nothing invented, with
+`provenance_status: reconstructed-after-data-loss-2026-09-02` and the lost
+file's SHA-256 in its frontmatter so a matching copy would supersede it. The
+full account is `history/2026-09-02-millions-knives-reconstruction.md`. The
+other four files were normalised with the corrected script; validator,
+compiler check, and `verify-references.mjs` pass; the canon snapshot diff
+lists exactly the five files. Rule adopted from it: no tool opens a canon
+file for writing before the complete replacement content exists. One
+migration open item remains: the promotion tool.
+
 **`verify-provenance.mjs` failures fixed (2026-09-02).** Two causes, two
 fixes. The tool: its no-argument run picked each story's newest file in
 `exports/` root by modification time, which since phase 2 is always a
