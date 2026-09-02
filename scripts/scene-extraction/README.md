@@ -40,13 +40,13 @@ Configs kept: `cuts_black_ledger.py`, `cuts_adjustment.py`, `cuts_noctis.py`,
 
 ## `build_sources.py`
 
-Rebuilds every storyline's `data/stories/<slug>/sources/` provenance mirror
-from scratch: byte copies of every ChatGPT project document (kept whole under
-`_originals/`, composites also split one file per entry), every Botify chat
-the story derives from (export, chronological transcript, archived images),
-and the raw archives and share captures. The per-story source lists and the
-composite-split rules live in the script; add a new export or capture there
-and re-run. Never hand-edit inside `sources/`.
+Rebuilds every storyline's `data/stories/<slug>/sources/` provenance view
+from scratch: a `_manifest.json` whose `pointers` name every original the
+story derives from under `data/archive/` (path, bytes, SHA-256, never
+copied), plus the readable derived files it writes: per-entry splits of the
+composite ChatGPT documents and a chronological transcript per Botify chat.
+It reads the archive indexes and asserts its chat lists agree with them.
+`sources/` is read-only; never hand-edit inside it.
 
 ## `earlier/`
 
