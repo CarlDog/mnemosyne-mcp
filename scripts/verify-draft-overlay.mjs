@@ -3,6 +3,11 @@
 // Usage:
 //   node scripts/verify-draft-overlay.mjs <story-slug>
 //   node scripts/verify-draft-overlay.mjs --canon-only <story-slug>
+//   node scripts/verify-draft-overlay.mjs --manifest _control/<file>.json <story-slug>
+//
+// --manifest verifies a SUBSET manifest (the promotion tool writes one for a
+// partial promotion); non-control drafts outside it may exist unmanifested.
+// An empty `files` array is valid: it is an overlay between proposals.
 //
 // --canon-only stages active canon with an empty operation list and runs
 // the same pointer check, structural validator, and import preflight on it,
@@ -61,6 +66,10 @@ import { clearTimeout, setTimeout } from "node:timers";
 import { TextDecoder } from "node:util";
 import { fileURLToPath } from "node:url";
 import { parseCanonScalar } from "./canon-frontmatter.mjs";
+import {
+  DRAFT_MARKER,
+  stripLeadingDraftBlockquote as stripDraftNotice,
+} from "./draft-notice.mjs";
 
 const REPO_ROOT = fileURLToPath(new URL("../", import.meta.url));
 const STORIES_ROOT = path.join(REPO_ROOT, "data", "stories");
@@ -70,13 +79,12 @@ const TEMP_PREFIX = "mnemosyne-draft-overlay-";
 const VALIDATOR_TIMEOUT_MS = 30_000;
 const VALIDATOR_KILL_GRACE_MS = 5_000;
 const VALIDATOR_MAX_OUTPUT_BYTES = 1_000_000;
-const UTF8_BOM = Buffer.from([0xef, 0xbb, 0xbf]);
 const SHA256_RE = /^[a-f0-9]{64}$/i;
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
 const FRONTMATTER_KEY_RE = /^([a-z_][a-z0-9_]*):\s*(.*)$/;
 const IMAGE_POINTER_RE =
   /data\/stories\/[a-z0-9][a-z0-9_-]*\/references\/[A-Za-z0-9._~!$&'+,;=@%/-]+\.(?:png|jpe?g|webp|gif|avif)/gi;
-const RESIDUE_MARKERS = ["DRAFT — NOT ACTIVE CANON", "DRAFT CONTROL RECORD"];
+const RESIDUE_MARKERS = [DRAFT_MARKER, "DRAFT CONTROL RECORD"];
 
 class VerificationError extends Error {
   constructor(message) {
@@ -95,14 +103,29 @@ function errorMessage(error) {
 
 function parseArgs(argv) {
   const canonOnly = argv.includes("--canon-only");
-  const rest = argv.filter((arg) => arg !== "--canon-only");
-  if (rest.length !== 1 || !SLUG_RE.test(rest[0])) {
+  let manifestRelative = null;
+  const rest = [];
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === "--canon-only") continue;
+    if (argv[i] === "--manifest") {
+      manifestRelative = argv[++i] ?? null;
+      continue;
+    }
+    rest.push(argv[i]);
+  }
+  if (
+    rest.length !== 1 ||
+    !SLUG_RE.test(rest[0]) ||
+    (manifestRelative !== null &&
+      !/^_control\/[A-Za-z0-9._-]+\.json$/.test(manifestRelative))
+  ) {
     fail(
-      "usage: node scripts/verify-draft-overlay.mjs [--canon-only] <story-slug> " +
+      "usage: node scripts/verify-draft-overlay.mjs [--canon-only] " +
+        "[--manifest _control/<file>.json] <story-slug> " +
         "(lowercase letters, digits, and hyphens only)",
     );
   }
-  return { slug: rest[0], canonOnly };
+  return { slug: rest[0], canonOnly, manifestRelative };
 }
 
 function samePath(left, right) {
@@ -203,8 +226,8 @@ function validateManifest(raw, slug) {
         `match requested story ${JSON.stringify(slug)}`,
     );
   }
-  if (!Array.isArray(raw.files) || raw.files.length === 0) {
-    fail("overlay manifest files must be a non-empty array");
+  if (!Array.isArray(raw.files)) {
+    fail("overlay manifest files must be an array (empty between proposals)");
   }
 
   const seen = new Map();
@@ -370,120 +393,8 @@ function compareHashTrees(expected, actual, label) {
   }
 }
 
-function readLine(text, start) {
-  if (start >= text.length) {
-    return { content: "", next: text.length, terminated: false };
-  }
-  const newline = text.indexOf("\n", start);
-  if (newline === -1) {
-    const content = text.slice(start).endsWith("\r")
-      ? text.slice(start, -1)
-      : text.slice(start);
-    return { content, next: text.length, terminated: false };
-  }
-  const end =
-    newline > start && text[newline - 1] === "\r" ? newline - 1 : newline;
-  return {
-    content: text.slice(start, end),
-    next: newline + 1,
-    terminated: true,
-  };
-}
-
 function stripLeadingDraftBlockquote(bytes, relativePath) {
-  const hasBom = bytes.subarray(0, UTF8_BOM.length).equals(UTF8_BOM);
-  const payload = hasBom ? bytes.subarray(UTF8_BOM.length) : bytes;
-  let text;
-  try {
-    text = new TextDecoder("utf-8", { fatal: true }).decode(payload);
-  } catch (error) {
-    fail(`${relativePath}: draft is not valid UTF-8 (${errorMessage(error)})`);
-  }
-
-  let searchOffset = 0;
-  const first = readLine(text, 0);
-  if (first.content === "---") {
-    let cursor = first.next;
-    let closed = false;
-    while (cursor <= text.length) {
-      const line = readLine(text, cursor);
-      if (line.content.trimEnd() === "> **DRAFT — NOT ACTIVE CANON**") {
-        fail(
-          `${relativePath}: draft banner occurs before the YAML closing ` +
-            'delimiter; frontmatter must close on its own "---" line first',
-        );
-      }
-      if (line.content === "---") {
-        if (!line.terminated && line.next === text.length) {
-          fail(
-            `${relativePath}: YAML closes at end of file before any draft body`,
-          );
-        }
-        searchOffset = line.next;
-        closed = true;
-        break;
-      }
-      if (!line.terminated) break;
-      cursor = line.next;
-    }
-    if (!closed)
-      fail(`${relativePath}: YAML frontmatter opened but never closed`);
-  }
-
-  let bannerStart = searchOffset;
-  while (bannerStart < text.length) {
-    const line = readLine(text, bannerStart);
-    if (line.content.trim() !== "") break;
-    bannerStart = line.next;
-  }
-  const banner = readLine(text, bannerStart);
-  if (banner.content.trimEnd() !== "> **DRAFT — NOT ACTIVE CANON**") {
-    const location =
-      first.content === "---" ? "after YAML frontmatter" : "at file start";
-    fail(
-      `${relativePath}: expected the leading draft blockquote ${location}; ` +
-        "only a leading banner block may be stripped",
-    );
-  }
-
-  let afterBlock = banner.next;
-  while (afterBlock < text.length) {
-    const line = readLine(text, afterBlock);
-    if (!line.content.startsWith(">")) break;
-    afterBlock = line.next;
-  }
-  if (afterBlock >= text.length) {
-    fail(
-      `${relativePath}: leading draft blockquote must be followed by a ` +
-        "blank-line boundary and promoted body content",
-    );
-  }
-  const boundary = readLine(text, afterBlock);
-  if (boundary.content.trim() !== "") {
-    fail(
-      `${relativePath}: leading draft blockquote must end at a blank-line ` +
-        "boundary before promoted body content",
-    );
-  }
-  while (afterBlock < text.length) {
-    const line = readLine(text, afterBlock);
-    if (line.content.trim() !== "") break;
-    afterBlock = line.next;
-  }
-  if (!text.slice(afterBlock).trim()) {
-    fail(
-      `${relativePath}: draft notice is not followed by promoted body content`,
-    );
-  }
-
-  const promoted = text.slice(0, bannerStart) + text.slice(afterBlock);
-  if (promoted.includes("DRAFT — NOT ACTIVE CANON")) {
-    fail(
-      `${relativePath}: draft marker remains after stripping the leading block`,
-    );
-  }
-  const encoded = Buffer.from(promoted, "utf8");
-  return hasBom ? Buffer.concat([UTF8_BOM, encoded]) : encoded;
+  return stripDraftNotice(bytes, relativePath, fail);
 }
 
 async function loadManifest(manifestPath, slug) {
@@ -500,7 +411,11 @@ async function loadManifest(manifestPath, slug) {
   return validateManifest(parsed, slug);
 }
 
-async function assertManifestCompleteness(entries, draftsRoot) {
+async function assertManifestCompleteness(
+  entries,
+  draftsRoot,
+  subsetMode = false,
+) {
   // The manifest remains the sole promotion authority. This inventory scan
   // only proves that the author did not leave an unmanifested Markdown file
   // outside _control/; it never adds an inferred path to the overlay.
@@ -528,7 +443,7 @@ async function assertManifestCompleteness(entries, draftsRoot) {
 
   const problems = [];
   for (const relativePath of draftPaths) {
-    if (!manifestPaths.has(relativePath)) {
+    if (!subsetMode && !manifestPaths.has(relativePath)) {
       problems.push(`unmanifested draft Markdown: ${relativePath}`);
     }
   }
@@ -1199,14 +1114,21 @@ async function verifyCanonOnly(slug) {
   console.log("  temporary staging directory removed");
 }
 
-async function verifyOverlay(slug) {
+async function verifyOverlay(slug, manifestRelative = null) {
   const storyRoot = await resolveContainedStoryRoot(
     path.join(STORIES_ROOT, slug),
   );
   const canonRoot = path.join(storyRoot, "canon");
   const draftsRoot = path.join(storyRoot, "drafts");
-  const manifestPath = path.join(draftsRoot, "_control", "overlay.json");
-  const manifestRelativePath = "_control/overlay.json";
+  // --manifest names a subset manifest inside _control/ (the promotion tool
+  // writes one for a partial promotion); other non-control drafts may then
+  // exist unmanifested, because they belong to the overlay's full manifest.
+  const subsetMode = manifestRelative !== null;
+  const manifestRelativePath = manifestRelative ?? "_control/overlay.json";
+  const manifestPath = path.join(
+    draftsRoot,
+    ...manifestRelativePath.split("/"),
+  );
 
   let activeBefore = null;
   let draftsBefore = null;
@@ -1235,7 +1157,7 @@ async function verifyOverlay(slug) {
       fail("overlay manifest changed while its input snapshot was captured");
     }
     const entries = await loadManifest(manifestPath, slug);
-    await assertManifestCompleteness(entries, draftsRoot);
+    await assertManifestCompleteness(entries, draftsRoot, subsetMode);
     const verifiedEntries = await verifyManifestHashes(
       entries,
       canonRoot,
@@ -1312,11 +1234,17 @@ async function verifyOverlay(slug) {
       baselineCopyRoot,
       "active baseline validator",
     );
-    const isolatedValidator = await runCanonValidator(
-      slug,
-      isolatedCopyRoot,
-      "isolated draft validator",
-    );
+    // An overlay with no staged draft entities (empty between proposals, or
+    // removals only) has nothing for the isolated validator to read; the
+    // merged validator below still covers the resulting canon.
+    const stagedDrafts = entries.some((entry) => entry.operation !== "remove");
+    const isolatedValidator = stagedDrafts
+      ? await runCanonValidator(
+          slug,
+          isolatedCopyRoot,
+          "isolated draft validator",
+        )
+      : "skipped (no staged draft entities)";
     const mergedValidator = await runCanonValidator(
       slug,
       stageRoot,
@@ -1462,7 +1390,9 @@ async function verifyOverlay(slug) {
   if (failures.length > 0) fail(failures.join("\n"));
   if (!report) fail("verification ended without producing a report");
 
-  console.log(`Verified draft overlay for ${slug}`);
+  console.log(
+    `Verified draft overlay for ${slug}${subsetMode ? " (subset manifest)" : ""}`,
+  );
   console.log(`  manifest: ${report.manifestPath}`);
   console.log(
     `  files: ${report.entries} ` +
@@ -1502,11 +1432,13 @@ async function verifyOverlay(slug) {
 }
 
 try {
-  const { slug, canonOnly } = parseArgs(process.argv.slice(2));
+  const { slug, canonOnly, manifestRelative } = parseArgs(
+    process.argv.slice(2),
+  );
   if (canonOnly) {
     await verifyCanonOnly(slug);
   } else {
-    await verifyOverlay(slug);
+    await verifyOverlay(slug, manifestRelative);
   }
 } catch (error) {
   console.error(`verify-draft-overlay: ${errorMessage(error)}`);

@@ -111,8 +111,9 @@ the tool named in the primary/derived table at the end.
 ## History — permanent records
 
 Living Canon passes, remediation records, reference-artwork status, storyline
-indexes, idea banks, prequel seed banks, and (once a promotion tool exists)
-promoted overlays' evidence live in `history/`, dated
+indexes, idea banks, prequel seed banks, and promoted overlays' evidence
+(`history/overlays/<revision>/`, written by `scripts/promote-overlay.mjs`) live
+in `history/`, dated
 (`<yyyy-mm-dd>-<topic>.md`), never in the story root and never in `canon/`.
 Standing control records keep their all-caps names (`PASS.md`,
 `SOURCE_PROVENANCE.md`, `LCS_SCORECARD.md`, `ASSET_REVIEW.md`,
@@ -315,8 +316,9 @@ entity-shaped overlay, and is never compiled or promoted as story content.
 - **Control evidence survives the decision.** Record final counts, deliberate
   retcons, remaining unknowns, validation commands/results, adversarial verdict,
   and operator approval or rejection. A completed authoring pass is not an
-  approval. `_control/` is never moved until a promotion tool exists;
-  permanent records belong in `history/`. **Any change to a canon file that
+  approval. `_control/` stays in place across promotions (the tool copies it
+  into `history/overlays/<revision>/` as it stood); permanent records belong
+  in `history/`. **Any change to a canon file that
   an overlay targets** (a `replace` baseline or a `remove` target, both of
   which carry `baseline_sha256`) is followed in the same step by rehashing
   that overlay's baselines and appending a dated paragraph to `PASS.md`.
@@ -328,6 +330,21 @@ with a `canon/` passes it; a bare `- references/...` pointer fails it, so
 pointers are always the full repo-relative path on their own bullet). Its manifest schema version 2 supports additions, replacements,
 and removals; schema version 1 remains readable for earlier add/replace-only
 overlays.
+
+`scripts/promote-overlay.mjs <story-slug> --revision <label> (--all | --paths
+a,b) [--apply --approved-by <name>]` is the only path from `drafts/` into
+`canon/`. Without `--apply` it plans: it runs the full verifier (and, for a
+subset, the verifier in `--manifest` subset mode on a temporary
+`_control/overlay.promotion.json`) and prints the operations. With `--apply`
+it backs up every affected canon file, draft, and `overlay.json` to
+`data/workspace/<stamp>-promotion-<slug>-<revision>/before/`, recomputes every
+hash immediately before writing, writes the same banner-stripped bytes the
+verifier staged (`scripts/draft-notice.mjs` is the one implementation), applies
+canon writes, then draft deletes, then the reduced manifest last, records
+`history/overlays/<revision>/promotion.json` (every hash) plus a copy of
+`_control/` and a dated `PASS.md` paragraph, and re-verifies; a failure after
+apply began restores the backup. `--approved-by` is an audit record, not a
+gate: the operator's decision to run the command is the approval.
 
 ## References — curated inputs
 

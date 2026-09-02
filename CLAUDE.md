@@ -19,8 +19,9 @@ normative) completed all six phases on 2026-09-02: `data/archive/` is the one
 master of originals (written only by `scripts/intake.py`), every story has
 `history/` and a read-only `sources/` view, active canon verifies alone
 (`verify-draft-overlay.mjs --canon-only`), and approved art exists in one
-place (`scripts/verify-references.mjs`). Open items are listed in STATUS.md's
-phase 6 entry. The recovered scene extractions are
+place (`scripts/verify-references.mjs`). The promotion tool
+(`scripts/promote-overlay.mjs`) landed 2026-09-02, closing the last migration
+open item; no overlay has been promoted with it. The recovered scene extractions are
 parked for review in the draft overlays, not in canon: on 2026-09-02 the operator
 moved Chaos Saga's 256 raw-archive scene files and The Blackwood Case's 50
 Botify-transcript scene files from `canon/scenes/` into each story's
@@ -245,6 +246,16 @@ assessments listed under "Layout" below.
 - `scripts/verify-draft-overlay.mjs <slug>` — verifies a manifest-driven draft
   overlay's operation inventory and hashes, validates active/isolated/merged
   trees, and runs the merged import preflight without promotion or import.
+  `--canon-only <slug>` checks active canon alone; `--manifest _control/<file>.json`
+  verifies a subset manifest (the promotion tool's partial-promotion path).
+- `scripts/promote-overlay.mjs <slug> --revision <label> (--all | --paths a,b)
+  [--apply --approved-by <name>]` — the only path from `drafts/` into `canon/`:
+  verifier-gated, content-backed-up, hash-rechecked, atomic-ordered, evidence to
+  `history/overlays/<revision>/`. Dry run without `--apply`. Never run it
+  against a real overlay without explicit operator direction.
+- `scripts/draft-notice.mjs` — the one implementation of the draft-banner
+  strip rule, imported by both the verifier and the promotion tool so staged
+  bytes equal promoted bytes.
 - `scripts/canon-frontmatter.mjs` — the canon frontmatter scalar format in one
   place (`toCanonScalar`/`fromCanonScalar`), imported by both the writer and
   the reader so they cannot disagree about quoting again.

@@ -2,6 +2,31 @@
 
 **Last updated:** 2026-09-02.
 
+**Promotion tool built (2026-09-02).** `scripts/promote-overlay.mjs` is now
+the one path from `drafts/` into `canon/`, closing the last migration open
+item. Design as adopted: the full verifier is the gate (spawned, bounded); a
+`--paths` subset is verified through a temporary
+`_control/overlay.promotion.json` in the verifier's new `--manifest` subset
+mode; `scripts/draft-notice.mjs` holds the banner-strip rule so the bytes the
+verifier stages are the bytes promotion writes; every hash is recomputed
+immediately before writing; affected canon files, drafts, and `overlay.json`
+are copied to `data/workspace/<stamp>-promotion-<slug>-<revision>/before/`
+first; apply order is canon writes, draft deletes, reduced manifest last
+(temp-file rename); evidence goes to `history/overlays/<revision>/`
+(`promotion.json` with every hash, `_control/` as it stood) plus a dated
+`PASS.md` paragraph; `--canon-only` and the full verifier re-run afterwards
+and a failure restores the backup. `--approved-by` is recorded as an audit
+field, not a gate. Verifier changes: an empty `files` array verifies (the
+isolated-draft validator is skipped when nothing is staged), and `--manifest`
+subset mode. Tests: `tests/promote-overlay.test.ts` (dry run byte-identical,
+`--all` promotes add/replace/remove and empties the manifest, `--paths`
+partial leaves the rest promotable, baseline drift refused with nothing
+written, duplicate revision refused) and three new verifier tests; the
+post-apply rollback path is exercised only by code reading, not by a test,
+because the fixture has no deterministic way to fail after verification
+passed. Both real overlays spot-checked (Shadowflame, Wonderland) still
+verify. No overlay has been promoted; that remains an explicit operator call.
+
 **Trigun pointers fixed, with one data-loss incident (2026-09-02).** On
 operator instruction the parked Trigun: Scarlet Mercy canon had its visual
 pointers normalised to the verifier's form, and `--canon-only` now passes for
@@ -18,8 +43,9 @@ full account is `history/2026-09-02-millions-knives-reconstruction.md`. The
 other four files were normalised with the corrected script; validator,
 compiler check, and `verify-references.mjs` pass; the canon snapshot diff
 lists exactly the five files. Rule adopted from it: no tool opens a canon
-file for writing before the complete replacement content exists. One
-migration open item remains: the promotion tool.
+file for writing before the complete replacement content exists. The one
+remaining migration open item, the promotion tool, landed later the same day
+(entry above).
 
 **`verify-provenance.mjs` failures fixed (2026-09-02).** Two causes, two
 fixes. The tool: its no-argument run picked each story's newest file in
