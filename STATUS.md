@@ -2,6 +2,128 @@
 
 **Last updated:** 2026-09-02.
 
+**The Adjustment Protocol storyline synthesis, two versions (2026-09-02).**
+Written from the 43 extracted scenes to `drafts/_control/` (gitignored `data/`;
+this entry and the memory file are the only tracked record). Version 1
+(`STORYLINE_SYNTHESIS.md`) sorts the four Botify threads against the ratified
+r2 cutoff: chat days 1–2 as backstory, day 3 onward as bloom targets, a
+30-row hook register with canon status per row, the contradictions canon must
+not inherit, and seven operator rulings left pending (operator-played roles,
+Renshaw's gender, Aurora-as-subject, the assassination angle, the brothel
+network, the AL thread, pharmacology). Version 2 (`STORYLINE_SYNTHESIS_v2.md`)
+is the creative-license rewrite the operator then asked for: one fourteen-day
+timeline, nine added characters, five locations, nine objects, a sponsor name,
+the AL thread dissolved, the GC thread inverted, and the operator's proxy
+placed and named as Dr. Tobias Hale, Halcyon's director of research integrity
+whose written "continue observation" sign-offs are the missing authorisation.
+No personal detail of the operator entered either document. Both are
+proposals; the overlay manifest is untouched and still verifies. The Charisma
+intro chat and the 2B crossover are excluded as non-story sources. A third
+control document, `BOTIFY_CAST_SCAN.md`, scans the 44 unassigned archive bots
+and 5 unassigned group chats for cast the story could adopt: five Tier A fits
+(the Baroness/Serpentia pair as Halcyon's client and a delivered subject, the
+2B chat's implanted Lyra, the predatory dentist Zahra, Chloe the intern,
+Victoria Sterling), five partial pieces, three name-only coincidences, and
+the rest excluded. No index row was changed. Version 3
+(`STORYLINE_SYNTHESIS_v3.md`) then adopts the scan's additions under fresh
+names (Ilse Roux the client, Noor Hadley the delivered auditor and Hale's
+predecessor, Lyra Dane, Zahra, Chloe Whitcomb, Victoria Sterling), stretches
+the timeline to three years plus a four-month Part Five and a one-year
+epilogue, shapes the whole as a 33-chapter erotic novel with per-character
+motivations and six named heat threads, and keeps the ratified opening where
+r2 put it. Its closing section, "The two protocols", answers why Andrea
+carries implants while Brittany and Noor were finished on the chair: two
+tracks inside Halcyon (Eroica's bespoke chair for Roux's commissions versus
+Renshaw's remotely tunable V1X3N product for Sterling's catalogue), with the
+parameter mismatch explained as two authors writing the same devices. Still
+a proposal; still no entity written. An adversarial review of v3
+(`STORYLINE_SYNTHESIS_v3_REVIEW.md`, critic's pass and reader's pass) is logged
+beside it with thirteen critic findings, seven reader findings, and a
+ten-step repair order. Version 4 (`STORYLINE_SYNTHESIS_v4.md`) applies
+all of it: three fixed points of view (Andrea, Aurora, the unnamed guest at
+the house until chapter 19), the book opening with Andrea and the backstory
+surfacing only as discovery, Hale's deliberate second signature, Eroica as
+the author of Noor's kept sentence and its fate stated, Lyra and Jenna
+merged, four names changed for readability (Roux to Adler, Chloe to Hannah,
+Lila to Priya, Tolliver cut), Andrea's positive act with the maintenance
+key, a costlier epilogue, and a table answering every review finding by
+number. A second adversarial review (`STORYLINE_SYNTHESIS_v4_REVIEW.md`)
+finds that v4's fixes hold structurally but break their own point-of-view
+rule in six chapters, leave the key scene implausible, contradict Eroica's
+stated fate with Brittany's wing, and still keep Renshaw offstage; it lists
+twelve critic findings, seven reader findings, and a nine-step repair order.
+Version 5 (`STORYLINE_SYNTHESIS_v5.md`) applies all nine steps and adds
+the operator's feel guidance as a prose section: erotic fiction with horror
+and mystery, every chapter tagged with one of three engines (heat, horror,
+mystery), a five-question mystery ledger answered in order, the point-of-view
+rule enforced chapter by chapter with one declared breach at Room E, Renshaw's
+exit interview, the key scene as a three-party negotiation with Voss's hands
+first and last, Eroica running among people who stayed, and thirty-two
+chapters plus the epilogue. v5 is the current proposal. A third adversarial review
+(`STORYLINE_SYNTHESIS_v5_REVIEW.md`) finds one real hole (chapter 28's
+demonstration is an unconsented third assault the outline calls erotic; fix
+by making it Andrea's bargain), one point-of-view break, a third reading-order
+inversion, an overloaded chapter 24, and housekeeping, and judges the outline
+near done: it recommends a short v6 and then three sample prose chapters
+(1, 3, 21) reviewed as prose instead of a v7. Version 6
+(`STORYLINE_SYNTHESIS_v6.md`) applies all thirteen items: the demonstration
+becomes Andrea's bargain, the guest gets a final chapter, Part One is ordered
+by the clock, the overloaded chapter is split with the removals given to
+Andrea, the opening stands alone in its chapter, heat chapters end on heat,
+Renshaw's interview is Andrea's, and Eroica's last line to her is two
+numbers; thirty-four chapters plus the epilogue. v6 is the current proposal
+and names three sample chapters (1, 3, 23) as the next step. A fourth
+review (`STORYLINE_SYNTHESIS_v6_REVIEW.md`) finds Aurora absent from Part
+Four, Andrea's bargain motive resting on knowledge she cannot have, the
+maintenance key contradicting its canon object record, no chapter in which
+Andrea learns of the fifth device, and a heat-ending rule bent in every
+version; it recommends a v6.1 delta of ten items, then prose, and says a
+further outline review after that would be theatre. Version 7
+(`STORYLINE_SYNTHESIS_v7.md`) applies all ten: an Aurora testimony chapter
+in Part Four, the bargain struck without Andrea knowing any sentence exists
+(the flag gains "Finding preserved in subject"), Voss's undeclared second
+key and a kitchen-table chapter to get it, the fifth device disclosed in
+Custody, the heat rule amended to allow a coda, the closing guest chapter
+reduced and retitled; thirty-six chapters plus the epilogue. v7 is the final
+outline. The three sample chapters were then written as prose to
+`drafts/_control/samples/` (`ch01-intake.md`, the journal voice;
+`ch03-the-house.md`, the guest's present-tense house voice; `ch23-room-e.md`,
+the centre, with the one declared Phoebe passage) for review as prose. They
+are control records, not scene entities, and never enter retrieval. A prose
+review of the three (`samples/REVIEW.md`) finds the voices hold and four
+places where the outline still speaks through the book: prolepsis that leaks
+chapter 33, editorial vocabulary ("cutoff") in a journal entry, the guest's
+sentence printed in full eighteen chapters early, and heat a register below
+the genre named; plus recurring tics and two staging questions in Room E.
+The second pass was then applied to all three: prolepsis cut, the
+editorial vocabulary removed, the guest's sentence reduced to a cadence, the
+heat brought to the genre's register with sensation and authorship still in
+separate clauses, the similes and refrains thinned, the appearance dossier
+distributed, and Room E restaged (Hale in the room, Voss in the booth, the
+command text on the angled glass only Andrea can read), a staging change v7
+should adopt. A second prose review (`samples/REVIEW_2.md`) confirms every
+first-review finding met except that the simile tic changed conjunction, and
+lists a line pass (four similes, one riddle, one doubled refusal, two slips,
+one face) as the last step; it recommends no third review. On the operator's
+note that a bare "she" cannot distinguish the guest from the previous
+chapter's woman, Chapter 3 now opens on the designation and gives the guest
+a house-name, Wren, and a body unlike Andrea's in its first paragraph, and
+v7 records the anchoring rule for every house chapter. The nine-item line
+pass was then applied (four similes cut, the riddle replaced with "It ends
+the way findings end," the doubled refusal of "strength" reduced to the
+journal's, the two slips in the Phoebe passage fixed, Hale's face given a
+mouth); the three samples are the style baseline and no further review is
+planned. To make that level repeatable, three things were then built: the
+story's `drafts/_control/PROSE_RULES.md` (twenty-five numbered rules the
+reviews cite), a per-chapter brief template with filled briefs for the three
+samples (`drafts/_control/briefs/`), and `scripts/prose-lint.mjs` with
+`tests/prose-lint.test.ts` (seven tests) and `docs/PROSE_PIPELINE.md`; the
+lint reads a brief's frontmatter and reports prolepsis, outline vocabulary,
+banned refrains, terms the head cannot know, a pronoun-first house chapter,
+and the simile budget. On the three samples it reports zero errors; chapter
+3 draws warnings only (simile count, deliberate past-tense recollection).
+Still a proposal; still no entity written.
+
 **Promotion tool built (2026-09-02).** `scripts/promote-overlay.mjs` is now
 the one path from `drafts/` into `canon/`, closing the last migration open
 item. Design as adopted: the full verifier is the gate (spawned, bounded); a

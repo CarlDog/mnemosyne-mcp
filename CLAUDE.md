@@ -253,6 +253,12 @@ assessments listed under "Layout" below.
   verifier-gated, content-backed-up, hash-rechecked, atomic-ordered, evidence to
   `history/overlays/<revision>/`. Dry run without `--apply`. Never run it
   against a real overlay without explicit operator direction.
+- `scripts/prose-lint.mjs <chapter.md> [--brief <brief.md>]` — mechanical
+  checks for a prose chapter against its brief (`docs/PROSE_PIPELINE.md`):
+  prolepsis phrases, outline vocabulary, banned refrains, terms the chapter's
+  head cannot know, a house chapter opening on a pronoun, the simile budget.
+  Errors fail; warnings are for the reviewer. Story rules and briefs live under
+  the story's `drafts/_control/` (`PROSE_RULES.md`, `briefs/`).
 - `scripts/draft-notice.mjs` — the one implementation of the draft-banner
   strip rule, imported by both the verifier and the promotion tool so staged
   bytes equal promoted bytes.
@@ -312,6 +318,9 @@ assessments listed under "Layout" below.
   bounded, evidence-only Atlas Cloud route evaluation; the accompanying
   `scripts/atlas-capability-benchmark.mjs` never automates explicit-content
   generation or stores raw generated output.
+- `docs/PROSE_PIPELINE.md` — the story-agnostic loop for writing and reviewing
+  a chapter of prose (brief, draft, lint, two adversarial review rounds, line
+  pass, stop), written after the Adjustment Protocol sample chapters.
 - `docs/HOOK_VAULT.md` — non-canon development register for promising story
   and character seeds. Promotion requires an explicit creative decision and a
   canon-first scaffold.
