@@ -13,9 +13,13 @@ Status lives in [STATUS.md](STATUS.md) — read it first. This section names
 only what is in flight; it must never restate STATUS.md's Done log. (When
 the two disagree, STATUS.md is newer.)
 
-**Nothing is in flight (2026-08-31).** The hexagonal architecture refactor and
-phase-end audit remediation are complete and locally verified; the Living Canon overlay pass is also closed
-at its operator-approval boundary; no draft was promoted or imported. The
+**Nothing is in flight (2026-09-01).** The 2026-09-01 draft review pass is
+closed: six overlays were corrected, rehashed, and re-sealed; both Miskatonic
+prequel scaffolds were built out with their first choices ratified; Wonderland
+gained its first overlay. See STATUS.md's top entry for the itemized record.
+The hexagonal architecture refactor and phase-end audit remediation are
+complete and locally verified; the Living Canon overlay pass is also closed at
+its operator-approval boundary; no draft was promoted or imported. The
 external-system research program also remains closed. Its one pending operator
 ask is labeling the enrichment-benchmark fixtures (`MNEMO_QUERY_ENRICHMENT`
 stays off until a recorded win). Read [STATUS.md](STATUS.md) first; the standing
@@ -27,7 +31,8 @@ OC stays canonical for *live* story state. Five stories are consolidated onto
 it; Star Wars: The Black Ledger is not, and is structurally unlike the others
 (ongoing, already partly live via Botify, no ChatGPT-project origin).
 
-**Eight review-gated Living Canon overlays are complete on disk (2026-08-30):**
+**Nine review-gated Living Canon overlays are complete on disk (eight from
+2026-08-30, Wonderland r10 added 2026-09-01 at 35 operations → 77 entities):**
 BattleChasers (71 operations → 143 entities), Brass & Nerve (20 → 43), Chaos
 Saga (60 → 73), The Miskatonic Archives: The Blackwood Case (formerly
 GhostHunters; 60 → 105), Midnight Is a Suggestion (41 → 70),
@@ -39,7 +44,11 @@ The 2026-09-01 title-only rename refreshed the affected canon wording and
 manifest hashes without promoting an overlay or importing canon. The Miskatonic
 Archives also has a control-only historical-storyline seed bank linked to
 Dovecoast, plus separate draft-only packages for The Black-Salt Compact and The
-Last Eastbound Run; neither package has canon/ or story.json.
+Last Eastbound Run; neither package has canon/ or story.json. Both were built
+out at the core level on 2026-09-01 (named cast, named places, plot spine);
+each package's `_control/DECISIONS.md` marks which choices the operator has
+ratified (Black-Salt: October 1719 and the Kettle inlet; Eastbound: the
+earlier-run fork, October 1881) and which remain pending.
 
 `trigun-scarlet-mercy` (55 entities) remains tracked in
 [STORYLINE_RESEARCH_BACKLOG.md](docs/STORYLINE_RESEARCH_BACKLOG.md); do not build

@@ -2,6 +2,32 @@
 
 **Last updated:** 2026-09-01.
 
+**Draft review pass, re-seals, prequel ratifications, and a Wonderland overlay
+(2026-09-01).** Every story's `drafts/` tree was read file by file and reviewed
+critically. Small prose corrections landed in BattleChasers (regions index now
+places Ironthrone under Kharag Dûm; the Flamewatch encounter entry is Streyhold's;
+Lilith's profile-established encounters with both parties were added to the
+geometry ledger; four wording fixes), Brass & Nerve (the Mercury Lattice sheath
+is gutta-percha, a deliberate visual-anchor change; one hook line demoted to
+match r2), Chaos Saga ("Trouble" is Riley's nickname only; Montana Highway
+Patrol), The Adjustment Protocol (one wording fix), The Blackwood Case (Reaper
+is a 1995 Defender 90), and The Noctis Veil (the Saint Lucia window hook refers
+to the college's old photographs, not Lucia's childhood). Each affected overlay
+manifest was rehashed on operator instruction and its PASS.md gained a dated
+re-seal note; all six pass `verify-draft-overlay.mjs` again with counts and
+active-canon hashes unchanged. The two Miskatonic prequel packages were built
+out at the core level (named cast, named places, plot spine and ending) and
+recorded in each `_control/DECISIONS.md`; the operator ratified October 1719 and
+the Kettle inlet for The Black-Salt Compact and the earlier-run (October 1881)
+fork for The Last Eastbound Run, with the remaining choices pending. Wonderland,
+which already held a curated 76-entity canon with full reference families,
+gained its first review-gated overlay, `wonderland-living-canon-r10-2026-09-01`:
+35 operations (30 replacements, 3 additions, 2 removals) migrating the Keyblade
+and Vorpal Blade to `lore`, adding a current-arc hook ledger and numeric art
+anchors, and converting every visual pointer to the repo-relative form the
+verifier requires; it verifies at 77 merged entities with zero writes. Nine
+overlays now retain PASS evidence. Nothing was promoted or imported.
+
 **Story setting and storyline renamed (2026-09-01).** The former
 **GhostHunters** package is now **The Miskatonic Archives: The Blackwood Case**:
 **The Miskatonic Archives** is the shared-world setting, **The Blackwood Case**
@@ -639,6 +665,17 @@ Typecheck, lint, and Prettier are green. Historical counts below remain attached
 to the milestones at which they were measured.
 
 ## Done
+
+- **Draft review pass, re-seals, prequel ratifications, Wonderland overlay**
+  (2026-09-01). All eight existing overlays were reviewed file by file; six
+  received small prose corrections and were rehashed and re-sealed with dated
+  notes in their PASS records (BattleChasers, Brass & Nerve, Chaos Saga, The
+  Adjustment Protocol, The Blackwood Case, The Noctis Veil). Both Miskatonic
+  prequel scaffolds were built out at the core level with the year/inlet and
+  timeline-fork choices ratified by the operator. Wonderland gained overlay
+  r10 (35 operations, 77 merged entities, verifier green), bringing the count
+  of review-gated overlays to nine. Every result remains unpromoted and
+  unimported.
 
 - **Hexagonal architecture refactor completed** (2026-08-31). Five application
   use cases are exposed through one `ApplicationUseCases` contract assembled in
