@@ -63,6 +63,10 @@ tmp/
 # with MNEMO_DATA_DIR.
 data/
 
+# Botify bot-definition exports; these may contain private or user-specific
+# character data and are intentionally kept out of version control.
+data/botify-exports/
+
 # Benchmark/report output (scripts/atlas-capability-benchmark.mjs --out default).
 # Evidence documents that should persist get written into docs/ by hand.
 reports/
