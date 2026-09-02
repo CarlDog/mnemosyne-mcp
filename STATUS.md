@@ -2,6 +2,28 @@
 
 **Last updated:** 2026-09-02.
 
+**Phase 6 complete: the standard is the layout doc (2026-09-02).**
+`docs/DATA_LAYOUT.md` was rewritten to the ratified data architecture: the
+root tree now shows `archive/`, `history/`, `workspace/`, `canon/_templates/`,
+the deployment boundary, and the backup set; new sections cover the archive
+(owner, no-overwrite rule, index authority, name-preservation exception),
+history, and workspace; the drafts section carries the standing
+rehash-and-re-seal rule and the `--canon-only` verifier; the references
+section carries the one-image-one-place rule with its hash links and
+`verify-references.mjs`; the sources section describes the read-only pointing
+view; and a primary/derived table closes the document. Everything that was
+already ratified and still true (canon shape, draft contract, reference
+composition defaults, art sidecar fields, companion-log normalization,
+`story.json`, shared conventions) stays as written. `CLAUDE.md`'s layout
+entry and `src/config.ts`'s path comment now point at it, and the superseded
+story-tree punch list moved to `docs/archive/`.
+`docs/DATA_ARCHITECTURE_PROPOSAL.md` remains as the design record and review
+log. **All six phases of the data architecture migration are complete.**
+What the migration leaves for the operator: the 1.28 GB of staged art copies
+under `data/workspace/2026-09-02-art-dedup/` (retire when satisfied),
+`verify-provenance.mjs`'s pre-existing failures, Trigun's malformed pointer
+(parked), and the promotion tool the standard defers to.
+
 **Phase 5 complete: `sources/` is a pointing view (2026-09-02).** Per decision
 2, `build_sources.py` no longer copies any byte that lives in `data/archive/`:
 Botify exports and media, ChatGPT originals, share captures, raw archives, and

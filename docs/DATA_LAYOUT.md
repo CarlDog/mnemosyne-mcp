@@ -10,9 +10,14 @@ finished scenes to `canon/scenes/` and review-gated `drafts/` overlays;
 amended 2026-08-31 to add `companion-logs/` for provenance-carrying
 captures pulled from an external addon/plugin, including the raw-vs-normalized
 split for a source-side identity/persona field that varies within one capture
-(see "Companion logs" below). The
+(see "Companion logs" below); **rewritten 2026-09-02 to the ratified data
+architecture standard** (`docs/DATA_ARCHITECTURE_PROPOSAL.md`, revision 4, whose
+six migration phases are complete): a write-nothing-over `archive/` as the one
+master of every original, `canon/` verifiable on its own, `history/` for
+permanent records, `sources/` as a read-only pointing view, one copy of every
+approved image, and an explicit primary/derived classification. The
 organization and naming standard for everything under `<data dir>` (default `<repo>/data`, gitignored,
-`MNEMO_DATA_DIR` override — see `src/config.ts`). Two guiding principles:
+`MNEMO_DATA_DIR` override — see `src/config.ts`). Guiding principles:
 
 1. **The entity model's `(type, name)` key maps deterministically onto
    the filesystem** — tooling can resolve an entity to its assets
@@ -20,75 +25,108 @@ organization and naming standard for everything under `<data dir>` (default `<re
 2. **Every filename is shell-safe** (lowercase `[a-z0-9.-]`, no spaces,
    nothing needing quotes) — the tree must be equally comfortable in a
    Linux container, a shell script, and a Windows checkout.
+3. **Canon is unmistakable and verifiable on its own.** `canon/` holds active
+   canon and nothing else, and passes `verify-draft-overlay.mjs --canon-only`
+   without help from `drafts/`.
+4. **Every byte we received is kept once, exactly as received.** `archive/` is
+   the master of every original; everything else is canon, a proposal, or a
+   derived view a named script in `scripts/` rebuilds from the archive.
+5. **Every file says where it came from**: index rows with hashes for
+   originals, frontmatter or sidecars naming the original and its hash for
+   derived files, `source_*` fields for entities.
+6. **No duplicated bytes by design.** A file lives in one place; other places
+   point at it by hash; an unavoidable copy is a move with a pointer left
+   behind.
+7. **Primary versus derived is explicit** (table at the end), so the backup
+   set is mechanical. **Every folder has one owner**, and the named tools that
+   write it do so on the owner's instruction.
 
 ```
 data/
-├── config.json                       # current-story pointer (global; server-written)
-└── stories/<slug>/                   # one subtree per storyline; slug = storySlug()
-    ├── story.json                    # identity card (server-written; see below)
-    ├── canon/                        # human-editable authoring surface (operator/tooling-owned)
-    │   ├── characters/<slug>.md      #   one file per core/recurring character
-    │   ├── characters/_minor.md      #   batched compact tier, one heading per NPC
-    │   ├── locations/<slug>.md       #   one file per location
-    │   ├── lore/<slug>.md            #   one file per lore entity
-    │   ├── lore/objects/<slug>.md    #   material objects (still type: lore) -- a
-    │   │                             #   navigation folder, not a distinct schema type
-    │   ├── scenes/<catalog-key>--<slug>.md
-    │   │                             #   one file per established/locked scene
-    │   ├── worldbuilding/<slug>.md   #   one file per topic
-    │   ├── rules.md                  #   ONE file, one `##` heading per rule entity
-    │   └── style.md                  #   ONE file, one `##` heading per style entity
-    ├── drafts/                       # sparse, canon-shaped proposal overlay (never runtime canon)
-    │   ├── <canon-relative>.md       #   additions/replacements at their proposed canon paths
-    │   └── _control/                 #   retained review evidence; never promoted as entities
-    │       ├── overlay.json          #   exact add/replace/remove operations + SHA-256 hashes
-    │       ├── PASS.md               #   completion, validation, and approval state
-    │       ├── LCS_SCORECARD.md       #   Living Canon compliance/adversarial findings
-    │       └── ASSET_REVIEW.md       #   reference coverage and provenance findings
-    ├── sources/                      # provenance mirror of every original (see "Sources")
-    │   ├── README.md, _manifest.json #   origin path + SHA-256 for every file
-    │   ├── chat/<bot>--<id8>/        #   one folder per Botify chat: export.json (byte copy),
-    │   │                             #   transcript.md (chronological, speaker-labelled), media/
-    │   ├── chat/raw/, chat/shares/   #   ChatGPT raw archives and share captures, byte copies
-    │   ├── profiles/characters/<entry>.md   # composite documents split one file per entry ...
-    │   ├── profiles/locations/, profiles/tattoos/, worldbuilding/, settings/,
-    │   │   style-guides/, templates/, logs/, scenes/draft|locked/, prequel/, references/
-    │   └── <kind>/_originals/<file>  #   ... with every original kept whole beside its splits
-    ├── exports/                      # story backups (server-written)
-    │   ├── <slug>-<stamp>.json       #   stamp = UTC to the second, colons stripped --
-    │   │                             #   no descriptive suffixes; a plain timestamp only
-    │   └── archive/                  #   pre-2026-08-27 hand-authored editorial-pass
-    │                                 #   files, retired once their content is scaffolded
-    │                                 #   into canon/ -- historical record, not a live
-    │                                 #   naming pattern to continue
-    ├── references/                   # approved visual INPUTS (operator-curated)
-    │   ├── characters/
-    │   │   └── riley-quinn/          #   one folder per canonical entity
-    │   │       ├── portrait.png      #   3:4 environmental/personality portrait
-    │   │       ├── portrait.json     #   required image sidecar
-    │   │       ├── body.png          #   3:4 full-body design plate
-    │   │       ├── body.json
-    │   │       ├── face.png          #   1:1 identity close-up
-    │   │       └── face.json
-    │   ├── locations/
-    │   │   └── the-warehouse-grill-pub/
-    │   │       ├── exterior.png      #   16:9 establishing view
-    │   │       ├── exterior.json
-    │   │       ├── interior.png      #   16:9 playable interior
-    │   │       └── interior.json
-    │   └── objects/
-    │       └── maddox-1942-indian-scout-741b/
-    │           ├── reference.png     #   16:9 primary object plate
-    │           └── reference.json
-    ├── art/                          # external generation OUTPUTS (OpenArt etc.)
-    │   ├── 2026-08-23T0512-warehouse-confrontation-nano-banana-2-01.jpg
-    │   └── 2026-08-23T0512-warehouse-confrontation-nano-banana-2-01.json
-    └── companion-logs/               # raw pulls from an external addon/plugin (read-only capture)
-        ├── watch-companion-watchalong-transcript-2026-08-31.json
-        ├── watch-companion-watchalong-transcript-2026-08-31.md
-        ├── watch-companion-watchalong-transcript-normalized-2026-08-31.json  # optional: see below
-        └── watch-companion-watchalong-transcript-normalized-2026-08-31.md
+├── config.json                 server: current-story pointer
+├── archive/                    PRIMARY — every original, exactly as received; written only by scripts/intake.py
+│   ├── botify/<bot>/           chats/<id>.json, bot.json, media/, media-manifest.json (fixed names stay
+│   │                           current; prior versions go to _history/<name>.<stamp>.<ext>)
+│   ├── botify/_group-chats/chats/<id>.json
+│   ├── chatgpt/<project>/      the ChatGPT project folders, byte copies, original names kept
+│   ├── chatgpt-shares/<id>.*   share captures (html, json, txt) + index.<story>.json
+│   ├── companion/<addon>/      raw addon pulls + normalization.json (the spec for the derived view)
+│   ├── operator/<story>/       documents handed over directly (nothing already held in references/)
+│   └── <family>/_index.jsonl   append-only, one row per file: path, sha256, bytes, received, indexed,
+│                               origin, stories (the one authority for which story an original serves), role
+├── stories/<slug>/
+│   ├── story.json              server: identity card (see below)
+│   ├── canon/                  PRIMARY — active canon: entities + README + _-prefixed docs, nothing else
+│   │   ├── _templates/<type>.md    authoring templates, one place per story
+│   │   ├── characters/<slug>.md, characters/_minor.md, locations/, lore/, lore/objects/,
+│   │   │   scenes/<key>--<slug>.md (established scenes + their own README, _catalog, _template),
+│   │   │   worldbuilding/, rules.md, style.md   (unchanged; see "Canon")
+│   ├── drafts/                 PRIMARY — the review-gated proposal (sparse mirror of canon/)
+│   │   ├── <canon-relative>.md     additions/replacements at their proposed canon paths, banner first
+│   │   └── _control/               overlay.json, PASS.md (append-only), README.md, SOURCE_PROVENANCE.md,
+│   │                               LCS_SCORECARD.md, ASSET_REVIEW.md, DECISIONS.md (packages),
+│   │                               scenes/ (docs for DRAFT scenes), source-documents/ (evidence)
+│   ├── history/                PRIMARY — permanent records that outlive any overlay: passes, remediation,
+│   │                           reviews, storyline indexes, idea banks; <yyyy-mm-dd>-<topic>.md
+│   ├── sources/                DERIVED, READ-ONLY — pointing view of archive/: _manifest.json (pointers by
+│   │                           path + hash), per-entry splits, one transcript per Botify chat
+│   ├── references/             PRIMARY — approved visual INPUTS, one folder per entity, image + sidecar;
+│   │                           the ONLY copy of an approved image (see "References")
+│   ├── art/                    PRIMARY (ledger) — generation sidecars + unapproved candidates + _logs/
+│   ├── exports/                server-written backups: <slug>-<stamp>.json only; archive/ holds the
+│   │                           retired hand-named editorial exports
+│   └── companion-logs/         DERIVED — normalized views of archive/companion/ for this story
+└── workspace/                  session working sets, one dated folder each; README names what is retained
 ```
+
+**Deployment boundary.** The server reads only `config.json` and each story's
+`story.json` and `exports/`. A runtime mount needs those; `archive/` and
+`workspace/` are never mounted into a deployment.
+
+**Backup set** = `config.json`, `archive/`, and every story's `story.json`,
+`canon/`, `drafts/`, `history/`, `references/`, `art/`, `exports/`, plus any
+`workspace/` folder its README marks retained. Everything else is rebuilt by
+the tool named in the primary/derived table at the end.
+
+## Archive — the one master of every original
+
+- **Owner:** the operator, through `scripts/intake.py` (`index`, `ingest`,
+  `verify` per source family; `snapshot` and `diff` for migration proofs).
+  Nothing else writes `archive/`. Consumers (`build_sources.py`, the extraction
+  configs) read it and never the intake tool's inputs.
+- **Nothing is overwritten; the fixed name is always current.** A re-export or
+  re-run moves the previous file to `_history/<name>.<stamp>.<ext>` before the
+  new one is written. Consumers resolve a chat by glob prefix and assert one
+  match, so versions never land beside the current file.
+- **Index rows are the authority** for which story an original serves
+  (`stories`) and what it was for (`role`); retroactive rows carry
+  `received: null`, never an invented date.
+- Files under `archive/` keep the names they were received under, spaces and
+  dashes included (renaming an original is a modification); the index row is
+  the slug-safe handle. Nothing in `archive/` is an entity or is read by story
+  retrieval.
+- The Botify media archiver whose output lands here is botify-mcp's export
+  media pass (`botify-mcp/docs/export-shapes.md`).
+
+## History — permanent records
+
+Living Canon passes, remediation records, reference-artwork status, storyline
+indexes, idea banks, prequel seed banks, and (once a promotion tool exists)
+promoted overlays' evidence live in `history/`, dated
+(`<yyyy-mm-dd>-<topic>.md`), never in the story root and never in `canon/`.
+Standing control records keep their all-caps names (`PASS.md`,
+`SOURCE_PROVENANCE.md`, `LCS_SCORECARD.md`, `ASSET_REVIEW.md`,
+`DECISIONS.md`) as a deliberate class marker; dated one-off records are
+lowercase slugs. `DECISIONS.md` belongs to a draft-only package's `_control/`
+and is not duplicated in `history/`.
+
+## Workspace — session working sets
+
+`workspace/` holds dated session folders and the migration snapshots
+(`snapshots/<label>.sha`). Nothing references it; its README names the folders
+retained on operator instruction (part of the backup set); everything else
+there is disposable.
+
 
 ## Draft-only story packages
 
@@ -277,11 +315,17 @@ entity-shaped overlay, and is never compiled or promoted as story content.
 - **Control evidence survives the decision.** Record final counts, deliberate
   retcons, remaining unknowns, validation commands/results, adversarial verdict,
   and operator approval or rejection. A completed authoring pass is not an
-  approval. `_control/` may be retained or archived as review history, but may
-  not enter `canon/` or runtime entities.
+  approval. `_control/` is never moved until a promotion tool exists;
+  permanent records belong in `history/`. **Any change to a canon file that
+  an overlay targets** (a `replace` baseline or a `remove` target, both of
+  which carry `baseline_sha256`) is followed in the same step by rehashing
+  that overlay's baselines and appending a dated paragraph to `PASS.md`.
 
 `scripts/verify-draft-overlay.mjs <story-slug>` is the repository verifier for
-this contract. Its manifest schema version 2 supports additions, replacements,
+this contract, and `--canon-only <story-slug>` runs the pointer check,
+structural validator, and import preflight on active canon alone (every story
+with a `canon/` passes it; a bare `- references/...` pointer fails it, so
+pointers are always the full repo-relative path on their own bullet). Its manifest schema version 2 supports additions, replacements,
 and removals; schema version 1 remains readable for earlier add/replace-only
 overlays.
 
@@ -316,12 +360,22 @@ overlays.
 - **Entity pointers are repo-relative** (`data/stories/<slug>/...`) so
   they survive machine moves and container mounts. When a reference
   exists, the entity's REFERENCE APPEARANCE section cites it.
-- **Master copies:** `data/` is the master and the operational copy that
-  tooling and a Docker deployment consume. The operator's original ChatGPT
-  Projects folders (OneDrive) were the provisional master until 2026-09-02;
-  every document there is now either scaffolded into `canon/`, retained in
-  `drafts/_control/`, or copied verbatim into `sources/` (below). Pointers
-  always cite the `data/` copy.
+- **Master copies:** `data/` is the master. Every original is in
+  `archive/`; the operator's ChatGPT Projects folders (OneDrive) stopped
+  being a master on 2026-09-02. Pointers always cite the `data/` copy.
+- **One image, one place.** A generation lands in `art/` as candidate image +
+  sidecar. On approval the **image moves** into its entity folder here; the
+  art sidecar stays as the ledger entry with `image_sha256`, `promoted: true`,
+  `promoted_to_sha256`, and the reference paths at promotion, and the
+  reference sidecar records `promoted_from_art_sidecar` and the same hash.
+  Links are by hash, so later supersession does not stale them. A candidate
+  copy under `<entity>/candidates/` identical to the current plate is removed
+  and its sidecar points at the survivor (`deduplicated_into`,
+  `same_bytes_as_sha256`). A genuine cross-entity share is declared on both
+  sidecars (`same_bytes_as`) and kept as two files, because one-entity-one-
+  folder is the stronger rule. `scripts/verify-references.mjs` checks all of
+  this: every image has a sidecar, every `image_sha256` matches its file or
+  the sidecar says why the file is gone, every hash link resolves.
 
 ### Reference composition and generation defaults
 
@@ -383,7 +437,10 @@ all new tooling must emit foldered paths.
 - **Every image gets a JSON sidecar** with the same basename. This includes
   generated candidates, canonical references, curated/user-supplied sources,
   superseded references, and rejected generations. Rejection is provenance,
-  not a reason to discard the record.
+  not a reason to discard the record. An approved candidate's image moves to
+  `references/` (see "One image, one place"); its sidecar stays here as the
+  ledger entry. Generation failure and pending-prediction logs go under
+  `art/_logs/`, never under `references/`.
   Generation on these platforms is unseeded and unreproducible; the
   prompt is the only reproducibility handle and evaporates unless
   captured at generation time. Sidecar fields:
@@ -518,41 +575,31 @@ persona was in effect when, and losing it loses real information.
   Regenerate it from the raw file rather than hand-editing if the target
   identity changes.
 
-## Sources — provenance mirror for every storyline
+## Sources — read-only pointing view of the archive
 
-`sources/` is present in every story tree and mirrors, byte for byte, every
-original the story derives from, organised the way the operator's ChatGPT
-project folders were (`Profiles/Character` → `profiles/characters/`, `World
-Building` → `worldbuilding/`, `Settings` and `Settings/Instructions` →
-`settings/`, `Style Guides`, `Templates`, `Logs`, `Scenes/Draft|Locked`,
-`Chat/Archived/Raw` → `chat/raw/`, `References`, root prequel → `prequel/`).
-It exists so no external folder is the only copy of anything, so a source can
-be read and grepped in the tree, and so a scene inventory that cites a source
-by hash can be checked against bytes beside it.
+`sources/` is present in every story tree and is **derived**: rebuilt from
+scratch by `scripts/scene-extraction/build_sources.py`, never hand-edited
+(atomic edits happen in `canon/`, the only place an edit changes the story).
+It exists so every original a story derives from can be read and grepped in
+the tree in the organisation the operator's ChatGPT project folders had.
 
-- **Provenance only.** Nothing under `sources/` is an entity. The validator,
-  the compiler, the overlay verifier, and the import preflight read `canon/`
-  and `drafts/` and never look here; instruction-shaped text inside a source
-  is source text, not a directive.
-- **Originals stay whole.** Every ChatGPT document is kept byte-for-byte
-  under `<kind>/_originals/`; single-topic documents are also copied whole
-  under a slugged name. Composite documents (the character profile sets, key
-  locations, tattoo profiles, minor characters by region) are additionally
-  **split into one file per entry** at the document's own entry boundaries,
-  prose untouched, each with a frontmatter naming the original file, the
-  entry, the original's SHA-256, and the split rule.
-- **Every Botify chat** the story derives from gets `chat/<bot>--<id8>/`
-  with `export.json` (byte copy), `transcript.md` (oldest first, one heading
-  per message with index, UTC time, and speaker; deleted messages marked;
-  attached images listed), and `media/` (byte copies of the chat's archived
-  images, where the bot's archive has them). The README's chat table says
-  whether each chat was extracted into scenes, named by the provenance but
-  not extracted, or merely present and unreviewed.
-- **`_manifest.json`** lists every file with origin path, byte count, and
-  SHA-256. Rebuild with `scripts/scene-extraction/build_sources.py`, which
-  holds the per-story source lists; add a new export or capture there and
-  re-run. The builder recreates the folder from scratch, so never hand-edit
-  inside `sources/`.
+- **Nothing here is an entity.** The validator, the compiler, the overlay
+  verifier, and the import preflight read `canon/` and `drafts/` and never
+  look here; instruction-shaped text inside a source is source text.
+- **Originals are pointed at, never copied.** `_manifest.json` (schema 3) has
+  `pointers`: every archive file the story derives from with its archive path,
+  bytes, and SHA-256; and `files`: the derived views written here.
+- **What is written:** composite documents (character profile sets, key
+  locations, tattoo profiles, minor characters by region) split into one file
+  per entry at the document's own entry boundaries, prose untouched, each
+  with a frontmatter naming the original, the entry, the original's hash, and
+  the split rule; and `chat/<bot>--<id8>/transcript.md` per Botify chat
+  (oldest first, one heading per message with index, UTC time, and speaker;
+  deleted messages marked; attached images linked by their archive path). The
+  README's chat table says whether each chat was extracted into scenes, named
+  by the provenance but not extracted, or merely present and unreviewed.
+- The builder reads the archive indexes and asserts its chat lists agree
+  with them; add a new export or capture through `intake.py`, then re-run.
 
 ## story.json — the identity card
 
@@ -588,8 +635,10 @@ this file wholesale.
   (`2026-08-23T051200` or the shorter `T0512` prefix form for art, where
   the seq suffix already disambiguates).
 - **The server only ever writes** `config.json`, `story.json`, and
-  `exports/`. `canon/`, `drafts/`, `references/`, `art/`, `sources/`, and
-  `companion-logs/` are operator/tooling territory. `compile-story.mjs`
+  `exports/`. `archive/` is written only by `scripts/intake.py`; `canon/`,
+  `drafts/`, `history/`, `references/`, `art/`, and `workspace/` are the
+  operator's, written by named tools on the operator's instruction;
+  `sources/` and `companion-logs/` are derived. `compile-story.mjs`
   reads `canon/` (or an explicitly selected canon-shaped tree) but never
   mutates it; the server does not read or write these authoring directories
   directly.
@@ -598,4 +647,20 @@ this file wholesale.
   belongs in `drafts/` until accepted and then in `canon/`, never in a
   hand-named `exports/` file — that drift
   (`-mature-`, `-living-canon-`, `-remediation-`, etc.) is exactly what
-  the 2026-08-27 amendment retired into `exports/archive/`.
+  the 2026-08-27 amendment retired into `exports/archive/` (completed for
+  every story on 2026-09-02; ChatGPT share captures moved to
+  `archive/chatgpt-shares/` the same day).
+
+## Primary or derived, and the tool that rebuilds each derived view
+
+| Folder | Class | Rebuilt by | Backed up |
+|---|---|---|---|
+| `archive/` | primary, written only by `scripts/intake.py` | nothing | yes |
+| `canon/`, `drafts/`, `history/` | primary | nothing | yes |
+| `references/`, `art/` | primary (unseeded generation) | nothing | yes |
+| `exports/`, `story.json`, `config.json` | primary (server) | the server, from OC | yes |
+| `sources/` | derived, read-only | `scripts/scene-extraction/build_sources.py` | no |
+| `drafts/_control/scenes/` (threads cut by `extract_scenes.py`) | derived evidence | `scripts/scene-extraction/extract_scenes.py` | with `drafts/` |
+| `drafts/_control/scenes/` (raw-archive and earlier-script docs), `_control/source-documents/` | primary with provenance (their producers are do-not-rerun records under `scripts/scene-extraction/earlier/`) | nothing | with `drafts/` |
+| `companion-logs/` | derived | the companion normalizer, from `archive/companion/` and its `normalization.json` | no |
+| `workspace/` | retained per its README; otherwise disposable | nothing | retained folders only |

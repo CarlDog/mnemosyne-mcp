@@ -13,7 +13,14 @@ Status lives in [STATUS.md](STATUS.md) — read it first. This section names
 only what is in flight; it must never restate STATUS.md's Done log. (When
 the two disagree, STATUS.md is newer.)
 
-**Nothing is in flight (2026-09-02).** The recovered scene extractions are
+**Nothing is in flight (2026-09-02).** The data architecture migration
+(`docs/DATA_ARCHITECTURE_PROPOSAL.md`, ratified; `docs/DATA_LAYOUT.md` now
+normative) completed all six phases on 2026-09-02: `data/archive/` is the one
+master of originals (written only by `scripts/intake.py`), every story has
+`history/` and a read-only `sources/` view, active canon verifies alone
+(`verify-draft-overlay.mjs --canon-only`), and approved art exists in one
+place (`scripts/verify-references.mjs`). Open items are listed in STATUS.md's
+phase 6 entry. The recovered scene extractions are
 parked for review in the draft overlays, not in canon: on 2026-09-02 the operator
 moved Chaos Saga's 256 raw-archive scene files and The Blackwood Case's 50
 Botify-transcript scene files from `canon/scenes/` into each story's
@@ -299,7 +306,11 @@ assessments listed under "Layout" below.
   and follow-up work for concepts with a deliberate direction or existing
   story foundation; raw salvage remains in the Hook Vault.
 - `docs/DATA_LAYOUT.md` — the data-directory organization and naming
-  standard: per-story `references/` and `art/` conventions, generation
+  standard (rewritten 2026-09-02 to the ratified data architecture:
+  `archive/` as the one master of originals, `history/` per story,
+  `sources/` as a read-only pointing view, one copy of every approved image,
+  primary/derived classes; `docs/DATA_ARCHITECTURE_PROPOSAL.md` is the design
+  record and review log): per-story `references/` and `art/` conventions, generation
   sidecars, `companion-logs/`'s external-addon/plugin provenance
   requirement, and the server-written `story.json` identity card.
 - `docs/LIVING_CANON_STANDARD.md` — the ratified editorial quality contract
