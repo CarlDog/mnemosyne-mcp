@@ -233,6 +233,99 @@ is said). Lint: zero errors, zero warnings on all three. The three samples
 are The Noctis Veil's style baseline; no further review is planned. Still a
 proposal; no entity written.
 
+**Brass & Nerve synthesis started (2026-09-02).** Per its readiness file the
+conservative sort was skipped. Written to `drafts/_control/`: one thread
+report on the single Evelyn Starling chat (`thread-reports/`, with the
+operator-played patient's details excluded and the authorship of the
+"Goddess Eliza" switch attributed to the operator), a cast scan
+(`BOTIFY_CAST_SCAN.md`: four canon roles the archive can voice, all renamed),
+and, on the operator's correction that v1 is always the conservative sort
+saved untouched and never reviewed, `STORYLINE_SYNTHESIS.md` as exactly
+that: the one chat placed against canon's opening configuration (all twelve
+scenes sit before it, already absorbed as "established before scene one"),
+a 17-row hook register, the contradictions canon must not inherit, and eight
+rulings left pending including the genre lean for v2. A creative draft
+written first by mistake is kept aside under `_control/superseded/`. Version
+2 (`STORYLINE_SYNTHESIS_v2.md`) is the creative-license version with the
+operator's genre lean for this story, industrial espionage: the book built
+as a build (every chapter revision-labelled and ending on a device-log
+line), three rotating heads, Sabine as the handler who discovers her warrant
+is a seizure order and runs the inspection as cover, a loss adjuster named
+Aurel Stane as the antagonist with a face, a break-in that steals the log and
+hurts Ada, moles in both directions (Bess Marrow unwitting, Isadora Kell
+deliberate), the Guild's evidence vault, one chase on the canal machine
+stairs, and every r2 unknown answered as proposal. An adversarial review
+(`STORYLINE_SYNTHESIS_v2_REVIEW.md`) finds the book breaking its own
+knowledge rule in Part One (Sabine, Bess, Isadora seen without a head in
+the room; fix: Sabine as a fourth head), the handler-and-asset framing
+without tradecraft (fix: Eliza's map taken off the warrant), the stolen
+log's chapter-endings undecided, two antagonists who do not know each other,
+an uncosted canal, Ada vanishing after the break-in, heat thinner than the
+brief, and a first-syllable collision (Corvane/Corran); nine repairs. Version 3
+(`STORYLINE_SYNTHESIS_v3.md`) applies all nine: Sabine as the fourth head with
+the knowledge rule rewritten, Eliza's map as the thing Sabine takes off the
+warrant, five chapters that end on no log line between the theft and the
+surgery with the recovered pages bound behind the new book at the end, the
+Guild lab as the hub selling in both directions, the canal costed with an
+inspector's report and a drawer, Ada's rebuild and credit line, a
+quality-assurance chapter under Tamsin's form as the book's centre, Corran
+renamed Tobias Wick, the cutout named, Nell's refusal, and a gauge with a
+body on the platform; thirty-four chapters. A second review
+(`STORYLINE_SYNTHESIS_v3_REVIEW.md`) finds three seams the fixes uncovered:
+fifteen chapters ending on no log line, which empties the gap (fix: Sabine's
+chapters end on her inspection record, the loft on the next morning's line,
+only the gap silent); Eliza as the clinical witness to her lover's
+sensation test (fix: she rules herself out, Tamsin witnesses); and Gideon's
+flight log never disclosed on the page (fix: he gives it to Sabine after the
+lock); plus a numbering fault, a leak to name, a loophole to own, two
+documents to place, and a girlhood to restore. Version 4
+(`STORYLINE_SYNTHESIS_v4.md`) applies all eight: two ledgers (the device log
+and Sabine's inspection record, which the reader watches diverge), the loft
+chapters ending on the next morning's line, only the five gap chapters
+silent, Eliza ruling herself out of the sensation test in her own hand,
+Gideon giving Sabine the flight log after the lock, the leak named as the
+clerk who requested the warrant, the shield as Sabine's own thin reading,
+the old file read by Leda and the omitted sentence read by Corvane, and
+Sabine's girlhood restored; thirty-three chapters. v4 is the last outline;
+next is prose (chapters 1, 12, 17). A third review
+(`STORYLINE_SYNTHESIS_v4_REVIEW.md`) finds no severe item: chapter 12's
+silence belongs to the wrong ledger (fix: a record line that omits, her
+first lie in her own hand; the device gap becomes four chapters), chapter 32
+carries two ledger lines (fix: Tobias keeps his own chapter), a promised
+confrontation to withdraw, Sabine's fate to add to the open list, a note
+for chapter 16's brief, and a title; it sends the items to the prose rules
+and briefs and judges a v5 theatre. Those items were applied: the story's
+`drafts/_control/PROSE_RULES.md` (twenty-seven rules for four heads, the
+knowledge rule, the two ledgers, the four-chapter silent gap, and the six
+deltas), briefs for chapters 1, 12, and 17 with a story `prose-lint.json`,
+and three sample chapters under `drafts/_control/samples/`
+(`ch01-function-stated.md`, the first live test and the log voice;
+`ch12-the-map.md`, Sabine asking off the warrant and her first record line
+that omits; `ch17-quality-assurance.md`, the centre, under Tamsin's form
+with Eliza absent by her own line). The prose review (`samples/REVIEW.md`)
+finds chapter 12 finished, chapter 1 needing a broken first sentence and a
+trimmed simile, and chapter 17 coy where the rules forbid euphemism (three
+figures for one physical fact, none naming it), Eliza cutting a page from
+the device log (out of character and against the book's own evidence rule),
+the form set as a document instead of read aloud, Gideon's "Right" as a tic
+to decide, and two similes over. All seven items were applied the same day:
+chapter 17 now names the reading in Tamsin's voice and in Gideon's head,
+Eliza's line is copied onto the form in Tamsin's hand with the log open on
+the side table, the form is read aloud as dialogue, junction eleven is placed
+on the body, two similes are cut; chapter 1's first sentence is broken and
+"Right" is kept as Gideon's tic, noticed once by Evelyn; chapter 12 loses one
+telling clause and its brief is amended to record that Sabine answers Eliza's
+invoice line. The second review (`samples/REVIEW_2.md`) finds the seven fixes
+held and two of them introduced errors in chapter 17: the device log is open
+on the side table and also arrives later in Evelyn's satchel, and junction
+eleven is placed against the wrong scar; plus one sentence to straighten.
+The line pass applied them: the copy on the form is initialled, Evelyn sets
+the book open on the side table before anything else and writes in it there,
+the scar clause is cut, the abstinence sentence is one plain line, the
+"and that" chain is four clauses, the stranded line is reflowed; chapters 1
+and 12 untouched. Lint is zero errors; the three samples are the story's
+style baseline, closed. The overlay still verifies; no entity written.
+
 **Promotion tool built (2026-09-02).** `scripts/promote-overlay.mjs` is now
 the one path from `drafts/` into `canon/`, closing the last migration open
 item. Design as adopted: the full verifier is the gate (spawned, bounded); a
