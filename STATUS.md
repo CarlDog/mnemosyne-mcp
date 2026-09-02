@@ -34,12 +34,15 @@ reversible departure from bare verbatim prose, inside the hashed body, and the
 account is not always the character speaking (flagged where it differs).
 `verify-draft-overlay.mjs` passes for Brass & Nerve, Story 10,
 Story 12, story-14, and Story 03, active canon hashes unchanged,
-writes=0. It does not pass for The Black Ledger: it fails on active canon before
-reaching the overlay, because `canon/characters/_minor.md` lines 19, 40, and 61
-put a label before the `references/` image path on the same bullet; the
-structural validator passes on canon and on the isolated tree, the merged
-preflight has not run, and the fix (an edit to `canon/`) is left to the
-operator. Documented retcons (Character 137 → Character 128, Chimaera → Revenant,
+writes=0. It first failed for The Black Ledger on active canon, before reaching
+the overlay: every canon file wrote its image pointers as a label plus a
+backticked `references/` path on one bullet, and the verifier accepts only the
+full `data/stories/<slug>/references/…` path as the entire bullet line. On
+operator instruction the pointers in 31 canon files were normalised to that
+form (label kept as its own bullet, pointer nested under it; three `rejected/`
+folder mentions reworded), with no wording, path, image, or sidecar otherwise
+changed; the verifier now passes for The Black Ledger too (64 merged entities,
+73 pointers resolved, writes=0), recorded in its PASS record. Documented retcons (Character 137 → Character 128, Chimaera → Revenant,
 "Carl Yeager" → Character 115 / Character 114) are carried as flags. Roles played
 under the operator's own name with no canon counterpart (the Brass & Nerve
 patient; Story 10's lead scientist and patient; Story 12's
