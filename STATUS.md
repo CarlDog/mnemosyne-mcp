@@ -2,6 +2,32 @@
 
 **Last updated:** 2026-09-02.
 
+**Phase 3 complete: canon-side docs (2026-09-02).** BattleChasers' six
+authoring templates moved from the type folders into `canon/_templates/`
+(`character-core.md`, `character-recurring.md`, `location.md`, `lore.md`,
+`object.md`, `worldbuilding.md`); the overlay's replacement for the core
+character template moved with it to `drafts/_templates/` and its manifest
+path was renamed, and `canon/README.md` (an overlay `replace` target),
+`drafts/README.md`, and the scorecard were repointed with both hashes
+refreshed. Chaos Saga's `canon/scenes/_source-inventory.md` and
+`_recovery-source-manifest.tsv`, which document the 256 draft scenes rather
+than the three established ones, moved to `drafts/_control/scenes/` beside the
+draft index and alternates; `canon/scenes/README.md` (not an overlay target)
+was trimmed to the established scenes plus a pointer, with `_catalog.md`'s
+location registry staying canon-side because it serves both. No draft scene
+cited the moved docs (only two control records did, and they were repointed
+or given a dated note). The before/after snapshots show exactly the two
+READMEs changed, the eight docs removed from their old canon paths, and the
+six templates added at the new one; validators, `--canon-only`, and the full
+verifier pass for both stories. The remaining one-off scripts from the
+retained workspace (the ChatGPT share fetcher, parser, inspector, and
+source-document saver; the two raw-archive alternates cutters; the Wonderland
+overlay builder) were copied into `scripts/scene-extraction/earlier/` with the
+do-not-rerun header, machine-specific paths replaced by repo-relative ones, so
+everything the standard calls "derived evidence" has its producer in
+`scripts/`. Phase 4 (visual dedup, the only phase that deletes bytes) is
+next and waits for the operator's go.
+
 **Phase 2 complete: story roots and records (2026-09-02).** Every story tree
 now has `history/` (with a README stating its purpose); the Black Ledger's
 three root-level records moved there as dated files
