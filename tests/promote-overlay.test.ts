@@ -54,7 +54,7 @@ async function exists(file: string): Promise<boolean> {
 async function seed(): Promise<Fixture> {
   const slug = `promote-overlay-${process.pid}-${randomBytes(4).toString("hex")}`;
   const root = join(STORIES_ROOT, slug);
-  await mkdir(root, { recursive: false });
+  await mkdir(root, { recursive: true });
   cleanups.push(root);
   const baselineCharacter = `---\nname: Baseline Character\n---\n\nOld state.\n`;
   const retiredLore = `---\nname: Retired Lore\n---\n\nRemovable.\n`;
@@ -150,6 +150,8 @@ async function manifestFiles(root: string): Promise<Operation[]> {
 }
 
 async function backupDirs(slug: string): Promise<string[]> {
+  // data/ is gitignored, so a fresh clone (CI) has no workspace directory yet.
+  if (!(await exists(WORKSPACE))) return [];
   return (await readdir(WORKSPACE)).filter((n) =>
     n.includes(`-promotion-${slug}-`),
   );
