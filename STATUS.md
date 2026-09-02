@@ -2,6 +2,21 @@
 
 **Last updated:** 2026-09-02.
 
+**Recovered scenes moved into the draft overlays (2026-09-02).** On operator
+decision, the recovered scene files for Chaos Saga (256 `CS-*` files) and The
+Blackwood Case (50 `BC-*` files) moved from each story's `canon/scenes/` into
+`drafts/scenes/` as overlay `add` operations, because they need review before
+they are locked in as canon. Each file gained the draft banner after its
+frontmatter; content hashes still cover the body alone. Their indexes,
+catalogs, source inventories, media index, and `_alternates/` moved to
+`drafts/_control/scenes/`. Chaos Saga's three export-established scenes and
+its scene-folder documentation stay in `canon/scenes/`; The Blackwood Case no
+longer has a `canon/scenes/` folder. Both overlays were rehashed and re-sealed
+(Chaos Saga 316 manifest entries, 65 active and 329 merged; The Blackwood Case
+110 entries, 101 active and 155 merged); both verifiers pass with active canon
+hashes unchanged and writes=0. Nothing was promoted or imported. The two entries
+below describe the extractions and should be read with this relocation.
+
 **The Blackwood Case scene recovery (2026-09-02).** On operator instruction,
 the played investigation was cut into per-scene files under
 `data/stories/miskatonic-archives-the-blackwood-case/canon/scenes/` for later
