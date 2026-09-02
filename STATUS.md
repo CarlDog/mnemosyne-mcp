@@ -2,6 +2,16 @@
 
 **Last updated:** 2026-09-02.
 
+**Staged art copies retired (2026-09-02).** On operator instruction, after
+`verify-references.mjs` passed again for all seven stories with visual
+assets, the phase 4 staging folder `data/workspace/2026-09-02-art-dedup/`
+(219 files, 1.28 GB) was deleted. The dedup's reclaim is now real: every
+removed art candidate and duplicate candidate copy exists only as the
+reference plate its sidecar points at by hash. Each affected story's
+`history/2026-09-02-phase4-visual-dedup.md` records the retirement. Of the
+phase 6 open items, three remain: the pre-existing `verify-provenance.mjs`
+failures, Trigun's malformed pointer, and the promotion tool.
+
 **Phase 6 complete: the standard is the layout doc (2026-09-02).**
 `docs/DATA_LAYOUT.md` was rewritten to the ratified data architecture: the
 root tree now shows `archive/`, `history/`, `workspace/`, `canon/_templates/`,
