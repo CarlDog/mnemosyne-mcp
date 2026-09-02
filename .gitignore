@@ -70,3 +70,7 @@ data/botify-exports/
 # Benchmark/report output (scripts/atlas-capability-benchmark.mjs --out default).
 # Evidence documents that should persist get written into docs/ by hand.
 reports/
+
+# Python bytecode from the operator scripts
+__pycache__/
+*.pyc
