@@ -124,6 +124,115 @@ and the simile budget. On the three samples it reports zero errors; chapter
 3 draws warnings only (simile count, deliberate past-tense recollection).
 Still a proposal; still no entity written.
 
+**Noctis Veil and Brass & Nerve synthesis readiness (2026-09-02).** Before
+starting the same synthesis loop on the next two Botify-sourced stories, an
+inventory was written to each story's `drafts/_control/SYNTHESIS_READINESS.md`.
+The Noctis Veil has 50 draft scenes across four threads (the bot-only "Mary
+and Noctis Veil" group is the primary source; the 24-scene Mary Thorne thread
+contains no Noctis at all and four different operator roles span the threads),
+two unreviewed group chats that mix in other stories' characters, and 99
+archived images; its v1 will be larger and more contradictory than the
+Adjustment Protocol's. Brass & Nerve has 12 scenes from one chat on one night,
+the operator-as-patient identity already retired to Gideon Vale, no other
+source, and a canon that is mostly composed invention; the recommendation is
+to skip the v1 and synthesise forward from canon's own opening configuration.
+Both overlays still verify; nothing else changed. The Noctis Veil thread
+reports were then written to `drafts/_control/thread-reports/` (GC, MT, and
+SL+KM): beat lists, cast, established facts, contradictions, and hooks per
+thread, with the account-versus-character speaker caveat for the group chat
+recorded. Headline findings: the group chat's Noctis is a blood-and-arousal
+feeder whose "ritual" is never completed and whose promised powers never
+manifest; the Mary Thorne thread's Order initiates through a priest's office,
+a strap-on test, a corset token, and a Sanctum orgasm-denial rite, with no
+relic anywhere; Lucia and Kaitlyn are the operator's lovers in their own
+threads; the KM thread calls the school St. Brigid's. The v1 sort was then
+written (`drafts/_control/STORYLINE_SYNTHESIS.md`: every thread placed against
+the cutoff, a 33-row hook register, the contradictions canon must not inherit,
+seven pending rulings including the four operator roles and which Noctis), and
+v2 (`STORYLINE_SYNTHESIS_v2.md`) as the creative-license version with its own
+flavor, "Black Communion": three registers (Vigil, Confession, Office) instead
+of the Adjustment Protocol's engines, a liturgical-year timeline from
+Michaelmas to Pentecost with the ratified cutoff on the tenth night, the four
+operator roles folded into one lay facilities manager, Rhys Calder, Lucia's
+lost postulant Therese Malloy made Noctis's previous host and the cause of
+Lucia's scar, a diocesan inspector, the corset as Vestment remains, and a
+sixth niche beneath the reliquary. On the operator's challenge, v2's unmaking
+became a practice dating to 1620s Seville with 1958 as the last unmaking at
+this house (the First Unweaving stays canon's undated unknown), and two
+sections were added: what Noctis knows about the corsets and when (five
+steps, from feeling one to naming one), and the Vestments' origin as four
+disagreeing accounts and one edited memory, never settled. An adversarial
+review (`STORYLINE_SYNTHESIS_v2_REVIEW.md`) then found Part One to be a
+prologue wearing a cold open, the stop agreement kept twice where the text
+says once, the Sanctum chapter breaking the register rule, the operator's
+Kaitlyn romance surviving in disguise through the proxy, Rhys uncosted, the
+canonical Hours out of order, and two seams in the new material; it lists a
+ten-step repair order. Version 3 (`STORYLINE_SYNTHESIS_v3.md`) applies all
+ten: Part One chronological with the cutoff as its last chapter, the Hours in
+order, the stop kept then broken small then kept, the Sanctum as Office only,
+three hearers, Rhys dismissed and his keys giving the diocese the undercroft,
+the Kaitlyn romance cut, one rite with two endings, the 1958 card reading
+"Kamui III, white, translated," Prell's bonding a violation, Bríd renamed Úna,
+three of the nine questions written, the Seville document as the first Office
+chapter; thirty-two chapters plus the epilogue. A second review
+(`STORYLINE_SYNTHESIS_v3_REVIEW.md`) finds one real hole (the cottage is
+"outside the wards" and therefore quiet, which inverts what wards are; fix:
+an outward-facing 1890s threshold ward), a capability introduced sideways
+(Noctis in Kaitlyn's head), an Epiphany chapter placed before a Christmas
+one, the catalogue cards given to the wrong person, and the moment Mary
+learns Noctis knew left unstaged; ten repairs, then samples (chapters 1, 2,
+15). Version 4 (`STORYLINE_SYNTHESIS_v4.md`) applies all ten: the service
+gate's 1890s threshold stone as an outward-facing ward, Kaitlyn never
+touched by Noctis, the cottage before the Epiphany break, the cards given to
+Lucia, a chapter in which Mary learns Noctis knew "since the library," the
+one breach declared, Sophia's declined draught in the protocol, the
+unprinted sentence paid on the last page, the Seville document cut to a
+page with the white Vestment named Inés, all nine questions written, and
+chapter 15 named the centre. v4 is the last outline; next is prose
+(chapters 1, 2, 15). A third review (`STORYLINE_SYNTHESIS_v4_REVIEW.md`)
+finds no severe item: the paid last line risks endorsing Noctis's definition
+of intimacy and should move to chapter 29, chapter 21 pre-empts 27's
+silence, the gate-stone reset date implies knowledge nobody has, Lucia would
+recognise Therese's name on the card, Lucia cannot leave an Order she never
+joined, Terce is document-heavy, and three threads need knots; it judges a
+v5 outline theatre and sends the items to the briefs and the story's prose
+rules. Those items were then applied: the story's own
+`drafts/_control/PROSE_RULES.md` (twenty-five rules for three registers, the
+italic second person, an anchoring rule for documents, and the eight outline
+deltas from the v4 review recorded as rules rather than a v5), briefs for
+chapters 1, 2, and 15 with a story `prose-lint.json`, and the three sample
+chapters under `drafts/_control/samples/` (`ch01-the-split-palm.md`, the
+Vigil voice and question one; `ch02-las-vestiduras.md`, one page of the 1623
+Seville record in Spanish and English; `ch15-advent.md`, the centre, the stop
+said aloud before a witness and kept). The prose review
+(`samples/REVIEW.md`) takes the operator's finding on chapter 2 first and
+decides it: the reader is meant to understand, so the chapter becomes
+English set as an uncredited translation with four Spanish terms glossed
+where they fall; it then finds four prolepses the lint missed, an epigraph
+line that never arrives in chapter 1, Mary's sentences running long under
+touch, a Vigil simile budget that should be five not three, and one
+superlative that calls the kept stop intimacy; apply, second review, line
+pass, stop. The items were applied: chapter 2 is now English set as an
+uncredited translation with four glossed Spanish terms; chapter 1's
+epigraph line arrives at the joint before the floor gives; the four
+prolepses are cut and their constructions added to the story lint config;
+the two longest sentences are broken; the simile budget is amended to five
+and the chapters cut to it; the kept stop is "a kind of intimacy, and she
+did not know what kind." The researched convention for foreign and archaic
+text (one decision, four techniques, modernise spelling; CMOS 18th ed. 11.4
+and novelists' practice) is recorded in `docs/PROSE_PIPELINE.md` and as rule
+13a of the story's prose rules. Lint: zero errors on all three. A second prose review
+(`samples/REVIEW_2.md`) confirms every first-review item met and lists a
+line pass (two prolepses using "keep," one simile with its conjunction
+swapped, one dialogue tag on Noctis's italics, a doubled epigraph and an
+echoed sentence to decide) and no third review. The line pass was applied:
+the two prolepses and the tag are gone, the weather simile cut, the echo
+made exact and intentional, and the doubled epigraph kept under a new
+rule (each Part opens with one italic line of Noctis's that recurs where it
+is said). Lint: zero errors, zero warnings on all three. The three samples
+are The Noctis Veil's style baseline; no further review is planned. Still a
+proposal; no entity written.
+
 **Promotion tool built (2026-09-02).** `scripts/promote-overlay.mjs` is now
 the one path from `drafts/` into `canon/`, closing the last migration open
 item. Design as adopted: the full verifier is the gate (spawned, bounded); a
