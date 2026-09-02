@@ -22,7 +22,10 @@ frontmatter; indexes, catalogs, and `_alternates/` under
 `drafts/_control/scenes/`). Chaos Saga's three export-established scenes stay in
 `canon/scenes/`; The Blackwood Case has no `canon/scenes/` folder. Shadowflame's
 59 scenes (cut the same day from the Dark Queen Lilith Botify chat) were written
-straight to `drafts/scenes/`. Any future scene extraction goes to `drafts/scenes/`. Both overlays were rehashed and
+straight to `drafts/scenes/`, as were BattleChasers' nine Chapter One scenes (cut
+the same day from the operator's two ChatGPT shares; earlier drafts and pasted
+config documents sit under `drafts/_control/scenes/`). Any future scene
+extraction goes to `drafts/scenes/`. Both overlays were rehashed and
 re-sealed; nothing was promoted. The 2026-09-01 draft review pass is
 closed: six overlays were corrected, rehashed, and re-sealed; both Miskatonic
 prequel scaffolds were built out with their first choices ratified; Wonderland
@@ -43,7 +46,8 @@ it; Star Wars: The Black Ledger is not, and is structurally unlike the others
 
 **Nine review-gated Living Canon overlays are complete on disk (eight from
 2026-08-30, Wonderland r10 added 2026-09-01 at 35 operations → 77 entities):**
-BattleChasers (71 operations → 143 entities), Brass & Nerve (20 → 43), Chaos
+BattleChasers (71 operations → 143 entities; 80 → 152 since the scene
+extraction), Brass & Nerve (20 → 43), Chaos
 Saga (60 → 73; 316 → 329 since the 2026-09-02 scene move), The Miskatonic Archives: The
 Blackwood Case (formerly GhostHunters; 60 → 105; 110 → 155 since the scene move), Midnight Is a Suggestion (41 → 70),
 Shadowflame (40 → 74; 99 → 133 since the scene extraction), The Adjustment Protocol (19 → 41), and The Noctis Veil
