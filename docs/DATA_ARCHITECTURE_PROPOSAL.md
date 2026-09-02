@@ -7,9 +7,10 @@ will hold for years: cleaner organization, no duplicated bytes, provenance
 that cannot be lost, and a clear line between what is canon, what is
 proposed, what is evidence, and what is merely kept. Revisions 2 to 4 folded
 in four adversarial reviews (§7); the fourth found no further architectural
-flaw. This document supersedes `docs/STORY_TREE_ORGANIZATION.md` and, when
+flaw. This document supersedes `docs/archive/STORY_TREE_ORGANIZATION.md` and, when
 phase 6 lands, replaces `docs/DATA_LAYOUT.md`. Migration status lives in
-`STATUS.md`; phases 0 to 5 completed 2026-09-02.
+`STATUS.md`; all six phases completed 2026-09-02. `docs/DATA_LAYOUT.md` is now the
+normative layout document; this file is the design record and review log.
 
 **Decisions (2026-09-02):** 1 rename `botify-exports/` to `archive/botify/`
 in phase 1; 2 `sources/` stops holding byte copies in phase 5; 3 the saved

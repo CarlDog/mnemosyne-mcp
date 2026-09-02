@@ -9,6 +9,10 @@
 //   <data dir>/stories/<slug>/references/  — operator-curated assets
 //                                            (e.g. character photos);
 //                                            not written by the server
+// Everything else under <data dir> (archive/, workspace/, and the per-story
+// canon/, drafts/, history/, sources/, art/) is operator/tooling territory the
+// server never reads; see docs/DATA_LAYOUT.md for the full standard and its
+// deployment boundary (archive/ and workspace/ are never mounted).
 //
 // Legacy location (pre-data-dir): the OS config dir —
 // %APPDATA%\mnemosyne-mcp (Windows), $XDG_CONFIG_HOME/mnemosyne-mcp or
