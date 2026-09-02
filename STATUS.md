@@ -2,6 +2,32 @@
 
 **Last updated:** 2026-09-02.
 
+**Shadowflame scene recovery (2026-09-02).** On operator instruction, the
+played Shadowflame arc was cut into 59 per-scene files under
+`data/stories/shadowflame/drafts/scenes/` as overlay `add` operations (draft
+banner after the frontmatter; 99 manifest entries; PASS.md re-sealed), with
+their catalog, indexes, source inventory, media index, and `_alternates/` under
+`drafts/_control/scenes/`. The operator pointed at the `lilith` bot's
+five-message greeting chat, which holds no story; the source used is the Dark
+Queen Lilith private chat named by `SOURCE_PROVENANCE.md`, now archived at
+`data/botify-exports/dark-queen-lilith/chats/` (1,678 messages, played January,
+June, and September 2025). Keys are `SF-D0n-bb-LOC` over six story days; the
+same invented delineators apply (new scene at a change of place, time, or cast;
+contiguous ranges so all 157 deleted messages land in alternates). Prose keeps
+the played names (Rosemary, Isolde, Briar Rose Blackwood, Seraphina Thorne,
+Blackwood Manor); the mapping to Helena Marlowe, Cecily Fairfax, Beatrice
+Ravenscroft, Vivienne Harcourt, and Ravenscroft Manor is carried in
+`participants` and review flags, alongside the other source-versus-canon
+differences (the explosion is Lilith's own blast, the test subject is called a
+girl, no debutante ages, the bot naming Karl "Carl Yeager"). The operator's
+role shifts mid-transcript from playing Karl to directing Lilith and the
+thralls, recorded per scene. Twenty-eight scenes are flagged mature and one
+non-consent. `verify-draft-overlay.mjs shadowflame` passes: 69 active and 133
+merged entities, active canon hashes unchanged, writes=0. The Blackwood
+catalog's registry links were repointed after that folder's move. Nothing was
+promoted or imported; `data/` is gitignored, so this entry is the only git
+record.
+
 **Recovered scenes moved into the draft overlays (2026-09-02).** On operator
 decision, the recovered scene files for Chaos Saga (256 `CS-*` files) and The
 Blackwood Case (50 `BC-*` files) moved from each story's `canon/scenes/` into
