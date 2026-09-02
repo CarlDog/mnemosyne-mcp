@@ -20,6 +20,7 @@ const REPO_ROOT = fileURLToPath(new URL("../", import.meta.url));
 const STORIES_ROOT = join(REPO_ROOT, "data", "stories");
 const VERIFIER = join(REPO_ROOT, "scripts", "verify-draft-overlay.mjs");
 const CANON_FRONTMATTER = join(REPO_ROOT, "scripts", "canon-frontmatter.mjs");
+const DRAFT_NOTICE = join(REPO_ROOT, "scripts", "draft-notice.mjs");
 const TEMP_PREFIX = "mnemosyne-draft-overlay-";
 const storyRoots: string[] = [];
 const links: string[] = [];
@@ -244,6 +245,7 @@ async function makeMutatingVerifierRepo(): Promise<{
     CANON_FRONTMATTER,
     join(repo, "scripts/canon-frontmatter.mjs"),
   );
+  await copyFile(DRAFT_NOTICE, join(repo, "scripts/draft-notice.mjs"));
   await put(
     repo,
     "scripts/validate-canon.mjs",
@@ -338,6 +340,69 @@ describe("verify-draft-overlay black-box success paths", () => {
       expect(await stagingDirectories()).toEqual(stagesBefore);
     });
   }
+});
+
+describe("verify-draft-overlay promotion-support paths", () => {
+  it("verifies an overlay whose manifest is empty between proposals", async () => {
+    const fixture = await seedOverlay(2);
+    fixture.manifest.files = [];
+    await writeManifest(fixture);
+    await rm(join(fixture.root, "drafts/characters"), { recursive: true });
+    await rm(join(fixture.root, "drafts/locations"), { recursive: true });
+    const storyBefore = await snapshot(fixture.root);
+
+    const result = await runVerifier(fixture.slug);
+
+    expect(result.code, result.stderr).toBe(0);
+    expect(result.stdout).toContain(
+      "files: 0 (0 replacements, 0 additions, 0 removals)",
+    );
+    expect(await snapshot(fixture.root)).toEqual(storyBefore);
+  });
+
+  it("verifies a --manifest subset without demanding every draft be listed", async () => {
+    const fixture = await seedOverlay(2);
+    const subset = {
+      ...fixture.manifest,
+      files: fixture.manifest.files.filter(
+        (entry) => entry.path === "characters/baseline.md",
+      ),
+    };
+    await put(
+      fixture.root,
+      "drafts/_control/overlay.promotion.json",
+      `${JSON.stringify(subset, null, 2)}
+`,
+    );
+    const storyBefore = await snapshot(fixture.root);
+
+    const result = await run(process.execPath, [
+      VERIFIER,
+      "--manifest",
+      "_control/overlay.promotion.json",
+      fixture.slug,
+    ]);
+
+    expect(result.code, result.stderr).toBe(0);
+    expect(result.stdout).toContain(
+      `Verified draft overlay for ${fixture.slug} (subset manifest)`,
+    );
+    expect(result.stdout).toContain(
+      "files: 1 (1 replacement, 0 additions, 0 removals)",
+    );
+    expect(await snapshot(fixture.root)).toEqual(storyBefore);
+  });
+
+  it("rejects a --manifest path outside _control", async () => {
+    const fixture = await seedOverlay(1);
+    const result = await run(process.execPath, [
+      VERIFIER,
+      "--manifest",
+      "characters/overlay.json",
+      fixture.slug,
+    ]);
+    expect(result.code).toBe(1);
+  });
 });
 
 describe("verify-draft-overlay black-box rejection paths", () => {
