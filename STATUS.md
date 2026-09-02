@@ -2,6 +2,25 @@
 
 **Last updated:** 2026-09-01.
 
+**Chaos Saga source-document validation (2026-09-02).** The operator's
+ChatGPT share chats were mined for the project documents behind the drafts.
+The Timeline and Story Beats logs turned out never to exist as content: the
+chats hold only the Canon Tracking Directive that defines them (six
+revisions, now saved verbatim under
+`data/stories/chaos-saga/drafts/_control/source-documents/` with the earlier
+share-chat versions of the character profiles and Key Locations). Every
+profile, location, tattoo, and group-chat document was then checked fact by
+fact against the drafts; the report is
+`drafts/_control/SOURCE_VALIDATION_2026-09-02.md`. Four absent facts were
+folded into the drafts (Jenna's Minneapolis, Cassie's "Big Daddy", Nyx's
+protest-camp childhood and sponsorship at seventeen, Kira's two remaining
+tattoo placements) and two source conflicts were ruled and recorded in the
+entities themselves: Carl's motorcycle is the 1942 Indian Scout 741B, and
+Jenna's hair follows the reference art. The entry hall and deck stay folded
+into existing location records by design. The overlay was rehashed and
+re-sealed twice; the verifier is green with counts unchanged. Nothing was
+promoted.
+
 **Chaos Saga scene recovery complete (2026-09-01/02).** On operator
 instruction, every scene in the original ChatGPT raw archive (`Chaos Saga
 1-4.txt`, hashes matching the 2026-08-29 source inventory) and in the
@@ -690,6 +709,12 @@ Typecheck, lint, and Prettier are green. Historical counts below remain attached
 to the milestones at which they were measured.
 
 ## Done
+
+- **Chaos Saga source-document validation** (2026-09-02). Share-chat
+  project documents saved under `drafts/_control/source-documents/`, drafts
+  validated against them, four gaps folded in, two conflicts ruled
+  (1942 Indian Scout; Jenna's hair follows the art). Overlay rehashed and
+  re-sealed; verifier green. Under gitignored `data/`.
 
 - **Chaos Saga scene recovery** (2026-09-01/02). All four raw ChatGPT
   archive files and the Homecoming Fatigue share chat were cut into one file
