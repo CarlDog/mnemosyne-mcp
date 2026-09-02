@@ -13,7 +13,16 @@ Status lives in [STATUS.md](STATUS.md) — read it first. This section names
 only what is in flight; it must never restate STATUS.md's Done log. (When
 the two disagree, STATUS.md is newer.)
 
-**Nothing is in flight (2026-09-01).** The 2026-09-01 draft review pass is
+**Nothing is in flight (2026-09-02).** The recovered scene extractions are
+parked for review in the draft overlays, not in canon: on 2026-09-02 the operator
+moved Story 03's 256 raw-archive scene files and The Blackwood Case's 50
+Botify-transcript scene files from `canon/scenes/` into each story's
+`drafts/scenes/` as overlay `add` operations (draft banner after the
+frontmatter; indexes, catalogs, and `_alternates/` under
+`drafts/_control/scenes/`). Story 03's three export-established scenes stay in
+`canon/scenes/`; The Blackwood Case has no `canon/scenes/` folder. Any future
+scene extraction goes to `drafts/scenes/`. Both overlays were rehashed and
+re-sealed; nothing was promoted. The 2026-09-01 draft review pass is
 closed: six overlays were corrected, rehashed, and re-sealed; both Miskatonic
 prequel scaffolds were built out with their first choices ratified; story-14
 gained its first overlay. See STATUS.md's top entry for the itemized record.
@@ -34,8 +43,8 @@ it; Star Wars: The Black Ledger is not, and is structurally unlike the others
 **Nine review-gated Living Canon overlays are complete on disk (eight from
 2026-08-30, story-14 r10 added 2026-09-01 at 35 operations → 77 entities):**
 story-01 (71 operations → 143 entities), Brass & Nerve (20 → 43), Chaos
-Saga (60 → 73), The Miskatonic Archives: The Blackwood Case (formerly
-GhostHunters; 60 → 105), Story 04 (41 → 70),
+Saga (60 → 73; 316 → 329 since the 2026-09-02 scene move), The Miskatonic Archives: The
+Blackwood Case (formerly GhostHunters; 60 → 105; 110 → 155 since the scene move), Story 04 (41 → 70),
 story-08 (40 → 74), Story 10 (19 → 41), and Story 12
 (13 → 39). Each retains PASS/control evidence and passed the zero-write import
 preflight. At that checkpoint none was promoted or imported, active canon
