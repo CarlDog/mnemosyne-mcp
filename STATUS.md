@@ -2,6 +2,20 @@
 
 **Last updated:** 2026-09-01.
 
+**Chaos Saga scene recovery (2026-09-01).** On operator instruction, every
+scene in the original ChatGPT raw archive (`Chaos Saga 1-4.txt`, hashes
+matching the 2026-08-29 source inventory) was extracted verbatim to its own
+file under `data/stories/chaos-saga/canon/scenes/`: 232 files, one per scene,
+each with a catalog key, timeline anchor, location code, auto-derived
+participants, review flags carried over from the inventory, and source
+line/hash provenance, indexed in `_index.md`. The purpose is later rendering in
+storybook or graphic-novel form. `validate-canon` reports 297 entities; the
+Chaos Saga overlay still verifies (merged preflight now 305, manifest
+unchanged). The operator's seven ChatGPT share links were also exported to
+`exports/raw-chatgpt-shares/` (HTML, decoded JSON, transcript). Nothing was
+promoted or imported; `data/` is gitignored, so this entry is the only git
+record.
+
 **Draft review pass, re-seals, prequel ratifications, and a Wonderland overlay
 (2026-09-01).** Every story's `drafts/` tree was read file by file and reviewed
 critically. Small prose corrections landed in BattleChasers (regions index now
