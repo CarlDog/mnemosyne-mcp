@@ -340,7 +340,7 @@ def main():
         "`Dropped` the bare `Continue`/`*`/`0` turns omitted, `Directives` the pure-directive operator turns omitted (listed in the file), `Deleted` the `isDeleted` messages kept in `_alternates/`, `Images` the bot-attached images inside the range.\n\n" + "\n".join(index_rows) + "\n")
     open(os.path.join(ctrl_dir, f"_media-index{sfx}.md"), "w", encoding="utf-8", newline="\n").write(
         f"# {title} media index\n\nEvery image a bot attached to a message in the cut exports, in transcript order per thread, with the scene whose range holds it. "
-        "Files live under each bot's `data/botify-exports/<bot>/media/images/` (manifest `media-manifest.json`); an image with no archived file (every image in a group-chat export under `data/botify-exports/_group-chats/`, and any private-chat image the archive run could not fetch) is listed as `unarchived:<id>`. Prompts are the bot's own image prompts decoded from the message's `mediaId`; most carry none. "
+        "Files live under each bot's `data/archive/botify/<bot>/media/images/` (manifest `media-manifest.json`); an image with no archived file (every image in a group-chat export under `data/archive/botify/_group-chats/`, and any private-chat image the archive run could not fetch) is listed as `unarchived:<id>`. Prompts are the bot's own image prompts decoded from the message's `mediaId`; most carry none. "
         "These are Botify renderings, not approved reference art.\n\n" + story.get("media_note", "") + "\n" + "\n".join(media_rows) + "\n")
     any_deleted = any(s["deleted"] for s in all_scenes)
     if any_deleted:
