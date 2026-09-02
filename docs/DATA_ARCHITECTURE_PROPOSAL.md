@@ -9,7 +9,7 @@ proposed, what is evidence, and what is merely kept. Revisions 2 to 4 folded
 in four adversarial reviews (§7); the fourth found no further architectural
 flaw. This document supersedes `docs/STORY_TREE_ORGANIZATION.md` and, when
 phase 6 lands, replaces `docs/DATA_LAYOUT.md`. Migration status lives in
-`STATUS.md`; phases 0 and 1 completed 2026-09-02.
+`STATUS.md`; phases 0 to 2 completed 2026-09-02.
 
 **Decisions (2026-09-02):** 1 rename `botify-exports/` to `archive/botify/`
 in phase 1; 2 `sources/` stops holding byte copies in phase 5; 3 the saved

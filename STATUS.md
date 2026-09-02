@@ -2,6 +2,36 @@
 
 **Last updated:** 2026-09-02.
 
+**Phase 2 complete: story roots and records (2026-09-02).** Every story tree
+now has `history/` (with a README stating its purpose); the Black Ledger's
+three root-level records moved there as dated files
+(`2026-08-26-living-canon-pass.md`, `-reference-artwork-status.md`,
+`-visual-remediation.md`), Chaos Saga's source-validation record as
+`2026-09-02-source-validation.md`, and The Blackwood Case's setting-level
+storyline index, idea bank, and prequel seed folder as `storylines-index.md`,
+`prequel-ideas.md`, and `prequels/`. The mis-rooted empty
+`shadowflame/data/...` folder and Trigun's empty `art/` and `exports/` were
+deleted. The 29 hand-named editorial exports moved to each story's
+`exports/archive/`, so `exports/` roots hold only server-written files. Sixteen
+files were repointed by byte-level substitution (line endings preserved): four
+canon-side files in Chaos Saga (the three established scenes'
+`source_export` frontmatter and `canon/scenes/README.md`, the only canon edits
+of the phase, none of them overlay targets), the Black Ledger's control README
+and moved pass record, Blackwood's provenance record and moved setting docs,
+and Chaos Saga's source-document evidence. PASS.md is append-only, so the three
+affected overlays got a dated note instead of an edit. The before/after
+snapshots (`data/workspace/snapshots/phase2-*`) list exactly those four canon
+files as changed, nothing removed, nothing added; the Chaos Saga validator and
+compiler pass; all ten overlay verifiers and `--canon-only` pass with unchanged
+counts. One pre-existing finding surfaced by the planned `verify-provenance.mjs`
+check: run with no arguments it picks each story's newest `exports/` JSON, and
+it was already failing on five of six stories before the move (the hand-named
+visual-references exports fail on a notes/revision mismatch); after the move
+it picks the server exports, which fail for a different pre-existing reason (no
+`editorial_revision` block at all). Coverage did not drop, because it was not
+passing to begin with; the archived files still fail identically when named
+explicitly. Left as found and recorded. Phase 3 (canon-side docs) is next.
+
 **Phase 1 complete: the intake archive (2026-09-02).** `data/archive/` now
 exists as the one master of every original, written only by the new
 `scripts/intake.py` (`index`, `ingest`, `verify` per source family; `snapshot`
