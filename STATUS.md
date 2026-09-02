@@ -2,6 +2,29 @@
 
 **Last updated:** 2026-09-02.
 
+**Phase 0 complete for every story with an overlay (2026-09-02).** The
+Shadowflame procedure was repeated for BattleChasers (39 canon files, 110
+pointer lines), Chaos Saga (29 files, 47 lines), The Blackwood Case (36
+files, 84 lines; 31 `replace` and 5 `remove` targets) and Wonderland (31
+files, 56 lines; 29 and 2), with a before/after SHA snapshot of each `canon/`
+and a reconstruction proof per file. Two things the test case had not shown
+surfaced and were fixed before sealing. First, ten of the files (nine in
+BattleChasers, one in Wonderland) use CRLF line endings, which the first
+rewrite silently converted; they were restored to CRLF, after which every file
+reconstructs to its snapshot hash. Second, `--canon-only` exposed three Chaos
+Saga canon defects the merged tree had always hidden: two character files
+cited a retired flat photo path inside a heading line (now a heading plus the
+existing `source.jpg` on its own bullet), and two location files pointed at
+`interior.png` plates that do not exist on disk (the dangling bullets were
+removed; the draft replacements already carry none). All 135 touched
+baselines were rehashed and the four overlays re-sealed. `--canon-only` now
+passes for ten of the eleven stories with a `canon/`, and the full verifier
+passes for all ten overlays with unchanged entity counts. The one exception
+is Trigun: Scarlet Mercy, which is parked and off-limits without an ask; its
+canon fails `--canon-only` on a malformed pointer line
+(`characters/millions-knives.md:79`) and is left as found. Phase 0 is closed;
+phase 1 (the intake archive) is next.
+
 **Phase 0 test case: Shadowflame (2026-09-02).** `verify-draft-overlay.mjs`
 gained `--canon-only`, which stages active canon with an empty operation list
 and runs the pointer check, structural validator, and import preflight on it,
