@@ -24,8 +24,7 @@ frontmatter; indexes, catalogs, and `_alternates/` under
 59 scenes (cut the same day from the Dark Queen Lilith Botify chat) were written
 straight to `drafts/scenes/`, as were BattleChasers' nine Chapter One scenes (cut
 the same day from the operator's two ChatGPT shares; earlier drafts and pasted
-config documents sit under `drafts/_control/scenes/`). Any future scene
-extraction goes to `drafts/scenes/`. Both overlays were rehashed and
+config documents sit under `drafts/_control/scenes/`). On the same day the remaining Botify-sourced stories were cut the same way, each chat as its own thread, never blended: Brass & Nerve (12), Star Wars: The Black Ledger (10; a scenes-only overlay was bootstrapped, and its verifier is blocked by a pre-existing `canon/characters/_minor.md` reference-line format defect left for the operator), The Adjustment Protocol (43 across four threads), The Noctis Veil (50 across four threads), Wonderland (23), and one Chaos Saga group-chat scene (`CS-GC-01-WHP`, unplaced; inclusion is an operator call). Group-chat bodies carry per-message speaker labels, a recorded departure from bare verbatim prose. Roles played under the operator's own name with no canon counterpart keep those files in `drafts/` until the open substitution ruling. Any future scene extraction goes to `drafts/scenes/`. Both overlays were rehashed and
 re-sealed; nothing was promoted. The 2026-09-01 draft review pass is
 closed: six overlays were corrected, rehashed, and re-sealed; both Miskatonic
 prequel scaffolds were built out with their first choices ratified; Wonderland
@@ -45,13 +44,12 @@ it; Star Wars: The Black Ledger is not, and is structurally unlike the others
 (ongoing, already partly live via Botify, no ChatGPT-project origin).
 
 **Nine review-gated Living Canon overlays are complete on disk (eight from
-2026-08-30, Wonderland r10 added 2026-09-01 at 35 operations → 77 entities):**
+2026-08-30, Wonderland r10 added 2026-09-01 at 35 operations → 77 entities; 58 → 100 since the scene extraction):**
 BattleChasers (71 operations → 143 entities; 80 → 152 since the scene
-extraction), Brass & Nerve (20 → 43), Chaos
-Saga (60 → 73; 316 → 329 since the 2026-09-02 scene move), The Miskatonic Archives: The
+extraction), Brass & Nerve (20 → 43; 32 → 55 since the scene extraction), Chaos
+Saga (60 → 73; 317 → 330 since the 2026-09-02 scene move and the group-chat scene), The Miskatonic Archives: The
 Blackwood Case (formerly GhostHunters; 60 → 105; 110 → 155 since the scene move), Midnight Is a Suggestion (41 → 70),
-Shadowflame (40 → 74; 99 → 133 since the scene extraction), The Adjustment Protocol (19 → 41), and The Noctis Veil
-(13 → 39). Each retains PASS/control evidence and passed the zero-write import
+Shadowflame (40 → 74; 99 → 133 since the scene extraction), The Adjustment Protocol (19 → 41; 62 → 84 since the scene extraction), and The Noctis Veil (13 → 39; 63 → 89 since the scene extraction). Each retains PASS/control evidence and passed the zero-write import
 preflight. At that checkpoint none was promoted or imported, active canon
 remained hash-stable, and promotion still required explicit operator approval.
 The 2026-09-01 title-only rename refreshed the affected canon wording and

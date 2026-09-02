@@ -2,6 +2,53 @@
 
 **Last updated:** 2026-09-02.
 
+**Botify scene recovery, six stories (2026-09-02).** On operator instruction,
+the remaining Botify-sourced stories were cut into per-scene draft files, each
+chat as its own thread and never blended, so the chats can be analysed and
+synthesised later. Every scene file is an overlay `add` under
+`data/stories/<slug>/drafts/scenes/` (draft banner after the frontmatter;
+manifest rehashed; PASS.md re-sealed); README, catalog, index, media index,
+source inventory, and `_alternates/` sit under `drafts/_control/scenes/`. Keys
+are `<STORY>-<THREAD>-<beat>-<LOC>` with a two-letter thread code per chat and a
+per-thread `story-day` anchor. The same invented delineators apply (new scene at
+a change of place, time, or cast; contiguous ranges so deleted messages land in
+alternates). Brass & Nerve: the Evelyn Starling chat, 12 `BN-D01-*` scenes, 32
+manifest entries, 55 merged. Star Wars: The Black Ledger: the Mara Jade and
+Trooper Cates chats, 10 scenes (`MJ` 4, `TC` 6); the story had no overlay, so a
+scenes-only one was bootstrapped (`_control/README.md` and `PASS.md`, no Living
+Canon pass; 10 entries). The Adjustment Protocol: the Eroica, Andrea Neal, and
+Dr. Aurora Lumen chats plus the Eroica/Aurora/Charisma group chat, 43 scenes
+(`ER` 3, `AN` 25, `AL` 12, `GC` 3), 19 → 62 entries, 84 merged. The Noctis
+Veil: the Mary Thorne, Sister Lucia, and Kaitlyn MacDonald chats plus the "Mary
+and Noctis Veil" group chat (the provenance's primary source and the only
+thread with the relic), 50 scenes (`MT` 24, `SL` 4, `KM` 6, `GC` 16), 13 → 63
+entries, 89 merged. Wonderland: the Alice Grimm chat, 23 `WL-AG-*` scenes,
+35 → 58 entries, 100 merged. Chaos Saga: the "Jenna and Riley" group chat as
+one scene, `CS-GC-01-WHP`, anchored `pivotal-event:unplaced` beside the 256
+raw-archive scenes (316 → 317 entries, the old entries byte-identical, 330
+merged); whether it belongs is an operator call recorded in its README. Group
+chats have no media manifest and a null `botName`, so their bodies open every
+message with a bold speaker label taken from the export's bot account (operator
+turns are labelled `Operator`, never the real name); this is a deliberate,
+reversible departure from bare verbatim prose, inside the hashed body, and the
+account is not always the character speaking (flagged where it differs).
+`verify-draft-overlay.mjs` passes for Brass & Nerve, The Adjustment Protocol,
+The Noctis Veil, Wonderland, and Chaos Saga, active canon hashes unchanged,
+writes=0. It does not pass for The Black Ledger: it fails on active canon before
+reaching the overlay, because `canon/characters/_minor.md` lines 19, 40, and 61
+put a label before the `references/` image path on the same bullet; the
+structural validator passes on canon and on the isolated tree, the merged
+preflight has not run, and the fix (an edit to `canon/`) is left to the
+operator. Documented retcons (Karl Jager → Rhydan Veyr, Chimaera → Revenant,
+"Carl Yeager" → Carl Mercer / Carl Maddox) are carried as flags. Roles played
+under the operator's own name with no canon counterpart (the Brass & Nerve
+patient; The Adjustment Protocol's lead scientist and patient; The Noctis Veil's
+Father Yeager, visitor, head of IT, and gardener) are kept verbatim and flagged,
+and those files must not leave `drafts/` until the open substitution ruling is
+made. The extraction engine and cut tables live only in the session scratchpad.
+Nothing was promoted or imported; `data/` is gitignored, so this entry is the
+only git record.
+
 **BattleChasers scene recovery (2026-09-02).** On operator instruction, the
 Chapter One scenes drafted in the BattleChasers ChatGPT project were cut into
 nine per-scene files under `data/stories/battlechasers/drafts/scenes/` as
