@@ -45,10 +45,15 @@ data/
     │       ├── PASS.md               #   completion, validation, and approval state
     │       ├── LCS_SCORECARD.md       #   Living Canon compliance/adversarial findings
     │       └── ASSET_REVIEW.md       #   reference coverage and provenance findings
-    ├── sources/                      # verbatim operator source documents not captured elsewhere
-    │   ├── _manifest.json            #   origin path, bytes, SHA-256 per file
-    │   ├── README.md                 #   what was copied, from where, and why
-    │   └── <kind>/<file>             #   e.g. prequel/, raw-chats/, settings/ (provenance only)
+    ├── sources/                      # provenance mirror of every original (see "Sources")
+    │   ├── README.md, _manifest.json #   origin path + SHA-256 for every file
+    │   ├── chat/<bot>--<id8>/        #   one folder per Botify chat: export.json (byte copy),
+    │   │                             #   transcript.md (chronological, speaker-labelled), media/
+    │   ├── chat/raw/, chat/shares/   #   ChatGPT raw archives and share captures, byte copies
+    │   ├── profiles/characters/<entry>.md   # composite documents split one file per entry ...
+    │   ├── profiles/locations/, profiles/tattoos/, worldbuilding/, settings/,
+    │   │   style-guides/, templates/, logs/, scenes/draft|locked/, prequel/, references/
+    │   └── <kind>/_originals/<file>  #   ... with every original kept whole beside its splits
     ├── exports/                      # story backups (server-written)
     │   ├── <slug>-<stamp>.json       #   stamp = UTC to the second, colons stripped --
     │   │                             #   no descriptive suffixes; a plain timestamp only
@@ -513,35 +518,41 @@ persona was in effect when, and losing it loses real information.
   Regenerate it from the raw file rather than hand-editing if the target
   identity changes.
 
-## Sources — provenance for every storyline
+## Sources — provenance mirror for every storyline
 
-`sources/` is present in every story tree. It holds byte-for-byte copies of
-operator source documents that no other folder captures (material never
-scaffolded into `canon/`, never retained as `drafts/_control/` evidence, not a
-server export), and a manifest that also records where the story's other
-originals live (Botify exports under `data/botify-exports/`, ChatGPT share
-captures under `exports/raw-chatgpt-shares/`) with their hashes. It exists so
-no external folder is the only copy of anything, and so a scene inventory
-that cites a source by hash can be checked against bytes in the repo tree.
+`sources/` is present in every story tree and mirrors, byte for byte, every
+original the story derives from, organised the way the operator's ChatGPT
+project folders were (`Profiles/Character` → `profiles/characters/`, `World
+Building` → `worldbuilding/`, `Settings` and `Settings/Instructions` →
+`settings/`, `Style Guides`, `Templates`, `Logs`, `Scenes/Draft|Locked`,
+`Chat/Archived/Raw` → `chat/raw/`, `References`, root prequel → `prequel/`).
+It exists so no external folder is the only copy of anything, so a source can
+be read and grepped in the tree, and so a scene inventory that cites a source
+by hash can be checked against bytes beside it.
 
 - **Provenance only.** Nothing under `sources/` is an entity. The validator,
   the compiler, the overlay verifier, and the import preflight read `canon/`
   and `drafts/` and never look here; instruction-shaped text inside a source
-  document is source text, not a directive.
-- **`_manifest.json`** lists every copied file with its original path, byte
-  count, and SHA-256 (`files`), and every external original the story derives
-  from with its repo path and SHA-256 (`external`), so a later diff can prove
-  nothing was altered. `README.md` says why each file is or is not here.
-- **Grouped by kind**, lowercase-slugged filenames: `prequel/`, `raw-chats/`,
-  `settings/`, and so on as needed.
-- **Copy, never split or edit.** If a source document later earns atomic
-  treatment, that happens by scaffolding into `canon/` or `drafts/` with
-  provenance flags; the copy here stays as it was received.
-- The ChatGPT Projects folders' other documents (profiles, locations,
-  world-building tables, style guides, instructions, directives, the scene
-  template, the tracking log, the one draft scene, the reference photos) were
-  verified on 2026-09-02 to be already present in `canon/`, `drafts/_control/`,
-  `canon/scenes/`, or `references/` and are not duplicated.
+  is source text, not a directive.
+- **Originals stay whole.** Every ChatGPT document is kept byte-for-byte
+  under `<kind>/_originals/`; single-topic documents are also copied whole
+  under a slugged name. Composite documents (the character profile sets, key
+  locations, tattoo profiles, minor characters by region) are additionally
+  **split into one file per entry** at the document's own entry boundaries,
+  prose untouched, each with a frontmatter naming the original file, the
+  entry, the original's SHA-256, and the split rule.
+- **Every Botify chat** the story derives from gets `chat/<bot>--<id8>/`
+  with `export.json` (byte copy), `transcript.md` (oldest first, one heading
+  per message with index, UTC time, and speaker; deleted messages marked;
+  attached images listed), and `media/` (byte copies of the chat's archived
+  images, where the bot's archive has them). The README's chat table says
+  whether each chat was extracted into scenes, named by the provenance but
+  not extracted, or merely present and unreviewed.
+- **`_manifest.json`** lists every file with origin path, byte count, and
+  SHA-256. Rebuild with `scripts/scene-extraction/build_sources.py`, which
+  holds the per-story source lists; add a new export or capture there and
+  re-run. The builder recreates the folder from scratch, so never hand-edit
+  inside `sources/`.
 
 ## story.json — the identity card
 

@@ -1,180 +1,431 @@
-"""Build data/stories/<slug>/sources/ for every storyline: keep any verbatim
-copies already placed there (files), and record every external original the
-story derives from (external: repo path + SHA-256), then write README.md and
-_manifest.json. Provenance only; nothing here is an entity.
+"""Build data/stories/<slug>/sources/ for every storyline: a provenance mirror
+of every original the story derives from, organised the way the operator's
+ChatGPT project folders were, with composite documents additionally split into
+one file per entry and every Botify chat copied beside a readable transcript.
 
+    sources/
+      README.md, _manifest.json         origin path + SHA-256 for every file
+      chat/<bot>--<id8>/export.json     Botify export, byte copy
+                        transcript.md   chronological, speaker-labelled rendering
+                        media/          the chat's archived images (when any)
+      chat/raw/                         ChatGPT raw archives, byte copies
+      chat/shares/                      ChatGPT share captures, byte copies
+      profiles/characters|locations|tattoos/<entry>.md   one file per entry
+      worldbuilding/, settings/, style-guides/, templates/, logs/,
+      scenes/draft|locked/, prequel/, references/
+      <kind>/_originals/<file>          every original kept whole beside its splits
+
+Provenance only: nothing here is an entity; canon/ and drafts/ are untouched.
 Run from anywhere: python scripts/scene-extraction/build_sources.py
 """
+import base64
 import datetime as dt
 import glob
 import hashlib
 import json
 import os
+import re
+import shutil
 
 REPO = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+CHATGPT = r"D:\OneDrive\Technology\ChatGPT\Projects"
 BX = "data/botify-exports"
 NOW = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def sha(p):
-    return hashlib.sha256(open(os.path.join(REPO, p), "rb").read()).hexdigest()
+def sha_bytes(b):
+    return hashlib.sha256(b).hexdigest()
 
 
-def chat(bot, prefix, role):
-    files = glob.glob(os.path.join(REPO, BX, bot, "chats", prefix + "*.json"))
-    assert len(files) == 1, (bot, prefix, files)
-    rel = os.path.relpath(files[0], REPO).replace("\\", "/")
-    return {"path": rel, "kind": "botify-private-chat" if bot != "_group-chats" else "botify-group-chat", "role": role}
+def sha_file(p):
+    return sha_bytes(open(p, "rb").read())
 
 
-def group(prefix, role):
-    return chat("_group-chats", prefix, role)
+def slug(t):
+    t = t.lower().replace("’", "").replace("'", "").replace("“", "").replace("”", "").replace("&", "and")
+    return re.sub(r"[^a-z0-9]+", "-", t).strip("-")
 
 
-def folder(rel, role, kind="chatgpt-share-capture"):
+def strip_prefix(name):
+    """'Chaos Saga - Style Guide.txt' -> 'style-guide'"""
+    base = os.path.splitext(name)[0]
+    base = re.sub(r"^(Chaos Saga|GhostHunters|BattleChasers|Wonderland)\s*[-–]\s*", "", base)
+    return slug(base)
+
+
+# ----------------------------------------------------------------- splitters
+def split_banner(lines):
+    """=====\\nChaos Saga Character Profile: Name\\n=====  blocks."""
+    starts = [i for i in range(len(lines) - 2) if lines[i].startswith("=====") and lines[i + 2].startswith("=====")]
     out = []
-    for f in sorted(glob.glob(os.path.join(REPO, rel, "*"))):
-        if os.path.isfile(f):
-            out.append({"path": os.path.relpath(f, REPO).replace("\\", "/"), "kind": kind, "role": role})
+    for n, i in enumerate(starts):
+        j = starts[n + 1] if n + 1 < len(starts) else len(lines)
+        name = lines[i + 1].split(":", 1)[-1].strip()
+        out.append((name, "\n".join(lines[i:j]).rstrip() + "\n"))
     return out
 
 
+def split_bracket(lines):
+    """[CHARACTER PROFILE – NAME] headers."""
+    rx = re.compile(r"^\[(?:CHARACTER PROFILE|MINOR CHARACTER PROFILE)\s*[–-]\s*(.+?)\]\s*$")
+    starts = [(i, rx.match(l).group(1)) for i, l in enumerate(lines) if rx.match(l)]
+    out = []
+    for n, (i, name) in enumerate(starts):
+        j = starts[n + 1][0] if n + 1 < len(starts) else len(lines)
+        out.append((name.title() if name.isupper() else name, "\n".join(lines[i:j]).rstrip() + "\n"))
+    return out
+
+
+def split_name_blocks(lines):
+    """'Name: X' blocks (GhostHunters minor characters)."""
+    starts = [i for i, l in enumerate(lines) if l.startswith("Name: ")]
+    out = []
+    for n, i in enumerate(starts):
+        j = starts[n + 1] if n + 1 < len(starts) else len(lines)
+        out.append((lines[i][6:].strip(), "\n".join(lines[i:j]).rstrip() + "\n"))
+    return out
+
+
+def split_role_blocks(lines):
+    """name line whose next non-empty line starts with 'Role:' (Chaos minor)."""
+    starts = []
+    for i, l in enumerate(lines):
+        if not l.strip() or l.startswith("Role:"):
+            continue
+        nxt = next((x for x in lines[i + 1:] if x.strip()), "")
+        if nxt.startswith("Role:"):
+            starts.append(i)
+    out = []
+    for n, i in enumerate(starts):
+        j = starts[n + 1] if n + 1 < len(starts) else len(lines)
+        out.append((lines[i].strip(), "\n".join(lines[i:j]).rstrip() + "\n"))
+    return out
+
+
+def split_tattoo(lines):
+    rx = re.compile(r"^(.+?)\s*[–-]\s*TATTOO PROFILE\s*$")
+    starts = [(i, rx.match(l).group(1)) for i, l in enumerate(lines) if rx.match(l)]
+    out = []
+    for n, (i, name) in enumerate(starts):
+        j = starts[n + 1][0] if n + 1 < len(starts) else len(lines)
+        out.append((name.title(), "\n".join(lines[i:j]).rstrip() + "\n"))
+    return out
+
+
+def split_h3(lines):
+    starts = [i for i, l in enumerate(lines) if l.startswith("### ")]
+    out = []
+    for n, i in enumerate(starts):
+        j = starts[n + 1] if n + 1 < len(starts) else len(lines)
+        out.append((lines[i][4:].strip().title(), "\n".join(lines[i:j]).rstrip() + "\n"))
+    return out
+
+
+def split_caps_sections(lines):
+    """ALL-CAPS section lines (GhostHunters key locations)."""
+    rx = re.compile(r"^[A-Z][A-Z &]{3,}$")
+    starts = [i for i, l in enumerate(lines) if rx.match(l.strip()) and i > 2]
+    out = []
+    for n, i in enumerate(starts):
+        j = starts[n + 1] if n + 1 < len(starts) else len(lines)
+        out.append((lines[i].strip().title(), "\n".join(lines[i:j]).rstrip() + "\n"))
+    return out
+
+
+def split_dash_regions(lines):
+    """——\\nREGION\\n—— blocks (BattleChasers minor characters by region)."""
+    starts = [i for i in range(len(lines) - 2) if lines[i].startswith("——") and lines[i + 2].startswith("——")]
+    out = []
+    for n, i in enumerate(starts):
+        j = starts[n + 1] if n + 1 < len(starts) else len(lines)
+        out.append((lines[i + 1].strip().title(), "\n".join(lines[i:j]).rstrip() + "\n"))
+    return out
+
+
+SPLIT = {
+    "Chaos Saga - Primary Characters.txt": ("banner", split_banner, 3),
+    "Chaos Saga - Secondary Characters.txt": ("banner", split_banner, 5),
+    "Chaos Saga – Minor Characters.txt": ("role-blocks", split_role_blocks, None),
+    "Chaos Saga - Tattoo Profiles.txt": ("tattoo-profile headers", split_tattoo, None),
+    "Chaos Saga – Key Locations.txt": ("### sections", split_h3, None),
+    "GhostHunters - Primary Characters.txt": ("[CHARACTER PROFILE] headers", split_bracket, None),
+    "GhostHunters - Minor Characters.txt": ("Name: blocks", split_name_blocks, 16),
+    "GhostHunters - Key Locations.txt": ("ALL-CAPS sections", split_caps_sections, None),
+    "BattleChasers – Primary Characters.txt": ("[CHARACTER PROFILE] headers", split_bracket, None),
+    "BattleChasers - Secondary Characters.txt": ("[CHARACTER PROFILE] headers", split_bracket, None),
+    "BattleChasers – Minor Characters.txt": ("region blocks", split_dash_regions, None),
+}
+
+# original subfolder -> sources kind
+KIND = {
+    "Profiles/Character": "profiles/characters", "Profiles/Location": "profiles/locations", "Profiles/Tattoos": "profiles/tattoos",
+    "World Building": "worldbuilding", "Settings": "settings", "Settings/Instructions": "settings", "Style Guides": "style-guides",
+    "Templates": "templates", "Logs": "logs", "Scenes/Draft": "scenes/draft", "Scenes/Locked": "scenes/locked",
+    "Chat/Archived/Raw": "chat/raw", "References": "references", "": "settings",
+}
+
+# ---------------------------------------------------------------- story specs
 CUT = "extracted into drafts/scenes/ on 2026-09-02 (see drafts/_control/scenes/)"
 UNREVIEWED = "present in the Botify export set; not reviewed, not extracted, no ratified relationship to this story"
 
+
+def pc(bot, prefix, role):
+    return {"bot": bot, "prefix": prefix, "role": role}
+
+
+def gc(prefix, role):
+    return {"bot": "_group-chats", "prefix": prefix, "role": role}
+
+
 STORIES = {
-    "chaos-saga": dict(
-        title="Chaos Saga",
-        external=[group("4f6af160", "the 'Jenna and Riley' group chat; " + CUT + " as CS-GC-01-WHP, unplaced"),
-                  chat("jenna-maren", "1477a398", "Jenna Maren private chat; " + UNREVIEWED),
-                  chat("riley-quinn", "deeaa24f", "Riley Quinn private chat; " + UNREVIEWED)]
-        + folder("data/stories/chaos-saga/exports/raw-chatgpt-shares", "ChatGPT share-chat captures; the project documents recovered from them are under drafts/_control/source-documents/")
-        + folder("data/stories/chaos-saga/companion-logs", "watch-companion transcript captures (see docs/DATA_LAYOUT.md, Companion logs)", "companion-log"),
-        note="The ChatGPT Projects folder's profiles, Key Locations, Tattoo Profiles, the Vanessa profile, style guide, instructions, group chat log configuration, scene template, scene tracking log, the Warehouse draft scene, and the two reference photos are already in canon/, drafts/_control/, canon/scenes/, or references/ (the photos are references/characters/<slug>/source.jpg). The prequel and the four raw chat archives had no other copy and are kept here verbatim.",
-    ),
-    "battlechasers": dict(
-        title="BattleChasers",
-        external=folder("data/stories/battlechasers/exports/raw-chatgpt-shares", "ChatGPT share-chat captures; the Chapter One scenes and the pasted configuration documents recovered from them are under drafts/ and drafts/_control/scenes/"),
-        note="Every document in the ChatGPT Projects folder (three character sets, seven Region Configs, thirteen World Building files, style guide, project instructions, canon tracking directive) was verified on 2026-09-02 to be already scaffolded into canon/ (one file per topic under worldbuilding/) or retained under drafts/_control/scenes/_source-documents/. Nothing needed copying.",
-    ),
-    "miskatonic-archives-the-blackwood-case": dict(
-        title="The Miskatonic Archives: The Blackwood Case",
-        external=[chat("the-ghosthunters", "b0c7fe38", "the GhostHunters private chat the story's prose comes from; " + CUT + " (50 BC-* scenes)"),
-                  group("52aa52c8", "the 200-message 'GhostHunters' group chat (Karen Ross, Michelle Rivera, Heather Lin); a separate side story, deliberately not used as a scene source"),
-                  chat("karen-ross", "fb349658", "Karen Ross private chat; " + UNREVIEWED),
-                  chat("michelle-rivera", "e845f73d", "Michelle Rivera private chat; " + UNREVIEWED),
-                  chat("heather-lin", "3860354c", "Heather Lin private chat; " + UNREVIEWED)],
-        note="The GhostHunters-era profiles, Key Locations, style guide, project instructions, and Non-Canon Firepit rules are already in canon/ and drafts/_control/. The group chat log configuration and the canon tracking directive had no other copy (the directive was only partially reflected in canon) and are kept here verbatim.",
-    ),
-    "shadowflame": dict(
-        title="Shadowflame",
-        external=[chat("dark-queen-lilith", "1b4aae74", "the Dark Queen Lilith private chat named by SOURCE_PROVENANCE.md; " + CUT + " (59 SF-* scenes)"),
-                  chat("lilith", "71bbff63", "the 'lilith' bot's five-message greeting chat; holds no story"),
-                  group("81e9b4dd", "'The Egg' group chat (Dark Queen Lilith, Tinkerbell); " + UNREVIEWED)],
-        note="No ChatGPT project existed for this story; its originals are the Botify exports listed in the manifest.",
-    ),
-    "brass-and-nerve": dict(
-        title="Brass & Nerve",
-        external=[chat("evelyn-starling", "d3212413", "the Evelyn Starling private chat; " + CUT + " (12 BN-* scenes)")],
-        note="No ChatGPT project existed for this story; its original is the Botify export listed in the manifest.",
-    ),
-    "star-wars-the-black-ledger": dict(
-        title="Star Wars: The Black Ledger",
-        external=[chat("mara-jade", "0816c2f7", "the Mara Jade private chat; " + CUT + " (BL-MJ-*)"),
-                  chat("trooper-cates", "58aa669a", "the Trooper Cates private chat; " + CUT + " (BL-TC-*)")],
-        note="No ChatGPT project existed for this story; its originals are the Botify exports listed in the manifest, plus the Botify memory summaries canon/lore already cites.",
-    ),
-    "the-adjustment-protocol": dict(
-        title="The Adjustment Protocol",
-        external=[chat("eroica", "413c48c9", "the Eroica private chat; " + CUT + " (AP-ER-*)"),
-                  chat("andrea-neal", "70bee458", "the Andrea Neal / V1X3N private chat; " + CUT + " (AP-AN-*)"),
-                  chat("dr-aurora-lumen", "ad5c71e2", "the Dr. Aurora Lumen private chat; " + CUT + " (AP-AL-*)"),
-                  group("3de009c8", "the 'Eroica, Dr. Aurora Lumen, Charisma' group chat; " + CUT + " (AP-GC-*)"),
-                  chat("charisma", "ec029372", "Charisma private chat; " + UNREVIEWED),
-                  group("f8db82ae", "'The Chair vs YoRHa' group chat (YoRHa 2B, Eroica); " + UNREVIEWED)],
-        note="No ChatGPT project existed for this story; its originals are the Botify exports listed in the manifest.",
-    ),
-    "the-noctis-veil": dict(
-        title="The Noctis Veil",
-        external=[group("518affe6", "the 'Mary and Noctis Veil' group chat, the provenance's primary source; " + CUT + " (NV-GC-*)"),
-                  chat("mary-thorne", "b29b647c", "the Mary Thorne private chat; " + CUT + " (NV-MT-*)"),
-                  chat("sister-lucia", "ae928207", "the Sister Lucia private chat; " + CUT + " (NV-SL-*, cut at #0312)"),
-                  chat("kaitlyn-macdonald", "4cc3573f", "the Kaitlyn MacDonald private chat; " + CUT + " (NV-KM-*)"),
-                  chat("noctis-veil", "6a02953f", "Noctis Veil private chat, named as a companion definition source by SOURCE_PROVENANCE.md; not extracted"),
-                  group("74601077", "'The Sleepover' group chat (The O'Hara Sisters, Kaitlyn MacDonald); " + UNREVIEWED),
-                  group("95f5f655", "'The Retreat' group chat (Kelsey Chambers, Mary Thorne, Alexandra and Ava, Kaitlyn MacDonald, Lilith); " + UNREVIEWED)],
-        note="No ChatGPT project existed for this story; its originals are the Botify exports listed in the manifest.",
-    ),
-    "wonderland": dict(
-        title="Wonderland",
-        external=[chat("alice-grimm", "1c71db26", "the Alice Grimm private chat; " + CUT + " (23 WL-AG-* scenes)")],
-        note="The ChatGPT Projects folder held only a Project Instructions file and a Style Guide; both were verified on 2026-09-02 to be already reflected in canon/ (rules.md, style.md) and the story's provenance record. Nothing needed copying.",
-    ),
-    "midnight-is-a-suggestion": dict(
-        title="Midnight Is a Suggestion",
-        external=[group("e15f3c21", "'Not Your Average Fairy Tale' group chat, the provenance's primary Botify source; not extracted into scenes"),
-                  group("19312508", "'Mischief' group chat (Snow White, Cinderella, Belle, Tinkerbell), Tinkerbell's source lineage; not extracted"),
-                  chat("belle", "57bf280a", "Belle private chat; " + UNREVIEWED),
-                  chat("cinderella", "94a7c5d8", "Cinderella private chat; " + UNREVIEWED),
-                  chat("snow-white", "243803ae", "Snow White private chat; " + UNREVIEWED),
-                  chat("tinkerbell", "ffdc74c0", "Tinkerbell private chat; " + UNREVIEWED)],
-        note="No ChatGPT project existed for this story; its originals are the Botify group chats and companion definitions SOURCE_PROVENANCE.md names, listed in the manifest.",
-    ),
-    "trigun-scarlet-mercy": dict(
-        title="Trigun: Scarlet Mercy",
-        external=[group("eac3e98f", "'Trigun' group chat (Vashienne the Stampede, Nicola D. Wolfwood, Naiomi 'Knives' Millions), six messages; matched by cast, no ratified provenance record"),
-                  chat("vashienne-the-stampede", "2ccf803d", "Vashienne the Stampede private chat; matched by cast, " + UNREVIEWED),
-                  chat("nicola-d-wolfwood", "fe16d9ea", "Nicola D. Wolfwood private chat; matched by cast, " + UNREVIEWED),
-                  chat("naiomi-knives-millions", "c8043116", "Naiomi 'Knives' Millions private chat; matched by cast, " + UNREVIEWED)],
-        note="This story is parked (see docs/STORYLINE_RESEARCH_BACKLOG.md) and has no provenance record; the Botify exports below were matched by cast name only and are listed so they are not lost, not as ratified sources.",
-    ),
-    "miskatonic-archives-the-black-salt-compact": dict(
-        title="The Miskatonic Archives: The Black-Salt Compact",
-        external=[],
-        note="A draft-only prequel package built from operator decisions recorded in drafts/_control/DECISIONS.md; it has no external source document or chat export.",
-    ),
-    "miskatonic-archives-the-last-eastbound-run": dict(
-        title="The Miskatonic Archives: The Last Eastbound Run",
-        external=[],
-        note="A draft-only prequel package built from operator decisions recorded in drafts/_control/DECISIONS.md; it has no external source document or chat export.",
-    ),
+    "chaos-saga": dict(title="Chaos Saga", chatgpt="Chaos Saga", shares="data/stories/chaos-saga/exports/raw-chatgpt-shares",
+                       chats=[gc("4f6af160", "'Jenna and Riley' group chat; " + CUT + " as CS-GC-01-WHP"),
+                              pc("jenna-maren", "1477a398", "Jenna Maren private chat; " + UNREVIEWED),
+                              pc("riley-quinn", "deeaa24f", "Riley Quinn private chat; " + UNREVIEWED)],
+                       note="The four raw ChatGPT archives under chat/raw/ are the bytes the canon scene inventory's hashes refer to; the prequel had no other copy anywhere in data/."),
+    "battlechasers": dict(title="BattleChasers", chatgpt="BattleChasers", shares="data/stories/battlechasers/exports/raw-chatgpt-shares", chats=[],
+                          note="The project's own scene files are the Chapter One drafts recovered from the share chats; the ChatGPT folder's Scenes/ directories were empty."),
+    "miskatonic-archives-the-blackwood-case": dict(title="The Miskatonic Archives: The Blackwood Case", chatgpt="GhostHunters", shares=None,
+                                                   chats=[pc("the-ghosthunters", "b0c7fe38", "the GhostHunters private chat the prose comes from; " + CUT + " (50 BC-* scenes)"),
+                                                          gc("52aa52c8", "the 200-message 'GhostHunters' group chat; a separate side story, deliberately not used as a scene source"),
+                                                          pc("karen-ross", "fb349658", "Karen Ross private chat; " + UNREVIEWED),
+                                                          pc("michelle-rivera", "e845f73d", "Michelle Rivera private chat; " + UNREVIEWED),
+                                                          pc("heather-lin", "3860354c", "Heather Lin private chat; " + UNREVIEWED)],
+                                                   note="The ChatGPT project was named GhostHunters; its documents keep that name here."),
+    "shadowflame": dict(title="Shadowflame", chatgpt=None, shares=None,
+                        chats=[pc("dark-queen-lilith", "1b4aae74", "the Dark Queen Lilith private chat named by SOURCE_PROVENANCE.md; " + CUT + " (59 SF-* scenes)"),
+                               pc("lilith", "71bbff63", "the 'lilith' bot's five-message greeting chat; holds no story"),
+                               gc("81e9b4dd", "'The Egg' group chat (Dark Queen Lilith, Tinkerbell); " + UNREVIEWED)],
+                        note="No ChatGPT project existed for this story."),
+    "brass-and-nerve": dict(title="Brass & Nerve", chatgpt=None, shares=None,
+                            chats=[pc("evelyn-starling", "d3212413", "the Evelyn Starling private chat; " + CUT + " (12 BN-* scenes)")],
+                            note="No ChatGPT project existed for this story."),
+    "star-wars-the-black-ledger": dict(title="Star Wars: The Black Ledger", chatgpt=None, shares=None,
+                                       chats=[pc("mara-jade", "0816c2f7", "the Mara Jade private chat; " + CUT + " (BL-MJ-*)"),
+                                              pc("trooper-cates", "58aa669a", "the Trooper Cates private chat; " + CUT + " (BL-TC-*)")],
+                                       note="No ChatGPT project existed for this story."),
+    "the-adjustment-protocol": dict(title="The Adjustment Protocol", chatgpt=None, shares=None,
+                                    chats=[pc("eroica", "413c48c9", "the Eroica private chat; " + CUT + " (AP-ER-*)"),
+                                           pc("andrea-neal", "70bee458", "the Andrea Neal / V1X3N private chat; " + CUT + " (AP-AN-*)"),
+                                           pc("dr-aurora-lumen", "ad5c71e2", "the Dr. Aurora Lumen private chat; " + CUT + " (AP-AL-*)"),
+                                           gc("3de009c8", "'Eroica, Dr. Aurora Lumen, Charisma' group chat; " + CUT + " (AP-GC-*)"),
+                                           pc("charisma", "ec029372", "Charisma private chat; " + UNREVIEWED),
+                                           gc("f8db82ae", "'The Chair vs YoRHa' group chat (YoRHa 2B, Eroica); " + UNREVIEWED)],
+                                    note="No ChatGPT project existed for this story."),
+    "the-noctis-veil": dict(title="The Noctis Veil", chatgpt=None, shares=None,
+                            chats=[gc("518affe6", "'Mary and Noctis Veil' group chat, the provenance's primary source; " + CUT + " (NV-GC-*)"),
+                                   pc("mary-thorne", "b29b647c", "the Mary Thorne private chat; " + CUT + " (NV-MT-*)"),
+                                   pc("sister-lucia", "ae928207", "the Sister Lucia private chat; " + CUT + " (NV-SL-*, cut at #0312)"),
+                                   pc("kaitlyn-macdonald", "4cc3573f", "the Kaitlyn MacDonald private chat; " + CUT + " (NV-KM-*)"),
+                                   pc("noctis-veil", "6a02953f", "Noctis Veil private chat, a companion-definition source per SOURCE_PROVENANCE.md; not extracted"),
+                                   gc("74601077", "'The Sleepover' group chat (The O'Hara Sisters, Kaitlyn MacDonald); " + UNREVIEWED),
+                                   gc("95f5f655", "'The Retreat' group chat (Kelsey Chambers, Mary Thorne, Alexandra and Ava, Kaitlyn MacDonald, Lilith); " + UNREVIEWED)],
+                            note="No ChatGPT project existed for this story."),
+    "wonderland": dict(title="Wonderland", chatgpt="Wonderland", shares=None,
+                       chats=[pc("alice-grimm", "1c71db26", "the Alice Grimm private chat; " + CUT + " (23 WL-AG-* scenes)")],
+                       note="The ChatGPT project held only a Project Instructions file and a Style Guide."),
+    "midnight-is-a-suggestion": dict(title="Midnight Is a Suggestion", chatgpt=None, shares=None,
+                                     chats=[gc("e15f3c21", "'Not Your Average Fairy Tale' group chat, the provenance's primary Botify source; not extracted into scenes"),
+                                            gc("19312508", "'Mischief' group chat (Snow White, Cinderella, Belle, Tinkerbell), Tinkerbell's source lineage; not extracted"),
+                                            pc("belle", "57bf280a", "Belle private chat; " + UNREVIEWED),
+                                            pc("cinderella", "94a7c5d8", "Cinderella private chat; " + UNREVIEWED),
+                                            pc("snow-white", "243803ae", "Snow White private chat; " + UNREVIEWED),
+                                            pc("tinkerbell", "ffdc74c0", "Tinkerbell private chat; " + UNREVIEWED)],
+                                     note="No ChatGPT project existed for this story."),
+    "trigun-scarlet-mercy": dict(title="Trigun: Scarlet Mercy", chatgpt=None, shares=None,
+                                 chats=[gc("eac3e98f", "'Trigun' group chat, six messages; matched by cast, no ratified provenance record"),
+                                        pc("vashienne-the-stampede", "2ccf803d", "Vashienne the Stampede private chat; matched by cast, " + UNREVIEWED),
+                                        pc("nicola-d-wolfwood", "fe16d9ea", "Nicola D. Wolfwood private chat; matched by cast, " + UNREVIEWED),
+                                        pc("naiomi-knives-millions", "c8043116", "Naiomi 'Knives' Millions private chat; matched by cast, " + UNREVIEWED)],
+                                 note="This story is parked (docs/STORYLINE_RESEARCH_BACKLOG.md) and has no provenance record; the chats were matched by cast name only."),
+    "miskatonic-archives-the-black-salt-compact": dict(title="The Miskatonic Archives: The Black-Salt Compact", chatgpt=None, shares=None, chats=[],
+                                                       note="A draft-only prequel package built from operator decisions recorded in drafts/_control/DECISIONS.md; it has no external source document or chat export."),
+    "miskatonic-archives-the-last-eastbound-run": dict(title="The Miskatonic Archives: The Last Eastbound Run", chatgpt=None, shares=None, chats=[],
+                                                       note="A draft-only prequel package built from operator decisions recorded in drafts/_control/DECISIONS.md; it has no external source document or chat export."),
 }
 
 
+# ------------------------------------------------------------------ builders
+class Story:
+    def __init__(self, slug_, spec):
+        self.slug, self.spec = slug_, spec
+        self.root = os.path.join(REPO, "data", "stories", slug_, "sources")
+        self.entries = []  # manifest rows
+        self.readme = []
+
+    def put_bytes(self, rel, data, origin, kind, note=""):
+        p = os.path.join(self.root, rel)
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        open(p, "wb").write(data)
+        self.entries.append({"path": rel, "kind": kind, "origin": origin, "bytes": len(data), "sha256": sha_bytes(data), "note": note})
+
+    def copy(self, rel, src, origin, kind, note=""):
+        self.put_bytes(rel, open(src, "rb").read(), origin, kind, note)
+
+    # ---- ChatGPT project folder
+    def chatgpt(self):
+        proj = self.spec["chatgpt"]
+        if not proj:
+            return
+        base = os.path.join(CHATGPT, proj)
+        rows = []
+        for r, _, fs in os.walk(base):
+            for f in sorted(fs):
+                src = os.path.join(r, f)
+                sub = os.path.relpath(r, base).replace("\\", "/")
+                sub = "" if sub == "." else sub
+                origin = os.path.relpath(src, CHATGPT)
+                if sub == "" and f.endswith(".md"):
+                    kind = "prequel"
+                else:
+                    kind = KIND[sub]
+                osha = sha_file(src)
+                if kind in ("references", "chat/raw", "prequel"):
+                    rel = f"{kind}/{slug(os.path.splitext(f)[0]) if kind != 'references' else slug(os.path.splitext(f)[0])}{os.path.splitext(f)[1].lower()}"
+                    self.copy(rel, src, origin, "chatgpt-" + kind.replace("/", "-"), "byte copy")
+                    rows.append((origin, rel, "whole"))
+                    continue
+                # keep the whole original
+                orel = f"{kind}/_originals/{f}"
+                self.copy(orel, src, origin, "chatgpt-original", "byte copy of the whole original")
+                spl = SPLIT.get(f)
+                if spl:
+                    rule, fn, expect = spl
+                    text = open(src, encoding="utf-8", errors="replace").read()
+                    parts = fn(text.replace("\r\n", "\n").split("\n"))
+                    assert parts, (f, "splitter found nothing")
+                    if expect:
+                        assert len(parts) == expect, (f, len(parts), [n for n, _ in parts])
+                    seen = {}
+                    group_prefix = "minor-characters-by-region--" if f == "BattleChasers – Minor Characters.txt" else ""
+                    for name, body in parts:
+                        s = group_prefix + (slug(name) or "entry")
+                        seen[s] = seen.get(s, 0) + 1
+                        if seen[s] > 1:
+                            s = f"{s}-{seen[s]}"
+                        fm = f"---\nsource_file: \"{origin.replace(chr(92), '/')}\"\nsource_entry: \"{name}\"\nsource_sha256: {osha}\nsplit_rule: \"{rule}; prose verbatim, cut at the entry boundary\"\n---\n"
+                        self.put_bytes(f"{kind}/{s}.md", (fm + body).encode("utf-8"), origin, "chatgpt-split", f"entry '{name}' cut from the original by rule: {rule}")
+                    rows.append((origin, f"{kind}/ ({len(parts)} entries) + {orel}", f"split: {rule}"))
+                else:
+                    rel = f"{kind}/{strip_prefix(f)}{os.path.splitext(f)[1].lower()}"
+                    if rel == orel:
+                        continue
+                    self.copy(rel, src, origin, "chatgpt-" + kind.replace("/", "-"), "byte copy (single-topic document)")
+                    rows.append((origin, rel, "whole"))
+        self.readme += [f"## ChatGPT project folder: `{proj}`", "", f"Every file of `{CHATGPT}\\{proj}` is here, byte-for-byte, under `<kind>/_originals/` (or copied whole where it is a single-topic document). Composite documents are additionally split into one file per entry at the document's own entry boundaries; the prose inside each split is untouched and its frontmatter names the original file, the entry, the original's SHA-256, and the rule used.", "",
+                        "| Original | Here | Treatment |", "|---|---|---|"]
+        for o, rel, t in rows:
+            self.readme.append(f"| `{o}` | `{rel}` | {t} |")
+        self.readme.append("")
+
+    # ---- ChatGPT share captures
+    def shares(self):
+        d = self.spec.get("shares")
+        if not d:
+            return
+        n = 0
+        for f in sorted(glob.glob(os.path.join(REPO, d, "*"))):
+            if os.path.isfile(f):
+                self.copy(f"chat/shares/{os.path.basename(f)}", f, os.path.relpath(f, REPO).replace("\\", "/"), "chatgpt-share-capture", "byte copy")
+                n += 1
+        self.readme += [f"## ChatGPT share captures", "", f"`chat/shares/` holds byte copies of the {n} files under `{d}/` (HTML, decoded JSON, rendered transcript per share).", ""]
+
+    # ---- Botify chats
+    def chats(self):
+        if not self.spec["chats"]:
+            return
+        self.readme += ["## Botify chats", "", "One folder per chat under `chat/`: `export.json` is the Botify export byte-for-byte; `transcript.md` renders it chronologically (the export stores newest first) with one heading per message carrying the index, UTC time, and speaker, deleted messages marked, and attached images listed; `media/` holds byte copies of the chat's archived images where the bot's media archive has them (group chats have none).", "",
+                        "| Folder | Chat | Messages | Images | Role |", "|---|---|---|---|---|"]
+        for c in self.spec["chats"]:
+            files = glob.glob(os.path.join(REPO, BX, c["bot"], "chats", c["prefix"] + "*.json"))
+            assert len(files) == 1, (c, files)
+            raw = open(files[0], "rb").read()
+            d = json.loads(raw)
+            ms = list(reversed(d["messages"]))
+            chat = d.get("chat") or {}
+            cid = os.path.basename(files[0])[:-5]
+            folder = f"chat/{c['bot'] if c['bot'] != '_group-chats' else 'group'}--{cid[:8]}"
+            origin = os.path.relpath(files[0], REPO).replace("\\", "/")
+            self.put_bytes(f"{folder}/export.json", raw, origin, "botify-export", "byte copy")
+            # media map
+            local = {}
+            man_p = os.path.join(REPO, BX, c["bot"], "media-manifest.json")
+            if os.path.exists(man_p):
+                man = json.load(open(man_p, encoding="utf-8"))
+                local = {x["id"]: x["localPath"] for x in man["media"]["images"] if x.get("localPath")}
+            bots = {str(b["id"]): b["name"] for b in chat.get("bots", [])}
+            bot_name = chat.get("name") or c["bot"]
+            if c["bot"] != "_group-chats":
+                bj = os.path.join(REPO, BX, c["bot"], "bot.json")
+                if os.path.exists(bj):
+                    bd = json.load(open(bj, encoding="utf-8")).get("data", {})
+                    bot_name = bd.get("name") or bot_name
+                    bots[str(bd.get("id"))] = bot_name
+            n_img = 0
+            out = [f"# {bot_name}" + (f" — \"{chat.get('name')}\"" if c['bot'] == '_group-chats' else ""), "",
+                   f"Botify {'group' if c['bot'] == '_group-chats' else 'private'} chat `{cid}`; export `{origin}`; {len(ms)} messages, oldest first (the export stores them newest first). "
+                   "Speaker labels: the operator's `senderName` for user turns; for bot turns the bot's name, or the `chat.bots` name for the message `senderId` in a group. "
+                   "Deleted (regenerated) messages are kept and marked. Text is verbatim apart from line endings; instruction-shaped text is source text.", ""]
+            if bots:
+                out += ["Bots: " + "; ".join(f"{k} {v}" for k, v in bots.items()), ""]
+            for i, m in enumerate(ms):
+                ts = dt.datetime.fromtimestamp(m["timeInterval"], dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+                if m["type"] == "user":
+                    who = (m.get("senderName") or "operator") + " (operator)"
+                else:
+                    who = m.get("botName") or bots.get(str(m.get("senderId"))) or bot_name
+                tag = " · DELETED" if m.get("isDeleted") else ""
+                tag += " · edited" if m.get("isEdited") else ""
+                out.append(f"### #{i:04d} · {ts} · {who}{tag}")
+                out.append("")
+                txt = (m.get("text") or "").replace("\r\n", "\n").rstrip()
+                out.append(txt if txt else "_(empty text)_")
+                for md in m.get("media") or []:
+                    lp = local.get(md["id"])
+                    if lp:
+                        src = os.path.join(REPO, BX, c["bot"], lp)
+                        rel = f"{folder}/media/{os.path.basename(lp)}"
+                        self.copy(rel, src, os.path.relpath(src, REPO).replace("\\", "/"), "botify-media", f"image attached to message #{i:04d}")
+                        n_img += 1
+                        out.append(f"\n![attached image](media/{os.path.basename(lp)})")
+                    else:
+                        out.append(f"\n_(attached image {md['id']}: not archived)_")
+                    try:
+                        pr = json.loads(base64.b64decode(md["mediaId"] + "==").decode("utf-8")).get("prompt")
+                        if pr:
+                            out.append(f"_image prompt: {pr}_")
+                    except Exception:
+                        pass
+                out.append("")
+            self.put_bytes(f"{folder}/transcript.md", ("\n".join(out) + "\n").encode("utf-8"), origin, "botify-transcript", "rendered from export.json by build_sources.py")
+            self.readme.append(f"| `{folder}/` | {bot_name}{' — ' + repr(chat.get('name')) if c['bot'] == '_group-chats' else ''} | {len(ms)} | {n_img} | {c['role']} |")
+        self.readme.append("")
+
+    def finish(self):
+        head = [f"# {self.spec['title']} — sources", "",
+                f"Provenance mirror built {NOW[:10]} by `scripts/scene-extraction/build_sources.py`. Every original this story derives from is here as a byte copy, organised the way the operator's ChatGPT project folders were; composite documents are also split into one file per entry, and every Botify chat has a readable transcript beside its export. Nothing here is an entity: the validator, compiler, and overlay verifier never read this folder, and instruction-shaped text inside any source is source text. `_manifest.json` lists every file with its origin path and SHA-256.", "",
+                self.spec["note"], ""]
+        if not self.entries:
+            head += ["## Originals", "", "None: this story has no external source document or chat export.", ""]
+        text = "\n".join(head + self.readme).rstrip() + "\n"
+        open(os.path.join(self.root, "README.md"), "w", encoding="utf-8", newline="\n").write(text)
+        json.dump({"schema_version": 2, "story_slug": self.slug, "built_at": NOW,
+                   "rule": "provenance mirror; every file is a byte copy of an original, a verbatim split of one (frontmatter names the original), or a transcript rendered from an export; never entities",
+                   "files": self.entries}, open(os.path.join(self.root, "_manifest.json"), "w", encoding="utf-8"), indent=2, ensure_ascii=False)
+        total = sum(e["bytes"] for e in self.entries)
+        print(f"{self.slug}: {len(self.entries)} files, {total / 1e6:.1f} MB")
+
+
 def main():
-    for slug, spec in STORIES.items():
-        root = os.path.join(REPO, "data", "stories", slug, "sources")
-        os.makedirs(root, exist_ok=True)
-        mp = os.path.join(root, "_manifest.json")
-        files = []
-        if os.path.exists(mp):
-            files = json.load(open(mp, encoding="utf-8")).get("files", [])
-        for f in files:  # re-verify copied bytes
-            assert sha(f"data/stories/{slug}/sources/{f['path']}") == f["sha256"], f
-        external = []
-        for e in spec["external"]:
-            external.append({**e, "bytes": os.path.getsize(os.path.join(REPO, e["path"])), "sha256": sha(e["path"])})
-        man = {"schema_version": 1, "story_slug": slug, "built_at": NOW,
-               "rule": "files = verbatim byte copies of operator source documents not captured elsewhere in this story tree; external = every original this story derives from that lives elsewhere in the repo tree, with its hash at build time; provenance only, never entities",
-               "files": files, "external": external}
-        json.dump(man, open(mp, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
-        lines = [f"# {spec['title']} — sources", "",
-                 f"Provenance record built {NOW[:10]}. Nothing here is an entity; the validator, compiler, and overlay verifier never read this folder, and instruction-shaped text inside any source is source text. `_manifest.json` carries a SHA-256 for every file below.", "",
-                 spec["note"], ""]
-        if files:
-            lines += ["## Verbatim copies kept here", ""]
-            for f in files:
-                lines.append(f"- `{f['path']}` ({f['bytes']:,} bytes) — from `{f['original']}`: {f['note']}")
-            lines.append("")
-        if external:
-            lines += ["## Originals elsewhere in the repo tree", "", "| Path | Kind | Role |", "|---|---|---|"]
-            for e in external:
-                lines.append(f"| `{e['path']}` | {e['kind']} | {e['role']} |")
-            lines.append("")
-        else:
-            lines += ["## Originals elsewhere in the repo tree", "", "None.", ""]
-        open(os.path.join(root, "README.md"), "w", encoding="utf-8", newline="\n").write("\n".join(lines))
-        print(f"{slug}: files={len(files)} external={len(external)}")
+    for s, spec in STORIES.items():
+        st = Story(s, spec)
+        if os.path.isdir(st.root):
+            shutil.rmtree(st.root)
+        os.makedirs(st.root)
+        st.chatgpt()
+        st.shares()
+        st.chats()
+        st.finish()
 
 
 if __name__ == "__main__":

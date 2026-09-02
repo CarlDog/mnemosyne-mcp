@@ -2,33 +2,31 @@
 
 **Last updated:** 2026-09-02.
 
-**Source provenance folders for every storyline (2026-09-02).** The operator
-asked what the original ChatGPT Projects export folders (OneDrive: Chaos Saga,
-GhostHunters, BattleChasers, Wonderland; 57 documents) still held that
-`data/stories` did not. A line-sample check of every document against the
-whole `data/stories` tree found all but three already captured: the profiles,
-locations, world-building tables, style guides, instructions, directives,
-templates, the scene tracking log, the one draft scene, and the two reference
-photos are in `canon/`, `drafts/_control/`, `canon/scenes/`, or `references/`.
-The three with no other copy (Chaos Saga's "The Story Before the Story"
-prequel; the GhostHunters group chat log configuration and canon tracking
-directive) and the four Chaos Saga raw chat archives (2.4 MB; the bytes the
-canon scene inventory's hashes refer to) were copied verbatim into a new
-per-story `sources/` folder. Every storyline now has `sources/README.md` and
-`sources/_manifest.json`: verbatim copies with origin path and SHA-256 where
-any were needed, and a hashed list of every external original the story
-derives from (the Botify private and group chats under
-`data/botify-exports/`, marked extracted, named-but-not-extracted, or present-
-but-unreviewed; the ChatGPT share captures; the companion logs). Trigun's
-entries are matched by cast only and say so; the two Miskatonic prequel
-packages record that they have no external source. `docs/DATA_LAYOUT.md`
-gains the `sources/` folder and a Sources section, and its "master copies"
-rule now names `data/` as the master, retiring the provisional OneDrive
-wording. The folder is provenance only: nothing in it is an entity, and the
-validator, compiler, and overlay verifier never read it (re-verified for Chaos
-Saga and The Blackwood Case). The builder is
-`scripts/scene-extraction/build_sources.py`. `data/` is gitignored, so this
-entry and the layout doc are the git record.
+**Source provenance mirror for every storyline (2026-09-02).** On operator
+instruction, every story tree gained `sources/`, a byte-for-byte mirror of
+every original the story derives from, organised the way the operator's
+ChatGPT Projects folders (OneDrive: Chaos Saga, GhostHunters, BattleChasers,
+Wonderland) were. Every ChatGPT document is kept whole under
+`<kind>/_originals/`, and the composite ones (character profile sets, key
+locations, tattoo profiles, minor characters by region) are also split into
+one file per entry at their own entry boundaries with a frontmatter naming
+the original, the entry, its hash, and the rule; single-topic documents
+(style guides, instructions, directives, world-building tables, region
+configs, templates, logs, the draft scene, the prequel, the reference photos)
+are copied whole under slugged names. Every Botify chat a story derives from
+(the extracted ones, the ones the provenance names but nothing extracted, and
+the unreviewed ones that share a cast) has its own `chat/<bot>--<id>/` folder
+with the export, a chronological speaker-labelled transcript, and byte copies
+of its archived images; Chaos Saga's four raw ChatGPT archives and both
+stories' share captures sit under `chat/raw/` and `chat/shares/`. Thirteen
+stories, 859 files, about 98 MB; the two Miskatonic prequel packages record
+that they have no external source. `_manifest.json` hashes every file. The
+builder is `scripts/scene-extraction/build_sources.py`, which recreates the
+folder from scratch. `docs/DATA_LAYOUT.md` documents the folder and now
+names `data/` as the master, retiring the provisional OneDrive wording; the
+OneDrive folder was not touched. The folder is provenance only and invisible
+to the validator, compiler, and overlay verifier (re-verified). `data/` is
+gitignored, so this entry and the layout doc are the git record.
 
 **Botify scene recovery, six stories (2026-09-02).** On operator instruction,
 the remaining Botify-sourced stories were cut into per-scene draft files, each
