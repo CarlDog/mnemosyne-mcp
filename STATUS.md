@@ -2,6 +2,29 @@
 
 **Last updated:** 2026-09-02.
 
+**Phase 4 complete: visual dedup, one image in one place (2026-09-02).** The
+only byte-deleting phase of the standard ran with its restore path in place:
+199 `art/` candidate images whose bytes were already approved plates under
+`references/` (197 current, 3 superseded) and 20 `references/<entity>/candidates/`
+copies identical to the entity's current plate were staged aside to
+`data/workspace/2026-09-02-art-dedup/` (1.28 GB, kept until retired) and
+removed. No image bytes were altered and no current reference plate moved. The
+219 art and candidate sidecars stay as ledger entries with `image_sha256`,
+`promoted: true` or `deduplicated_into`, and hash links to the surviving file;
+the 200 reference sidecars gained `promoted_from_art_sidecar` and the hash.
+The one cross-entity share (Blackwood's `reaper` overview serving a location
+and an object plate) was declared on both sidecars (`same_bytes_as`) and kept
+as two files, since one-entity-one-folder is the stronger rule. A new
+`scripts/verify-references.mjs` checks every image has a sidecar, every
+`image_sha256` matches its file or the sidecar says why the file is gone, and
+every hash link resolves; it passes for all seven stories with visual assets
+(439 sidecars changed, 219 images removed in the snapshot diff, nothing else),
+and the ten overlay verifiers and `--canon-only` pass unchanged. `art/` shrank
+from 1.2 GB to about 20 MB of sidecars and unapproved candidates. The
+migration script is kept as a do-not-rerun record under
+`scripts/scene-extraction/earlier/`. Phase 5 (`sources/` becomes a pointing
+view, decision 2) is next.
+
 **Phase 3 complete: canon-side docs (2026-09-02).** BattleChasers' six
 authoring templates moved from the type folders into `canon/_templates/`
 (`character-core.md`, `character-recurring.md`, `location.md`, `lore.md`,

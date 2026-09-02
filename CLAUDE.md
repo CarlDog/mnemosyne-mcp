@@ -245,8 +245,13 @@ assessments listed under "Layout" below.
   Import it statically, then reach for `dist/` with `await import(...)`: ESM
   resolves static imports before evaluating anything, so a static `dist/`
   import fails during linking before any guard could run.
-- `scripts/verify-provenance.mjs` — checks reference/art images against
-  their JSON sidecars.
+- `scripts/verify-provenance.mjs` — checks an export's reference/art
+  pointers against their JSON sidecars.
+- `scripts/verify-references.mjs` — checks every story's `references/` and
+  `art/` trees: sidecar per image, `image_sha256` matches, hash cross-links
+  resolve (the data architecture standard's one-image-one-place rule).
+- `scripts/intake.py` — the only writer of `data/archive/` (index, ingest,
+  verify per source family; snapshot and diff for migration proofs).
 - `docs/ARCHITECTURE.md` — locked architectural decisions. Read this
   first to understand project shape, state model, validation strategy,
   provider strategy, and build sequence.

@@ -70,3 +70,10 @@ The archive's only writer (`docs/DATA_ARCHITECTURE_PROPOSAL.md` 4.1):
 `index`, `ingest`, `verify` per source family, plus `snapshot` and `diff`
 for the phase proofs. `build_sources.py` reads the archive indexes and
 asserts its chat lists agree with them.
+
+## `../verify-references.mjs`
+
+Checks every story's `references/` and `art/`: sidecar per image, `image_sha256`
+matches or the sidecar says why the image is gone, and every hash link
+(`promoted_to_sha256`, `deduplicated_into`, `same_bytes_as`) resolves. Run it
+after any change to visual assets.
