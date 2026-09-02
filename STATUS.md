@@ -2,19 +2,30 @@
 
 **Last updated:** 2026-09-01.
 
-**Chaos Saga scene recovery (2026-09-01).** On operator instruction, every
-scene in the original ChatGPT raw archive (`Chaos Saga 1-4.txt`, hashes
-matching the 2026-08-29 source inventory) was extracted verbatim to its own
-file under `data/stories/chaos-saga/canon/scenes/`: 232 files, one per scene,
-each with a catalog key, timeline anchor, location code, auto-derived
-participants, review flags carried over from the inventory, and source
-line/hash provenance, indexed in `_index.md`. The purpose is later rendering in
-storybook or graphic-novel form. `validate-canon` reports 297 entities; the
-Chaos Saga overlay still verifies (merged preflight now 305, manifest
-unchanged). The operator's seven ChatGPT share links were also exported to
-`exports/raw-chatgpt-shares/` (HTML, decoded JSON, transcript). Nothing was
-promoted or imported; `data/` is gitignored, so this entry is the only git
-record.
+**Chaos Saga scene recovery complete (2026-09-01/02).** On operator
+instruction, every scene in the original ChatGPT raw archive (`Chaos Saga
+1-4.txt`, hashes matching the 2026-08-29 source inventory) and in the
+operator's "Homecoming Fatigue" share chat was extracted verbatim to its own
+file under `data/stories/chaos-saga/canon/scenes/`, for later rendering in
+storybook or graphic-novel form. Canon now holds 259 scene files (256
+recovered plus the three original export scenes): Raw 1 and Raw 2 were cut to
+full line coverage, Raw 3 and Raw 4 contributed their reviewed spans, and the
+share chat's own locked export blocks supplied fourteen scenes for pivotal
+events 34 and 35 with native `CH-048`–`CH-057` IDs. Each file carries a
+catalog key, timeline anchor, location code, auto-derived participants,
+review flags, and source line/hash provenance; `_index.md` lists them all.
+Non-canon prose (style samples, superseded drafts, interactive play, replay
+variants, one explicitly non-canon karaoke scene; 80 files) lives in
+`canon/scenes/_alternates/`, an underscore folder the validator and compiler
+skip. `validate-canon` reports 321 entities; the Chaos Saga overlay still
+verifies (merged preflight 329, manifest unchanged). Open for operator review:
+one `review` scene (the May 10 morning, played but never exported), the
+timeline numbering of events 34/35 against their in-world dates, long-unit
+split boundaries, and heuristic location codes on Recovery Days 1–23. The
+seven share links are exported to `exports/raw-chatgpt-shares/`; "Breakfast &
+Bruises" there proved to be a style-guide header example, not a scene.
+Nothing was promoted or imported; `data/` is gitignored, so this entry is the
+only git record.
 
 **Draft review pass, re-seals, prequel ratifications, and a Wonderland overlay
 (2026-09-01).** Every story's `drafts/` tree was read file by file and reviewed
@@ -679,6 +690,13 @@ Typecheck, lint, and Prettier are green. Historical counts below remain attached
 to the milestones at which they were measured.
 
 ## Done
+
+- **Chaos Saga scene recovery** (2026-09-01/02). All four raw ChatGPT
+  archive files and the Homecoming Fatigue share chat were cut into one file
+  per scene under `canon/scenes/` (259 canon scene files, 80 alternates in
+  `_alternates/`), verbatim, with catalog keys and provenance. Validator at
+  321 entities, overlay verifier green at 329 merged. Lives under gitignored
+  `data/`; see the top entry for the open review items.
 
 - **Draft review pass, re-seals, prequel ratifications, Wonderland overlay**
   (2026-09-01). All eight existing overlays were reviewed file by file; six
