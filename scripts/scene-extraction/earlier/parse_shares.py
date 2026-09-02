@@ -8,7 +8,7 @@ REPO = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
 transcript and a JSON conversation dump. Text is copied as served."""
 import re, json, os, hashlib
 
-OUT = r"D:\GitHub\mnemosyne-mcp\data\stories\chaos-saga\exports\raw-chatgpt-shares"
+OUT = os.path.join(REPO, "data", "archive", "chatgpt-shares")
 PAT = re.compile(r'enqueue\("((?:[^"\\]|\\.)*)"\)')
 NEG = {-5: None, -7: None, -1: None, -2: None, -3: None, -4: None, -6: None}
 

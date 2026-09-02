@@ -9,7 +9,7 @@ rendered transcript in the same 'You said:/ChatGPT said:' shape as the
 OneDrive raw archive. Nothing is interpreted; text is copied as served."""
 import json, os, re, sys, urllib.request, hashlib
 
-OUT = r"D:\GitHub\mnemosyne-mcp\data\stories\chaos-saga\exports\raw-chatgpt-shares"
+OUT = os.path.join(REPO, "data", "archive", "chatgpt-shares")
 LINKS = [
     "https://chatgpt.com/share/6a8fdec8-ae48-83ea-b0c1-07263b5ebc93",
     "https://chatgpt.com/share/6a8fdeb2-fc50-83ea-a47c-e10fa1e903a1",

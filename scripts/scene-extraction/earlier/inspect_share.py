@@ -5,7 +5,7 @@
 import os
 REPO = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
 import re, json, sys
-p = r"D:\GitHub\mnemosyne-mcp\data\stories\chaos-saga\exports\raw-chatgpt-shares\6a8fdec8-ae48-83ea-b0c1-07263b5ebc93.html"
+p = os.path.join(REPO, "data", "archive", "chatgpt-shares", "6a8fdec8-ae48-83ea-b0c1-07263b5ebc93.html")
 html = open(p, encoding="utf-8", errors="replace").read()
 pat = re.compile(r'enqueue\("((?:[^"\\]|\\.)*)"\)')
 chunks = pat.findall(html)

@@ -5,7 +5,7 @@
 import os
 REPO = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
 import json, os, hashlib
-SH = r"D:\GitHub\mnemosyne-mcp\data\stories\chaos-saga\exports\raw-chatgpt-shares"
+SH = os.path.join(REPO, "data", "archive", "chatgpt-shares")
 OUT = r"D:\GitHub\mnemosyne-mcp\data\stories\chaos-saga\drafts\_control\source-documents"
 SCR = os.path.join(REPO, "data", "workspace", "2026-09-02-scene-extraction")
 os.makedirs(OUT, exist_ok=True)
