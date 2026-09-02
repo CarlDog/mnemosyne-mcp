@@ -2,6 +2,12 @@
 //
 // Usage:
 //   node scripts/verify-draft-overlay.mjs <story-slug>
+//   node scripts/verify-draft-overlay.mjs --canon-only <story-slug>
+//
+// --canon-only stages active canon with an empty operation list and runs
+// the same pointer check, structural validator, and import preflight on it,
+// so `canon/` is verified on its own, without help from `drafts/`. It needs
+// no overlay manifest and never reads `drafts/`.
 //
 // Reads data/stories/<slug>/drafts/_control/overlay.json with schema 1
 // (add/replace) or schema 2 (add/replace/remove):
@@ -88,13 +94,15 @@ function errorMessage(error) {
 }
 
 function parseArgs(argv) {
-  if (argv.length !== 1 || !SLUG_RE.test(argv[0])) {
+  const canonOnly = argv.includes("--canon-only");
+  const rest = argv.filter((arg) => arg !== "--canon-only");
+  if (rest.length !== 1 || !SLUG_RE.test(rest[0])) {
     fail(
-      "usage: node scripts/verify-draft-overlay.mjs <story-slug> " +
+      "usage: node scripts/verify-draft-overlay.mjs [--canon-only] <story-slug> " +
         "(lowercase letters, digits, and hyphens only)",
     );
   }
-  return argv[0];
+  return { slug: rest[0], canonOnly };
 }
 
 function samePath(left, right) {
@@ -1083,6 +1091,114 @@ async function removeSafeTempRoot(temp) {
   }
 }
 
+async function verifyCanonOnly(slug) {
+  const storyRoot = await resolveContainedStoryRoot(
+    path.join(STORIES_ROOT, slug),
+  );
+  const canonRoot = path.join(storyRoot, "canon");
+  await assertRealDirectory(canonRoot, "active canon");
+  let activeBefore = null;
+  let stageRoot = null;
+  let stagedBeforeValidation = null;
+  let visualSnapshot = null;
+  let temp = null;
+  let report = null;
+  const failures = [];
+  try {
+    activeBefore = await hashTree(canonRoot, "active canon");
+    temp = await createSafeTempRoot();
+    stageRoot = path.join(temp.realTempRoot, "canon-only");
+    await cp(canonRoot, stageRoot, {
+      recursive: true,
+      force: false,
+      errorOnExist: true,
+    });
+    stagedBeforeValidation = await hashTree(stageRoot, "staged canon");
+    compareHashTrees(activeBefore, stagedBeforeValidation, "staged canon copy");
+    const templates = await validateStagedTemplateFrontmatter(stageRoot);
+    visualSnapshot = await verifyVisualPointers(stageRoot, storyRoot);
+    const validator = await runCanonValidator(
+      slug,
+      stageRoot,
+      "active canon validator",
+    );
+    const importCheck = await runCanonImportCheck(
+      slug,
+      stageRoot,
+      "active canon import dry-run",
+    );
+    report = { validator, importCheck, visuals: visualSnapshot, templates };
+  } catch (error) {
+    failures.push(`verification failed: ${errorMessage(error)}`);
+  }
+  if (activeBefore) {
+    try {
+      compareHashTrees(
+        activeBefore,
+        await hashTree(canonRoot, "active canon after verification"),
+        "active canon changed during verification",
+      );
+    } catch (error) {
+      failures.push(
+        `active-canon integrity check failed: ${errorMessage(error)}`,
+      );
+    }
+  }
+  if (stageRoot && stagedBeforeValidation) {
+    try {
+      compareHashTrees(
+        stagedBeforeValidation,
+        await hashTree(stageRoot, "staged canon after validation"),
+        "staged canon changed during validation",
+      );
+    } catch (error) {
+      failures.push(
+        `staged-canon integrity check failed: ${errorMessage(error)}`,
+      );
+    }
+  }
+  if (visualSnapshot) {
+    try {
+      await rehashResolvedFiles(
+        visualSnapshot.referencesRoot,
+        visualSnapshot.resolvedHashes,
+        "resolved visual assets changed during validation",
+      );
+    } catch (error) {
+      failures.push(
+        `visual-asset integrity check failed: ${errorMessage(error)}`,
+      );
+    }
+  }
+  if (temp) {
+    try {
+      await removeSafeTempRoot(temp);
+    } catch (error) {
+      failures.push(
+        `temporary-directory cleanup failed: ${errorMessage(error)}`,
+      );
+    }
+  }
+  if (failures.length > 0) fail(failures.join("\n"));
+  if (!report) fail("verification ended without producing a report");
+  console.log(`Verified active canon alone for ${slug} (--canon-only)`);
+  console.log(
+    `  visual pointers: ${report.visuals.occurrences} occurrences, ` +
+      `${report.visuals.unique} unique; assets and sidecars OK`,
+  );
+  console.log(
+    `  underscore-prefixed Markdown templates: ${report.templates} OK`,
+  );
+  console.log("  structural validator: active canon OK");
+  if (report.validator.stdout) console.log(report.validator.stdout);
+  if (report.validator.stderr) console.error(report.validator.stderr);
+  console.log("  offline import schema/preflight: active canon OK; writes=0");
+  if (report.importCheck.stdout) console.log(report.importCheck.stdout);
+  if (report.importCheck.stderr) console.error(report.importCheck.stderr);
+  console.log("  active canon hashes unchanged");
+  console.log("  temporary staging directory removed");
+}
+
 async function verifyOverlay(slug) {
   const storyRoot = await resolveContainedStoryRoot(
     path.join(STORIES_ROOT, slug),
@@ -1386,8 +1502,12 @@ async function verifyOverlay(slug) {
 }
 
 try {
-  const slug = parseArgs(process.argv.slice(2));
-  await verifyOverlay(slug);
+  const { slug, canonOnly } = parseArgs(process.argv.slice(2));
+  if (canonOnly) {
+    await verifyCanonOnly(slug);
+  } else {
+    await verifyOverlay(slug);
+  }
 } catch (error) {
   console.error(`verify-draft-overlay: ${errorMessage(error)}`);
   process.exitCode = 1;

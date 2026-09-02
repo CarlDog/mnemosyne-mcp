@@ -2,6 +2,23 @@
 
 **Last updated:** 2026-09-02.
 
+**Phase 0 test case: Shadowflame (2026-09-02).** `verify-draft-overlay.mjs`
+gained `--canon-only`, which stages active canon with an empty operation list
+and runs the pointer check, structural validator, and import preflight on it,
+so `canon/` is verified without help from `drafts/` (the normal mode is
+unchanged; The Black Ledger passes alone, and Shadowflame failed alone on its
+bare pointers exactly as the standard predicted). Shadowflame's 14
+bare-pointer canon files were normalised to the full repo-relative form: 36
+pointer lines changed and nothing else, proven by a before/after SHA snapshot
+of `canon/` (exactly those 14 files differ) and by reconstructing each file's
+prior form to its snapshot hash. The 14 `baseline_sha256` values were rehashed
+and the overlay re-sealed in `PASS.md`; no other manifest field, draft, image,
+or sidecar changed. `--canon-only` now passes (36 pointers, 69 entities,
+writes=0) and the full verifier passes as before (69/105/133, writes=0). The
+same procedure is now due for BattleChasers (39 files), Chaos Saga (29),
+The Blackwood Case (36), and Wonderland (31), then `--canon-only` for the
+remaining stories with a `canon/`.
+
 **Data architecture standard ratified; phase 0 begun (2026-09-02).** The
 operator asked for a ground-up redesign of the whole `data/` root rather than
 further patching of the story trees. `docs/DATA_ARCHITECTURE_PROPOSAL.md`
