@@ -250,14 +250,15 @@ export function validatorNoiseFloor(baselineSummary) {
   return { noisy, cases, unreliable: cases > 0 && noisy * 2 > cases };
 }
 
-/** The constant-baseline rule: a candidate is credible only if it beats the
- * baseline on continuity and contract and does not lose to it on canon,
- * on the deterministic verdicts.
+/** The trivial-baseline rule: a candidate is credible only if it beats the
+ * trivial constant on continuity and contract and does not lose to it on
+ * canon, on the deterministic verdicts.
  *
- * Known limitation, reproduced 2026-09-03 and recorded in
- * docs/NARRATOR_EVAL.md: this gate reads three rows, so a plausible-looking
- * constant beat that answers none of the directions clears it. The gate
- * detects degenerate output, not a bad narrator. */
+ * This is one of two arms and it is the weak one: it reads three rows against
+ * a beat degenerate enough that anything fluent wins, so clearing it proves
+ * only that the candidate is not degenerate. `discrimination()` against the
+ * plausible arm is what shows the candidate did something a canned reply
+ * cannot. */
 export function clearsBaseline(candidateRows, baselineRows) {
   const get = (rows, k) => rows[k] ?? { cases: 0, pass: 0 };
   const beats = (k) => get(candidateRows, k).pass > get(baselineRows, k).pass;
@@ -269,4 +270,54 @@ export function clearsBaseline(candidateRows, baselineRows) {
     canon_not_worse: notWorse("canon"),
     clears: beats("continuity") && beats("contract") && notWorse("canon"),
   };
+}
+
+/**
+ * The plausible-baseline arm. Compares the candidate's mechanical verdicts to
+ * those of a fluent, correctly shaped constant that answers none of the
+ * directions, and reports which cases actually separate them.
+ *
+ * `separating` is the load-bearing number: cases the candidate passes and the
+ * canned beat fails. If it is empty, this corpus has not shown the candidate
+ * doing anything a canned reply cannot, however high its row counts look.
+ * `regressions` is the opposite, cases where the canned beat did better.
+ * Advisory cases are excluded, since they carry no mechanical verdict.
+ */
+export function discrimination(candidateSummary, plausibleSummary) {
+  const canned = new Map(plausibleSummary.perCase.map((c) => [c.id, c]));
+  const separating = [];
+  const regressions = [];
+  const shared = [];
+  let mechanicalCases = 0;
+  for (const c of candidateSummary.perCase) {
+    if (!c.mechanical) continue;
+    const p = canned.get(c.id);
+    if (!p) continue;
+    mechanicalCases += 1;
+    if (c.pass && !p.pass) separating.push(c.id);
+    else if (!c.pass && p.pass) regressions.push(c.id);
+    else if (c.pass && p.pass) shared.push(c.id);
+  }
+  return {
+    mechanical_cases: mechanicalCases,
+    separating,
+    regressions,
+    shared,
+    discriminates: separating.length > 0,
+  };
+}
+
+/**
+ * Combine both arms into one outcome:
+ *   "does not clear" -- fails the trivial arm; the output is degenerate.
+ *   "inconclusive"   -- clears the trivial arm but no case separates it from
+ *                       the canned beat, so this corpus cannot tell them apart.
+ *   "clears"         -- clears the trivial arm AND passes at least one case the
+ *                       canned beat fails.
+ * "inconclusive" is a statement about the corpus, not about the narrator.
+ */
+export function gateOutcome(trivialGate, disc) {
+  if (!trivialGate.clears) return "does not clear";
+  if (!disc.discriminates) return "inconclusive";
+  return "clears";
 }

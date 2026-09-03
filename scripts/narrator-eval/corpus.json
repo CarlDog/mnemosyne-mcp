@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "description": "Synthetic narrator evaluation corpus (docs/NARRATOR_EVAL.md). A case with \"mechanical\": false has no trustworthy deterministic signal and is scored advisory-only: its verdict is excluded from the row counts and it is checkable only by a working validator or a human reader. Nothing here is canon for any real story; the Halvard set exists only to score a narrator. Cases cover six rows: canon, continuity, voice, boundary, contract, decisiveness. \"Decisiveness\" is deliberately NOT the design's \"Player agency\" row, which asks the opposite; see docs/NARRATOR_EVAL.md.",
   "seed": {
     "characters": [
@@ -130,8 +130,18 @@
       "hint": "The narrator decides and ends on a moment; it never hands the choice back to the reader as a question. The case id predates the row rename: this row is \"decisiveness\", deliberately NOT the design's \"Player agency\" row, which asks the opposite (that a narrator not decide a player character's consequential actions) and applies to participant mode."
     }
   ],
-  "baseline": {
-    "beat": "*She waited.*",
-    "note": "A degenerate constant output. It contradicts nothing, so a canon-only metric scores it clean; every candidate must beat it on continuity and contract, and must not lose to it on canon."
-  }
+  "baselines": [
+    {
+      "id": "trivial",
+      "label": "trivial constant",
+      "beat": "*She waited.*",
+      "note": "A degenerate constant. It contradicts nothing, so a canon-only metric scores it clean, but it fails the output contract outright. Clearing it proves only that the candidate is not degenerate."
+    },
+    {
+      "id": "plausible",
+      "label": "plausible constant",
+      "beat": "*Ilse crouched by the sealed hatch and worked the folding knife out of her boot. The prints were still there in the frost, damp at the edges, and the lamp light shivered as the generator faltered in the east shed.*\n\n\"Nobody came through here,\" she said.\n\n*Bram did not answer. He limped a half step back from the hatch and put his hand flat on the cold plating. The radio in the control room stayed dead, the way it had stayed dead since the storm.*\n\n\"Then somebody came out,\" he said.",
+      "note": "The adversarial control, and the exact beat that defeated the single-arm gate on 2026-09-03: correct house shape, fluent, seeded with the corpus's own nouns, and responsive to none of the twelve directions. Sent identically for every case. A candidate that does not pass any mechanical case this beat fails has not been shown to do anything a canned reply cannot. Never edit it to make a run look better; edit the cases instead."
+    }
+  ]
 }

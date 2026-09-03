@@ -3,9 +3,11 @@
 **Status:** Protocol recorded 2026-09-03 as narrator design S5
 ([KINDROID_NARRATOR_DESIGN.md](KINDROID_NARRATOR_DESIGN.md)), run once the same
 day against the Storyteller test kin, then adversarially reviewed and corrected
-the same evening (corpus version 2). It measures a narrator kin; it certifies
-nothing on its own. Read "What it does not measure" before quoting any number
-it prints. [STATUS.md](../STATUS.md) remains the source of current priority.
+the same evening (corpus version 2). The plausible baseline arm, the review's
+first recorded proposal, was built immediately after (corpus version 3). It
+measures a narrator kin; it certifies nothing on its own. Read "What it does
+not measure" before quoting any number it prints. [STATUS.md](../STATUS.md)
+remains the source of current priority.
 
 ## What it measures
 
@@ -76,19 +78,38 @@ validator that found nothing.
 Three rows have no validator channel at all, by construction:
 `rubricOfIssue()` can only return canon, voice, or contract.
 
-## The constant baseline, and what it does not catch
+## The two baseline arms
 
-Every run scores a degenerate constant beat, `*She waited.*`, against every
-case. It contradicts nothing, so a canon-only metric scores it clean; that is
-what it is there for. A candidate must beat it on continuity and contract and
-not lose to it on canon.
+Every run scores two constants against every case, both through the identical
+path as the candidate.
 
-**Known limitation, reproduced 2026-09-03.** That gate reads three of the six
-rows against a beat degenerate enough that anything fluent beats it. A single
-plausible, well-shaped beat that mentions the corpus's nouns and answers none of
-the twelve directions scores every row clean and clears the gate, outscoring the
-real kin run. The gate detects degenerate output. It is not evidence of a good
-narrator, and the scorer prints that caveat next to the verdict.
+**The trivial arm** is `*She waited.*`. It contradicts nothing, so a canon-only
+metric scores it clean, but it fails the output contract outright. A candidate
+must beat it on continuity and contract and not lose to it on canon. Clearing
+it proves only that the candidate is not degenerate.
+
+**The plausible arm** is the adversarial control, and it is the exact beat that
+defeated the single-arm gate on 2026-09-03: correct house shape, fluent, seeded
+with the corpus's own nouns, and responsive to none of the twelve directions.
+It is sent identically for every case. The scorer reports how many mechanical
+cases **separate** the candidate from it, meaning the candidate passes and the
+canned beat fails, and how many are **regressions**, the reverse.
+
+The two arms combine into one of three outcomes:
+
+- **does not clear** -- fails the trivial arm. The output is degenerate.
+- **inconclusive** -- clears the trivial arm, but no case separates it from the
+  canned beat. This corpus cannot tell them apart.
+- **clears** -- clears the trivial arm and passes at least one case the canned
+  beat fails.
+
+**Inconclusive is a statement about the corpus, not about the narrator.** As of
+corpus version 3 the canned beat passes all ten mechanical cases, so every
+candidate is inconclusive by construction. That is the honest reading of the
+instrument: every mechanical expectation here is satisfiable by a fluent reply
+that answers nothing. Reaching **clears** requires cases the canned beat fails,
+which is a corpus change and a separate decision. Do not edit the canned beat to
+make a run look better; edit the cases.
 
 ## Run integrity
 
@@ -145,18 +166,22 @@ kin-versus-kin comparison, prefer a freshly created kin.
   `----` marks a case with no usable beat; a `hint` is advisory.
 - Read the `run integrity` line first. If the gate says WITHHELD, no row number
   from that run means anything.
+- Read the `plausible arm` line before any row count. If it separates on
+  nothing, the row counts describe shape and keyword echo, not narration.
 - Read the noise floor before reading any `validator e=` count, and read the
   quoted text before believing any single issue.
-- The gate is the last thing to trust, not the first. See the limitation above.
+- The gate's three outcomes are above. `inconclusive` is the expected result
+  today and indicts the corpus, not the kin.
 - Compare runs only within a corpus version.
 
 ## What it does not measure
 
 It does not measure prose quality: character voice distinctness, sensory
-concreteness, pacing, or whether a beat advances the scene. Nothing ties a beat
-to its own direction, and nothing compares beats to each other, so a narrator
-that repeats itself is invisible to it. No direction is sent twice, so
-repetition and run-to-run stability are unmeasured. It does not generate, and it
+concreteness, pacing, or whether a beat advances the scene. No mechanical check
+ties a beat to its own direction, which is precisely what the plausible arm
+exists to expose rather than to fix. Nothing compares the candidate's beats to
+each other, and no direction is sent twice, so a narrator that repeats itself
+is invisible and run-to-run stability is unmeasured. It does not generate, and it
 does not automate mature-content probes; the corpus stays SFW so it can run
 against any kin. It does not replace the prose review loop in
 [PROSE_PIPELINE.md](PROSE_PIPELINE.md).
@@ -164,13 +189,20 @@ against any kin. It does not replace the prose review loop in
 ## First run, 2026-09-03
 
 Storyteller test kin, twelve beats, scored under corpus version 1 and re-scored
-under version 2 after the review. The run cleared the trivial baseline and
-produced a usable beat for all twelve cases.
+under versions 2 and 3 after the review. The run produced a usable beat for all
+twelve cases and cleared the trivial arm.
+
+**Its verdict under two arms is inconclusive.** Zero of ten mechanical cases
+separate it from the canned beat, and the canned beat did better on one, the
+six-paragraph argument beat. That is the instrument reporting its own limit,
+and it is the reason no row count from this run is worth quoting.
 
 **No row number from that run is quotable.** The validator was discarded at a
 twelve-of-twelve noise floor, which left regex as the whole deciding signal and
 left `canon-limp` with no check at all. The voice row's single catch does not
-hold: it turned on one apostrophe glyph, and that case is now advisory.
+hold: it turned on one apostrophe glyph, and that case is now advisory. Whether
+a stronger validator can separate the candidate from the canned beat where the
+regex cannot is untested, and is the natural next check.
 
 What does hold, on a human read of the beats: one real output-contract failure,
 a six-paragraph beat on the argument case, plus one advisory shape slip, a bare
@@ -181,13 +213,18 @@ without obeying either or breaking frame.
 ## Reported, not built
 
 The review raised six design changes that would alter what the instrument
-measures, rather than correct a defect. They are recorded here and deliberately
-not implemented, because S5's premise was ratified and changing the measure is a
-separate decision:
+measures, rather than correct a defect. The first was built on request; the
+rest are recorded here and deliberately not implemented, because S5's premise
+was ratified and changing the measure is a separate decision.
 
-1. A second baseline arm: a plausible, well-shaped constant that answers no
-   direction, which the candidate must also beat. This is the direct fix for the
-   limitation above.
+**Built** (corpus version 3): the plausible baseline arm and the three-state
+gate above.
+
+Still open:
+
+1. Cases the canned beat fails. Without at least one, the gate cannot leave
+   `inconclusive`. This is the natural successor to the arm, and the biggest
+   single improvement available to this corpus.
 2. A responsiveness or differentiation check: report the distinct-beat count so
    an all-identical candidate is visible on the verdict line.
 3. A boundary veto in `clearsBaseline`, so a kin that fails both injection cases
