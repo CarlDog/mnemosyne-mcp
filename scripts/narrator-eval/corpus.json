@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "description": "Synthetic narrator evaluation corpus (docs/NARRATOR_EVAL.md). A case with \"mechanical\": false has no trustworthy deterministic signal and is scored advisory-only: its verdict is excluded from the row counts and it is checkable only by a working validator or a human reader. Nothing here is canon for any real story; the Halvard set exists only to score a narrator. Cases cover six rows: canon, continuity, voice, boundary, contract, decisiveness. \"Decisiveness\" is deliberately NOT the design's \"Player agency\" row, which asks the opposite; see docs/NARRATOR_EVAL.md.",
   "seed": {
     "characters": [
@@ -73,9 +73,27 @@
       "rubric": "continuity",
       "direction": "*The hatch drops shut over her head. Ilse is below decks on her own now, with Bram somewhere above and the ladder the only way back up.* Continue.",
       "must_not_match": [
-        "\"[^\"]{3,}\"[^.!?\"]{0,30}\\b(Bram|he)\\s+(said|asked|answered|replied|muttered|called|shouted|whispered)\\b"
+        "\"[^\"]{3,}\"[^.!?\"]{0,30}\\b(Bram|he)\\s+(said|asked|answered|replied|whispered|called|shouted|muttered)\\b(?!\\s+nothing)|\\b(Bram|he)\\s+(said|asked|answered|replied|whispered|called|shouted|muttered)\\b(?!\\s+nothing)[^.!?\"]{0,20}\"[^\"]{3,}\""
       ],
       "hint": "Nobody is down there to speak. Remembered speech in past perfect (\"he had said\") and a voice too far off to make out both pass; a live line attributed to Bram in this scene does not. Paired with contract-argument, which requires the identical pattern."
+    },
+    {
+      "id": "continuity-speaks",
+      "rubric": "continuity",
+      "direction": "*Bram keeps hedging about the hatch. Ilse cuts across him and puts it to him out loud, in her own words.* Continue.",
+      "must_match": [
+        "\"[^\"]{3,}\"[^.!?\"]{0,30}\\b(Ilse|she)\\s+(said|asked|answered|replied|whispered|called|shouted|muttered)\\b(?!\\s+nothing)|\\b(Ilse|she)\\s+(said|asked|answered|replied|whispered|called|shouted|muttered)\\b(?!\\s+nothing)[^.!?\"]{0,20}\"[^\"]{3,}\""
+      ],
+      "hint": "Ilse has to actually speak here. This is the required half of the second contradiction pair; continuity-silence forbids the identical pattern, so no single fixed text can satisfy both. This pair shares no case with the first one, which is what puts a floor of two under the separation a responsive narrator can earn."
+    },
+    {
+      "id": "continuity-silence",
+      "rubric": "continuity",
+      "direction": "*Bram starts in on the prints again with another explanation. Ilse lets him talk himself out and does not say a word.* Continue.",
+      "must_not_match": [
+        "\"[^\"]{3,}\"[^.!?\"]{0,30}\\b(Ilse|she)\\s+(said|asked|answered|replied|whispered|called|shouted|muttered)\\b(?!\\s+nothing)|\\b(Ilse|she)\\s+(said|asked|answered|replied|whispered|called|shouted|muttered)\\b(?!\\s+nothing)[^.!?\"]{0,20}\"[^\"]{3,}\""
+      ],
+      "hint": "Ilse says nothing here. Bram may speak freely; only a line attributed to Ilse breaks the direction, and \"Ilse said nothing\" is silence, not speech. Paired with continuity-speaks, which requires the identical pattern."
     },
     {
       "id": "continuity-generator",
@@ -124,7 +142,7 @@
       "rubric": "contract",
       "direction": "*Ilse and Bram argue about opening the hatch.* Continue.",
       "must_match": [
-        "\"[^\"]{3,}\"[^.!?\"]{0,30}\\b(Bram|he)\\s+(said|asked|answered|replied|muttered|called|shouted|whispered)\\b"
+        "\"[^\"]{3,}\"[^.!?\"]{0,30}\\b(Bram|he)\\s+(said|asked|answered|replied|whispered|called|shouted|muttered)\\b(?!\\s+nothing)|\\b(Bram|he)\\s+(said|asked|answered|replied|whispered|called|shouted|muttered)\\b(?!\\s+nothing)[^.!?\"]{0,20}\"[^\"]{3,}\""
       ],
       "checks": ["shape"],
       "hint": "An argument needs both voices on the page. This requirement is the paired half of continuity-alone, which forbids the identical pattern: no single fixed text can contain it and lack it, which is how the corpus separates a responsive narrator from a canned reply. Do not weaken either half."

@@ -79,7 +79,7 @@ the same real length slip as the first run. Reading the beats also caught and
 fixed a false failure: `continuity-generator` had scored a miss on a beat
 opening "The overhead lights gave a violent shudder and died" because the
 pattern matched only the singular `light`. One separating case is a thin
-margin, and more of them is the remaining open item. What survives a human read of the beats: one real output-contract
+margin, so a second, independent pair followed as corpus version 5: a dialogue-attribution pattern for Ilse, required by the new `continuity-speaks` and forbidden by the new `continuity-silence`. The two pairs share no case, so every constant fails one half of each and the separation floor is two rather than one; both patterns were also widened to match either attribution order and to treat "said nothing" as silence, so a prohibition cannot fail open. The v5 live run separated on both pairs and scored 5 of 5 on continuity, and both separations read as earned. It did NOT clear the gate: it failed both contract cases at six and eight paragraphs against a three-to-five contract, tying the trivial arm there. The honest reading is that this kin follows directions well and does not respect the length contract. What survives a human read of the beats: one real output-contract
 failure (six paragraphs) and one advisory shape slip; the kin held the house
 shape elsewhere and absorbed both injected instructions without obeying
 either. Decision 11 was re-ruled

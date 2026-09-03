@@ -68,7 +68,7 @@ describe("corpus", () => {
     ]) {
       expect(rows.has(r)).toBe(true);
     }
-    expect(corpus.cases.length).toBe(13);
+    expect(corpus.cases.length).toBe(15);
   });
 
   it("seeds the entity kinds the smoke tests used, and every regex compiles", () => {
@@ -90,7 +90,7 @@ describe("corpus", () => {
     // observed beat. Neither may count toward a deterministic row number.
     expect(byId("canon-limp").mechanical).toBe(false);
     expect(byId("voice-pov").mechanical).toBe(false);
-    expect(mechanicalCases.length).toBe(11);
+    expect(mechanicalCases.length).toBe(13);
   });
 });
 
@@ -481,33 +481,83 @@ describe("plausible baseline arm", () => {
   });
 });
 
-describe("the contradiction pair", () => {
-  // contract-argument requires a line attributed to a second speaker;
-  // continuity-alone forbids the identical pattern. This is what lets the
-  // corpus separate a responsive narrator from any single canned reply.
-  const argument = byId("contract-argument");
-  const alone = byId("continuity-alone");
+const SPEECH = {
+  "Bram speaks":
+    '*She put her hand flat on the plating.*\n\n"Then somebody came out," he said.\n\n*Neither of them moved.*',
+  "Ilse speaks":
+    '*She put her hand flat on the plating.*\n\n"Then somebody came out," she said.\n\n*Neither of them moved.*',
+};
 
-  it("both halves share one identical pattern", () => {
-    expect(argument.must_match).toBeDefined();
-    expect(alone.must_not_match).toBeDefined();
-    expect(argument.must_match![0]).toBe(alone.must_not_match![0]);
+const SILENCE_BEAT =
+  "*Bram went on about meltwater and frost, building the explanation out of nothing, and Ilse let him.*\n\n*She watched his hands instead of his face. They did not stop moving the whole time he talked.*\n\n*When he ran out he stood there in the quiet he had made, waiting for her to fill it, and she did not.*";
+
+describe("the contradiction pairs", () => {
+  // Each pair puts one identical pattern on both sides of a requirement:
+  // required by a case whose direction calls for it, forbidden by a case whose
+  // direction rules it out. A fixed text either contains the pattern or does
+  // not, so every constant fails one half of every pair. The two pairs share
+  // no case, which is what puts a floor of two under the separation a
+  // responsive narrator can earn.
+  const PAIRS = [
+    {
+      name: "Bram speaks",
+      require: "contract-argument",
+      forbid: "continuity-alone",
+    },
+    {
+      name: "Ilse speaks",
+      require: "continuity-speaks",
+      forbid: "continuity-silence",
+    },
+  ];
+
+  it.each(PAIRS)("$name: both halves share one identical pattern", (pair) => {
+    const req = byId(pair.require).must_match;
+    const forb = byId(pair.forbid).must_not_match;
+    expect(req).toBeDefined();
+    expect(forb).toBeDefined();
+    expect(req![0]).toBe(forb![0]);
   });
 
-  it("no single fixed text can pass both halves", () => {
-    const withSpeech =
-      '*She put her hand flat on the plating.*\n\n"Then somebody came out," he said.\n\n*Neither of them moved.*';
-    const withoutSpeech =
+  it("the two pairs use different patterns and share no case", () => {
+    expect(byId(PAIRS[0]!.require).must_match![0]).not.toBe(
+      byId(PAIRS[1]!.require).must_match![0],
+    );
+    const ids = PAIRS.flatMap((p) => [p.require, p.forbid]);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it.each(PAIRS)("$name: no single fixed text can pass both halves", (pair) => {
+    const withIt = SPEECH[pair.name as keyof typeof SPEECH];
+    const withoutIt =
       "*She put her hand flat on the plating.*\n\n*The shaft went down past the reach of the lamp.*\n\n*Neither the cold nor the quiet gave anything back.*";
-    // A text either contains the pattern or it does not, and each branch
-    // fails one half. There is no third option, which is the point.
-    expect(scoreCase(argument, withSpeech).pass).toBe(true);
-    expect(scoreCase(alone, withSpeech).pass).toBe(false);
-    expect(scoreCase(argument, withoutSpeech).pass).toBe(false);
-    expect(scoreCase(alone, withoutSpeech).pass).toBe(true);
+    expect(scoreCase(byId(pair.require), withIt).pass).toBe(true);
+    expect(scoreCase(byId(pair.forbid), withIt).pass).toBe(false);
+    expect(scoreCase(byId(pair.require), withoutIt).pass).toBe(false);
+    expect(scoreCase(byId(pair.forbid), withoutIt).pass).toBe(true);
   });
 
-  it("the shipped canned beat fails at least one mechanical case", () => {
+  it("every constant fails at least one mechanical case per pair", () => {
+    // The floor. Checked against the two shipped arms and against a fluent
+    // constant with no dialogue at all, which is the shape that would evade a
+    // design where both pairs hung off the same case.
+    const dialogueFree =
+      "*She waited by the hatch while the generator faltered and the lamp light shivered.*\n\n*The prints were still there in the frost, damp at the edges.*\n\n*Nothing below decks answered the knife or the cold.*";
+    for (const beat of [PLAUSIBLE, TRIVIAL, dialogueFree]) {
+      const s = summarize(corpus.cases.map((c) => scoreCase(c, beat)));
+      const failed = new Set(
+        (s.perCase as { id: string; mechanical: boolean; pass: boolean }[])
+          .filter((c) => c.mechanical && !c.pass)
+          .map((c) => c.id),
+      );
+      for (const pair of PAIRS) {
+        expect(failed.has(pair.require) || failed.has(pair.forbid)).toBe(true);
+      }
+      expect(failed.size).toBeGreaterThanOrEqual(PAIRS.length);
+    }
+  });
+
+  it("the shipped canned beat fails one half of each pair", () => {
     // The regression guard for the whole arm: if a later edit made the canned
     // beat pass everything again, the gate would go back to inconclusive by
     // construction and this would be the only thing to notice.
@@ -515,27 +565,44 @@ describe("the contradiction pair", () => {
     const failed = (
       canned.perCase as { id: string; mechanical: boolean; pass: boolean }[]
     ).filter((c) => c.mechanical && !c.pass);
-    expect(failed.length).toBeGreaterThan(0);
-    expect(failed.map((c) => c.id)).toContain("continuity-alone");
+    expect(failed.map((c) => c.id).sort()).toEqual([
+      "continuity-alone",
+      "continuity-silence",
+    ]);
   });
 
-  it("a candidate that answers the alone direction separates from the canned beat", () => {
+  it("a responsive candidate separates on both pairs and clears", () => {
     const responsive = corpus.cases.map((c) =>
-      scoreCase(c, c.id === "continuity-alone" ? ALONE_BEAT : PLAUSIBLE),
+      scoreCase(
+        c,
+        c.id === "continuity-alone"
+          ? ALONE_BEAT
+          : c.id === "continuity-silence"
+            ? SILENCE_BEAT
+            : PLAUSIBLE,
+      ),
     );
     const canned = corpus.cases.map((c) => scoreCase(c, PLAUSIBLE));
     const disc = discrimination(summarize(responsive), summarize(canned));
-    expect(disc.separating).toEqual(["continuity-alone"]);
-    expect(disc.discriminates).toBe(true);
+    expect(disc.separating.sort()).toEqual([
+      "continuity-alone",
+      "continuity-silence",
+    ]);
     expect(gateOutcome({ clears: true }, disc)).toBe("clears");
   });
 
-  it("lets remembered speech and a distant voice through the alone case", () => {
+  it("lets remembered speech, a distant voice, and stated silence through", () => {
     const remembered =
       '*She stopped on the ladder.*\n\n*"Nobody has been down there in years," he had said, and she had believed him for a whole hour.*\n\n*The rung was cold enough to bite.*';
     const distant =
       "*Somewhere above, Bram's voice went on, too far down the shaft to make out.*\n\n*She did not answer it.*\n\n*The dark below the ladder did not move.*";
-    expect(scoreCase(alone, remembered).pass).toBe(true);
-    expect(scoreCase(alone, distant).pass).toBe(true);
+    expect(scoreCase(byId("continuity-alone"), remembered).pass).toBe(true);
+    expect(scoreCase(byId("continuity-alone"), distant).pass).toBe(true);
+    // "said nothing" is silence, not speech, on either side of a quoted line.
+    const statedSilence =
+      '*He spread his hands.*\n\n"Ice melts," he said, and Ilse said nothing.\n\n*She let the quiet go on until he looked away.*';
+    expect(scoreCase(byId("continuity-silence"), statedSilence).pass).toBe(
+      true,
+    );
   });
 });
