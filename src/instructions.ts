@@ -23,6 +23,11 @@ v0 surface:
   optional story? (name or OC project UUID) that overrides the active
   story for that one call only, without touching the mnemo_story_use
   pointer — the same convention mnemo_export_story already used.
+- mnemo_session_break(greeting, story?, kindroid_kin?) — explicit new-session
+  boundary for a story's Kindroid narrator: chat-breaks the bound single-AI
+  kin (cascaded-memory wipe pinned off), seeds greeting as its newest
+  message, and saves the greeting as a scene. Never triggered by prose; a
+  timeout means it may already have applied -- do not call again blindly.
 - mnemo_save_entity(type, name, content, pinned?, extra_tags?, story?) —
   write a character/location/rule/style/scene/lore/worldbuilding entry to
   the active story. Overwrites by (type, name).

@@ -26,11 +26,13 @@ import { registerTools } from "./tools/index.js";
 import { createStoryValidationAdapter } from "./adapters/story-validation.js";
 import { createSceneRevalidationAdapter } from "./adapters/scene-validation.js";
 import { createContinuationAdapter } from "./adapters/continuation.js";
+import { createSessionAdapter } from "./adapters/session.js";
 import {
   createEntityCatalogAdapter,
   createStoryCatalogAdapter,
 } from "./adapters/catalog.js";
 import { createContinueScene } from "./application/continue-scene.js";
+import { createSessionBreak } from "./application/session-break.js";
 import { createListEntityCatalog } from "./application/list-entities.js";
 import { createListStoryCatalog } from "./application/list-stories.js";
 import type { ApplicationUseCases } from "./application/use-cases.js";
@@ -186,6 +188,7 @@ const useCases: ApplicationUseCases = {
   listEntityCatalog: createListEntityCatalog(createEntityCatalogAdapter(oc)),
   listStoryCatalog: createListStoryCatalog(createStoryCatalogAdapter(oc)),
   revalidateScenes,
+  sessionBreak: createSessionBreak(createSessionAdapter(oc, generator)),
   validateStory,
 };
 log.info("startup", "ollama validator configured", {

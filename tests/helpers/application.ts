@@ -1,4 +1,5 @@
 import { createContinuationAdapter } from "../../src/adapters/continuation.js";
+import { createSessionAdapter } from "../../src/adapters/session.js";
 import {
   createEntityCatalogAdapter,
   createStoryCatalogAdapter,
@@ -11,6 +12,7 @@ import {
 } from "../../src/application/continue-scene.js";
 import { createListEntityCatalog } from "../../src/application/list-entities.js";
 import { createListStoryCatalog } from "../../src/application/list-stories.js";
+import { createSessionBreak } from "../../src/application/session-break.js";
 import type { ApplicationUseCases } from "../../src/application/use-cases.js";
 import type { RevalidateScenes } from "../../src/application/revalidate-scenes.js";
 import type { ValidateStory } from "../../src/application/validate-story.js";
@@ -49,6 +51,7 @@ export function testUseCases(
     listEntityCatalog: createListEntityCatalog(createEntityCatalogAdapter(oc)),
     listStoryCatalog: createListStoryCatalog(createStoryCatalogAdapter(oc)),
     revalidateScenes,
+    sessionBreak: createSessionBreak(createSessionAdapter(oc, generator)),
     validateStory,
   };
 }

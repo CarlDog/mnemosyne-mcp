@@ -7,6 +7,14 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 
 ### Added
 
+- `mnemo_session_break(greeting, story?, kindroid_kin?)`: the explicit
+  new-session boundary for a story's Kindroid narrator. Chat-breaks the bound
+  single-AI kin with the cascaded-memory wipe pinned off, seeds the greeting
+  as its newest message, and saves the greeting as a scene tagged
+  `session-break` (plus the narrator label). Refuses non-Kindroid generators,
+  unbound stories, and group targets before any mutation; a timeout keeps
+  the no-retry rule because chat break has no idempotency key. Narrator
+  design S3.
 - `mnemo_story_use` accepts `narrator_profile` (`null` clears): a short label
   naming the narrator persona a story is written with, stored as a
   `Narrator-Profile:` line on the story marker (schema 4, older markers still

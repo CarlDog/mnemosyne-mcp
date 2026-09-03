@@ -9,7 +9,7 @@ adversarial review record, and the smoke tests, lives at
 kindroid-mcp will and will not own; this one holds what would change here.
 
 **Ratified 2026-09-03:** the operator accepted every recommendation in §5.
-S1 and S2 shipped the same day; S3 through S5 remain unscheduled; S4 stays
+S1, S2, and S3 shipped the same day; S4 and S5 remain unscheduled; S4 stays
 blocked on the share check in decision 12.
 
 ## 1. The shape, in one paragraph
@@ -118,6 +118,15 @@ log. This gives provenance ("which narrator wrote this beat") without a second
 copy of the persona that would drift.
 
 ### S3. Session break as its own explicit call
+
+**Shipped 2026-09-03** as `mnemo_session_break(greeting, story?,
+kindroid_kin?)`: a use case of its own
+([session-break.ts](../src/application/session-break.ts)) behind a narrow
+port, refusing non-Kindroid generators, blank greetings, unbound stories,
+and group targets before any mutation; the break runs first and the greeting
+is then saved as a scene tagged `session-break` plus the narrator label, with
+a failed save reported as recoverable. `KindroidClient.chatBreak` pins
+`wipe_cascaded` off and keeps the no-retry timeout rule.
 
 A new tool, not a parameter on `mnemo_continue`: `mnemo_session_break(story?,
 greeting)` that calls `kindroid_chat_break` with `wipe_cascaded: false` fixed,

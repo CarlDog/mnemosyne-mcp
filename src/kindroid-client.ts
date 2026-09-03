@@ -53,6 +53,7 @@ export type AdvanceGroupResult = z.infer<typeof AdvanceGroupResultSchema>;
 export const KINDROID_REQUIRED_TOOLS = [
   "kindroid_send_message",
   "kindroid_advance_group",
+  "kindroid_chat_break",
 ] as const;
 
 /**
@@ -259,6 +260,23 @@ export class KindroidClient {
         );
       }
     }
+  }
+
+  /**
+   * Reset a kin's short-term context via kindroid_chat_break, seeding
+   * `greeting` as its newest message, with wipe_cascaded pinned to false:
+   * no caller of this client can reach the permanent long-term wipe.
+   * Goes through callMutatingTool, so a timeout is reported as
+   * possibly-already-applied and is never retried here -- chat break has
+   * no idempotency key (live-verified 2026-09-03: the field is rejected).
+   */
+  async chatBreak(aiId: string, greeting: string): Promise<void> {
+    const result = await this.callMutatingTool("kindroid_chat_break", {
+      ai_id: aiId,
+      greeting,
+      wipe_cascaded: false,
+    });
+    extractText(result, "kindroid_chat_break");
   }
 
   /** Drive a group chat's turn loop via kindroid_advance_group and return

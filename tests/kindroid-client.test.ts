@@ -174,3 +174,24 @@ describe("kindroid_send_message re-sends under the same idempotency token", () =
     expect(callTool).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("kindroid_chat_break", () => {
+  it("pins wipe_cascaded to false and passes the greeting", async () => {
+    const callTool = vi
+      .fn()
+      .mockResolvedValue({ content: [{ type: "text", text: "OK" }] });
+    await stubbedClient(callTool).chatBreak("kin", "*Snow.*");
+    expect(callTool.mock.calls[0]![0]).toEqual({
+      name: "kindroid_chat_break",
+      arguments: { ai_id: "kin", greeting: "*Snow.*", wipe_cascaded: false },
+    });
+  });
+
+  it("never re-sends after a timeout: no idempotency key exists for chat break", async () => {
+    const callTool = vi.fn().mockRejectedValue(timeout());
+    await expect(
+      stubbedClient(callTool).chatBreak("kin", "*Snow.*"),
+    ).rejects.toThrow(/kindroid_chat_break timed out[\s\S]*do NOT retry/);
+    expect(callTool).toHaveBeenCalledTimes(1);
+  });
+});
