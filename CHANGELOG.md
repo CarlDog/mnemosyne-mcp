@@ -7,6 +7,14 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 
 ### Added
 
+- Narrator evaluation (`docs/NARRATOR_EVAL.md`, `scripts/narrator-eval/`): a
+  synthetic corpus of twelve cases across the rubric's six rows, deterministic
+  checks shared with the unit tests, Ollama validator scoring by row, a
+  constant-baseline gate, and a generator that runs the corpus through a kin
+  over mnemosyne's own client. The gate is decided on deterministic
+  verdicts; validator counts are shown beside them with a noise floor
+  measured on the baseline. Beats and reports stay under `data/`.
+  Narrator design S5.
 - `mnemo_session_break(greeting, story?, kindroid_kin?)`: the explicit
   new-session boundary for a story's Kindroid narrator. Chat-breaks the bound
   single-AI kin with the cascaded-memory wipe pinned off, seeds the greeting
