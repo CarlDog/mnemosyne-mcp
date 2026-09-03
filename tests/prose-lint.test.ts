@@ -70,6 +70,19 @@ describe("prose-lint", () => {
     expect(r.findings[0]?.rule).toBe("18 simile budget");
   });
 
+  it("warns past the thought-verb budget and stays under it otherwise", () => {
+    const heavy =
+      "# x\n\nShe knew. He realised. They understood. She believed it. He remembered. She wanted it. He wondered. She knew again.\n";
+    const r = lint(heavy, {}) as Result;
+    expect(r.errors).toBe(0);
+    expect(r.findings.some((f) => f.rule === "thought verbs")).toBe(true);
+    const light = lint(
+      "# x\n\nShe knew the door. He wanted tea.\n",
+      {},
+    ) as Result;
+    expect(light.findings.some((f) => f.rule === "thought verbs")).toBe(false);
+  });
+
   it("does not lint the DRAFT CONTROL RECORD header note", () => {
     const text =
       "> **DRAFT CONTROL RECORD — NOT ACTIVE CANON**\n>\n> Engines: heat and horror; the cutoff.\n\n# x\n\nClean prose.\n";
