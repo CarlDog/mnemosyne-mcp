@@ -532,8 +532,10 @@ Key architectural decisions (see ARCHITECTURE.md for full reasoning):
   Every kindroid-mcp call goes through one chokepoint,
   `KindroidClient.callMutatingTool` — they all mutate a real conversation, so
   a failure leaves "did anything happen?" unanswerable. It sets a per-request
-  timeout (`KINDROID_MCP_TIMEOUT_MS`, default 180s, well above the SDK's 60s
-  because a group chains sequential generations at ~13s each) and, on a
+  timeout (`KINDROID_MCP_TIMEOUT_MS`, default 240s, well above the SDK's 60s
+  because a group chains sequential generations at ~13s each, and above
+  kindroid-mcp's worst case for one send: its 60s request timeout plus its
+  120s same-key re-send budget) and, on a
   timeout **specifically**, rethrows saying the call may have already posted
   and generated — do not retry. Non-timeout failures pass through untouched
   so the warning stays scarce enough to mean something. The one exception

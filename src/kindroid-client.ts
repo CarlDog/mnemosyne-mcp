@@ -68,7 +68,14 @@ export const KINDROID_REQUIRED_TOOLS = [
  * failure we are trying to avoid, while a too-long one only delays an error
  * on a call that was already lost.
  */
-export const DEFAULT_TIMEOUT_MS = 180_000;
+//
+// Raised from 180s on 2026-09-03: kindroid-mcp's single-AI send now rides out
+// its own upstream timeout by re-sending under the same idempotency key, and
+// its worst case for one send is its 60s request timeout plus its 120s
+// re-send budget. Waiting 240s here lets that resolve inside ONE tool call
+// instead of timing out first and re-sending with the same token, which
+// works but burns a whole cycle.
+export const DEFAULT_TIMEOUT_MS = 240_000;
 
 /**
  * Extra attempts a timed-out kindroid_send_message gets under the SAME

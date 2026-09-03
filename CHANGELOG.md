@@ -12,7 +12,8 @@ this file was introduced remains in [STATUS.md](STATUS.md).
   (`SEND_TIMEOUT_RETRIES`, 2) before throwing `provider_dispatch_unknown`;
   kindroid-mcp turns the token into Kindroid's live-verified
   `idempotency_key`, so a timed-out direction is posted at most once. Group
-  advances keep the no-retry rule.
+  advances keep the no-retry rule. `KINDROID_MCP_TIMEOUT_MS` defaults to
+  240 s (was 180 s) so a kindroid-mcp send's worst case fits in one call.
 - Recorded the non-flagship story gap-audit pass (2026-09-02): every
   non-flagship story now carries a `drafts/_control/GAP_AUDIT.md` graded
   against the flagship bar, a standing control-record class added to
