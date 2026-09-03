@@ -5,7 +5,9 @@
 **Kindroid sends are now retry-safe (2026-09-03).** `KindroidClient.sendMessage`
 passes a fresh `idempotency_token` on every `kindroid_send_message` call and,
 on a timeout, re-sends with the same token up to `SEND_TIMEOUT_RETRIES` (2)
-times before throwing `provider_dispatch_unknown`. kindroid-mcp (986aaf2)
+times before throwing `provider_dispatch_unknown`. `KINDROID_MCP_TIMEOUT_MS`
+now defaults to 240 s so one kindroid-mcp send (its 60 s request timeout plus
+its 120 s re-send budget) resolves inside a single call. kindroid-mcp (986aaf2)
 composes the token into Kindroid's `idempotency_key`, live-verified the same
 day on a test kin: `409 Request already in progress` while generating, the
 original reply replayed afterwards with no second exchange, even after a
