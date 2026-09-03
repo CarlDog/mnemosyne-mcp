@@ -6,6 +6,7 @@
 // Add more as new call sites need them -- three similar lines is better
 // than a premature abstraction.
 
+import { randomUUID } from "node:crypto";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { log } from "./log.js";
@@ -68,6 +69,23 @@ export const KINDROID_REQUIRED_TOOLS = [
  * on a call that was already lost.
  */
 export const DEFAULT_TIMEOUT_MS = 180_000;
+
+/**
+ * Extra attempts a timed-out kindroid_send_message gets under the SAME
+ * idempotency token before the unknown-outcome error is thrown.
+ *
+ * kindroid-mcp (since 2026-09-03) composes every send's idempotency_token
+ * into Kindroid's idempotency_key and itself re-sends after an upstream
+ * timeout. Live-verified against Kindroid: the same key answers
+ * "409 Request already in progress" while the reply is still generating and
+ * replays the ORIGINAL reply afterwards, never a second exchange -- even when
+ * the first request was abandoned mid-flight. So a timeout reaching this
+ * client means kindroid-mcp's own re-send budget ran out or the MCP transport
+ * dropped, and re-sending with the same token is safe either way. Kept small:
+ * each attempt can wait the full KINDROID_MCP_TIMEOUT_MS. Group advances stay
+ * on the no-retry rule; nothing about a group turn loop is idempotent.
+ */
+export const SEND_TIMEOUT_RETRIES = 2;
 
 export class KindroidClient {
   private client: Client;
@@ -195,11 +213,45 @@ export class KindroidClient {
    * `aiId` accepts a raw ai_id or a kindroid-mcp registered friendly name --
    * kindroid_send_message resolves the name server-side. */
   async sendMessage(aiId: string, message: string): Promise<string> {
-    const result = await this.callMutatingTool("kindroid_send_message", {
+    // One token for the whole call, however many attempts it takes: that is
+    // what makes the retry safe (see SEND_TIMEOUT_RETRIES). An older
+    // kindroid-mcp ignores the unknown argument and behaves as before.
+    const args = {
       ai_id: aiId,
       message,
-    });
-    return extractText(result, "kindroid_send_message");
+      idempotency_token: randomUUID(),
+    };
+    for (let attempt = 1; ; attempt++) {
+      try {
+        const result = await this.callMutatingTool(
+          "kindroid_send_message",
+          args,
+        );
+        return extractText(result, "kindroid_send_message");
+      } catch (err) {
+        const timedOut =
+          err instanceof RunOutcomeError &&
+          err.outcome === "provider_dispatch_unknown";
+        if (!timedOut) throw err;
+        if (attempt > SEND_TIMEOUT_RETRIES) {
+          throw new RunOutcomeError(
+            "provider_dispatch_unknown",
+            `kindroid_send_message timed out ${attempt} time(s), including ` +
+              `${SEND_TIMEOUT_RETRIES} re-send(s) under the same idempotency ` +
+              `token. The direction is posted at most once upstream (Kindroid ` +
+              `replays the reply for a repeated token rather than generating ` +
+              `again), so do not send it again: read the target's recent ` +
+              `history to see whether the reply landed, then continue from there.`,
+            { cause: err },
+          );
+        }
+        log.warn(
+          "kindroid-client",
+          "kindroid_send_message timed out; re-sending under the same idempotency token",
+          { attempt, max_attempts: 1 + SEND_TIMEOUT_RETRIES },
+        );
+      }
+    }
   }
 
   /** Drive a group chat's turn loop via kindroid_advance_group and return

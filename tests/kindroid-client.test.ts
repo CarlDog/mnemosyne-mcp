@@ -9,7 +9,12 @@
 
 import { describe, it, expect, vi } from "vitest";
 import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
-import { DEFAULT_TIMEOUT_MS, KindroidClient } from "../src/kindroid-client.js";
+import {
+  DEFAULT_TIMEOUT_MS,
+  KindroidClient,
+  SEND_TIMEOUT_RETRIES,
+} from "../src/kindroid-client.js";
+import { RunOutcomeError } from "../src/run-outcome.js";
 
 /** A client whose SDK transport is a stub and which believes it is connected. */
 function stubbedClient(
@@ -108,5 +113,64 @@ describe("timeout is reported as possibly-already-mutated", () => {
       .advanceGroup("g", "hi")
       .catch((e: unknown) => e);
     expect((err as Error).message).toBe("fetch failed");
+  });
+});
+
+describe("kindroid_send_message re-sends under the same idempotency token", () => {
+  const reply = (text: string) => ({ content: [{ type: "text", text }] });
+  const tokenOf = (call: unknown[]) =>
+    (call[0] as { arguments: { idempotency_token?: string } }).arguments
+      .idempotency_token;
+
+  it("passes a fresh idempotency_token with every send", async () => {
+    const callTool = vi.fn().mockResolvedValue(reply("ok"));
+    await stubbedClient(callTool).sendMessage("kin", "hi");
+    const args = (callTool.mock.calls[0]![0] as { arguments: object })
+      .arguments;
+    expect(args).toMatchObject({ ai_id: "kin", message: "hi" });
+    expect(tokenOf(callTool.mock.calls[0]!)).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it("retries a timeout with the SAME token and returns the eventual reply", async () => {
+    const callTool = vi
+      .fn()
+      .mockRejectedValueOnce(timeout())
+      .mockRejectedValueOnce(timeout())
+      .mockResolvedValueOnce(reply("late"));
+    await expect(
+      stubbedClient(callTool).sendMessage("kin", "hi"),
+    ).resolves.toBe("late");
+    expect(callTool).toHaveBeenCalledTimes(3);
+    expect(new Set(callTool.mock.calls.map(tokenOf)).size).toBe(1);
+  });
+
+  it("gives up after SEND_TIMEOUT_RETRIES re-sends and says the direction was posted at most once", async () => {
+    const callTool = vi.fn().mockRejectedValue(timeout());
+    const err = await stubbedClient(callTool)
+      .sendMessage("kin", "hi")
+      .catch((e: unknown) => e);
+    expect(callTool).toHaveBeenCalledTimes(1 + SEND_TIMEOUT_RETRIES);
+    expect(err).toBeInstanceOf(RunOutcomeError);
+    expect((err as RunOutcomeError).outcome).toBe("provider_dispatch_unknown");
+    expect((err as Error).message).toMatch(/at most once/);
+    expect((err as Error).message).toMatch(/kindroid_send_message timed out/);
+  });
+
+  it("does not re-send on a non-timeout failure", async () => {
+    const callTool = vi
+      .fn()
+      .mockRejectedValue(new McpError(ErrorCode.InvalidParams, "no such kin"));
+    await expect(
+      stubbedClient(callTool).sendMessage("kin", "hi"),
+    ).rejects.toThrow(/no such kin/);
+    expect(callTool).toHaveBeenCalledTimes(1);
+  });
+
+  it("never re-sends a group advance", async () => {
+    const callTool = vi.fn().mockRejectedValue(timeout());
+    await expect(
+      stubbedClient(callTool).advanceGroup("g", "hi"),
+    ).rejects.toThrow(/do NOT retry/);
+    expect(callTool).toHaveBeenCalledTimes(1);
   });
 });

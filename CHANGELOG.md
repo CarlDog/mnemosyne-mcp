@@ -7,6 +7,12 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 
 ### Added
 
+- `KindroidClient.sendMessage` sends a fresh `idempotency_token` with every
+  `kindroid_send_message` call and re-sends with the same token on a timeout
+  (`SEND_TIMEOUT_RETRIES`, 2) before throwing `provider_dispatch_unknown`;
+  kindroid-mcp turns the token into Kindroid's live-verified
+  `idempotency_key`, so a timed-out direction is posted at most once. Group
+  advances keep the no-retry rule.
 - Recorded the non-flagship story gap-audit pass (2026-09-02): every
   non-flagship story now carries a `drafts/_control/GAP_AUDIT.md` graded
   against the flagship bar, a standing control-record class added to

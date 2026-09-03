@@ -2,6 +2,22 @@
 
 **Last updated:** 2026-09-03.
 
+**Kindroid sends are now retry-safe (2026-09-03).** `KindroidClient.sendMessage`
+passes a fresh `idempotency_token` on every `kindroid_send_message` call and,
+on a timeout, re-sends with the same token up to `SEND_TIMEOUT_RETRIES` (2)
+times before throwing `provider_dispatch_unknown`. kindroid-mcp (986aaf2)
+composes the token into Kindroid's `idempotency_key`, live-verified the same
+day on a test kin: `409 Request already in progress` while generating, the
+original reply replayed afterwards with no second exchange, even after a
+client-side abandon. The group path keeps its no-retry rule. Background: the
+operator's narrator-kin design (kindroid-mcp `docs/narrator-kin-design.md`)
+was adversarially reviewed and smoke-tested, the Web UI's message-action
+routes were recorded under a documentation-only exception, and the
+idempotency key surfaced from the app's own send payload; the record lives in
+kindroid-mcp's docs, and this repo's memory note `narrator-kin-design-review`
+carries the blockers that still gate that design (content-rating scope,
+share snapshot semantics, the rules/style channel decision, groups).
+
 **Five more gap audits: Brass & Nerve, The Adjustment Protocol, The Noctis
 Veil, Shadowflame, and, on the operator's go-ahead, Star Wars: The Black Ledger
 (2026-09-02).** Each was written by a per-story audit agent against the Midnight
