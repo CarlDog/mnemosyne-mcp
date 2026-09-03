@@ -96,7 +96,6 @@ Written down but **not ratified** — design input, not specification:
 [WEBUI_NOTES.md](docs/WEBUI_NOTES.md),
 [CONTENT_ROUTING_DESIGN.md](docs/CONTENT_ROUTING_DESIGN.md),
 [COMPANION_PROFILE_DESIGN.md](docs/COMPANION_PROFILE_DESIGN.md),
-[KINDROID_NARRATOR_DESIGN.md](docs/KINDROID_NARRATOR_DESIGN.md),
 [HOOK_VAULT.md](docs/HOOK_VAULT.md), and the four external-system adoption
 assessments listed under "Layout" below.
 
@@ -382,7 +381,8 @@ assessments listed under "Layout" below.
   Records what the day's smoke and end-to-end runs verified, the findings that
   shape the design (persona is the style, mode never reaches Kindroid,
   full-name keyphrase gating), five unscheduled slices, and the decisions the
-  operator still owns with recommendations. Design input, not ratified.
+  operator's rulings. Decisions ratified 2026-09-03; S1 shipped, S2 through S5
+  unscheduled, S4 blocked on the share check.
 - `docs/V2_RETROSPECTIVE.md` — entity schemas, verbatim prompt templates,
   lessons learned, and anti-patterns from the v2 OpenChronicle
   storytelling plugin. v2 code is NOT being ported; this doc is the

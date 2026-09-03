@@ -1,7 +1,7 @@
 # Kindroid Narrator: the Mnemosyne-side design
 
-**Status: Design input, recorded 2026-09-03. Not ratified.** This document
-schedules no implementation by itself; [STATUS.md](../STATUS.md) remains the
+**Status: Decisions ratified 2026-09-03; slices scheduled one at a time.**
+This document schedules no implementation by itself; [STATUS.md](../STATUS.md) remains the
 source of project priority. It is the Mnemosyne half of the operator's
 narrator-kin proposal, whose kindroid-mcp half, the boundary statement, the
 adversarial review record, and the smoke tests, lives at
