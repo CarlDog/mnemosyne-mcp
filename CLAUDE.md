@@ -54,7 +54,8 @@ it; Star Wars: The Black Ledger is not, and is structurally unlike the others
 **Nine review-gated Living Canon overlays are complete on disk (eight from
 2026-08-30, Wonderland r10 added 2026-09-01 at 35 operations → 77 entities; 58 → 100 since the scene extraction):**
 BattleChasers (71 operations → 143 entities; 80 → 152 since the scene
-extraction), Brass & Nerve (20 → 43; 32 → 55 since the scene extraction), Chaos
+extraction), Brass & Nerve (20 → 43; 32 → 55 since the scene extraction; 49 → 76 since the
+2026-09-02 r3 synthesis pass), Chaos
 Saga (60 → 73; 317 → 330 since the 2026-09-02 scene move and the group-chat scene), The Miskatonic Archives: The
 Blackwood Case (formerly GhostHunters; 60 → 105; 110 → 155 since the scene move), Midnight Is a Suggestion (41 → 70),
 Shadowflame (40 → 74; 99 → 133 since the scene extraction), The Adjustment Protocol (19 → 41; 62 → 84 since the scene extraction), and The Noctis Veil (13 → 39; 63 → 89 since the scene extraction). Each retains PASS/control evidence and passed the zero-write import

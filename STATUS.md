@@ -324,7 +324,37 @@ the book open on the side table before anything else and writes in it there,
 the scar clause is cut, the abstinence sentence is one plain line, the
 "and that" chain is four clauses, the stranded line is reflowed; chapters 1
 and 12 untouched. Lint is zero errors; the three samples are the story's
-style baseline, closed. The overlay still verifies; no entity written.
+style baseline, closed. Then, on operator direction, the **r3 overlay pass**
+folded the synthesis into the draft overlay, truth-tiered: 17 additions (Aurel
+Stane, Odile Corvane, Isadora Kell, Tamsin Lowe; the Sealed Wing, Corvane Dry
+Dock, Lantern Row Scene Dock, the Evidence Vault, the Copper Finch, the Canal
+Machine Stairs; the Device Log, Sabine's Inspection Record, Gideon's Flight
+Log, the Surgery Report, the Condenser Gauge, Moira's Ledger, the Old File) and
+11 rehashed replacements (`_minor.md` gains Bess Marrow, Nell Garrity, Dolan
+Pruett, Ambrose Wick; the core profiles, premise ledger, geometry, hook ecology,
+Lattice, and knowledge map gain the new cast and a "Synthesis v4 (open
+possibility, unplayed)" tier for every invented resolution). Three operator
+rulings recorded in `_control/PASS.md`: full truth-tiered scope; the airship
+*Halcyon Wren* renamed *Ardent Petrel* and Tobias Wick renamed Ambrose Wick to
+clear collisions with The Adjustment Protocol (the Rook surname's collision
+with Trigun is noted, not ruled); Sabine Rook serves the College of Physicians,
+not the Guild. `verify-draft-overlay.mjs brass-and-nerve` passes: 49
+operations, 36 active → 76 merged entities, writes=0, active canon unchanged.
+The adversarial reread of the r3 entities (`_control/R3_REVIEW.md`) found
+P0: 3, P1: 3, P2: 4 and rules the overlay not promotable as it stands: novel
+meta-language ("the book", "chapter", "fourth head") in thirteen entity files,
+synthesis setup written in the established voice in eight, and a minor-cast
+entry with no established content; plus a control-path pointer in the premise
+ledger, provenance prose inside an entity, and missing revised-canon markers.
+All ten items were applied the same day and the overlay re-sealed: meta-language
+rewritten as story-world statements, eight setup claims moved under the
+open-possibility tier, the Ambrose Wick entry removed (he is named only inside
+the Old File's possibility paragraph), the control path cut, revised-canon
+markers added to Sabine and Gideon, the gauge given a Capability section, and
+Corvane Dry Dock reconciled with Cinderwick's disused aerostat platform.
+`verify-draft-overlay.mjs brass-and-nerve` passes: 49 operations, 36 active →
+75 merged, writes=0, active canon unchanged. Nothing promoted, nothing
+imported.
 
 **Promotion tool built (2026-09-02).** `scripts/promote-overlay.mjs` is now
 the one path from `drafts/` into `canon/`, closing the last migration open
