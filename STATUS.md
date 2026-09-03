@@ -9,7 +9,13 @@ times before throwing `provider_dispatch_unknown`. kindroid-mcp (986aaf2)
 composes the token into Kindroid's `idempotency_key`, live-verified the same
 day on a test kin: `409 Request already in progress` while generating, the
 original reply replayed afterwards with no second exchange, even after a
-client-side abandon. The group path keeps its no-retry rule. Background: the
+client-side abandon. The group path keeps its no-retry rule. An end-to-end run
+the same day (local kindroid-mcp keyed to the test account, local mnemosyne
+with the Kindroid generator bound to the test kin, a throwaway OC story since
+deleted) produced and saved a validated beat, and showed that companion
+keyphrase gating matches full entity names only: a direction saying "Ilse"
+never folds in "Ilse Varga", and an unnamed location is dropped, after which
+the kin invented setting detail the seeded location contradicted. Background: the
 operator's narrator-kin design (kindroid-mcp `docs/narrator-kin-design.md`)
 was adversarially reviewed and smoke-tested, the Web UI's message-action
 routes were recorded under a documentation-only exception, and the
