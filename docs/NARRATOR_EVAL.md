@@ -144,8 +144,10 @@ Score a beats file, with the validator:
 OLLAMA_VALIDATOR_MODEL=<installed tag> node scripts/narrator-eval/score.mjs --beats data/narrator-eval/<beats>.json
 ```
 
-Pass `--no-validator` for the deterministic checks alone; in that mode the
-scorer imports nothing from `dist/` and runs on a clean checkout. With the
+The validator runs over all three scored sets, the candidate and both baseline
+arms, so a twelve-case corpus costs 36 calls. Pass `--no-validator` for the
+deterministic checks alone; in that mode the scorer imports nothing from
+`dist/` and runs on a clean checkout. With the
 validator enabled it does, so build first. The generator always needs `dist/`.
 Beats and reports live under `data/`, which is gitignored: generated prose is
 never committed, and the report carries the beats precisely so a person can
@@ -164,6 +166,8 @@ kin-versus-kin comparison, prefer a freshly created kin.
 
 - A `FAIL` line names the hard check that failed; `adv` marks an advisory case;
   `----` marks a case with no usable beat; a `hint` is advisory.
+- A corpus version mismatch is printed above the integrity line. Row counts
+  are not comparable across versions.
 - Read the `run integrity` line first. If the gate says WITHHELD, no row number
   from that run means anything.
 - Read the `plausible arm` line before any row count. If it separates on
@@ -200,9 +204,14 @@ and it is the reason no row count from this run is worth quoting.
 **No row number from that run is quotable.** The validator was discarded at a
 twelve-of-twelve noise floor, which left regex as the whole deciding signal and
 left `canon-limp` with no check at all. The voice row's single catch does not
-hold: it turned on one apostrophe glyph, and that case is now advisory. Whether
-a stronger validator can separate the candidate from the canned beat where the
-regex cannot is untested, and is the natural next check.
+hold: it turned on one apostrophe glyph, and that case is now advisory.
+
+**The validator does not rescue the corpus either.** Scored against all three
+sets, `llama3.1:8b-instruct-q4_K_M` raised errors on the canned beat at a rate
+comparable to the real run, 13 contract and 16 voice errors against the run's 6
+and 35, and both scored `0/2` on the contract row's validator verdict. So it
+separates the candidate from a canned reply no better than the regex does.
+Whether a stronger model would is untested, and is the natural next check.
 
 What does hold, on a human read of the beats: one real output-contract failure,
 a six-paragraph beat on the argument case, plus one advisory shape slip, a bare
