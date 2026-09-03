@@ -237,7 +237,9 @@ verdict a person reads is still the one that counts.
 
 Storyteller test kin, twelve beats, scored under corpus version 1 and re-scored
 under versions 2 and 3 after the review. The run produced a usable beat for all
-twelve cases and cleared the trivial arm.
+twelve cases and cleared the trivial arm. It cannot be scored under version 4,
+which added a thirteenth case: the scorer names the missing case, withholds the
+gate and exits non-zero, which is the guard working rather than a fault.
 
 **Its verdict under two arms is inconclusive.** Zero of ten mechanical cases
 separate it from the canned beat, and the canned beat did better on one, the
