@@ -21,6 +21,7 @@ export interface StorySummary {
   created_at: string;
   kindroid_kin?: string;
   kindroid_group_id?: string;
+  narrator_profile?: string;
 }
 
 export const MODES = ["participant", "director", "audience"] as const;

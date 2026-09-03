@@ -10,6 +10,7 @@ import type {
   SceneContextStrategy,
   ValidationReport,
 } from "./model.js";
+import { narratorTag } from "./narrator-policy.js";
 import { makeRunContext, type RunContext } from "../run-context.js";
 import { assertNotAborted, RunOutcomeError } from "../run-outcome.js";
 import {
@@ -42,6 +43,8 @@ export interface ContinueSceneOptions {
   /** The story's own bound Kindroid target, when the caller already
    * fetched it for its own 404 check. */
   storyKindroidTarget?: KindroidTarget;
+  /** The story's narrator label, when the caller prefetched the marker. */
+  storyNarratorProfile?: string;
   storyKindroidTargetPrefetched?: boolean;
   groupMaxTurns?: number;
   allowUser?: boolean;
@@ -66,6 +69,10 @@ export interface ContinueSceneResult {
   beat_name?: string;
   beat_text: string;
   memory_id?: string;
+  /** The narrator persona label the story names (S2), when the story's
+   * binding was consulted for this beat; the saved scene carries the same
+   * label as a `narrator:<label>` tag. */
+  narrator_profile?: string;
   save_error?: string;
   /** Set when a DISPATCHED OC save failed: the canonical write outcome is
    * unprovable from here (the transport may have failed after OC
@@ -196,12 +203,15 @@ export async function continueScene(
   // meaningless to any generator but Kindroid, and the caller didn't
   // already fetch it.
   let storyTarget = opts.storyKindroidTarget;
+  let narratorProfile = opts.storyNarratorProfile;
   if (
     !opts.storyKindroidTargetPrefetched &&
     opts.explicitKindroidTarget === undefined &&
     port.generatorName === "kindroid"
   ) {
-    storyTarget = await port.storyKindroidTarget(storyId);
+    const binding = await port.storyBinding(storyId);
+    storyTarget = binding.kindroidTarget;
+    narratorProfile = binding.narratorProfile;
   }
   const kindroidTarget =
     opts.explicitKindroidTarget ??
@@ -324,7 +334,12 @@ export async function continueScene(
   let savedTags: string[] | undefined;
   let saveError: string | undefined;
   try {
-    const saved = await port.saveScene(storyId, beatName, beatText);
+    const saved = await port.saveScene(
+      storyId,
+      beatName,
+      beatText,
+      narratorProfile ? [narratorTag(narratorProfile)] : undefined,
+    );
     memoryId = saved.memory_id;
     savedTags = saved.tags;
   } catch (err) {
@@ -392,6 +407,7 @@ export async function continueScene(
     beat_name: beatName,
     beat_text: beatText,
     ...(memoryId !== undefined && { memory_id: memoryId }),
+    ...(narratorProfile !== undefined && { narrator_profile: narratorProfile }),
     ...(saveError !== undefined && { save_error: saveError }),
     ...(canonWriteUnknown && { canon_write_outcome: "unknown" as const }),
     mode,

@@ -13,9 +13,12 @@ OC projects are not visible through this MCP.
 v0 surface:
 - mnemo_story_list — list Mnemosyne stories
 - mnemo_story_use(name_or_id, create_if_missing?, kindroid_kin?,
-  kindroid_group_id?) — set active story. kindroid_kin/kindroid_group_id
-  (mutually exclusive) optionally bind this story to a specific Kindroid
-  AI or group chat (GENERATOR_PROVIDER=kindroid only); null clears.
+  kindroid_group_id?, narrator_profile?) — set active story.
+  kindroid_kin/kindroid_group_id (mutually exclusive) optionally bind this
+  story to a specific Kindroid AI or group chat (GENERATOR_PROVIDER=kindroid
+  only); narrator_profile names the narrator persona label the story is
+  written with (echoed by mnemo_continue, tagged on saved scenes); null
+  clears either.
 - Every tool below that operates on "the active story" also accepts an
   optional story? (name or OC project UUID) that overrides the active
   story for that one call only, without touching the mnemo_story_use

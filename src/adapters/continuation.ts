@@ -66,14 +66,20 @@ export function createContinuationAdapter(
     renderAdmittedContext: renderAdmittedBundle,
     capabilityWarnings: (options) =>
       capabilityWarnings(generator.name, options),
-    storyKindroidTarget: async (storyId) =>
-      (await findStory(oc, storyId))?.kindroid_target,
+    storyBinding: async (storyId) => {
+      const story = await findStory(oc, storyId);
+      return {
+        kindroidTarget: story?.kindroid_target,
+        narratorProfile: story?.narrator_profile,
+      };
+    },
     generate: (options) => generator.generate(options),
-    saveScene: async (storyId, name, body) => {
+    saveScene: async (storyId, name, body, extraTags) => {
       const saved = await saveEntity(oc, storyId, {
         type: "scene",
         name,
         body,
+        extraTags,
       });
       return { memory_id: saved.memory_id, tags: saved.tags };
     },

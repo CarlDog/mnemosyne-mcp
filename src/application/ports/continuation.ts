@@ -19,6 +19,13 @@ export interface SavedScene {
 }
 
 /** Outbound capabilities required by the continuation use case. */
+/** What the story marker binds a story to: its Kindroid target and the
+ * narrator label (S2), read together so one lookup serves both. */
+export interface StoryBinding {
+  kindroidTarget?: KindroidTarget;
+  narratorProfile?: string;
+}
+
 export interface ContinuationPort {
   readonly generatorName: string;
   readonly admissionMode: AdmissionMode;
@@ -40,9 +47,16 @@ export interface ContinuationPort {
     maxTokens?: number;
     model?: string;
   }): string[];
-  storyKindroidTarget(storyId: string): Promise<KindroidTarget | undefined>;
+  /** The story marker's provider binding: its Kindroid target and narrator
+   * label, read together so one marker lookup serves both. */
+  storyBinding(storyId: string): Promise<StoryBinding>;
   generate(options: GenerateBeatOptions): Promise<GeneratedBeat>;
-  saveScene(storyId: string, name: string, body: string): Promise<SavedScene>;
+  saveScene(
+    storyId: string,
+    name: string,
+    body: string,
+    extraTags?: string[],
+  ): Promise<SavedScene>;
   validate(
     context: ContextBundle,
     content: string,

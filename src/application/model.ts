@@ -45,6 +45,7 @@ export interface MnemoStory {
   created_at: string;
   marker_memory_id: string;
   kindroid_target?: KindroidTarget;
+  narrator_profile?: string;
 }
 
 export interface StorySummary {
@@ -53,6 +54,7 @@ export interface StorySummary {
   created_at: string;
   kindroid_kin?: string;
   kindroid_group_id?: string;
+  narrator_profile?: string;
 }
 
 export type Mode = "participant" | "director" | "audience";

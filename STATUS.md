@@ -11,7 +11,12 @@ companion context selector now matches any distinctive word of a multi-word
 entity name ("Ilse" folds in "Ilse Varga"; `MIN_DISTINCTIVE_TOKEN` 4 plus a
 stopword list) and always includes locations alongside recent scenes, in
 both the message builder and the manifest selector; the end-to-end seed that
-lost its arctic station now keeps it. S2 through S5 remain unscheduled.
+lost its arctic station now keeps it. S2 shipped the same evening: a
+`narrator_profile` label on the story marker (schema 4, set or cleared through
+`mnemo_story_use`), echoed by `mnemo_continue` when the story's Kindroid
+binding is used and stamped on each saved scene as a `narrator:<label>` tag;
+the label policy sits in `src/application/narrator-policy.ts` so the use case
+never imports outward. S3 through S5 remain unscheduled.
 
 **Kindroid sends are now retry-safe (2026-09-03).** `KindroidClient.sendMessage`
 passes a fresh `idempotency_token` on every `kindroid_send_message` call and,
