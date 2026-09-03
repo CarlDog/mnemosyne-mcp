@@ -23,8 +23,13 @@ greetings, unbound stories, and group targets before any mutation, runs the
 chat break first with the cascaded wipe pinned off, then saves the greeting as
 a `session-break`-tagged scene so OC and the kin start in step; live-verified
 the same evening on the test kin (break, tagged greeting scene, and a
-following beat that echoed and tagged the label). S4 and S5 remain
-unscheduled.
+following beat that echoed and tagged the label). Decision 12 answered with
+the operator's share code for the test kin: a share is a **snapshot** of the
+persona at share time (a rewritten directive showed in the kin's own chat at
+once and never through the share), so S4's share target would be frozen at
+share time and re-profiled only by re-sharing. Also seen: the kin narrated
+past a pinned Key Memories fact four times out of four, so directives, not
+facts, are the persona lever. S4 and S5 remain unscheduled.
 
 **Kindroid sends are now retry-safe (2026-09-03).** `KindroidClient.sendMessage`
 passes a fresh `idempotency_token` on every `kindroid_send_message` call and,

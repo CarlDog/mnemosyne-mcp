@@ -9,8 +9,8 @@ adversarial review record, and the smoke tests, lives at
 kindroid-mcp will and will not own; this one holds what would change here.
 
 **Ratified 2026-09-03:** the operator accepted every recommendation in §5.
-S1, S2, and S3 shipped the same day; S4 and S5 remain unscheduled; S4 stays
-blocked on the share check in decision 12.
+S1, S2, and S3 shipped the same day; S4 and S5 remain unscheduled; S4's
+share check (decision 12) is answered: a share is a snapshot.
 
 ## 1. The shape, in one paragraph
 
@@ -145,8 +145,14 @@ own unknown-outcome error.
 
 A third `KindroidTarget` type, `{type: "share", id: <share code>}`, routed to
 `kindroid_discord_bot` with the compiled context rendered as a conversation
-window. Blocked until decisions 11 and 12 below are made, because a share is
-moderated SFW and it is unverified whether a share tracks later persona edits.
+window. Decision 12 is answered: a share is a snapshot, so a share target's
+persona is frozen at share time and re-profiling means a new share code from
+the app. Still unscheduled, and gated by decision 11: shares only for
+stories declared SFW. Two more observations from the same probe: the kin
+narrated past a fact pinned in Key Memories in four of four tries, so a
+persona *directive* is the reliable lever and a persona *fact* is not; and
+identical consecutive directions produced byte-identical replies in the
+1:1 chat, which a story author would notice as repetition.
 
 ### S5. Evaluation corpus
 
@@ -164,7 +170,7 @@ Numbered to match the kindroid-mcp document where they overlap.
 |---|---|---|
 | 1 / 11 | Is stateless the default, and which content ratings may use a share at all? | Stateful is the default. A share path exists only for stories declared SFW under the content-rating field proposed in [CONTENT_ROUTING_DESIGN.md](CONTENT_ROUTING_DESIGN.md); mature stories never reach it. |
 | 10 | Do rules and style ride in each beat, or stay persona-side? | Persona-side, unchanged. One kin per voice; a story's style entity mirrors the kin's persona so the validator and the generator agree. |
-| 12 | Does a share track later `update-info` edits to its kin? | Unknown. Needs a share code for the test kin from the app, then three calls: edit a persona field, generate through the share, compare. |
+| 12 | Does a share track later `update-info` edits to its kin? | **Answered 2026-09-03: no, a share is a snapshot.** With a share code for the test kin, a rewritten Response Directive appeared in the kin's own chat at once (twice) and never through the share (twice). Re-profiling a share means re-sharing in the app, with moderation, for a new code. |
 | 13 | Where does the Mnemosyne-side design live? | Here. The kindroid-mcp file keeps the boundary statement and the review record. |
 | new | Entity naming in the context selector. | S1, both halves. |
 | new | Groups. | Out of scope for the narrator until the single-kin path has run a real story. |
