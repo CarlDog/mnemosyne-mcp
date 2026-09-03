@@ -29,7 +29,15 @@ persona at share time (a rewritten directive showed in the kin's own chat at
 once and never through the share), so S4's share target would be frozen at
 share time and re-profiled only by re-sharing. Also seen: the kin narrated
 past a pinned Key Memories fact four times out of four, so directives, not
-facts, are the persona lever. S4 and S5 remain unscheduled.
+facts, are the persona lever. A content test on the same share then corrected
+the review's SFW-only premise: share moderation constrains the shared
+persona, while generation through the share is gated only by
+`enable_filter` (off delivered an explicitly requested adult scene, on
+softened it), so decision 11 is proposed for re-ruling as "filter from the
+story's content rating" rather than "no shares for mature stories". The
+test kin's own 1:1 chat softened the same request, so the kin as configured
+is not a mature-content narrator on either path. S4 and S5 remain
+unscheduled.
 
 **Kindroid sends are now retry-safe (2026-09-03).** `KindroidClient.sendMessage`
 passes a fresh `idempotency_token` on every `kindroid_send_message` call and,

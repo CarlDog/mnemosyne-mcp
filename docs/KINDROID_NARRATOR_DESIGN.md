@@ -147,8 +147,15 @@ A third `KindroidTarget` type, `{type: "share", id: <share code>}`, routed to
 `kindroid_discord_bot` with the compiled context rendered as a conversation
 window. Decision 12 is answered: a share is a snapshot, so a share target's
 persona is frozen at share time and re-profiling means a new share code from
-the app. Still unscheduled, and gated by decision 11: shares only for
-stories declared SFW. Two more observations from the same probe: the kin
+the app. Still unscheduled. Decision 11's premise was corrected the same
+day: the share's SFW rule is about the shared persona, and generation is
+gated by `enable_filter` alone, so the slice would set the flag from the
+story's content rating rather than refuse mature stories (pending the
+operator's re-ruling). Also seen: the test kin's own 1:1 chat softened an
+explicitly requested adult scene to non-explicit while the unfiltered share
+delivered it, so the kin as configured (Ember model, Companion flair) is not
+a mature-content narrator regardless of path. Two more observations from
+the earlier probe: the kin
 narrated past a fact pinned in Key Memories in four of four tries, so a
 persona *directive* is the reliable lever and a persona *fact* is not; and
 identical consecutive directions produced byte-identical replies in the
@@ -168,7 +175,7 @@ Numbered to match the kindroid-mcp document where they overlap.
 
 | # | Question | Recommendation |
 |---|---|---|
-| 1 / 11 | Is stateless the default, and which content ratings may use a share at all? | Stateful is the default. A share path exists only for stories declared SFW under the content-rating field proposed in [CONTENT_ROUTING_DESIGN.md](CONTENT_ROUTING_DESIGN.md); mature stories never reach it. |
+| 1 / 11 | Is stateless the default, and which content ratings may use a share at all? | Stateful is the default. **Premise corrected 2026-09-03:** share moderation constrains the shared *persona*, not what it generates; on the test share, `enable_filter: false` delivered an explicitly requested adult scene and `true` softened it. So the content-rating field in [CONTENT_ROUTING_DESIGN.md](CONTENT_ROUTING_DESIGN.md) should drive the filter flag (`sfw` → filter on, `mature` → off), not forbid shares to mature stories. Recommendation for re-ruling: a share target for any rating, filter derived from the rating, persona kept SFW because moderation requires it. |
 | 10 | Do rules and style ride in each beat, or stay persona-side? | Persona-side, unchanged. One kin per voice; a story's style entity mirrors the kin's persona so the validator and the generator agree. |
 | 12 | Does a share track later `update-info` edits to its kin? | **Answered 2026-09-03: no, a share is a snapshot.** With a share code for the test kin, a rewritten Response Directive appeared in the kin's own chat at once (twice) and never through the share (twice). Re-profiling a share means re-sharing in the app, with moderation, for a new code. |
 | 13 | Where does the Mnemosyne-side design live? | Here. The kindroid-mcp file keeps the boundary statement and the review record. |
