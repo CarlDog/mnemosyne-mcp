@@ -536,7 +536,14 @@ Key architectural decisions (see ARCHITECTURE.md for full reasoning):
   because a group chains sequential generations at ~13s each) and, on a
   timeout **specifically**, rethrows saying the call may have already posted
   and generated — do not retry. Non-timeout failures pass through untouched
-  so the warning stays scarce enough to mean something. `maxTurns`
+  so the warning stays scarce enough to mean something. The one exception
+  since 2026-09-03 is `kindroid_send_message`: every send carries a fresh
+  `idempotency_token` that kindroid-mcp composes into Kindroid's
+  `idempotency_key` (live-verified: Kindroid answers `409 Request already in
+  progress` while generating and replays the original reply afterwards,
+  never a duplicate), so a timeout there is re-sent with the same token up
+  to `SEND_TIMEOUT_RETRIES` times before the unknown-outcome error is
+  thrown. `kindroid_advance_group` keeps the no-retry rule. `maxTurns`
   is configurable (2026-08-23): server-wide via `KINDROID_GROUP_MAX_TURNS`
   and per call via `mnemo_continue`'s `group_max_turns`, defaulting to 4
   and bounded 1–8 to mirror `kindroid_advance_group`'s own schema rather
