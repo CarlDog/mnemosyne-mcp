@@ -86,6 +86,15 @@ const unusable = new Set([...missing, ...errored, ...empty]);
 const envelopeIncomplete =
   !Array.isArray(beatsFile) &&
   (beatsFile.complete === false || Number(beatsFile.errors ?? 0) > 0);
+// Comparability, not integrity: scoring older beats against a newer corpus is
+// legitimate while the case ids still line up, but it must never be silent.
+const beatsCorpusVersion = Array.isArray(beatsFile)
+  ? null
+  : (beatsFile.corpus_version ?? null);
+const versionMismatch =
+  beatsCorpusVersion !== null && beatsCorpusVersion !== corpus.version
+    ? { beats: beatsCorpusVersion, corpus: corpus.version }
+    : null;
 
 const flatten = (rows) => rows.map((r) => `${r.name}\n${r.body}`);
 const context = {
@@ -216,6 +225,7 @@ const integrity = {
   errored,
   empty,
   envelope_incomplete: envelopeIncomplete,
+  corpus_version_mismatch: versionMismatch,
   validator_failures: candidate.summary.validator_failures,
   ok:
     unusable.size === 0 &&
@@ -223,6 +233,10 @@ const integrity = {
     candidate.summary.validator_failures === 0,
 };
 
+if (versionMismatch)
+  console.log(
+    `\ncorpus version mismatch: these beats were produced under corpus version ${versionMismatch.beats} and scored under ${versionMismatch.corpus}. Compare runs only within a version.`,
+  );
 console.log(
   `\nrun integrity: ${integrity.usable}/${integrity.cases} cases produced a usable beat` +
     (missing.length ? `; missing: ${missing.join(", ")}` : "") +
