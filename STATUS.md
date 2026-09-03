@@ -2,6 +2,30 @@
 
 **Last updated:** 2026-09-02.
 
+**Midnight Is a Suggestion gap audit (2026-09-02).** First step of the
+non-flagship story-development pass (Midnight first, then the Black Ledger on
+permission, Brass & Nerve, the Adjustment Protocol, the Noctis Veil,
+Shadowflame). The story's canon, r2 overlay, control records, sources, the four
+bots' definitions and Botify memory blocks, and the live Botify chat list were
+read against the flagship bar (Wonderland end to end; the Blackwood lore set)
+and the audit written to `drafts/_control/GAP_AUDIT.md` (gitignored `data/`;
+this entry and the memory note are the tracked record). Headline: the r2
+overlay meets the bar on ledgers, objects, rules, style, and control evidence
+and misses it on worldbuilding systems (2 files against 10 to 12), a timeline
+(absent), extracted scenes (none; the archive holds four off-premise chats,
+two of them operator-played, and two greetings), and retrieval-text hygiene
+(pipeline vocabulary in 26 of 44 entity files; a control path in the
+canon-root README). Three bar rows (consequence ledger, arc records, a
+dozen-plus locations) need play the story does not have. The audit proposes
+an r3 of eight worldbuilding systems, a backstory timeline, Rosewing, a
+meta-language scrub, and control fixes, and stops for eleven operator rulings
+(extraction of the source-era chats, ratifying r2's editorial anchors,
+Tinkerbell's bot-definition anecdotes, the unnamed former spouse, four
+cross-story name collisions incl. Silas and Tomas, the Shadowflame-assigned
+Egg chat, the worldbuilding set, Rosewing, control fixes, art deferred). No
+flagship defect was observed. Verifier green; nothing written outside the
+audit; nothing promoted or imported.
+
 **The Adjustment Protocol storyline synthesis, two versions (2026-09-02).**
 Written from the 43 extracted scenes to `drafts/_control/` (gitignored `data/`;
 this entry and the memory file are the only tracked record). Version 1

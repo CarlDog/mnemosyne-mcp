@@ -13,7 +13,11 @@ Status lives in [STATUS.md](STATUS.md) — read it first. This section names
 only what is in flight; it must never restate STATUS.md's Done log. (When
 the two disagree, STATUS.md is newer.)
 
-**Nothing is in flight (2026-09-02).** The data architecture migration
+**In flight (2026-09-02): the non-flagship story-development pass, starting
+with Midnight Is a Suggestion.** Step 1, the gap audit, is written to that
+story's `drafts/_control/GAP_AUDIT.md` and stopped for the operator's scope
+ruling (eleven Decides; see STATUS.md's top entry); no overlay was changed.
+Otherwise nothing is in flight. The data architecture migration
 (`docs/DATA_ARCHITECTURE_PROPOSAL.md`, ratified; `docs/DATA_LAYOUT.md` now
 normative) completed all six phases on 2026-09-02: `data/archive/` is the one
 master of originals (written only by `scripts/intake.py`), every story has
