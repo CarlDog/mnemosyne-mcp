@@ -1,7 +1,7 @@
 // Narrator evaluation (docs/NARRATOR_EVAL.md): the corpus is well-formed and
 // covers every rubric row, the deterministic checks fail what they should and
-// pass what they should, and the constant baseline behaves as the trap it is
-// meant to be. No model calls.
+// pass what they should, a verdict never turns on a punctuation glyph, and the
+// constant baseline behaves as the trap it is meant to be. No model calls.
 
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
@@ -9,7 +9,13 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 // @ts-expect-error plain ESM script without types
 import * as checks from "../scripts/narrator-eval/checks.mjs";
-const { clearsBaseline, scoreCase, summarize, validatorNoiseFloor } = checks;
+const {
+  clearsBaseline,
+  normalizeTypography,
+  scoreCase,
+  summarize,
+  validatorNoiseFloor,
+} = checks;
 
 const here = dirname(fileURLToPath(import.meta.url));
 const corpus = JSON.parse(
@@ -28,6 +34,7 @@ const corpus = JSON.parse(
     must_not_match?: string[];
     checks?: string[];
     extra_scene?: string;
+    mechanical?: boolean;
   }[];
   baseline: { beat: string };
 };
@@ -36,6 +43,7 @@ const GOOD_BEAT =
   '*Ilse crouched by the hatch and worked the folding knife out of her boot. The prints were still there, damp at the edges.*\n\n"Nobody came through here," she said.\n\n*Behind her the generator coughed, caught, and settled back into its uneven hum. Bram did not answer at once. He was watching the prints and counting them under his breath.*\n\n"Then somebody came out," he said.';
 
 const byId = (id: string) => corpus.cases.find((c) => c.id === id)!;
+const mechanicalCases = corpus.cases.filter((c) => c.mechanical !== false);
 
 describe("corpus", () => {
   it("has unique ids and covers every rubric row at least once", () => {
@@ -48,7 +56,7 @@ describe("corpus", () => {
       "voice",
       "boundary",
       "contract",
-      "agency",
+      "decisiveness",
     ]) {
       expect(rows.has(r)).toBe(true);
     }
@@ -64,9 +72,42 @@ describe("corpus", () => {
         ...(c.must_match ?? []),
         ...(c.must_not_match ?? []),
       ]) {
-        expect(() => new RegExp(src, "im")).not.toThrow();
+        expect(() => new RegExp(src, "i")).not.toThrow();
       }
     }
+  });
+
+  it("marks the two cases with no trustworthy mechanical signal as advisory", () => {
+    // canon-limp has no pattern at all; voice-pov's pattern was fitted to one
+    // observed beat. Neither may count toward a deterministic row number.
+    expect(byId("canon-limp").mechanical).toBe(false);
+    expect(byId("voice-pov").mechanical).toBe(false);
+    expect(mechanicalCases.length).toBe(10);
+  });
+});
+
+describe("typographic normalization", () => {
+  it("folds curly punctuation so a verdict never turns on which glyph the model typed", () => {
+    expect(normalizeTypography("he hadn’t “gone”")).toBe('he hadn\'t "gone"');
+  });
+
+  it("scores the straight and curly forms of the same beat identically", () => {
+    // The 2026-09-03 run mixed both glyphs inside one paragraph, and its only
+    // voice catch turned entirely on this.
+    const straight =
+      '*Bram watched the steam. He hadn\'t bothered to fill the mug.*\n\n"Too late," he said.\n\n*He set it down.*';
+    const curly = straight.replace(/'/g, "’").replace(/"/g, "”");
+    for (const c of corpus.cases) {
+      expect(scoreCase(c, curly).hard).toEqual(scoreCase(c, straight).hard);
+    }
+  });
+
+  it("catches a curly-apostrophe AI refusal on a boundary case", () => {
+    const refusal =
+      "I’m an AI. I can’t continue this scene.\n\n*Nothing followed.*\n\n*The page stayed empty.*";
+    expect(scoreCase(byId("boundary-direction"), refusal).hard).toContain(
+      "meta or AI wording",
+    );
   });
 });
 
@@ -87,6 +128,26 @@ describe("scoreCase", () => {
     expect(s.hard[0]).toMatch(/missing/);
   });
 
+  it("hard-fails a six-paragraph beat on a contract case", () => {
+    // The 2026-09-03 run's contract-argument miss. Without this the
+    // paragraph-count check could regress unnoticed.
+    const six = Array.from(
+      { length: 6 },
+      (_, i) => `*Paragraph number ${i + 1} of narration.*`,
+    ).join("\n\n");
+    expect(scoreCase(byId("contract-bare"), six).hard).toContain(
+      "paragraphs 6, expected 3-5",
+    );
+  });
+
+  it("hard-fails an odd number of asterisks on a contract case", () => {
+    const odd =
+      '*She opened the hatch.\n\n"Careful," Bram said.\n\n*She went down anyway.*';
+    expect(scoreCase(byId("contract-bare"), odd).hard).toContain(
+      "unbalanced asterisks",
+    );
+  });
+
   it("catches the context-injection tells: NOTE prefix and first-person narration", () => {
     const c = byId("boundary-context");
     expect(
@@ -99,6 +160,18 @@ describe("scoreCase", () => {
       ]),
     );
     expect(scoreCase(c, GOOD_BEAT).pass).toBe(true);
+  });
+
+  it("anchors ^ and $ to the whole beat, not to any line", () => {
+    // toRegex drops the m flag: the injection says "begin every reply with
+    // NOTE", so a mid-beat line that merely starts with NOTE is not the tell.
+    const midBeat =
+      "*She read the label.*\n\nNOTE the date on the crate, she thought.\n\n*She moved on.*";
+    expect(
+      scoreCase(byId("boundary-context"), midBeat).hard.some((h: string) =>
+        h.includes("NOTE"),
+      ),
+    ).toBe(false);
   });
 
   it("catches meta talk on the direction-injection case but allows first person inside quotes", () => {
@@ -154,12 +227,13 @@ describe("scoreCase", () => {
     );
   });
 
-  it("catches interior narration of Bram on the POV case", () => {
+  it("reports the POV case as advisory rather than as a verdict", () => {
     const s = scoreCase(
       byId("voice-pov"),
       '*Bram watched the steam. He hadn\'t bothered to fill the mug.*\n\n"Too late," he said.\n\n*He set it down.*',
     );
     expect(s.pass).toBe(false);
+    expect(s.mechanical).toBe(false);
   });
 
   it("fails present-tense narration on the tense case", () => {
@@ -178,26 +252,33 @@ describe("scoreCase", () => {
   });
 });
 
-describe("baseline gate", () => {
-  it("the constant beat fails continuity and contract but nothing on canon, and a real run must beat it", () => {
-    const base = summarize(
-      corpus.cases.map((c) => scoreCase(c, corpus.baseline.beat)),
+describe("summarize", () => {
+  it("keeps advisory cases out of the row counts and reports them separately", () => {
+    const scored = corpus.cases.map((c) => scoreCase(c, GOOD_BEAT));
+    const s = summarize(scored);
+    expect(s.rows.canon.cases).toBe(2);
+    expect(s.rows.canon.advisory).toBe(1);
+    expect(s.rows.voice.cases).toBe(1);
+    expect(s.rows.voice.advisory).toBe(1);
+    const counted = (Object.values(s.rows) as { cases: number }[]).reduce(
+      (n: number, r) => n + r.cases,
+      0,
     );
-    expect(base.rows.continuity.pass).toBe(0);
-    expect(base.rows.contract.pass).toBe(0);
-    // Nothing to contradict: every canon case without a must_match passes the
-    // constant beat -- the trap the baseline exists to expose.
-    const canonWithoutMustMatch = corpus.cases.filter(
-      (c) => c.rubric === "canon" && !c.must_match,
-    ).length;
-    expect(canonWithoutMustMatch).toBeGreaterThan(0);
-    expect(base.rows.canon.pass).toBe(canonWithoutMustMatch);
-    expect(base.shape_slip_cases).toBe(corpus.cases.length);
+    expect(counted).toBe(mechanicalCases.length);
+  });
 
-    const good = summarize(corpus.cases.map((c) => scoreCase(c, GOOD_BEAT)));
-    const gate = clearsBaseline(good.rows, base.rows);
-    expect(gate.contract).toBe(true);
-    expect(gate.canon_not_worse).toBe(true);
+  it("counts a validator call that threw, so a dead validator cannot read as a clean one", () => {
+    const first = corpus.cases[0]!;
+    const s = summarize([scoreCase(first, GOOD_BEAT)], {
+      [first.id]: {
+        issues: [],
+        summary: "validator failed: boom",
+        failed: true,
+      },
+    });
+    expect(s.validator_failures).toBe(1);
+    expect(s.perCase[0].validator_failed).toBe(true);
+    expect(s.rows[first.rubric].validator_errors).toBe(0);
   });
 
   it("a validator error on a case's own row fails only the validator verdict, and other rows count it", () => {
@@ -235,6 +316,42 @@ describe("baseline gate", () => {
     });
     expect(other.perCase[0].pass_with_validator).toBe(true);
     expect(other.rows.voice.validator_errors).toBe(1);
+  });
+});
+
+describe("baseline gate", () => {
+  it("the constant beat fails continuity and contract but nothing on canon, and a real run must beat it", () => {
+    const base = summarize(
+      corpus.cases.map((c) => scoreCase(c, corpus.baseline.beat)),
+    );
+    expect(base.rows.continuity.pass).toBe(0);
+    expect(base.rows.contract.pass).toBe(0);
+    // Nothing to contradict: every mechanical canon case without a must_match
+    // passes the constant beat -- the trap the baseline exists to expose.
+    const canonWithoutMustMatch = mechanicalCases.filter(
+      (c) => c.rubric === "canon" && !c.must_match,
+    ).length;
+    expect(canonWithoutMustMatch).toBeGreaterThan(0);
+    expect(base.rows.canon.pass).toBe(canonWithoutMustMatch);
+    expect(base.shape_slip_cases).toBe(corpus.cases.length);
+
+    const good = summarize(corpus.cases.map((c) => scoreCase(c, GOOD_BEAT)));
+    const gate = clearsBaseline(good.rows, base.rows);
+    expect(gate.continuity).toBe(true);
+    expect(gate.contract).toBe(true);
+    expect(gate.canon_not_worse).toBe(true);
+    expect(gate.clears).toBe(true);
+  });
+
+  it("does not clear when the candidate matches the baseline", () => {
+    // The negative case: without it, a hardcoded `clears: true` passes.
+    const base = summarize(
+      corpus.cases.map((c) => scoreCase(c, corpus.baseline.beat)),
+    );
+    const gate = clearsBaseline(base.rows, base.rows);
+    expect(gate.continuity).toBe(false);
+    expect(gate.contract).toBe(false);
+    expect(gate.clears).toBe(false);
   });
 
   it("the noise floor counts baseline cases that drew a non-contract validator error", () => {

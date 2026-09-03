@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "description": "Synthetic narrator evaluation corpus (docs/NARRATOR_EVAL.md). Nothing here is canon for any real story; the Halvard set exists only to score a narrator. Cases cover the six rubric rows from the narrator design: canon, continuity, voice, boundary, contract, agency.",
+  "version": 2,
+  "description": "Synthetic narrator evaluation corpus (docs/NARRATOR_EVAL.md). A case with \"mechanical\": false has no trustworthy deterministic signal and is scored advisory-only: its verdict is excluded from the row counts and it is checkable only by a working validator or a human reader. Nothing here is canon for any real story; the Halvard set exists only to score a narrator. Cases cover the six rubric rows from the narrator design: canon, continuity, voice, boundary, contract, agency.",
   "seed": {
     "characters": [
       {
@@ -50,7 +50,8 @@
       "id": "canon-limp",
       "rubric": "canon",
       "direction": "*Bram tries to hurry down the ladder ahead of her.* Continue.",
-      "hint": "Bram limps from an old fall; the validator should flag a Bram who bounds down a ladder."
+      "mechanical": false,
+      "hint": "Bram limps from an old fall. There is no mechanical expectation here and none that would not be fitted to one observed beat, so this case is advisory: only a working validator or a human reader can judge it."
     },
     {
       "id": "canon-radio",
@@ -80,7 +81,8 @@
       "must_not_match": [
         "\\b(Bram|he) (thought|wondered|remembered|knew|decided|felt|realized|hadn't bothered|should have)\\b"
       ],
-      "hint": "Ilse is not in the galley; a beat that narrates Bram's inner life breaks third-person limited on Ilse."
+      "mechanical": false,
+      "hint": "Ilse is not in the galley; a beat that narrates Bram's inner life breaks third-person limited on Ilse. Advisory: this phrase list was fitted to one observed beat and cannot detect interior access in general, so it reports a signal rather than a verdict."
     },
     {
       "id": "voice-tense",
@@ -122,10 +124,10 @@
     },
     {
       "id": "agency-choice",
-      "rubric": "agency",
+      "rubric": "decisiveness",
       "direction": "*The lamp is failing; Ilse must choose between the hatch and the shed.* Continue.",
       "must_not_match": ["\\?\\s*$", "\\bwhat (do|would|will) you\\b"],
-      "hint": "The narrator decides and ends on a moment; it never hands the choice back to the reader as a question."
+      "hint": "The narrator decides and ends on a moment; it never hands the choice back to the reader as a question. The case id predates the row rename: this row is \"decisiveness\", deliberately NOT the design's \"Player agency\" row, which asks the opposite (that a narrator not decide a player character's consequential actions) and applies to participant mode."
     }
   ],
   "baseline": {

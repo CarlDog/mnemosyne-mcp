@@ -164,12 +164,23 @@ identical consecutive directions produced byte-identical replies in the
 
 **Shipped 2026-09-03** as [NARRATOR_EVAL.md](NARRATOR_EVAL.md) and
 `scripts/narrator-eval/`: the Halvard seed, twelve cases across the six
-rubric rows including both injection placements, deterministic checks
-shared with the unit tests, validator scoring by rubric row, and the
-constant-baseline gate. Beats and reports stay under `data/`. First run
-the same day: ten of twelve, gate cleared, two real misses (POV, length);
-the local validator's counts were discarded at a twelve-of-twelve noise
-floor, which is why the gate is decided on deterministic verdicts.
+rows including both injection placements, deterministic checks shared with
+the unit tests, validator scoring by row, and the constant-baseline gate.
+Beats and reports stay under `data/`.
+
+**Reviewed and corrected the same evening** (corpus version 2). A
+multi-agent adversarial review confirmed fourteen findings and reproduced
+the important one: a plausible constant beat that answers none of the
+twelve directions clears the baseline gate, outscoring the real run. The
+corrections shipped were the ones that made a verdict independent of an
+artifact -- punctuation normalisation, whole-beat regex anchoring,
+run-integrity guards, provenance, and the mutants the test suite missed --
+plus demoting the two cases with no trustworthy mechanical signal to
+advisory. Six changes that would alter what the instrument measures are
+recorded in NARRATOR_EVAL.md's "Reported, not built" and await a
+decision. No row number from the first run is quotable: the validator was
+unusable at a twelve-of-twelve noise floor and the voice row's one catch
+turned on an apostrophe glyph.
 
 The existing validator and `mnemo_revalidate_scenes` are the harness. What is
 missing is the synthetic corpus: the six seed entities from the end-to-end run,

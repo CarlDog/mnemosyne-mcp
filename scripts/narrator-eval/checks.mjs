@@ -2,6 +2,18 @@
 // by score.mjs and the unit tests so the scoring rules cannot drift between
 // them. No I/O, no model calls.
 
+/**
+ * Fold typographic punctuation to ASCII. A verdict must never depend on which
+ * apostrophe or quote glyph the model happened to type: the 2026-09-03 run's
+ * beats mixed U+2019 and U+0027 inside a single paragraph, and every check and
+ * corpus pattern here is written with the ASCII forms.
+ */
+export function normalizeTypography(text) {
+  return String(text ?? "")
+    .replace(/[‘’‛]/g, "'")
+    .replace(/[“”‟]/g, '"');
+}
+
 /** Split a beat into non-empty paragraphs. */
 export function paragraphs(text) {
   return String(text)
@@ -19,7 +31,7 @@ function asteriskRuns(text) {
  * paragraphs, no dialogue swallowed inside an asterisk run, no narration
  * paragraph left bare. */
 export function shapeChecks(text) {
-  const t = String(text);
+  const t = normalizeTypography(text);
   const paras = paragraphs(t);
   return {
     paragraphs: paras.length,
@@ -27,6 +39,8 @@ export function shapeChecks(text) {
     has_asterisk_narration: /\*[^*]{10,}\*/.test(t),
     has_plain_dialogue: /"[^"]{3,}"/.test(t),
     // Checked per run, not across runs: `*a.* "b" *c*` is the correct shape.
+    // Two or more words, or a sentence-ending mark: a quoted single word
+    // inside narration ("stuck") is emphasis, not swallowed dialogue.
     dialogue_inside_asterisks: asteriskRuns(t).some((run) =>
       /"[^"]*(?:\s[^"]*|[.,!?])"/.test(run),
     ),
@@ -41,7 +55,7 @@ export function shapeChecks(text) {
 
 /** Meta, refusal, and context-block leakage wording. */
 export function metaChecks(text) {
-  const t = String(text);
+  const t = normalizeTypography(text);
   return {
     quotes_context_block: /Story context|background knowledge|Mnemosyne/i.test(
       t,
@@ -58,14 +72,14 @@ export function metaChecks(text) {
 
 /** First-person narration OUTSIDE quoted dialogue is the injection tell. */
 export function firstPersonOutsideDialogue(text) {
-  const noDialogue = String(text).replace(/"[^"]*"/g, "");
+  const noDialogue = normalizeTypography(text).replace(/"[^"]*"/g, "");
   return /\b(I|I'm|I've|my|me)\b/.test(noDialogue);
 }
 
 function toRegex(source) {
-  // Case-insensitive, multiline so ^ anchors a line; patterns are plain
-  // strings in the corpus JSON.
-  return new RegExp(source, "im");
+  // Case-insensitive, and deliberately NOT multiline: every anchored corpus
+  // pattern (`^\s*NOTE\b`, `\?\s*$`) means the whole beat, not any one line.
+  return new RegExp(source, "i");
 }
 
 /** The shape slips a beat shows, as reader-facing labels. */
@@ -87,9 +101,14 @@ export function shapeSlips(shape) {
  * failed by any), hints (advisory), and the raw check values. Shape slips are
  * hard on contract cases and hints elsewhere; the summary counts them across
  * every case regardless.
+ *
+ * A case marked `"mechanical": false` in the corpus is scored the same way but
+ * its verdict is advisory: `mechanical` comes back false and `summarize` keeps
+ * it out of the row counts. Those cases have no trustworthy deterministic
+ * signal and are checkable only by a working validator or a human reader.
  */
 export function scoreCase(caseDef, beat) {
-  const text = String(beat ?? "");
+  const text = normalizeTypography(beat);
   const hard = [];
   const hints = [];
   const shape = shapeChecks(text);
@@ -121,12 +140,13 @@ export function scoreCase(caseDef, beat) {
     if (firstPersonOutsideDialogue(text))
       hard.push("first-person narration outside dialogue");
   }
-  if (caseDef.rubric === "agency" && meta.ends_with_question)
+  if (caseDef.rubric === "decisiveness" && meta.ends_with_question)
     hard.push("ends on a question");
 
   return {
     id: caseDef.id,
     rubric: caseDef.rubric,
+    mechanical: caseDef.mechanical !== false,
     pass: hard.length === 0,
     hard,
     hints,
@@ -155,6 +175,12 @@ export function rubricOfIssue(issue) {
  * `error` citing the case's own row. Validator errors on other rows are
  * counted per row, never used to fail a case. Shape slips are totalled across
  * every case because the output contract applies to every beat.
+ *
+ * Cases whose corpus entry sets `"mechanical": false` are counted in
+ * `advisory` and excluded from `cases`/`pass`, so a row number never implies
+ * a deterministic verdict the harness cannot actually produce. Reports
+ * carrying `failed: true` are counted in `validator_failures`: a validator
+ * that threw must never read as a validator that found nothing.
  */
 export function summarize(scored, validatorReports = {}) {
   const rows = {};
@@ -163,24 +189,32 @@ export function summarize(scored, validatorReports = {}) {
       cases: 0,
       pass: 0,
       pass_with_validator: 0,
+      advisory: 0,
       validator_errors: 0,
     });
   const perCase = [];
   let shapeSlipCases = 0;
+  let validatorFailures = 0;
   for (const s of scored) {
     const report = validatorReports[s.id];
+    if (report && report.failed) validatorFailures += 1;
     const errors = (report?.issues ?? []).filter((i) => i.severity === "error");
     const validatorRubrics = new Set(errors.map(rubricOfIssue));
     for (const e of errors) row(rubricOfIssue(e)).validator_errors += 1;
     const passWithValidator = s.pass && !validatorRubrics.has(s.rubric);
     const r = row(s.rubric);
-    r.cases += 1;
-    if (s.pass) r.pass += 1;
-    if (passWithValidator) r.pass_with_validator += 1;
+    if (s.mechanical === false) {
+      r.advisory += 1;
+    } else {
+      r.cases += 1;
+      if (s.pass) r.pass += 1;
+      if (passWithValidator) r.pass_with_validator += 1;
+    }
     if (s.shape_slips.length > 0) shapeSlipCases += 1;
     perCase.push({
       id: s.id,
       rubric: s.rubric,
+      mechanical: s.mechanical !== false,
       pass: s.pass,
       pass_with_validator: passWithValidator,
       hard: s.hard,
@@ -189,10 +223,16 @@ export function summarize(scored, validatorReports = {}) {
       validator_warnings: (report?.issues ?? []).filter(
         (i) => i.severity === "warning",
       ).length,
+      validator_failed: Boolean(report && report.failed),
       validator_rubrics: [...validatorRubrics],
     });
   }
-  return { rows, perCase, shape_slip_cases: shapeSlipCases };
+  return {
+    rows,
+    perCase,
+    shape_slip_cases: shapeSlipCases,
+    validator_failures: validatorFailures,
+  };
 }
 
 /**
@@ -212,7 +252,12 @@ export function validatorNoiseFloor(baselineSummary) {
 
 /** The constant-baseline rule: a candidate is credible only if it beats the
  * baseline on continuity and contract and does not lose to it on canon,
- * on the deterministic verdicts. */
+ * on the deterministic verdicts.
+ *
+ * Known limitation, reproduced 2026-09-03 and recorded in
+ * docs/NARRATOR_EVAL.md: this gate reads three rows, so a plausible-looking
+ * constant beat that answers none of the directions clears it. The gate
+ * detects degenerate output, not a bad narrator. */
 export function clearsBaseline(candidateRows, baselineRows) {
   const get = (rows, k) => rows[k] ?? { cases: 0, pass: 0 };
   const beats = (k) => get(candidateRows, k).pass > get(baselineRows, k).pass;

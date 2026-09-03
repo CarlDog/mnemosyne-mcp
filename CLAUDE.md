@@ -287,12 +287,16 @@ assessments listed under "Layout" below.
   verify per source family; snapshot and diff for migration proofs).
 - `scripts/narrator-eval/` — the narrator evaluation (`docs/NARRATOR_EVAL.md`,
   narrator design S5): `corpus.json` (synthetic Halvard seed, twelve cases
-  across the six rubric rows, a constant baseline), `checks.mjs` (pure,
-  deterministic checks shared with the unit tests), `score.mjs` (checks +
-  Ollama validator + baseline gate; report under gitignored `data/`), and
+  across the six rows, two of them advisory, plus a constant baseline),
+  `checks.mjs` (pure, deterministic checks shared with the unit tests;
+  punctuation is normalised so no verdict turns on a glyph), `score.mjs`
+  (checks + Ollama validator + baseline gate + run-integrity guards that
+  withhold the gate and exit non-zero on an incomplete run), and
   `generate-kindroid.mjs` (runs the corpus through a kin over mnemosyne's own
-  client and message builder). Numbers are not verdicts; a person reads the
-  beats.
+  client and message builder, writing real messages into that kin's chat).
+  Reports go under gitignored `data/`. Read the doc's "What it does not
+  measure" and its recorded gate limitation before quoting a number: a
+  plausible constant beat clears the gate.
 - `scripts/scene-extraction/` — `extract_scenes.py`, the shared engine that
   cuts a story's Botify chat exports into per-scene draft files (overlay
   `add`s with the draft banner) plus their `_control/scenes/` docs, driven by
@@ -344,8 +348,10 @@ assessments listed under "Layout" below.
   `scripts/atlas-capability-benchmark.mjs` never automates explicit-content
   generation or stores raw generated output.
 - `docs/NARRATOR_EVAL.md` — the narrator evaluation protocol (S5): what the
-  corpus measures, the constant-baseline rule, how to generate and score, and
-  why no number is a verdict until the beats are read.
+  corpus measures and what it does not, the advisory cases, the two verdicts
+  per row and the validator noise floor, the constant-baseline rule and the
+  reproduced limitation that a plausible constant clears it, run integrity,
+  and the six reviewed design changes deliberately not built.
 - `docs/PROSE_PIPELINE.md` — the story-agnostic loop for writing and reviewing
   a chapter of prose (brief, draft, lint, two adversarial review rounds, line
   pass, stop), written after the Adjustment Protocol sample chapters.
@@ -391,9 +397,10 @@ assessments listed under "Layout" below.
   statement and review record, is `kindroid-mcp/docs/narrator-kin-design.md`).
   Records what the day's smoke and end-to-end runs verified, the findings that
   shape the design (persona is the style, mode never reaches Kindroid,
-  full-name keyphrase gating), five unscheduled slices, and the decisions the
-  operator's rulings. Decisions ratified 2026-09-03; S1 shipped, S2 through S5
-  unscheduled, S4 blocked on the share check.
+  full-name keyphrase gating), the slices, and the decisions the operator's
+  rulings settled. Decisions ratified 2026-09-03; S1, S2, S3 and S5 shipped
+  the same day; S4 unscheduled, its share check answered (a share is a
+  snapshot, and generation through one is gated only by `enable_filter`).
 - `docs/V2_RETROSPECTIVE.md` — entity schemas, verbatim prompt templates,
   lessons learned, and anti-patterns from the v2 OpenChronicle
   storytelling plugin. v2 code is NOT being ported; this doc is the

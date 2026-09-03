@@ -15,6 +15,24 @@ this file was introduced remains in [STATUS.md](STATUS.md).
   verdicts; validator counts are shown beside them with a noise floor
   measured on the baseline. Beats and reports stay under `data/`.
   Narrator design S5.
+
+### Fixed
+
+- Narrator evaluation, after an adversarial review of the harness (corpus
+  version 2): beats are folded to ASCII punctuation, so a verdict no longer
+  turns on which apostrophe glyph the model typed; corpus patterns anchor to
+  the whole beat rather than to any line; a missing, errored or empty beat,
+  an incomplete producer run, or a failed validator call now withholds the
+  gate verdict and exits non-zero instead of scoring as a clean number; the
+  beats envelope records provider, kin id and chat-break setting, and
+  `--kin` sets the target explicitly and echoes it before the first write;
+  the two cases with no trustworthy mechanical signal are advisory and
+  excluded from the row counts; the rubric row formerly called agency is
+  renamed decisiveness, since the design's "Player agency" row asks the
+  opposite; and `score.mjs --no-validator` no longer requires a build. The
+  reproduced limitation that a plausible constant clears the gate is
+  documented rather than fixed, with five other measure-changing proposals,
+  in `docs/NARRATOR_EVAL.md`.
 - `mnemo_session_break(greeting, story?, kindroid_kin?)`: the explicit
   new-session boundary for a story's Kindroid narrator. Chat-breaks the bound
   single-AI kin with the cascaded-memory wipe pinned off, seeds the greeting
