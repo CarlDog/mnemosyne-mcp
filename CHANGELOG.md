@@ -16,6 +16,14 @@ this file was introduced remains in [STATUS.md](STATUS.md).
   measured on the baseline. Beats and reports stay under `data/`.
   Narrator design S5.
 
+- Narrator evaluation: a third contradiction pair, on the contract row
+  (corpus version 6), plus the demotion of `continuity-generator` to advisory
+  (version 7). Plain dialogue itself is required by `contract-argument` and
+  forbidden by the new `contract-wordless`, so a narrator can separate from a
+  canned reply on a third case. The pair reuses pair A's required half, so it
+  does not raise the worst-case floor. `continuity-generator` asks for a noun
+  the direction already supplies and produced a false failure in two of three
+  live runs, so its verdict is now advisory rather than counted.
 - Narrator evaluation: a second, independent contradiction pair (corpus
   version 5). A dialogue-attribution pattern for Ilse is required by the new
   `continuity-speaks` and forbidden by the new `continuity-silence`. The two
