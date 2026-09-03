@@ -64,7 +64,8 @@ data/
 │   ├── drafts/                 PRIMARY — the review-gated proposal (sparse mirror of canon/)
 │   │   ├── <canon-relative>.md     additions/replacements at their proposed canon paths, banner first
 │   │   └── _control/               overlay.json, PASS.md (append-only), README.md, SOURCE_PROVENANCE.md,
-│   │                               LCS_SCORECARD.md, ASSET_REVIEW.md, DECISIONS.md (packages),
+│   │                               LCS_SCORECARD.md, ASSET_REVIEW.md, GAP_AUDIT.md, RN_REVIEW.md,
+│   │                               DECISIONS.md (packages),
 │   │                               scenes/ (docs for DRAFT scenes), source-documents/ (evidence)
 │   ├── history/                PRIMARY — permanent records that outlive any overlay: passes, remediation,
 │   │                           reviews, storyline indexes, idea banks; <yyyy-mm-dd>-<topic>.md
@@ -117,8 +118,9 @@ in `history/`, dated
 (`<yyyy-mm-dd>-<topic>.md`), never in the story root and never in `canon/`.
 Standing control records keep their all-caps names (`PASS.md`,
 `SOURCE_PROVENANCE.md`, `LCS_SCORECARD.md`, `ASSET_REVIEW.md`,
-`DECISIONS.md`) as a deliberate class marker; dated one-off records are
-lowercase slugs. `DECISIONS.md` belongs to a draft-only package's `_control/`
+`GAP_AUDIT.md` for a story's audit against the flagship bar, `RN_REVIEW.md`
+for the adversarial reread of revision N, `DECISIONS.md`) as a deliberate
+class marker; dated one-off records are lowercase slugs. `DECISIONS.md` belongs to a draft-only package's `_control/`
 and is not duplicated in `history/`.
 
 ## Workspace — session working sets
