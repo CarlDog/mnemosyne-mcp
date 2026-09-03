@@ -170,6 +170,14 @@ export class KindroidProvider implements LlmProvider {
     await this.client.connect();
   }
 
+  /** Reset the target kin's short-term context, seeding `greeting` as its
+   * newest message (docs/KINDROID_NARRATOR_DESIGN.md S3). Single-AI only;
+   * a group's reset is a different subscriber-only operation that stays out
+   * of scope. Cascaded memory is never wiped from here. */
+  async chatBreak(aiId: string, greeting: string): Promise<void> {
+    await this.client.chatBreak(aiId, greeting);
+  }
+
   async generate(opts: LlmGenerateOptions): Promise<GeneratedBeat> {
     const target = opts.kindroidTarget ?? this.config.defaultTarget;
     const message = buildKindroidMessage(

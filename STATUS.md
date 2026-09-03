@@ -16,7 +16,13 @@ lost its arctic station now keeps it. S2 shipped the same evening: a
 `mnemo_story_use`), echoed by `mnemo_continue` when the story's Kindroid
 binding is used and stamped on each saved scene as a `narrator:<label>` tag;
 the label policy sits in `src/application/narrator-policy.ts` so the use case
-never imports outward. S3 through S5 remain unscheduled.
+never imports outward. S3 shipped as well: `mnemo_session_break` is the
+explicit new-session boundary for a story's Kindroid narrator, a use case of
+its own behind a narrow port that refuses non-Kindroid generators, blank
+greetings, unbound stories, and group targets before any mutation, runs the
+chat break first with the cascaded wipe pinned off, then saves the greeting as
+a `session-break`-tagged scene so OC and the kin start in step. S4 and S5
+remain unscheduled.
 
 **Kindroid sends are now retry-safe (2026-09-03).** `KindroidClient.sendMessage`
 passes a fresh `idempotency_token` on every `kindroid_send_message` call and,

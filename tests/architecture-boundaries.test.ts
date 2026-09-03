@@ -155,6 +155,7 @@ describe("hexagonal source boundaries", () => {
         "./ports/story-validation.js",
       ],
       "validate-story.ts": ["./ports/story-validation.js"],
+      "session-break.ts": ["./ports/session.js"],
     };
     for (const path of sourceFiles(join(srcDir, "application"))) {
       const expected = expectedPorts[basename(path)];
@@ -175,6 +176,8 @@ describe("hexagonal source boundaries", () => {
         "createContinueScene",
         "createListEntityCatalog",
         "createListStoryCatalog",
+        "createSessionAdapter",
+        "createSessionBreak",
       ]),
     );
 
@@ -189,6 +192,7 @@ describe("hexagonal source boundaries", () => {
           "createStoryCatalogAdapter",
           "createStoryValidationAdapter",
           "createSceneRevalidationAdapter",
+          "createSessionAdapter",
         ]),
       );
     }

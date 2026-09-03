@@ -557,7 +557,10 @@ Key architectural decisions (see ARCHITECTURE.md for full reasoning):
   progress` while generating and replays the original reply afterwards,
   never a duplicate), so a timeout there is re-sent with the same token up
   to `SEND_TIMEOUT_RETRIES` times before the unknown-outcome error is
-  thrown. `kindroid_advance_group` keeps the no-retry rule. `maxTurns`
+  thrown. `kindroid_advance_group` keeps the no-retry rule, and so does
+  `kindroid_chat_break`, which `mnemo_session_break` (2026-09-03) calls with
+  `wipe_cascaded` pinned off: chat break rejects an idempotency key outright.
+  `maxTurns`
   is configurable (2026-08-23): server-wide via `KINDROID_GROUP_MAX_TURNS`
   and per call via `mnemo_continue`'s `group_max_turns`, defaulting to 4
   and bounded 1–8 to mirror `kindroid_advance_group`'s own schema rather

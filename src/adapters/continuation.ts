@@ -1,7 +1,7 @@
 import type { ContinuationPort } from "../application/ports/continuation.js";
 import type { AdmissionMode } from "../context-plan.js";
 import { capabilityWarnings } from "../capabilities.js";
-import { saveEntity, retagValidation } from "../entities.js";
+import { retagValidation } from "../entities.js";
 import type { LlmProvider } from "../llm.js";
 import {
   DEFAULT_MAX_TOKENS,
@@ -15,7 +15,7 @@ import {
   gatherContext,
   renderAdmittedBundle,
 } from "../prompt.js";
-import { findStory } from "../stories.js";
+import { readStoryBinding, saveSceneEntity } from "./story-binding.js";
 import { validateContentWithUsage } from "../validator.js";
 
 function admissionModeFromEnv(): AdmissionMode {
@@ -66,23 +66,10 @@ export function createContinuationAdapter(
     renderAdmittedContext: renderAdmittedBundle,
     capabilityWarnings: (options) =>
       capabilityWarnings(generator.name, options),
-    storyBinding: async (storyId) => {
-      const story = await findStory(oc, storyId);
-      return {
-        kindroidTarget: story?.kindroid_target,
-        narratorProfile: story?.narrator_profile,
-      };
-    },
+    storyBinding: (storyId) => readStoryBinding(oc, storyId),
     generate: (options) => generator.generate(options),
-    saveScene: async (storyId, name, body, extraTags) => {
-      const saved = await saveEntity(oc, storyId, {
-        type: "scene",
-        name,
-        body,
-        extraTags,
-      });
-      return { memory_id: saved.memory_id, tags: saved.tags };
-    },
+    saveScene: (storyId, name, body, extraTags) =>
+      saveSceneEntity(oc, storyId, name, body, extraTags),
     validate: (context, content) =>
       validateContentWithUsage(validator, context, content),
     retagValidation: async (memoryId, tags, verdict) => {

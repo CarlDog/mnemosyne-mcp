@@ -14,6 +14,7 @@ import { registerImportTool } from "./import.js";
 import { registerStoryTools } from "./stories.js";
 import { registerValidateTool } from "./validate.js";
 import { registerRevalidateTool } from "./revalidate.js";
+import { registerSessionTool } from "./session.js";
 
 export function registerTools(
   server: McpServer,
@@ -43,4 +44,5 @@ export function registerTools(
   // there.
   registerValidateTool(server, oc, useCases.validateStory);
   registerRevalidateTool(server, oc, useCases.revalidateScenes);
+  registerSessionTool(server, oc, useCases.sessionBreak);
 }
