@@ -2,6 +2,17 @@
 
 **Last updated:** 2026-09-03.
 
+**Narrator rulings and Slice 1 (2026-09-03).** The operator accepted every
+recommendation in `docs/KINDROID_NARRATOR_DESIGN.md` §5: stateful by default,
+shares only for stories declared SFW, rules and style persona-side with one
+kin per voice, groups out of scope until a real story has run, the share
+snapshot question pending a share code. S1 shipped the same day: the
+companion context selector now matches any distinctive word of a multi-word
+entity name ("Ilse" folds in "Ilse Varga"; `MIN_DISTINCTIVE_TOKEN` 4 plus a
+stopword list) and always includes locations alongside recent scenes, in
+both the message builder and the manifest selector; the end-to-end seed that
+lost its arctic station now keeps it. S2 through S5 remain unscheduled.
+
 **Kindroid sends are now retry-safe (2026-09-03).** `KindroidClient.sendMessage`
 passes a fresh `idempotency_token` on every `kindroid_send_message` call and,
 on a timeout, re-sends with the same token up to `SEND_TIMEOUT_RETRIES` (2)

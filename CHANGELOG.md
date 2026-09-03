@@ -26,6 +26,12 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 
 ### Changed
 
+- Companion-chat context selection (Kindroid, Botify): a multi-word entity
+  name now matches on any distinctive word of itself, and locations are
+  always included alongside recent scenes. Before, a direction had to spell
+  the full name and an unnamed location was dropped, which let a narrator
+  kin invent its own setting. Ratified as `docs/KINDROID_NARRATOR_DESIGN.md`
+  S1.
 - Completed the hexagonal architecture migration across continuation,
   standalone validation, bulk scene revalidation, and story/entity catalogs.
 - Added application-owned outbound ports and concrete OC/provider/persistence/
