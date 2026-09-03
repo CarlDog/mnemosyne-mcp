@@ -68,7 +68,7 @@ describe("corpus", () => {
     ]) {
       expect(rows.has(r)).toBe(true);
     }
-    expect(corpus.cases.length).toBe(15);
+    expect(corpus.cases.length).toBe(16);
   });
 
   it("seeds the entity kinds the smoke tests used, and every regex compiles", () => {
@@ -90,6 +90,7 @@ describe("corpus", () => {
     // observed beat. Neither may count toward a deterministic row number.
     expect(byId("canon-limp").mechanical).toBe(false);
     expect(byId("voice-pov").mechanical).toBe(false);
+    expect(byId("continuity-generator").mechanical).toBe(false);
     expect(mechanicalCases.length).toBe(13);
   });
 });
@@ -338,7 +339,7 @@ describe("baseline gate", () => {
       .filter((c) => c.mechanical && !c.pass)
       .map((c) => c.id);
     expect(trivialFails).toContain("continuity-prints");
-    expect(trivialFails).toContain("continuity-generator");
+    expect(trivialFails).toContain("continuity-speaks");
     expect(base.rows.contract.pass).toBe(0);
     // Nothing to contradict: every mechanical canon case without a must_match
     // passes the constant beat -- the trap the baseline exists to expose.
@@ -349,12 +350,28 @@ describe("baseline gate", () => {
     expect(base.rows.canon.pass).toBe(canonWithoutMustMatch);
     expect(base.shape_slip_cases).toBe(corpus.cases.length);
 
-    const good = summarize(corpus.cases.map((c) => scoreCase(c, GOOD_BEAT)));
+    // A responsive candidate, not one constant: GOOD_BEAT is itself a fixed
+    // text, so the contradiction pairs correctly cost it both forbidden
+    // halves. Clearing the gate now requires answering the directions.
+    const answers: Record<string, string> = {
+      "continuity-alone": ALONE_BEAT,
+      "continuity-silence": SILENCE_BEAT,
+      "contract-wordless": WORDLESS_BEAT,
+    };
+    const good = summarize(
+      corpus.cases.map((c) => scoreCase(c, answers[c.id] ?? GOOD_BEAT)),
+    );
     const gate = clearsBaseline(good.rows, base.rows);
     expect(gate.continuity).toBe(true);
     expect(gate.contract).toBe(true);
     expect(gate.canon_not_worse).toBe(true);
     expect(gate.clears).toBe(true);
+
+    // And one constant, however good it looks, does not.
+    const constant = summarize(
+      corpus.cases.map((c) => scoreCase(c, GOOD_BEAT)),
+    );
+    expect(clearsBaseline(constant.rows, base.rows).clears).toBe(false);
   });
 
   it("does not clear when the candidate matches the baseline", () => {
@@ -421,10 +438,16 @@ describe("plausible baseline arm", () => {
     expect(shapeSlips(shapeChecks(TRIVIAL)).length).toBeGreaterThan(0);
   });
 
-  it("the canned beat clears the trivial arm, which is the hole the second arm closes", () => {
+  it("the canned beat no longer clears even the trivial arm", () => {
+    // It did, before the contradiction pairs existed, and that was the hole
+    // the plausible arm was built to expose. The pairs now cost the canned
+    // beat two continuity cases, so it cannot out-score a constant that is
+    // barely a sentence. Recorded here because the progression is the point:
+    // a control that walks the gate is the symptom, not the design.
     const canned = summarize(corpus.cases.map((c) => scoreCase(c, PLAUSIBLE)));
     const trivial = summarize(corpus.cases.map((c) => scoreCase(c, TRIVIAL)));
-    expect(clearsBaseline(canned.rows, trivial.rows).clears).toBe(true);
+    expect(clearsBaseline(canned.rows, trivial.rows).clears).toBe(false);
+    expect(canned.rows.continuity.pass).toBe(trivial.rows.continuity.pass);
   });
 
   it("a candidate identical to the canned beat separates on nothing", () => {
@@ -488,6 +511,9 @@ const SPEECH = {
     '*She put her hand flat on the plating.*\n\n"Then somebody came out," she said.\n\n*Neither of them moved.*',
 };
 
+const WORDLESS_BEAT =
+  "*She set the pry bar into the seam and leaned on it until her boots slipped on the grate.*\n\n*The seal gave a quarter inch and stopped, and she reset her grip and did it again.*\n\n*The fourth time it came away all at once and put her down hard on the deck, and nothing above her stirred.*";
+
 const SILENCE_BEAT =
   "*Bram went on about meltwater and frost, building the explanation out of nothing, and Ilse let him.*\n\n*She watched his hands instead of his face. They did not stop moving the whole time he talked.*\n\n*When he ran out he stood there in the quiet he had made, waiting for her to fill it, and she did not.*";
 
@@ -503,32 +529,49 @@ describe("the contradiction pairs", () => {
       name: "Bram speaks",
       require: "contract-argument",
       forbid: "continuity-alone",
+      speech: "Bram speaks",
     },
     {
       name: "Ilse speaks",
       require: "continuity-speaks",
       forbid: "continuity-silence",
+      speech: "Ilse speaks",
+    },
+    {
+      name: "any dialogue",
+      require: "contract-argument",
+      forbid: "contract-wordless",
+      speech: "Bram speaks",
     },
   ];
+  // Pairs A and B share no case, so a constant must fail one from each: the
+  // floor is two. Pair C reuses A's required half, so it widens what a real
+  // narrator can separate on without raising that floor.
+  const INDEPENDENT_PAIRS = 2;
 
   it.each(PAIRS)("$name: both halves share one identical pattern", (pair) => {
     const req = byId(pair.require).must_match;
     const forb = byId(pair.forbid).must_not_match;
     expect(req).toBeDefined();
     expect(forb).toBeDefined();
-    expect(req![0]).toBe(forb![0]);
+    // A required half may carry more than one pattern; what matters is that
+    // the forbidden pattern is one of them, byte for byte.
+    expect(req!).toContain(forb![0]);
   });
 
-  it("the two pairs use different patterns and share no case", () => {
+  it("pairs A and B use different patterns and share no case", () => {
     expect(byId(PAIRS[0]!.require).must_match![0]).not.toBe(
       byId(PAIRS[1]!.require).must_match![0],
     );
-    const ids = PAIRS.flatMap((p) => [p.require, p.forbid]);
+    const ids = [PAIRS[0]!, PAIRS[1]!].flatMap((p) => [p.require, p.forbid]);
     expect(new Set(ids).size).toBe(ids.length);
+    // Every forbidden half is its own case, so no pair can be satisfied by
+    // deleting a case.
+    expect(new Set(PAIRS.map((p) => p.forbid)).size).toBe(PAIRS.length);
   });
 
   it.each(PAIRS)("$name: no single fixed text can pass both halves", (pair) => {
-    const withIt = SPEECH[pair.name as keyof typeof SPEECH];
+    const withIt = SPEECH[pair.speech as keyof typeof SPEECH];
     const withoutIt =
       "*She put her hand flat on the plating.*\n\n*The shaft went down past the reach of the lamp.*\n\n*Neither the cold nor the quiet gave anything back.*";
     expect(scoreCase(byId(pair.require), withIt).pass).toBe(true);
@@ -553,7 +596,7 @@ describe("the contradiction pairs", () => {
       for (const pair of PAIRS) {
         expect(failed.has(pair.require) || failed.has(pair.forbid)).toBe(true);
       }
-      expect(failed.size).toBeGreaterThanOrEqual(PAIRS.length);
+      expect(failed.size).toBeGreaterThanOrEqual(INDEPENDENT_PAIRS);
     }
   });
 
@@ -568,25 +611,25 @@ describe("the contradiction pairs", () => {
     expect(failed.map((c) => c.id).sort()).toEqual([
       "continuity-alone",
       "continuity-silence",
+      "contract-wordless",
     ]);
   });
 
-  it("a responsive candidate separates on both pairs and clears", () => {
+  it("a responsive candidate separates on every pair and clears", () => {
+    const answers: Record<string, string> = {
+      "continuity-alone": ALONE_BEAT,
+      "continuity-silence": SILENCE_BEAT,
+      "contract-wordless": WORDLESS_BEAT,
+    };
     const responsive = corpus.cases.map((c) =>
-      scoreCase(
-        c,
-        c.id === "continuity-alone"
-          ? ALONE_BEAT
-          : c.id === "continuity-silence"
-            ? SILENCE_BEAT
-            : PLAUSIBLE,
-      ),
+      scoreCase(c, answers[c.id] ?? PLAUSIBLE),
     );
     const canned = corpus.cases.map((c) => scoreCase(c, PLAUSIBLE));
     const disc = discrimination(summarize(responsive), summarize(canned));
     expect(disc.separating.sort()).toEqual([
       "continuity-alone",
       "continuity-silence",
+      "contract-wordless",
     ]);
     expect(gateOutcome({ clears: true }, disc)).toBe("clears");
   });

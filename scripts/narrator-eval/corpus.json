@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 7,
   "description": "Synthetic narrator evaluation corpus (docs/NARRATOR_EVAL.md). A case with \"mechanical\": false has no trustworthy deterministic signal and is scored advisory-only: its verdict is excluded from the row counts and it is checkable only by a working validator or a human reader. Nothing here is canon for any real story; the Halvard set exists only to score a narrator. Cases cover six rows: canon, continuity, voice, boundary, contract, decisiveness. \"Decisiveness\" is deliberately NOT the design's \"Player agency\" row, which asks the opposite; see docs/NARRATOR_EVAL.md.",
   "seed": {
     "characters": [
@@ -99,7 +99,9 @@
       "id": "continuity-generator",
       "rubric": "continuity",
       "direction": "*The generator dies mid-sentence.* Continue.",
-      "must_match": ["\\b(generator|dark|darkness|lights?|lamps?)\\b"]
+      "must_match": ["\\b(generator|dark|darkness|lights?|lamps?)\\b"],
+      "mechanical": false,
+      "hint": "The generator dies; the beat should engage that. This case is advisory: its expectation is a noun echo of the direction, and it produced a false failure in two of three live runs -- once on an inflection, once on a beat that rendered the failure through sound and cold and named the fuel line without ever saying \"generator\". Widening the pattern to catch those would be fitting it to observed beats, so the pattern stays as a signal and stops being a verdict. A working validator or a human reader is what can judge this one."
     },
     {
       "id": "voice-pov",
@@ -142,16 +144,25 @@
       "rubric": "contract",
       "direction": "*Ilse and Bram argue about opening the hatch.* Continue.",
       "must_match": [
-        "\"[^\"]{3,}\"[^.!?\"]{0,30}\\b(Bram|he)\\s+(said|asked|answered|replied|whispered|called|shouted|muttered)\\b(?!\\s+nothing)|\\b(Bram|he)\\s+(said|asked|answered|replied|whispered|called|shouted|muttered)\\b(?!\\s+nothing)[^.!?\"]{0,20}\"[^\"]{3,}\""
+        "\"[^\"]{3,}\"[^.!?\"]{0,30}\\b(Bram|he)\\s+(said|asked|answered|replied|whispered|called|shouted|muttered)\\b(?!\\s+nothing)|\\b(Bram|he)\\s+(said|asked|answered|replied|whispered|called|shouted|muttered)\\b(?!\\s+nothing)[^.!?\"]{0,20}\"[^\"]{3,}\"",
+        "\"[^\"]{3,}\""
       ],
       "checks": ["shape"],
-      "hint": "An argument needs both voices on the page. This requirement is the paired half of continuity-alone, which forbids the identical pattern: no single fixed text can contain it and lack it, which is how the corpus separates a responsive narrator from a canned reply. Do not weaken either half."
+      "hint": "An argument needs both voices on the page. Two requirements, each the required half of a pair: the attribution pattern is paired with continuity-alone, and plain dialogue itself is paired with contract-wordless. Do not weaken either."
     },
     {
       "id": "contract-bare",
       "rubric": "contract",
       "direction": "Continue.",
       "checks": ["shape", "no_meta"]
+    },
+    {
+      "id": "contract-wordless",
+      "rubric": "contract",
+      "direction": "*Ilse works the hatch seal open by herself, from the first pry to the moment it gives. Bram is asleep two decks up, and there is nothing down here to read or to answer.* Continue.",
+      "must_not_match": ["\"[^\"]{3,}\""],
+      "checks": ["shape"],
+      "hint": "A wordless beat is a legitimate shape for this style, and this is the forbidden half of the pair whose required half is contract-argument: no single fixed text can both carry a spoken line and lack one. The advisory \"no plain dialogue\" hint is expected here and is not a fault. Because the pair shares its required half with the Bram-attribution pair, it widens what a narrator can separate on without raising the worst-case floor."
     },
     {
       "id": "agency-choice",
