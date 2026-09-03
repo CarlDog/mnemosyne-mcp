@@ -285,6 +285,16 @@ assessments listed under "Layout" below.
   resolve (the data architecture standard's one-image-one-place rule).
 - `scripts/intake.py` — the only writer of `data/archive/` (index, ingest,
   verify per source family; snapshot and diff for migration proofs).
+- `scripts/scene-extraction/` — `extract_scenes.py`, the shared engine that
+  cuts a story's Botify chat exports into per-scene draft files (overlay
+  `add`s with the draft banner) plus their `_control/scenes/` docs, driven by
+  a per-story `cuts_<story>.py` config; `build_sources.py` rebuilds every
+  story's read-only `sources/` view; `earlier/` holds do-not-rerun one-offs.
+  Known defects (found by the 2026-09-02 gap audits, unfixed): the engine
+  writes a `_control/scenes/_catalog.md` path into every scene's
+  `location_basis` (a control path inside an entity), and one run left an
+  unrendered `{chat['played']}` and a `source_bot … None` in an inventory.
+  Fix in the engine before the next cut, not by hand in the scene files.
 - `docs/ARCHITECTURE.md` — locked architectural decisions. Read this
   first to understand project shape, state model, validation strategy,
   provider strategy, and build sequence.

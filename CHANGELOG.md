@@ -5,6 +5,15 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 
 ## Unreleased
 
+### Added
+
+- Recorded the non-flagship story gap-audit pass (2026-09-02): every
+  non-flagship story now carries a `drafts/_control/GAP_AUDIT.md` graded
+  against the flagship bar, a standing control-record class added to
+  `docs/DATA_LAYOUT.md` alongside `RN_REVIEW.md`; `STATUS.md` holds the six
+  verdicts and the operator rulings each stops for, and `CLAUDE.md` documents
+  `scripts/scene-extraction/` and the two engine defects the audits found.
+
 ### Changed
 
 - Completed the hexagonal architecture migration across continuation,

@@ -1,6 +1,6 @@
 # Status
 
-**Last updated:** 2026-09-02.
+**Last updated:** 2026-09-03.
 
 **Five more gap audits: Brass & Nerve, Story 10, The Noctis
 Veil, story-08, and, on the operator's go-ahead, Star Wars: The Black Ledger
