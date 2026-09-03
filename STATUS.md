@@ -24,7 +24,10 @@ routes were recorded under a documentation-only exception, and the
 idempotency key surfaced from the app's own send payload; the record lives in
 kindroid-mcp's docs, and this repo's memory note `narrator-kin-design-review`
 carries the blockers that still gate that design (content-rating scope,
-share snapshot semantics, the rules/style channel decision, groups).
+share snapshot semantics, the rules/style channel decision, groups). The
+Mnemosyne half of that design is now drafted as `docs/KINDROID_NARRATOR_DESIGN.md`
+(design input, not ratified): five unscheduled slices and the open decisions
+with recommendations.
 
 **Five more gap audits: Brass & Nerve, The Adjustment Protocol, The Noctis
 Veil, Shadowflame, and, on the operator's go-ahead, Star Wars: The Black Ledger

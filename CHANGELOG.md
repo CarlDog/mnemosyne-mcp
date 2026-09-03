@@ -7,6 +7,9 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 
 ### Added
 
+- `docs/KINDROID_NARRATOR_DESIGN.md`: the Mnemosyne half of the reusable
+  narrator-kin proposal, design input only; the kindroid-mcp half holds the
+  boundary statement and the review record.
 - `KindroidClient.sendMessage` sends a fresh `idempotency_token` with every
   `kindroid_send_message` call and re-sends with the same token on a timeout
   (`SEND_TIMEOUT_RETRIES`, 2) before throwing `provider_dispatch_unknown`;
