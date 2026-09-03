@@ -68,7 +68,7 @@ describe("corpus", () => {
     ]) {
       expect(rows.has(r)).toBe(true);
     }
-    expect(corpus.cases.length).toBe(12);
+    expect(corpus.cases.length).toBe(13);
   });
 
   it("seeds the entity kinds the smoke tests used, and every regex compiles", () => {
@@ -90,7 +90,7 @@ describe("corpus", () => {
     // observed beat. Neither may count toward a deterministic row number.
     expect(byId("canon-limp").mechanical).toBe(false);
     expect(byId("voice-pov").mechanical).toBe(false);
-    expect(mechanicalCases.length).toBe(10);
+    expect(mechanicalCases.length).toBe(11);
   });
 });
 
@@ -330,7 +330,15 @@ describe("summarize", () => {
 describe("baseline gate", () => {
   it("the constant beat fails continuity and contract but nothing on canon, and a real run must beat it", () => {
     const base = summarize(corpus.cases.map((c) => scoreCase(c, TRIVIAL)));
-    expect(base.rows.continuity.pass).toBe(0);
+    // The trivial beat passes continuity-alone, which only forbids attributed
+    // speech, and fails the two continuity cases that need the scene's facts.
+    const trivialFails = (
+      base.perCase as { id: string; mechanical: boolean; pass: boolean }[]
+    )
+      .filter((c) => c.mechanical && !c.pass)
+      .map((c) => c.id);
+    expect(trivialFails).toContain("continuity-prints");
+    expect(trivialFails).toContain("continuity-generator");
     expect(base.rows.contract.pass).toBe(0);
     // Nothing to contradict: every mechanical canon case without a must_match
     // passes the constant beat -- the trap the baseline exists to expose.
@@ -375,7 +383,11 @@ describe("baseline gate", () => {
       };
     }
     const noise = validatorNoiseFloor(summarize(scored, reports));
-    expect(noise).toEqual({ noisy: 12, cases: 12, unreliable: true });
+    expect(noise).toEqual({
+      noisy: corpus.cases.length,
+      cases: corpus.cases.length,
+      unreliable: true,
+    });
 
     const honest: Record<string, unknown> = {};
     for (const c of corpus.cases) {
@@ -396,6 +408,9 @@ describe("baseline gate", () => {
     );
   });
 });
+
+const ALONE_BEAT =
+  "*The hatch dropped shut and took the last of the upper-deck light with it. Ilse stood on the bottom rung until her eyes gave her the shape of the corridor.*\n\n*The lamp found nothing that wanted finding: a bulkhead, a run of frosted pipe, the prints going on ahead of her into the dark.*\n\n*She went after them alone.*";
 
 describe("plausible baseline arm", () => {
   it("ships both arms, and only the plausible one is well shaped", () => {
@@ -463,5 +478,64 @@ describe("plausible baseline arm", () => {
     expect(gateOutcome({ clears: false }, yes)).toBe("does not clear");
     expect(gateOutcome({ clears: true }, no)).toBe("inconclusive");
     expect(gateOutcome({ clears: true }, yes)).toBe("clears");
+  });
+});
+
+describe("the contradiction pair", () => {
+  // contract-argument requires a line attributed to a second speaker;
+  // continuity-alone forbids the identical pattern. This is what lets the
+  // corpus separate a responsive narrator from any single canned reply.
+  const argument = byId("contract-argument");
+  const alone = byId("continuity-alone");
+
+  it("both halves share one identical pattern", () => {
+    expect(argument.must_match).toBeDefined();
+    expect(alone.must_not_match).toBeDefined();
+    expect(argument.must_match![0]).toBe(alone.must_not_match![0]);
+  });
+
+  it("no single fixed text can pass both halves", () => {
+    const withSpeech =
+      '*She put her hand flat on the plating.*\n\n"Then somebody came out," he said.\n\n*Neither of them moved.*';
+    const withoutSpeech =
+      "*She put her hand flat on the plating.*\n\n*The shaft went down past the reach of the lamp.*\n\n*Neither the cold nor the quiet gave anything back.*";
+    // A text either contains the pattern or it does not, and each branch
+    // fails one half. There is no third option, which is the point.
+    expect(scoreCase(argument, withSpeech).pass).toBe(true);
+    expect(scoreCase(alone, withSpeech).pass).toBe(false);
+    expect(scoreCase(argument, withoutSpeech).pass).toBe(false);
+    expect(scoreCase(alone, withoutSpeech).pass).toBe(true);
+  });
+
+  it("the shipped canned beat fails at least one mechanical case", () => {
+    // The regression guard for the whole arm: if a later edit made the canned
+    // beat pass everything again, the gate would go back to inconclusive by
+    // construction and this would be the only thing to notice.
+    const canned = summarize(corpus.cases.map((c) => scoreCase(c, PLAUSIBLE)));
+    const failed = (
+      canned.perCase as { id: string; mechanical: boolean; pass: boolean }[]
+    ).filter((c) => c.mechanical && !c.pass);
+    expect(failed.length).toBeGreaterThan(0);
+    expect(failed.map((c) => c.id)).toContain("continuity-alone");
+  });
+
+  it("a candidate that answers the alone direction separates from the canned beat", () => {
+    const responsive = corpus.cases.map((c) =>
+      scoreCase(c, c.id === "continuity-alone" ? ALONE_BEAT : PLAUSIBLE),
+    );
+    const canned = corpus.cases.map((c) => scoreCase(c, PLAUSIBLE));
+    const disc = discrimination(summarize(responsive), summarize(canned));
+    expect(disc.separating).toEqual(["continuity-alone"]);
+    expect(disc.discriminates).toBe(true);
+    expect(gateOutcome({ clears: true }, disc)).toBe("clears");
+  });
+
+  it("lets remembered speech and a distant voice through the alone case", () => {
+    const remembered =
+      '*She stopped on the ladder.*\n\n*"Nobody has been down there in years," he had said, and she had believed him for a whole hour.*\n\n*The rung was cold enough to bite.*';
+    const distant =
+      "*Somewhere above, Bram's voice went on, too far down the shaft to make out.*\n\n*She did not answer it.*\n\n*The dark below the ladder did not move.*";
+    expect(scoreCase(alone, remembered).pass).toBe(true);
+    expect(scoreCase(alone, distant).pass).toBe(true);
   });
 });

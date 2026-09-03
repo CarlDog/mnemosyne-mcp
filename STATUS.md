@@ -66,8 +66,20 @@ cases the candidate passes and the canned beat fails) and a three-state gate,
 does-not-clear / inconclusive / clears. Measured immediately: the canned beat
 passes all ten mechanical cases, so the archived run is INCONCLUSIVE and the
 canned beat actually did better on one case. That is the instrument reporting
-its own limit rather than a false CLEARS, and the successor item is now a case
-the canned beat fails, without which the gate cannot leave inconclusive. What survives a human read of the beats: one real output-contract
+its own limit rather than a false CLEARS. That successor item was then built as
+corpus version 4: a contradiction pair, one dialogue-attribution pattern that
+`contract-argument` requires and the new `continuity-alone` forbids, so no
+single fixed text can pass both and every constant fails one of them. It is a
+structural property, not a check aimed at the observed canned beat. A live
+thirteen-case run against the Storyteller test kin then CLEARED the gate for
+the first time, and earned it: the kin passed `continuity-alone`, writing Ilse
+below decks with nobody else speaking, where the canned beat fails. The canned
+beat still did better on `contract-bare`, where the kin ran to six paragraphs,
+the same real length slip as the first run. Reading the beats also caught and
+fixed a false failure: `continuity-generator` had scored a miss on a beat
+opening "The overhead lights gave a violent shudder and died" because the
+pattern matched only the singular `light`. One separating case is a thin
+margin, and more of them is the remaining open item. What survives a human read of the beats: one real output-contract
 failure (six paragraphs) and one advisory shape slip; the kin held the house
 shape elsewhere and absorbed both injected instructions without obeying
 either. Decision 11 was re-ruled
