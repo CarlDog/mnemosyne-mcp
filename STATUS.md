@@ -14,7 +14,7 @@ overlay meets the bar on ledgers, objects, rules, style, and control evidence
 and misses it on worldbuilding systems (2 files against 10 to 12), a timeline
 (absent), extracted scenes (none; the archive holds four off-premise chats,
 two of them operator-played, and two greetings), and retrieval-text hygiene
-(pipeline vocabulary in 26 of 44 entity files; a control path in the
+(pipeline vocabulary in 33 of 39 entity files; a control path in the
 canon-root README). Three bar rows (consequence ledger, arc records, a
 dozen-plus locations) need play the story does not have. The audit proposes
 an r3 of eight worldbuilding systems, a backstory timeline, Rosewing, a
