@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "description": "Synthetic narrator evaluation corpus (docs/NARRATOR_EVAL.md). A case with \"mechanical\": false has no trustworthy deterministic signal and is scored advisory-only: its verdict is excluded from the row counts and it is checkable only by a working validator or a human reader. Nothing here is canon for any real story; the Halvard set exists only to score a narrator. Cases cover the six rubric rows from the narrator design: canon, continuity, voice, boundary, contract, agency.",
+  "description": "Synthetic narrator evaluation corpus (docs/NARRATOR_EVAL.md). A case with \"mechanical\": false has no trustworthy deterministic signal and is scored advisory-only: its verdict is excluded from the row counts and it is checkable only by a working validator or a human reader. Nothing here is canon for any real story; the Halvard set exists only to score a narrator. Cases cover six rows: canon, continuity, voice, boundary, contract, decisiveness. \"Decisiveness\" is deliberately NOT the design's \"Player agency\" row, which asks the opposite; see docs/NARRATOR_EVAL.md.",
   "seed": {
     "characters": [
       {
