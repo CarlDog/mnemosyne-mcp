@@ -11,8 +11,12 @@ import { dirname, join } from "node:path";
 import * as checks from "../scripts/narrator-eval/checks.mjs";
 const {
   clearsBaseline,
+  discrimination,
+  gateOutcome,
   normalizeTypography,
   scoreCase,
+  shapeSlips,
+  shapeChecks,
   summarize,
   validatorNoiseFloor,
 } = checks;
@@ -36,8 +40,12 @@ const corpus = JSON.parse(
     extra_scene?: string;
     mechanical?: boolean;
   }[];
-  baseline: { beat: string };
+  baselines: { id: string; label: string; beat: string; note: string }[];
 };
+
+const armBeat = (id: string) => corpus.baselines.find((b) => b.id === id)!.beat;
+const TRIVIAL = armBeat("trivial");
+const PLAUSIBLE = armBeat("plausible");
 
 const GOOD_BEAT =
   '*Ilse crouched by the hatch and worked the folding knife out of her boot. The prints were still there, damp at the edges.*\n\n"Nobody came through here," she said.\n\n*Behind her the generator coughed, caught, and settled back into its uneven hum. Bram did not answer at once. He was watching the prints and counting them under his breath.*\n\n"Then somebody came out," he said.';
@@ -321,9 +329,7 @@ describe("summarize", () => {
 
 describe("baseline gate", () => {
   it("the constant beat fails continuity and contract but nothing on canon, and a real run must beat it", () => {
-    const base = summarize(
-      corpus.cases.map((c) => scoreCase(c, corpus.baseline.beat)),
-    );
+    const base = summarize(corpus.cases.map((c) => scoreCase(c, TRIVIAL)));
     expect(base.rows.continuity.pass).toBe(0);
     expect(base.rows.contract.pass).toBe(0);
     // Nothing to contradict: every mechanical canon case without a must_match
@@ -345,9 +351,7 @@ describe("baseline gate", () => {
 
   it("does not clear when the candidate matches the baseline", () => {
     // The negative case: without it, a hardcoded `clears: true` passes.
-    const base = summarize(
-      corpus.cases.map((c) => scoreCase(c, corpus.baseline.beat)),
-    );
+    const base = summarize(corpus.cases.map((c) => scoreCase(c, TRIVIAL)));
     const gate = clearsBaseline(base.rows, base.rows);
     expect(gate.continuity).toBe(false);
     expect(gate.contract).toBe(false);
@@ -355,7 +359,7 @@ describe("baseline gate", () => {
   });
 
   it("the noise floor counts baseline cases that drew a non-contract validator error", () => {
-    const scored = corpus.cases.map((c) => scoreCase(c, corpus.baseline.beat));
+    const scored = corpus.cases.map((c) => scoreCase(c, TRIVIAL));
     const reports: Record<string, unknown> = {};
     for (const c of corpus.cases) {
       reports[c.id] = {
@@ -363,7 +367,7 @@ describe("baseline gate", () => {
           {
             severity: "error",
             rule: "Third-person limited, past tense, close on Ilse",
-            violating_text: corpus.baseline.beat,
+            violating_text: TRIVIAL,
             explanation: "",
           },
         ],
@@ -380,7 +384,7 @@ describe("baseline gate", () => {
           {
             severity: "error",
             rule: "Three to five paragraphs a beat",
-            violating_text: corpus.baseline.beat,
+            violating_text: TRIVIAL,
             explanation: "",
           },
         ],
@@ -390,5 +394,74 @@ describe("baseline gate", () => {
     expect(validatorNoiseFloor(summarize(scored, honest)).unreliable).toBe(
       false,
     );
+  });
+});
+
+describe("plausible baseline arm", () => {
+  it("ships both arms, and only the plausible one is well shaped", () => {
+    expect(corpus.baselines.map((b) => b.id)).toEqual(["trivial", "plausible"]);
+    // The control only works as an adversarial one while it looks like a real
+    // beat. If a later edit makes it sloppy it stops testing anything.
+    expect(shapeSlips(shapeChecks(PLAUSIBLE))).toEqual([]);
+    expect(shapeSlips(shapeChecks(TRIVIAL)).length).toBeGreaterThan(0);
+  });
+
+  it("the canned beat clears the trivial arm, which is the hole the second arm closes", () => {
+    const canned = summarize(corpus.cases.map((c) => scoreCase(c, PLAUSIBLE)));
+    const trivial = summarize(corpus.cases.map((c) => scoreCase(c, TRIVIAL)));
+    expect(clearsBaseline(canned.rows, trivial.rows).clears).toBe(true);
+  });
+
+  it("a candidate identical to the canned beat separates on nothing", () => {
+    const canned = summarize(corpus.cases.map((c) => scoreCase(c, PLAUSIBLE)));
+    const disc = discrimination(canned, canned);
+    expect(disc.separating).toEqual([]);
+    expect(disc.regressions).toEqual([]);
+    expect(disc.discriminates).toBe(false);
+    expect(disc.mechanical_cases).toBe(mechanicalCases.length);
+  });
+
+  it("separates only on a case the candidate passes and the canned beat fails", () => {
+    const mk = (pass: Record<string, boolean>) => ({
+      perCase: Object.entries(pass).map(([id, p]) => ({
+        id,
+        mechanical: true,
+        pass: p,
+      })),
+    });
+    const disc = discrimination(
+      mk({ a: true, b: false, c: true, d: false }),
+      mk({ a: false, b: true, c: true, d: false }),
+    );
+    expect(disc.separating).toEqual(["a"]);
+    expect(disc.regressions).toEqual(["b"]);
+    expect(disc.shared).toEqual(["c"]);
+    expect(disc.discriminates).toBe(true);
+  });
+
+  it("ignores advisory cases, which carry no mechanical verdict", () => {
+    const withAdvisory = {
+      perCase: [
+        { id: "a", mechanical: false, pass: true },
+        { id: "b", mechanical: true, pass: true },
+      ],
+    };
+    const canned = {
+      perCase: [
+        { id: "a", mechanical: false, pass: false },
+        { id: "b", mechanical: true, pass: false },
+      ],
+    };
+    const disc = discrimination(withAdvisory, canned);
+    expect(disc.mechanical_cases).toBe(1);
+    expect(disc.separating).toEqual(["b"]);
+  });
+
+  it("gateOutcome names all three states", () => {
+    const yes = { discriminates: true };
+    const no = { discriminates: false };
+    expect(gateOutcome({ clears: false }, yes)).toBe("does not clear");
+    expect(gateOutcome({ clears: true }, no)).toBe("inconclusive");
+    expect(gateOutcome({ clears: true }, yes)).toBe("clears");
   });
 });

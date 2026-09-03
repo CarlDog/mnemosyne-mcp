@@ -16,6 +16,14 @@ this file was introduced remains in [STATUS.md](STATUS.md).
   measured on the baseline. Beats and reports stay under `data/`.
   Narrator design S5.
 
+- Narrator evaluation: a second baseline arm (corpus version 3). Alongside the
+  trivial constant, every run now scores a plausible canned beat, correctly
+  shaped and seeded with the corpus's nouns but responsive to no direction,
+  through the identical path. `discrimination()` reports which mechanical cases
+  separate the candidate from it, and the gate has three states: does not
+  clear, inconclusive, clears. Inconclusive indicts the corpus, not the
+  narrator: the canned beat currently passes every mechanical case.
+
 ### Fixed
 
 - Narrator evaluation, after an adversarial review of the harness (corpus

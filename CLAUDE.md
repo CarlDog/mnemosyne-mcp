@@ -294,9 +294,12 @@ assessments listed under "Layout" below.
   withhold the gate and exit non-zero on an incomplete run), and
   `generate-kindroid.mjs` (runs the corpus through a kin over mnemosyne's own
   client and message builder, writing real messages into that kin's chat).
-  Reports go under gitignored `data/`. Read the doc's "What it does not
-  measure" and its recorded gate limitation before quoting a number: a
-  plausible constant beat clears the gate.
+  Two baseline arms: a trivial constant, and a plausible canned beat that
+  answers no direction, whose `discrimination` result drives a three-state
+  gate (does not clear / inconclusive / clears). Reports go under gitignored
+  `data/`. Read the doc's "What it does not measure" first: as of corpus
+  version 3 the canned beat passes every mechanical case, so every candidate
+  is inconclusive until the corpus gains a case it fails.
 - `scripts/scene-extraction/` — `extract_scenes.py`, the shared engine that
   cuts a story's Botify chat exports into per-scene draft files (overlay
   `add`s with the draft banner) plus their `_control/scenes/` docs, driven by

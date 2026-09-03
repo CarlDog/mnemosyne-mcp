@@ -58,8 +58,16 @@ opposite; demotion of `canon-limp` and `voice-pov` to advisory, as neither
 has a trustworthy mechanical signal; and the three surviving test mutants.
 No row number from the first run is quotable, and the six reviewed changes
 that would alter what the instrument measures are recorded in
-`docs/NARRATOR_EVAL.md` under "Reported, not built" for an operator
-decision. What survives a human read of the beats: one real output-contract
+`docs/NARRATOR_EVAL.md` under "Reported, not built". The operator then asked
+for the first of those, and it shipped as corpus version 3: a second baseline
+arm holding the exact canned beat that defeated the single-arm gate, scored
+through the identical path, plus a `discrimination` result (how many mechanical
+cases the candidate passes and the canned beat fails) and a three-state gate,
+does-not-clear / inconclusive / clears. Measured immediately: the canned beat
+passes all ten mechanical cases, so the archived run is INCONCLUSIVE and the
+canned beat actually did better on one case. That is the instrument reporting
+its own limit rather than a false CLEARS, and the successor item is now a case
+the canned beat fails, without which the gate cannot leave inconclusive. What survives a human read of the beats: one real output-contract
 failure (six paragraphs) and one advisory shape slip; the kin held the house
 shape elsewhere and absorbed both injected instructions without obeying
 either. Decision 11 was re-ruled

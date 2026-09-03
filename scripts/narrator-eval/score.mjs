@@ -24,6 +24,8 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   clearsBaseline,
+  discrimination,
+  gateOutcome,
   scoreCase,
   summarize,
   validatorNoiseFloor,
@@ -57,6 +59,17 @@ if (!Array.isArray(beats)) {
   process.exit(2);
 }
 const beatById = new Map(beats.map((b) => [b.case_id, b]));
+
+const arm = (id) => {
+  const found = (corpus.baselines ?? []).find((b) => b.id === id);
+  if (!found) {
+    console.error(`corpus is missing the "${id}" baseline arm`);
+    process.exit(2);
+  }
+  return found;
+};
+const trivialArm = arm("trivial");
+const plausibleArm = arm("plausible");
 
 // Run integrity, computed before anything is scored.
 const missing = corpus.cases
@@ -181,10 +194,19 @@ const candidate = await scoreSet(
   true,
 );
 const baseline = await scoreSet(
-  "constant baseline",
-  () => corpus.baseline.beat,
+  `${trivialArm.label} baseline`,
+  () => trivialArm.beat,
 );
-const gate = clearsBaseline(candidate.summary.rows, baseline.summary.rows);
+const plausible = await scoreSet(
+  `${plausibleArm.label} baseline (canned, answers no direction)`,
+  () => plausibleArm.beat,
+);
+const trivialGate = clearsBaseline(
+  candidate.summary.rows,
+  baseline.summary.rows,
+);
+const disc = discrimination(candidate.summary, plausible.summary);
+const outcome = gateOutcome(trivialGate, disc);
 const noise = validate ? validatorNoiseFloor(baseline.summary) : null;
 
 const integrity = {
@@ -214,11 +236,20 @@ console.log(
 
 if (integrity.ok) {
   console.log(
-    `baseline gate (deterministic verdicts): continuity ${gate.continuity ? "beats" : "does NOT beat"} baseline; contract ${gate.contract ? "beats" : "does NOT beat"} baseline; canon ${gate.canon_not_worse ? "not worse" : "WORSE"} -> ${gate.clears ? "CLEARS" : "does not clear"}`,
+    `trivial arm: continuity ${trivialGate.continuity ? "beats" : "does NOT beat"}; contract ${trivialGate.contract ? "beats" : "does NOT beat"}; canon ${trivialGate.canon_not_worse ? "not worse" : "WORSE"} -> ${trivialGate.clears ? "clears" : "does not clear"}`,
   );
   console.log(
-    "gate scope: it reads continuity, contract and canon only, against a degenerate constant. A plausible constant that answers no direction clears it (reproduced 2026-09-03). Clearing is not evidence of a good narrator.",
+    `plausible arm: ${disc.separating.length} of ${disc.mechanical_cases} mechanical cases separate the candidate from a canned beat` +
+      (disc.separating.length ? `: ${disc.separating.join(", ")}` : "") +
+      (disc.regressions.length
+        ? `; the canned beat did better on: ${disc.regressions.join(", ")}`
+        : ""),
   );
+  console.log(`baseline gate: ${outcome.toUpperCase()}`);
+  if (outcome === "inconclusive")
+    console.log(
+      "  inconclusive is a statement about the corpus, not the narrator: no case here passes for the candidate and fails for a fluent beat that answers nothing. To reach CLEARS, the corpus needs a case the canned beat fails.",
+    );
 } else {
   console.log(
     "baseline gate: WITHHELD -- this run is incomplete, so no gate verdict is reported.",
@@ -226,7 +257,7 @@ if (integrity.ok) {
 }
 if (noise) {
   console.log(
-    `validator noise floor: ${noise.noisy}/${noise.cases} baseline cases drew a non-contract error on "${corpus.baseline.beat}"` +
+    `validator noise floor: ${noise.noisy}/${noise.cases} trivial-baseline cases drew a non-contract error on "${trivialArm.beat}"` +
       (noise.unreliable
         ? " -> validator counts are not a judgment for this run"
         : ""),
@@ -257,7 +288,14 @@ await writeFile(
       integrity,
       candidate: { summary: candidate.summary, reports: candidate.reports },
       baseline: { summary: baseline.summary, reports: baseline.reports },
-      gate: integrity.ok ? gate : null,
+      plausible_baseline: {
+        beat: plausibleArm.beat,
+        summary: plausible.summary,
+        reports: plausible.reports,
+      },
+      gate: integrity.ok
+        ? { trivial: trivialGate, discrimination: disc, outcome }
+        : null,
       gate_withheld_reason: integrity.ok ? null : "incomplete run",
       validator_noise_floor: noise,
       beats: beatsFile,
