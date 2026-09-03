@@ -10,6 +10,8 @@ import { toStorySummary } from "../application/catalog-policy.js";
 import type { StorySummary } from "../application/model.js";
 import {
   combineKindroidTarget,
+  NARRATOR_PROFILE_PATTERN,
+  setNarratorProfile,
   createStory,
   findStory,
   setKindroidTarget,
@@ -82,6 +84,14 @@ export function registerStoryTools(
           .describe(
             "Bind this story to a specific Kindroid group chat (a raw group_id or a kindroid-mcp registered name) instead of a single AI -- mnemo_continue then drives the group's turn loop and returns each AI's reply as part of the beat. Mutually exclusive with kindroid_kin. Pass null to clear. Omit to leave unchanged.",
           ),
+        narrator_profile: z
+          .string()
+          .regex(NARRATOR_PROFILE_PATTERN)
+          .nullable()
+          .optional()
+          .describe(
+            "Name the narrator persona this story is written with (1-64 chars of letters, digits, . _ -), e.g. the kin's persona label. A provenance label only: mnemo_continue echoes it and tags each saved scene narrator:<label> when the story's Kindroid binding is used. Pass null to clear. Omit to leave unchanged.",
+          ),
       },
     },
     withLogging(
@@ -91,8 +101,11 @@ export function registerStoryTools(
         create_if_missing?: boolean;
         kindroid_kin?: string | null;
         kindroid_group_id?: string | null;
+        narrator_profile?: string | null;
       }) => {
         const { name_or_id, create_if_missing } = args;
+        const profileChangeRequested = args.narrator_profile !== undefined;
+        const requestedProfile = args.narrator_profile ?? undefined;
 
         // Throws on a genuine kindroid_kin + kindroid_group_id conflict.
         const requestedTarget = combineKindroidTarget(
@@ -114,9 +127,19 @@ export function registerStoryTools(
               { isError: true },
             );
           }
-          story = await createStory(oc, name_or_id, requestedTarget);
-        } else if (targetChangeRequested) {
-          story = await setKindroidTarget(oc, story, requestedTarget);
+          story = await createStory(
+            oc,
+            name_or_id,
+            requestedTarget,
+            requestedProfile,
+          );
+        } else {
+          if (targetChangeRequested) {
+            story = await setKindroidTarget(oc, story, requestedTarget);
+          }
+          if (profileChangeRequested) {
+            story = await setNarratorProfile(oc, story, requestedProfile);
+          }
         }
         await setCurrentStoryId(story.id);
         return asText({ ...toStorySummary(story), current: true });

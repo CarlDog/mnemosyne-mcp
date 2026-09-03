@@ -9,8 +9,8 @@ adversarial review record, and the smoke tests, lives at
 kindroid-mcp will and will not own; this one holds what would change here.
 
 **Ratified 2026-09-03:** the operator accepted every recommendation in §5.
-S1 shipped the same day; S2 through S5 remain unscheduled; S4 stays blocked
-on the share check in decision 12.
+S1 and S2 shipped the same day; S3 through S5 remain unscheduled; S4 stays
+blocked on the share check in decision 12.
 
 ## 1. The shape, in one paragraph
 
@@ -101,6 +101,14 @@ payload; the end-to-end seed from 2026-09-03 folds in Ilse Varga and the
 station from the direction "Ilse crouches at the hatch".
 
 ### S2. Name the narrator on the story
+
+**Shipped 2026-09-03.** `mnemo_story_use(narrator_profile)` writes a
+`Narrator-Profile:` line on the story marker (schema 4; `null` clears), the
+story summary carries it, `mnemo_continue` echoes it as `narrator_profile`
+whenever the story's Kindroid binding is consulted or prefetched, and the
+saved scene carries a `narrator:<label>` tag. The label policy lives in
+[narrator-policy.ts](../src/application/narrator-policy.ts) so the
+continuation use case and the marker agree on one shape.
 
 A `narrator_profile` label on the story marker, set through `mnemo_story_use`
 alongside the Kindroid target, surfaced in `mnemo_continue`'s response and in

@@ -7,6 +7,12 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 
 ### Added
 
+- `mnemo_story_use` accepts `narrator_profile` (`null` clears): a short label
+  naming the narrator persona a story is written with, stored as a
+  `Narrator-Profile:` line on the story marker (schema 4, older markers still
+  parse). `mnemo_continue` echoes it as `narrator_profile` when the story's
+  Kindroid binding is used, and each saved scene carries a `narrator:<label>`
+  tag. Provenance only, no copy of the persona. Narrator design S2.
 - `docs/KINDROID_NARRATOR_DESIGN.md`: the Mnemosyne half of the reusable
   narrator-kin proposal, design input only; the kindroid-mcp half holds the
   boundary statement and the review record.

@@ -2,11 +2,18 @@
 // pinned marker memory of the form:
 //   [Mnemosyne Story] <name>
 //   Created: <iso-datetime>
-//   Schema: 3
+//   Schema: 4
 //   Kindroid-Target: ai:<id>        (optional; or "group:<id>")
+//   Narrator-Profile: <label>       (optional; schema 4, 2026-09-03)
 // with tags ["mnemosyne", "story-marker"]. Schema-1 markers (no kin line at
-// all) and schema-2 markers (legacy "Kindroid-Kin: <id>" line, always an AI
-// target) both still parse fine -- see parseMarker's legacy fallback.
+// all), schema-2 markers (legacy "Kindroid-Kin: <id>" line, always an AI
+// target), and schema-3 markers (no narrator line) all still parse fine --
+// unknown lines are ignored and known ones are found by prefix.
+//
+// The narrator profile is a LABEL naming which narrator kin persona a story
+// is written with (docs/KINDROID_NARRATOR_DESIGN.md S2): it rides the
+// marker so provenance survives, is echoed by mnemo_continue, and tags each
+// saved scene as `narrator:<label>`. It is not a copy of the persona.
 //
 // Discovery uses a single cross-project memory_search filtered by the marker
 // tags (AND logic), so listStories is one round trip regardless of how many
@@ -14,14 +21,24 @@
 
 import { type OcClient, type OcMemory } from "./oc-client.js";
 import { requireCurrentStoryId } from "./config.js";
+import {
+  assertNarratorProfile,
+  NARRATOR_PROFILE_PATTERN,
+  narratorTag,
+} from "./application/narrator-policy.js";
+
+// Re-exported so the tools and tests that reach the marker through this
+// module get the label policy from the same place.
+export { assertNarratorProfile, NARRATOR_PROFILE_PATTERN, narratorTag };
 
 export const STORY_MARKER_TAGS = ["mnemosyne", "story-marker"];
 const STORY_MARKER_QUERY = "Mnemosyne Story";
-const STORY_MARKER_SCHEMA = 3;
+const STORY_MARKER_SCHEMA = 4;
 const MAX_STORIES_PER_LIST = 1000;
 const KINDROID_TARGET_PREFIX = "Kindroid-Target: ";
 // Schema 2, read-only compat: a bare kin line always meant an AI target.
 const LEGACY_KINDROID_KIN_PREFIX = "Kindroid-Kin: ";
+const NARRATOR_PROFILE_PREFIX = "Narrator-Profile: ";
 
 export type KindroidTargetType = "ai" | "group";
 
@@ -39,12 +56,18 @@ export interface MnemoStory {
   /** This story's dedicated Kindroid target (a single AI or a group chat),
    * if bound. See setKindroidTarget(). */
   kindroid_target?: KindroidTarget;
+  /** The narrator persona label this story is written with, if set. See
+   * setNarratorProfile(). */
+  narrator_profile?: string;
 }
 
-function buildMarkerContent(
+/** Exported for the pure marker tests; production callers go through
+ * createStory / setKindroidTarget / setNarratorProfile. */
+export function buildMarkerContent(
   name: string,
   createdAt: string,
   kindroidTarget?: KindroidTarget,
+  narratorProfile?: string,
 ): string {
   const lines = [
     `[Mnemosyne Story] ${name}`,
@@ -55,6 +78,9 @@ function buildMarkerContent(
     lines.push(
       `${KINDROID_TARGET_PREFIX}${kindroidTarget.type}:${kindroidTarget.id}`,
     );
+  }
+  if (narratorProfile) {
+    lines.push(`${NARRATOR_PROFILE_PREFIX}${narratorProfile}`);
   }
   return lines.join("\n");
 }
@@ -68,10 +94,20 @@ function parseKindroidTargetValue(value: string): KindroidTarget | undefined {
   return undefined;
 }
 
-function parseMarker(
-  memory: OcMemory,
-): { name: string; created: string; kindroidTarget?: KindroidTarget } | null {
-  const lines = memory.content.split("\n");
+export interface ParsedMarker {
+  name: string;
+  created: string;
+  kindroidTarget?: KindroidTarget;
+  narratorProfile?: string;
+}
+
+function parseMarker(memory: OcMemory): ParsedMarker | null {
+  return parseMarkerContent(memory.content);
+}
+
+/** Exported for the pure marker tests. */
+export function parseMarkerContent(content: string): ParsedMarker | null {
+  const lines = content.split("\n");
   const nameMatch = lines[0]?.match(/^\[Mnemosyne Story\] (.+)$/);
   const createdMatch = lines[1]?.match(/^Created: (\S+)$/);
   if (!nameMatch?.[1] || !createdMatch?.[1]) return null;
@@ -93,10 +129,24 @@ function parseMarker(
     if (legacyId) kindroidTarget = { type: "ai", id: legacyId };
   }
 
+  const narratorLine = lines.find((line) =>
+    line.startsWith(NARRATOR_PROFILE_PREFIX),
+  );
+  const narratorRaw = narratorLine
+    ?.slice(NARRATOR_PROFILE_PREFIX.length)
+    .trim();
+  // A malformed label in a hand-edited marker is ignored rather than fatal:
+  // the story must still resolve.
+  const narratorProfile =
+    narratorRaw && NARRATOR_PROFILE_PATTERN.test(narratorRaw)
+      ? narratorRaw
+      : undefined;
+
   return {
     name: nameMatch[1],
     created: createdMatch[1],
     ...(kindroidTarget && { kindroidTarget }),
+    ...(narratorProfile && { narratorProfile }),
   };
 }
 
@@ -109,6 +159,9 @@ function markerToStory(marker: OcMemory): MnemoStory | null {
     created_at: parsed.created,
     marker_memory_id: marker.id,
     ...(parsed.kindroidTarget && { kindroid_target: parsed.kindroidTarget }),
+    ...(parsed.narratorProfile && {
+      narrator_profile: parsed.narratorProfile,
+    }),
   };
 }
 
@@ -205,11 +258,18 @@ export async function createStory(
   oc: OcClient,
   name: string,
   kindroidTarget?: KindroidTarget,
+  narratorProfile?: string,
 ): Promise<MnemoStory> {
+  if (narratorProfile !== undefined) assertNarratorProfile(narratorProfile);
   const project = await oc.projectCreate(name);
   const createdAt = new Date().toISOString();
   const marker = await oc.memorySave({
-    content: buildMarkerContent(name, createdAt, kindroidTarget),
+    content: buildMarkerContent(
+      name,
+      createdAt,
+      kindroidTarget,
+      narratorProfile,
+    ),
     projectId: project.id,
     tags: STORY_MARKER_TAGS,
     pinned: true,
@@ -220,6 +280,7 @@ export async function createStory(
     created_at: createdAt,
     marker_memory_id: marker.id,
     ...(kindroidTarget && { kindroid_target: kindroidTarget }),
+    ...(narratorProfile && { narrator_profile: narratorProfile }),
   };
 }
 
@@ -240,7 +301,31 @@ export async function setKindroidTarget(
     story.name,
     story.created_at,
     kindroidTarget,
+    story.narrator_profile,
   );
   await oc.memoryUpdate({ memoryId: story.marker_memory_id, content });
   return { ...story, kindroid_target: kindroidTarget };
+}
+
+/**
+ * Names (or clears, when label is undefined) the narrator persona this story
+ * is written with, rewriting the marker in place the same way
+ * setKindroidTarget does; the Kindroid target is preserved verbatim.
+ */
+export async function setNarratorProfile(
+  oc: OcClient,
+  story: MnemoStory,
+  label: string | undefined,
+): Promise<MnemoStory> {
+  if (label !== undefined) assertNarratorProfile(label);
+  const content = buildMarkerContent(
+    story.name,
+    story.created_at,
+    story.kindroid_target,
+    label,
+  );
+  await oc.memoryUpdate({ memoryId: story.marker_memory_id, content });
+  const { narrator_profile: _dropped, ...rest } = story;
+  void _dropped;
+  return label === undefined ? rest : { ...rest, narrator_profile: label };
 }

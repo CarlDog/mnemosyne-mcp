@@ -504,8 +504,10 @@ Key architectural decisions (see ARCHITECTURE.md for full reasoning):
   bind its own dedicated Kindroid target — a single AI, or a group chat —
   via `mnemo_story_use`'s `kindroid_kin` / `kindroid_group_id` params
   (mutually exclusive; `null` clears), stored as `KindroidTarget {type: "ai"
-  | "group", id}` on the story's marker memory (`stories.ts`, schema 3 —
-  schema-1 markers with no kin line and schema-2 markers with the legacy
+  | "group", id}` on the story's marker memory (`stories.ts`, schema 4 since
+  2026-09-03, which added the optional `Narrator-Profile:` label line;
+  schema-3 markers without it, schema-1 markers with no kin line and
+  schema-2 markers with the legacy
   bare `Kindroid-Kin:` line, always an AI target, both still parse fine).
   This follows the existing "OC is canonical for story state" rule rather
   than mnemosyne's local `config.json`, since a target id is portable story

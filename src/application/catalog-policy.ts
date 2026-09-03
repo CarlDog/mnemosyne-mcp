@@ -17,6 +17,9 @@ export function toStorySummary(story: MnemoStory): StorySummary {
     ...(story.kindroid_target?.type === "group" && {
       kindroid_group_id: story.kindroid_target.id,
     }),
+    ...(story.narrator_profile && {
+      narrator_profile: story.narrator_profile,
+    }),
   };
 }
 

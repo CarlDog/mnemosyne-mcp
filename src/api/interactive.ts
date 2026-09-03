@@ -157,6 +157,7 @@ export function registerInteractiveRoutes(
           // findStory already ran for the 404 check above -- hand its
           // binding over so continueScene doesn't re-fetch the marker.
           storyKindroidTarget: story.kindroid_target,
+          storyNarratorProfile: story.narrator_profile,
           storyKindroidTargetPrefetched: true,
           groupMaxTurns: body.group_max_turns,
           allowUser: body.allow_user,
