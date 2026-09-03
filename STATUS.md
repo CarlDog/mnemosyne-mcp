@@ -356,6 +356,17 @@ Corvane Dry Dock reconciled with Cinderwick's disused aerostat platform.
 75 merged, writes=0, active canon unchanged. Nothing promoted, nothing
 imported.
 
+Later the same day, a survey of highly regarded fiction-craft guidance
+(Gardner's psychic distance, Palahniuk's thought verbs, Almond and Benedict on
+sex scenes, Le Guin's crowding and leaping, King's two revision rules,
+Vonnegut's wants) was folded into the pipeline: `docs/PROSE_PIPELINE.md` gains
+a "Craft appendix: adopted guidance" that every story's `PROSE_RULES.md`
+inherits; `scripts/prose-lint.mjs` gains a thought-verb budget warning (never
+an error) with a test; the Adjustment Protocol brief template gains a
+per-person wants line and a distance line. Two user-level agents were also
+created for the loop (`novelist` drafts and revises; `prose-critic` reviews
+with quote-per-finding), outside the repo.
+
 **Promotion tool built (2026-09-02).** `scripts/promote-overlay.mjs` is now
 the one path from `drafts/` into `canon/`, closing the last migration open
 item. Design as adopted: the full verifier is the gate (spawned, bounded); a

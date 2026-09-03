@@ -52,6 +52,22 @@ const DEFAULTS = {
   simileBudget: 3,
   // Words the narrator may not use to name the engines (rule 7).
   engineNaming: ["the horror of it", "the heat of it", "the mystery of it"],
+  // Thought verbs (Palahniuk): narration telling the reader what to conclude
+  // instead of showing the fact that would let them conclude it. A warning,
+  // never an error: a deliberate "she had decided" is a choice, not a fault.
+  thoughtVerbs: [
+    "knew",
+    "realised",
+    "realized",
+    "understood",
+    "believed",
+    "remembered",
+    "wanted",
+    "felt that",
+    "felt like",
+    "wondered",
+  ],
+  thoughtVerbBudget: 6,
 };
 
 function parseArgs(argv) {
@@ -194,6 +210,16 @@ export function lint(chapterText, brief = {}, config = {}) {
       "18 simile budget",
       `${simileHits.length} simile constructions (budget ${rules.simileBudget})`,
       simileHits,
+    );
+  }
+
+  const thoughtHits = rules.thoughtVerbs.flatMap((v) => findWord(body, v));
+  if (thoughtHits.length > rules.thoughtVerbBudget) {
+    add(
+      "warning",
+      "thought verbs",
+      `${thoughtHits.length} thought verbs (budget ${rules.thoughtVerbBudget}); unpack into the physical fact or keep on purpose`,
+      thoughtHits,
     );
   }
 

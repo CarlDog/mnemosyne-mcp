@@ -257,8 +257,8 @@ assessments listed under "Layout" below.
 - `scripts/prose-lint.mjs <chapter.md> [--brief <brief.md>]` — mechanical
   checks for a prose chapter against its brief (`docs/PROSE_PIPELINE.md`):
   prolepsis phrases, outline vocabulary, banned refrains, terms the chapter's
-  head cannot know, a house chapter opening on a pronoun, the simile budget.
-  Errors fail; warnings are for the reviewer. Story rules and briefs live under
+  head cannot know, a house chapter opening on a pronoun, the simile budget,
+  the thought-verb budget. Errors fail; warnings are for the reviewer. Story rules and briefs live under
   the story's `drafts/_control/` (`PROSE_RULES.md`, `briefs/`).
 - `scripts/draft-notice.mjs` — the one implementation of the draft-banner
   strip rule, imported by both the verifier and the promotion tool so staged
