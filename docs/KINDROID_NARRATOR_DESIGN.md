@@ -127,6 +127,10 @@ and group targets before any mutation; the break runs first and the greeting
 is then saved as a scene tagged `session-break` plus the narrator label, with
 a failed save reported as recoverable. `KindroidClient.chatBreak` pins
 `wipe_cascaded` off and keeps the no-retry timeout rule.
+Live-verified the same evening against the test kin through a local
+Mnemosyne and kindroid-mcp: the break applied in under two seconds, the
+greeting landed as a `session-break`-tagged scene, and the next beat continued
+from it with the narrator label echoed and tagged.
 
 A new tool, not a parameter on `mnemo_continue`: `mnemo_session_break(story?,
 greeting)` that calls `kindroid_chat_break` with `wipe_cascaded: false` fixed,
