@@ -41,11 +41,20 @@ function parseFlattened(entries: string[]): ParsedEntry[] {
   });
 }
 
-// Word-boundary match, not a bare substring -- avoids e.g. a location named
+// Word-boundary match, not a bare substring -- avoids e.g. a character named
 // "Aria" false-matching inside an unrelated word like "Arial". Still a
 // simple keyphrase match, same class of imprecision Kindroid's own Journal
 // feature has (per its UI copy: "when a keyphrase comes up... the entry
 // will be recalled") -- not trying to out-engineer the feature it mirrors.
+//
+// Since 2026-09-03 (docs/KINDROID_NARRATOR_DESIGN.md S1, operator-ratified)
+// a multi-word name also matches on any DISTINCTIVE token of itself: a
+// direction that says "Ilse" folds in "Ilse Varga", because that is how
+// directions are actually written. Distinctive = at least
+// MIN_DISTINCTIVE_TOKEN letters and not a stopword, so "The Storyteller"
+// never matches on "the". Observed before the change: the full-name rule
+// silently dropped both named characters from a beat, and the kin invented
+// canon to fill the gap.
 //
 // Lookaround, not \b: \b only fires at a transition between a word char and
 // a non-word char, so it silently fails to match when the NAME's own edge
@@ -58,11 +67,84 @@ function parseFlattened(entries: string[]): ParsedEntry[] {
 export function nameMentioned(message: string, name: string): boolean {
   const trimmed = name.trim();
   if (!trimmed) return false;
-  const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (wholeWordMatch(message, trimmed)) return true;
+  return distinctiveTokens(trimmed).some((t) => wholeWordMatch(message, t));
+}
+
+function wholeWordMatch(message: string, phrase: string): boolean {
+  const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(`(?<![A-Za-z0-9_])${escaped}(?![A-Za-z0-9_])`, "i").test(
     message,
   );
 }
+
+/** Shortest token of a name that may stand for the whole name. Four keeps
+ * "Ilse", "Bram", "Prof" and drops "Jr", "St", "Li"; a shorter cutoff
+ * would start matching ordinary words. Tunable, not a contract. */
+export const MIN_DISTINCTIVE_TOKEN = 4;
+
+// Particles and articles that appear inside names and inside every
+// direction. Lower-cased; matched case-insensitively.
+const NAME_STOPWORDS = new Set([
+  "the",
+  "and",
+  "of",
+  "from",
+  "with",
+  "for",
+  "von",
+  "van",
+  "der",
+  "den",
+  "del",
+  "della",
+  "di",
+  "da",
+  "de",
+  "la",
+  "le",
+  "les",
+  "los",
+  "las",
+  "el",
+  "al",
+  "bin",
+  "ibn",
+  "saint",
+  "lady",
+  "lord",
+  "sir",
+  "miss",
+  "mrs",
+  "mister",
+]);
+
+/** The tokens of a multi-word name that may stand for it on their own.
+ * Single-word names yield nothing extra (the whole-name check already
+ * covered them). Exported for the tests that pin the rule. */
+export function distinctiveTokens(name: string): string[] {
+  const tokens = name
+    .split(/[\s\u2013\u2014-]+/)
+    .map((t) => t.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ""))
+    .filter(
+      (t) =>
+        t.length >= MIN_DISTINCTIVE_TOKEN &&
+        !NAME_STOPWORDS.has(t.toLowerCase()),
+    );
+  return tokens.length > 1 || (tokens.length === 1 && tokens[0] !== name.trim())
+    ? tokens
+    : [];
+}
+
+/** Entity types the companion message carries unconditionally: recent
+ * scenes for continuity (always were), and locations for the setting the
+ * kin cannot otherwise know (since 2026-09-03, S1). Both are already capped
+ * upstream by gatherContext's per-type limits. Reference types not listed
+ * here stay keyphrase-gated. */
+export const ALWAYS_INCLUDED_TYPES: ReadonlySet<string> = new Set([
+  "scene",
+  "location",
+]);
 
 /** The memory ids the companion message ACTUALLY folds in: keyphrase-
  * matched reference entities plus the always-included scenes. One
@@ -85,7 +167,7 @@ export function selectCompanionMemoryIds(
   return entries
     .filter(
       (e) =>
-        e.entity_type === "scene" ||
+        ALWAYS_INCLUDED_TYPES.has(e.entity_type) ||
         (referenceTypes.has(e.entity_type) &&
           nameMentioned(userMessage, e.name)),
     )
@@ -111,13 +193,13 @@ export interface CompanionMessageOptions {
  * Builds the message actually sent to a companion-chat service: an
  * unconditional provenance header (this is an automated note, not the
  * operator typing), then a story-context block when the direction
- * name-mentions a character/location/lore/worldbuilding entity or when
- * there are recent scenes, then the raw direction, then optionally a group
- * note (see CompanionMessageOptions). Recent scenes are always included
- * (already relevance-filtered by gatherContext, capped at 5) -- reference
- * entities are keyphrase-gated so an unrelated direction doesn't drag in
- * the whole cast list every call. Pure function (no I/O) so it's
- * unit-testable without a live client.
+ * name-mentions a character/lore/worldbuilding entity, when the story has
+ * locations, or when there are recent scenes, then the raw direction, then
+ * optionally a group note (see CompanionMessageOptions). Recent scenes and
+ * locations are always included (both capped upstream by gatherContext) --
+ * the remaining reference entities are keyphrase-gated so an unrelated
+ * direction doesn't drag in the whole cast list every call. Pure function
+ * (no I/O) so it's unit-testable without a live client.
  */
 export function buildCompanionMessage(
   userMessage: string,
@@ -125,10 +207,13 @@ export function buildCompanionMessage(
   opts?: CompanionMessageOptions,
   userName: string = DEFAULT_USER_NAME,
 ): string {
+  // Locations ride along unconditionally (ALWAYS_INCLUDED_TYPES); the other
+  // reference types are keyphrase-gated. The bundle keys are plural.
   const matched = context
     ? REFERENCE_TYPES.flatMap((key) =>
-        parseFlattened(context[key]).filter((entry) =>
-          nameMentioned(userMessage, entry.name),
+        parseFlattened(context[key]).filter(
+          (entry) =>
+            key === "locations" || nameMentioned(userMessage, entry.name),
         ),
       )
     : [];

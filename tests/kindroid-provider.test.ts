@@ -25,6 +25,11 @@ import {
   resolveKindroidTarget,
   formatGroupReplies,
 } from "../src/kindroid-provider.js";
+import {
+  distinctiveTokens,
+  MIN_DISTINCTIVE_TOKEN,
+  selectCompanionMemoryIds,
+} from "../src/companion-message.js";
 import type { ContextBundle } from "../src/prompt.js";
 import type { KindroidTarget } from "../src/stories.js";
 
@@ -87,7 +92,7 @@ describe("buildKindroidMessage (pure)", () => {
   it("uses word boundaries, not bare substring matching", () => {
     const context: ContextBundle = {
       ...EMPTY_CONTEXT,
-      locations: ["Aria\nA small moon colony."],
+      characters: ["Aria\nA small moon colony's cartographer."],
     };
     // "Arial" contains "Aria" as a substring but is not a mention of it.
     const result = buildKindroidMessage("set the font to Arial", context);
@@ -128,6 +133,104 @@ describe("buildKindroidMessage (pure)", () => {
     expect(ariaIdx).toBeLessThan(tavernIdx);
     expect(tavernIdx).toBeLessThan(sunderingIdx);
     expect(sunderingIdx).toBeLessThan(magicIdx);
+  });
+
+  it("matches a distinctive word of a multi-word name (S1, 2026-09-03)", () => {
+    const context: ContextBundle = {
+      ...EMPTY_CONTEXT,
+      characters: ["Ilse Varga\nExpedition medic."],
+    };
+    expect(
+      buildKindroidMessage("Ilse crouches at the hatch", context),
+    ).toContain("Ilse Varga: Expedition medic.");
+    expect(buildKindroidMessage("Varga waits", context)).toContain(
+      "Ilse Varga: Expedition medic.",
+    );
+  });
+
+  it("does not match on a stopword or a short token of a name", () => {
+    const context: ContextBundle = {
+      ...EMPTY_CONTEXT,
+      characters: [
+        "The Storyteller\nA narrator.",
+        "Bo Li\nA courier.",
+        "Prof. Whitfield Jr.\nA retired linguist.",
+      ],
+    };
+    // "the" is a stopword; "Bo" and "Li" are under the cutoff; "Jr" too.
+    expect(buildKindroidMessage("the lamp went out; Jr. left", context)).toBe(
+      `${HEADER}\n\nthe lamp went out; Jr. left`,
+    );
+    // "Whitfield" alone is enough.
+    expect(buildKindroidMessage("Whitfield coughs", context)).toContain(
+      "Prof. Whitfield Jr.: A retired linguist.",
+    );
+    expect(distinctiveTokens("Prof. Whitfield Jr.")).toEqual([
+      "Prof",
+      "Whitfield",
+    ]);
+    expect(distinctiveTokens("Aria")).toEqual([]);
+    expect(MIN_DISTINCTIVE_TOKEN).toBe(4);
+  });
+
+  it("always includes locations, unconditionally (S1, 2026-09-03)", () => {
+    const context: ContextBundle = {
+      ...EMPTY_CONTEXT,
+      locations: ["Halvard weather station\nAbandoned arctic station."],
+    };
+    const result = buildKindroidMessage("Ilse crouches at the hatch", context);
+    expect(result).toContain(
+      "Halvard weather station: Abandoned arctic station.",
+    );
+  });
+
+  it("selectCompanionMemoryIds mirrors the builder: partial names and locations", () => {
+    const context: ContextBundle = {
+      ...EMPTY_CONTEXT,
+      characters: ["Ilse Varga\nExpedition medic.", "Bram\nCaretaker."],
+      locations: ["Halvard weather station\nAbandoned arctic station."],
+      entries: [
+        {
+          memory_id: "m-ilse",
+          entity_type: "character",
+          name: "Ilse Varga",
+          tags: [],
+          pinned: false,
+          created_at: "2026-09-03T00:00:00.000Z",
+          chars: 1,
+          est_tokens: 1,
+          admission: "included",
+          reason: "",
+        },
+        {
+          memory_id: "m-bram",
+          entity_type: "character",
+          name: "Bram",
+          tags: [],
+          pinned: false,
+          created_at: "2026-09-03T00:00:00.000Z",
+          chars: 1,
+          est_tokens: 1,
+          admission: "included",
+          reason: "",
+        },
+        {
+          memory_id: "m-station",
+          entity_type: "location",
+          name: "Halvard weather station",
+          tags: [],
+          pinned: false,
+          created_at: "2026-09-03T00:00:00.000Z",
+          chars: 1,
+          est_tokens: 1,
+          admission: "included",
+          reason: "",
+        },
+      ],
+    };
+    expect(
+      selectCompanionMemoryIds("Ilse crouches at the hatch", context),
+    ).toEqual(["m-ilse", "m-station"]);
   });
 
   it("always includes recent scenes, unconditionally (not keyphrase-gated)", () => {

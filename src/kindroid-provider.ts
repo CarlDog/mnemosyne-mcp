@@ -13,7 +13,8 @@
 // equivalent feature for that (keyphrase-triggered "Journal" entries) isn't
 // exposed by the public API at all. So this provider does the same thing
 // Kindroid's Journal would: scan the direction for an entity NAME mention
-// and fold in only the matching entries, plus the already-relevance-filtered
+// (any distinctive word of a multi-word name counts) and fold in only the
+// matching entries, plus every location and the already-relevance-filtered
 // recent scenes -- never the full assembled context (that's still a poor
 // fit for a chat companion, and most of it would go unused per call
 // anyway). Applies identically to both target types -- what changes per

@@ -182,8 +182,8 @@ assessments listed under "Layout" below.
   shared companion-message builder that adds the group @-mention nudge.
 - `src/companion-message.ts` — the shared keyphrase-gated context
   builder both companion-chat providers (Kindroid, Botify) fold story
-  entities through. Extracted so the word-boundary matching and
-  scene-inclusion rules can't drift between consumers.
+  entities through. Extracted so the word-boundary matching and the
+  scene/location-inclusion rules can't drift between consumers.
 - `src/botify-client.ts` / `src/botify-provider.ts` — Botify generator
   (MCP client to botify-mcp, same shape as the Kindroid pair; target is
   a chat UUID via `BOTIFY_STORYTELLING_CHAT`).
@@ -483,9 +483,11 @@ Key architectural decisions (see ARCHITECTURE.md for full reasoning):
   prompt.** `KindroidProvider.generate()` ignores `systemPrompt`/
   `temperature`/`maxTokens` (no Kindroid equivalent) but does NOT ignore
   `context` — `buildKindroidMessage()` scans the direction for a
-  character/location/lore/worldbuilding entity NAME mention and folds in
-  only the matching entries, plus the already-relevance-filtered recent
-  scenes (always included, never keyphrase-gated). This mirrors Kindroid's
+  character/lore/worldbuilding entity name (since 2026-09-03 any distinctive
+  word of a multi-word name counts, so "Ilse" folds in "Ilse Varga") and
+  folds in only the matching entries, plus every location and the
+  already-relevance-filtered recent scenes (both always included, never
+  keyphrase-gated; `docs/KINDROID_NARRATOR_DESIGN.md` S1). This mirrors Kindroid's
   own "Journal" feature (keyphrase-triggered lorebook entries), which isn't
   exposed by the public API — so mnemosyne reimplements the same mechanic
   client-side, populated from the story's existing OC entities (no new

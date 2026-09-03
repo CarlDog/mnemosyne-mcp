@@ -8,7 +8,7 @@
 // temperature / maxTokens / model have no Botify equivalent and are
 // ignored -- exactly the Kindroid trade-off, documented there. What is
 // NOT ignored is `context`: the shared companion-message builder folds
-// keyphrase-matched story entities plus recent scenes into the message
+// keyphrase-matched story entities plus locations and recent scenes into the message
 // text (the only channel Botify has), so story-specific facts the bot's
 // own persona can't know still reach it. kindroidTarget is ignored too --
 // it's Kindroid-specific by definition; Botify's target is the configured

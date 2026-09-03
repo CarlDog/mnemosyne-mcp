@@ -8,6 +8,10 @@ adversarial review record, and the smoke tests, lives at
 `kindroid-mcp/docs/narrator-kin-design.md`. That file stays the record of what
 kindroid-mcp will and will not own; this one holds what would change here.
 
+**Ratified 2026-09-03:** the operator accepted every recommendation in §5.
+S1 shipped the same day; S2 through S5 remain unscheduled; S4 stays blocked
+on the share check in decision 12.
+
 ## 1. The shape, in one paragraph
 
 A reusable narrator is a **Kindroid identity**, not a code path: a dedicated
@@ -71,6 +75,13 @@ None of these is scheduled. Each is independently testable without a live kin
 except where noted.
 
 ### S1. Context selector: match names the way directions write them
+
+**Shipped 2026-09-03.** `nameMentioned` matches the whole name or any
+distinctive token of it (four or more letters, not a stopword;
+`MIN_DISTINCTIVE_TOKEN` and the stopword list live in
+[companion-message.ts](../src/companion-message.ts)); locations join scenes
+in `ALWAYS_INCLUDED_TYPES`, and the selector that feeds
+`context_plan.companion_selection` shares both rules with the builder.
 
 Two changes to `selectCompanionMemoryIds` and the builder that share its
 matching, keeping one implementation:
