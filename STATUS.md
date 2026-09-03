@@ -40,14 +40,29 @@ is not a mature-content narrator on either path. S5 shipped the same evening:
 `docs/NARRATOR_EVAL.md` and `scripts/narrator-eval/` (synthetic Halvard
 corpus with twelve cases across the six rubric rows, deterministic checks
 shared with the unit tests, validator scoring by row, a constant-baseline
-gate; beats and reports under gitignored `data/`). First run the same evening
-against the Storyteller test kin: ten of twelve deterministic verdicts and
-the gate cleared; the two misses were real on a human read (the POV case,
-where the kin narrated Bram's interior; the argument case, six paragraphs).
-The local `llama3.1:8b-instruct-q4_K_M` validator raised a third-person-limited
-error on the one-line constant baseline twelve of twelve times, so the scorer
-now prints a validator noise floor and decides the gate on the deterministic
-verdicts alone. Decision 11 was re-ruled
+gate; beats and reports under gitignored `data/`). It was then adversarially
+reviewed by a six-dimension multi-agent pass with per-finding refutation,
+which confirmed fourteen findings and reproduced the important one: a
+plausible, well-shaped constant beat that answers none of the twelve
+directions clears the baseline gate and outscores the real run, so the gate
+detects degenerate output rather than a bad narrator. The corrections shipped
+(corpus version 2) are the ones that make a verdict independent of an
+artifact: ASCII punctuation normalisation, since the first run's beats mixed
+apostrophe glyphs inside one paragraph and the voice row's only catch turned
+on that; whole-beat regex anchoring; run-integrity guards that withhold the
+gate verdict and exit non-zero on a missing, errored or empty beat or a
+failed validator call; run provenance in the beats envelope plus an explicit
+`--kin` target that is echoed before the first write; the row rename from
+agency to decisiveness, since the design's "Player agency" row asks the
+opposite; demotion of `canon-limp` and `voice-pov` to advisory, as neither
+has a trustworthy mechanical signal; and the three surviving test mutants.
+No row number from the first run is quotable, and the six reviewed changes
+that would alter what the instrument measures are recorded in
+`docs/NARRATOR_EVAL.md` under "Reported, not built" for an operator
+decision. What survives a human read of the beats: one real output-contract
+failure (six paragraphs) and one advisory shape slip; the kin held the house
+shape elsewhere and absorbed both injected instructions without obeying
+either. Decision 11 was re-ruled
 as proposed: a share target for any rating with the filter set from the
 story's content rating. S4 remains unscheduled.
 
