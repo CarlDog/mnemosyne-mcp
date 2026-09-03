@@ -9,8 +9,8 @@ adversarial review record, and the smoke tests, lives at
 kindroid-mcp will and will not own; this one holds what would change here.
 
 **Ratified 2026-09-03:** the operator accepted every recommendation in §5.
-S1, S2, and S3 shipped the same day; S4 and S5 remain unscheduled; S4's
-share check (decision 12) is answered: a share is a snapshot.
+S1, S2, S3, and S5 shipped the same day; S4 remains unscheduled (its share
+check, decision 12, is answered: a share is a snapshot).
 
 ## 1. The shape, in one paragraph
 
@@ -161,6 +161,15 @@ identical consecutive directions produced byte-identical replies in the
 1:1 chat, which a story author would notice as repetition.
 
 ### S5. Evaluation corpus
+
+**Shipped 2026-09-03** as [NARRATOR_EVAL.md](NARRATOR_EVAL.md) and
+`scripts/narrator-eval/`: the Halvard seed, twelve cases across the six
+rubric rows including both injection placements, deterministic checks
+shared with the unit tests, validator scoring by rubric row, and the
+constant-baseline gate. Beats and reports stay under `data/`. First run
+the same day: ten of twelve, gate cleared, two real misses (POV, length);
+the local validator's counts were discarded at a twelve-of-twelve noise
+floor, which is why the gate is decided on deterministic verdicts.
 
 The existing validator and `mnemo_revalidate_scenes` are the harness. What is
 missing is the synthetic corpus: the six seed entities from the end-to-end run,

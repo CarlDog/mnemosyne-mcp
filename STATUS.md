@@ -36,8 +36,20 @@ persona, while generation through the share is gated only by
 softened it), so decision 11 is proposed for re-ruling as "filter from the
 story's content rating" rather than "no shares for mature stories". The
 test kin's own 1:1 chat softened the same request, so the kin as configured
-is not a mature-content narrator on either path. S4 and S5 remain
-unscheduled.
+is not a mature-content narrator on either path. S5 shipped the same evening:
+`docs/NARRATOR_EVAL.md` and `scripts/narrator-eval/` (synthetic Halvard
+corpus with twelve cases across the six rubric rows, deterministic checks
+shared with the unit tests, validator scoring by row, a constant-baseline
+gate; beats and reports under gitignored `data/`). First run the same evening
+against the Storyteller test kin: ten of twelve deterministic verdicts and
+the gate cleared; the two misses were real on a human read (the POV case,
+where the kin narrated Bram's interior; the argument case, six paragraphs).
+The local `llama3.1:8b-instruct-q4_K_M` validator raised a third-person-limited
+error on the one-line constant baseline twelve of twelve times, so the scorer
+now prints a validator noise floor and decides the gate on the deterministic
+verdicts alone. Decision 11 was re-ruled
+as proposed: a share target for any rating with the filter set from the
+story's content rating. S4 remains unscheduled.
 
 **Kindroid sends are now retry-safe (2026-09-03).** `KindroidClient.sendMessage`
 passes a fresh `idempotency_token` on every `kindroid_send_message` call and,

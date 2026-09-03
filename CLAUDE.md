@@ -285,6 +285,14 @@ assessments listed under "Layout" below.
   resolve (the data architecture standard's one-image-one-place rule).
 - `scripts/intake.py` — the only writer of `data/archive/` (index, ingest,
   verify per source family; snapshot and diff for migration proofs).
+- `scripts/narrator-eval/` — the narrator evaluation (`docs/NARRATOR_EVAL.md`,
+  narrator design S5): `corpus.json` (synthetic Halvard seed, twelve cases
+  across the six rubric rows, a constant baseline), `checks.mjs` (pure,
+  deterministic checks shared with the unit tests), `score.mjs` (checks +
+  Ollama validator + baseline gate; report under gitignored `data/`), and
+  `generate-kindroid.mjs` (runs the corpus through a kin over mnemosyne's own
+  client and message builder). Numbers are not verdicts; a person reads the
+  beats.
 - `scripts/scene-extraction/` — `extract_scenes.py`, the shared engine that
   cuts a story's Botify chat exports into per-scene draft files (overlay
   `add`s with the draft banner) plus their `_control/scenes/` docs, driven by
@@ -335,6 +343,9 @@ assessments listed under "Layout" below.
   bounded, evidence-only Atlas Cloud route evaluation; the accompanying
   `scripts/atlas-capability-benchmark.mjs` never automates explicit-content
   generation or stores raw generated output.
+- `docs/NARRATOR_EVAL.md` — the narrator evaluation protocol (S5): what the
+  corpus measures, the constant-baseline rule, how to generate and score, and
+  why no number is a verdict until the beats are read.
 - `docs/PROSE_PIPELINE.md` — the story-agnostic loop for writing and reviewing
   a chapter of prose (brief, draft, lint, two adversarial review rounds, line
   pass, stop), written after the Adjustment Protocol sample chapters.
