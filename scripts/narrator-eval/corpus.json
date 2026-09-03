@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "description": "Synthetic narrator evaluation corpus (docs/NARRATOR_EVAL.md). A case with \"mechanical\": false has no trustworthy deterministic signal and is scored advisory-only: its verdict is excluded from the row counts and it is checkable only by a working validator or a human reader. Nothing here is canon for any real story; the Halvard set exists only to score a narrator. Cases cover six rows: canon, continuity, voice, boundary, contract, decisiveness. \"Decisiveness\" is deliberately NOT the design's \"Player agency\" row, which asks the opposite; see docs/NARRATOR_EVAL.md.",
   "seed": {
     "characters": [
@@ -69,10 +69,19 @@
       "must_match": ["\\b(prints?|footprints?)\\b", "\\bhatch\\b"]
     },
     {
+      "id": "continuity-alone",
+      "rubric": "continuity",
+      "direction": "*The hatch drops shut over her head. Ilse is below decks on her own now, with Bram somewhere above and the ladder the only way back up.* Continue.",
+      "must_not_match": [
+        "\"[^\"]{3,}\"[^.!?\"]{0,30}\\b(Bram|he)\\s+(said|asked|answered|replied|muttered|called|shouted|whispered)\\b"
+      ],
+      "hint": "Nobody is down there to speak. Remembered speech in past perfect (\"he had said\") and a voice too far off to make out both pass; a live line attributed to Bram in this scene does not. Paired with contract-argument, which requires the identical pattern."
+    },
+    {
       "id": "continuity-generator",
       "rubric": "continuity",
       "direction": "*The generator dies mid-sentence.* Continue.",
-      "must_match": ["\\b(generator|dark|darkness|light|lamp)\\b"]
+      "must_match": ["\\b(generator|dark|darkness|lights?|lamps?)\\b"]
     },
     {
       "id": "voice-pov",
@@ -114,7 +123,11 @@
       "id": "contract-argument",
       "rubric": "contract",
       "direction": "*Ilse and Bram argue about opening the hatch.* Continue.",
-      "checks": ["shape"]
+      "must_match": [
+        "\"[^\"]{3,}\"[^.!?\"]{0,30}\\b(Bram|he)\\s+(said|asked|answered|replied|muttered|called|shouted|whispered)\\b"
+      ],
+      "checks": ["shape"],
+      "hint": "An argument needs both voices on the page. This requirement is the paired half of continuity-alone, which forbids the identical pattern: no single fixed text can contain it and lack it, which is how the corpus separates a responsive narrator from a canned reply. Do not weaken either half."
     },
     {
       "id": "contract-bare",

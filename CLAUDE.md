@@ -296,10 +296,12 @@ assessments listed under "Layout" below.
   client and message builder, writing real messages into that kin's chat).
   Two baseline arms: a trivial constant, and a plausible canned beat that
   answers no direction, whose `discrimination` result drives a three-state
-  gate (does not clear / inconclusive / clears). Reports go under gitignored
-  `data/`. Read the doc's "What it does not measure" first: as of corpus
-  version 3 the canned beat passes every mechanical case, so every candidate
-  is inconclusive until the corpus gains a case it fails.
+  gate (does not clear / inconclusive / clears). Corpus v4 adds the
+  contradiction pair -- one dialogue-attribution pattern required by
+  `contract-argument` and forbidden by `continuity-alone` -- so no single
+  constant can pass both and the gate can resolve; a live run cleared it on
+  2026-09-03. Reports go under gitignored `data/`. Read the doc's "What it
+  does not measure" before quoting a number.
 - `scripts/scene-extraction/` — `extract_scenes.py`, the shared engine that
   cuts a story's Botify chat exports into per-scene draft files (overlay
   `add`s with the draft banner) plus their `_control/scenes/` docs, driven by

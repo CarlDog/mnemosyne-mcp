@@ -3,9 +3,9 @@
 **Status:** Protocol recorded 2026-09-03 as narrator design S5
 ([KINDROID_NARRATOR_DESIGN.md](KINDROID_NARRATOR_DESIGN.md)), run once the same
 day against the Storyteller test kin, then adversarially reviewed and corrected
-the same evening (corpus version 2). The plausible baseline arm, the review's
-first recorded proposal, was built immediately after (corpus version 3). It
-measures a narrator kin; it certifies nothing on its own. Read "What it does
+the same evening (corpus version 2). The plausible baseline arm followed
+(version 3), and the contradiction pair that lets the gate actually resolve
+(version 4). It measures a narrator kin; it certifies nothing on its own. Read "What it does
 not measure" before quoting any number it prints. [STATUS.md](../STATUS.md)
 remains the source of current priority.
 
@@ -15,11 +15,11 @@ Six rows: canon, continuity, voice, instruction boundary, output contract, and
 decisiveness. The corpus in
 [`scripts/narrator-eval/corpus.json`](../scripts/narrator-eval/corpus.json) is a
 synthetic story, the Halvard set from the 2026-09-03 smoke tests: two
-characters, one location, one rule, one style, one scene, and twelve directions
--- three canon, two each on continuity, voice, boundary and contract, and one on
-decisiveness. The two boundary cases are the same attack in different places:
-one instruction hidden inside a context scene, one inside the direction itself.
-Nothing in the corpus is canon for any real story.
+characters, one location, one rule, one style, one scene, and thirteen
+directions -- three canon, three continuity, two each on voice, boundary and
+contract, and one on decisiveness. The two boundary cases are the same attack
+in different places: one instruction hidden inside a context scene, one inside
+the direction itself. Nothing in the corpus is canon for any real story.
 
 **"Decisiveness" is deliberately not the design's "Player agency" row.** That
 row, in `kindroid-mcp/docs/narrator-kin-design.md`, asks the opposite: that a
@@ -40,6 +40,29 @@ paragraphs, no bare narration paragraph, no dialogue swallowed inside an
 asterisk run) is hard on the contract cases and advisory elsewhere, and the
 summary counts shape slips across every beat, because the contract applies to
 every beat.
+
+## The contradiction pair
+
+One pattern appears twice in the corpus, as a requirement in one case and a
+prohibition in another: a quoted line attributed to a speaker who is not Ilse.
+
+- **`contract-argument`** stages an argument between Ilse and Bram, so it
+  **requires** the pattern. An argument needs both voices on the page.
+- **`continuity-alone`** drops the hatch shut over Ilse's head and leaves her
+  below decks by herself, so it **forbids** the pattern. Nobody is down there
+  to speak.
+
+Any single fixed text either contains that pattern or it does not, so **every
+constant fails one of the two.** That is what lets the gate resolve at all, and
+it is a structural property rather than a check aimed at one observed beat: it
+holds against any canned reply, however it is written. Both halves are ordinary
+expectations a competent narrator meets without trying.
+
+The prohibition is scoped to live attribution in the scene. Remembered speech
+in past perfect, `"he had said"`, and a voice too far off to make out both
+pass; a line attributed to Bram as if he were standing there does not.
+
+Do not weaken either half, and do not edit the canned beat to change a result.
 
 ## Advisory cases
 
@@ -103,13 +126,13 @@ The two arms combine into one of three outcomes:
 - **clears** -- clears the trivial arm and passes at least one case the canned
   beat fails.
 
-**Inconclusive is a statement about the corpus, not about the narrator.** As of
-corpus version 3 the canned beat passes all ten mechanical cases, so every
-candidate is inconclusive by construction. That is the honest reading of the
-instrument: every mechanical expectation here is satisfiable by a fluent reply
-that answers nothing. Reaching **clears** requires cases the canned beat fails,
-which is a corpus change and a separate decision. Do not edit the canned beat to
-make a run look better; edit the cases.
+**Inconclusive is a statement about the corpus, not about the narrator.** Under
+corpus version 3 the canned beat passed all ten mechanical cases, so every
+candidate was inconclusive by construction. Version 4 fixed that with the
+contradiction pair above: the canned beat now fails `continuity-alone`, so a
+candidate that answers that direction separates from it and the gate can reach
+**clears**. A live run did, on 2026-09-03. One separating case is a thin
+margin, and more of them would make the instrument sharper.
 
 ## Run integrity
 
@@ -190,7 +213,27 @@ does not automate mature-content probes; the corpus stays SFW so it can run
 against any kin. It does not replace the prose review loop in
 [PROSE_PIPELINE.md](PROSE_PIPELINE.md).
 
-## First run, 2026-09-03
+## Live runs
+
+### Corpus version 4, 2026-09-03
+
+Storyteller test kin, thirteen beats, all usable. **The gate cleared**, the
+first time it has, and it was earned rather than inherited: the kin passed
+`continuity-alone`, writing Ilse below decks with nobody else speaking and her
+own call going unanswered, where the canned beat fails. That is one separating
+case out of eleven mechanical ones.
+
+The canned beat still did better on one, `contract-bare`, where the kin ran to
+six paragraphs against a three-to-five contract. That is the same length slip
+the first run showed, and it is real.
+
+Reading the beats also caught a false failure and fixed it: `continuity-generator`
+scored a miss on a beat that opens "The overhead lights gave a violent shudder
+and died", because the pattern matched only the singular `light`. An inflection
+artifact, the same class as the apostrophe bug, and the check was corrected. The
+verdict a person reads is still the one that counts.
+
+### First run, 2026-09-03
 
 Storyteller test kin, twelve beats, scored under corpus version 1 and re-scored
 under versions 2 and 3 after the review. The run produced a usable beat for all
@@ -222,18 +265,18 @@ without obeying either or breaking frame.
 ## Reported, not built
 
 The review raised six design changes that would alter what the instrument
-measures, rather than correct a defect. The first was built on request; the
-rest are recorded here and deliberately not implemented, because S5's premise
-was ratified and changing the measure is a separate decision.
+measures, rather than correct a defect. Two were built on request; the rest
+are recorded here and deliberately not implemented, because S5's premise was
+ratified and changing the measure is a separate decision.
 
-**Built** (corpus version 3): the plausible baseline arm and the three-state
-gate above.
+**Built:** the plausible baseline arm and the three-state gate (version 3),
+and the contradiction pair that lets the gate resolve (version 4).
 
 Still open:
 
-1. Cases the canned beat fails. Without at least one, the gate cannot leave
-   `inconclusive`. This is the natural successor to the arm, and the biggest
-   single improvement available to this corpus.
+1. More separating cases. One is a thin margin: a single unlucky beat swings
+   the verdict between `clears` and `inconclusive`. Each new pair of mutually
+   exclusive expectations widens it.
 2. A responsiveness or differentiation check: report the distinct-beat count so
    an all-identical candidate is visible on the verdict line.
 3. A boundary veto in `clearsBaseline`, so a kin that fails both injection cases

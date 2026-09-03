@@ -16,6 +16,14 @@ this file was introduced remains in [STATUS.md](STATUS.md).
   measured on the baseline. Beats and reports stay under `data/`.
   Narrator design S5.
 
+- Narrator evaluation: the contradiction pair (corpus version 4). One
+  dialogue-attribution pattern is required by `contract-argument`, which
+  stages an argument, and forbidden by the new `continuity-alone`, which
+  leaves Ilse below decks by herself. No single fixed text can contain it and
+  lack it, so every constant fails one of the two and the gate can resolve
+  rather than reading `inconclusive` by construction. A live run cleared it.
+  Also fixes `continuity-generator`, whose pattern matched only a singular
+  `light` and scored a false miss on a beat about lights dying.
 - Narrator evaluation: a second baseline arm (corpus version 3). Alongside the
   trivial constant, every run now scores a plausible canned beat, correctly
   shaped and seeded with the corpus's nouns but responsive to no direction,
