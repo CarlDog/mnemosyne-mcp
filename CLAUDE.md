@@ -13,11 +13,13 @@ Status lives in [STATUS.md](STATUS.md) — read it first. This section names
 only what is in flight; it must never restate STATUS.md's Done log. (When
 the two disagree, STATUS.md is newer.)
 
-**In flight (2026-09-02): the non-flagship story-development pass, starting
-with Story 04.** Step 1, the gap audit, is written to that
-story's `drafts/_control/GAP_AUDIT.md` and stopped for the operator's scope
-ruling (eleven Decides; see STATUS.md's top entry); no overlay was changed.
-Otherwise nothing is in flight. The data architecture migration
+**In flight (2026-09-02): the non-flagship story-development pass.** Step 1,
+the gap audit, is written for all six non-flagship stories (Midnight Is a
+Suggestion, Brass & Nerve, Story 10, Story 12,
+story-08, Star Wars: The Black Ledger) to each story's
+`drafts/_control/GAP_AUDIT.md` and stopped for the operator's rulings (see
+STATUS.md's top two entries); no overlay was changed. Otherwise nothing is in
+flight. The data architecture migration
 (`docs/DATA_ARCHITECTURE_PROPOSAL.md`, ratified; `docs/DATA_LAYOUT.md` now
 normative) completed all six phases on 2026-09-02: `data/archive/` is the one
 master of originals (written only by `scripts/intake.py`), every story has
@@ -36,7 +38,7 @@ frontmatter; indexes, catalogs, and `_alternates/` under
 59 scenes (cut the same day from the Dark Queen Lilith Botify chat) were written
 straight to `drafts/scenes/`, as were story-01' nine Chapter One scenes (cut
 the same day from the operator's two ChatGPT shares; earlier drafts and pasted
-config documents sit under `drafts/_control/scenes/`). On the same day the remaining Botify-sourced stories were cut the same way, each chat as its own thread, never blended: Brass & Nerve (12), Star Wars: The Black Ledger (10; a scenes-only overlay was bootstrapped, and its verifier is blocked by a pre-existing `canon/characters/_minor.md` reference-line format defect left for the operator), Story 10 (43 across four threads), Story 12 (50 across four threads), story-14 (23), and one Story 03 group-chat scene (`CS-GC-01-WHP`, unplaced; inclusion is an operator call). Group-chat bodies carry per-message speaker labels, a recorded departure from bare verbatim prose. Roles played under the operator's own name with no canon counterpart keep those files in `drafts/` until the open substitution ruling. Any future scene extraction goes to `drafts/scenes/`. Both overlays were rehashed and
+config documents sit under `drafts/_control/scenes/`). On the same day the remaining Botify-sourced stories were cut the same way, each chat as its own thread, never blended: Brass & Nerve (12), Star Wars: The Black Ledger (10; a scenes-only overlay was bootstrapped; its verifier first failed on the canon pointer format and passes since the same-day normalisation of 31 canon files, 64 merged), Story 10 (43 across four threads), Story 12 (50 across four threads), story-14 (23), and one Story 03 group-chat scene (`CS-GC-01-WHP`, unplaced; inclusion is an operator call). Group-chat bodies carry per-message speaker labels, a recorded departure from bare verbatim prose. Roles played under the operator's own name with no canon counterpart keep those files in `drafts/` until the open substitution ruling. Any future scene extraction goes to `drafts/scenes/`. Both overlays were rehashed and
 re-sealed; nothing was promoted. The 2026-09-01 draft review pass is
 closed: six overlays were corrected, rehashed, and re-sealed; both Miskatonic
 prequel scaffolds were built out with their first choices ratified; story-14
