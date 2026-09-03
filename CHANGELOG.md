@@ -16,6 +16,13 @@ this file was introduced remains in [STATUS.md](STATUS.md).
   measured on the baseline. Beats and reports stay under `data/`.
   Narrator design S5.
 
+- Narrator evaluation: a second, independent contradiction pair (corpus
+  version 5). A dialogue-attribution pattern for Ilse is required by the new
+  `continuity-speaks` and forbidden by the new `continuity-silence`. The two
+  pairs share no case, so every constant fails one half of each and a
+  responsive narrator can separate on at least two cases rather than one. Both
+  patterns now match either attribution order and treat "said nothing" as
+  silence, so a prohibition cannot fail open on a phrasing.
 - Narrator evaluation: the contradiction pair (corpus version 4). One
   dialogue-attribution pattern is required by `contract-argument`, which
   stages an argument, and forbidden by the new `continuity-alone`, which

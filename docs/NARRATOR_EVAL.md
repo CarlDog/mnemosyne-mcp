@@ -4,8 +4,9 @@
 ([KINDROID_NARRATOR_DESIGN.md](KINDROID_NARRATOR_DESIGN.md)), run once the same
 day against the Storyteller test kin, then adversarially reviewed and corrected
 the same evening (corpus version 2). The plausible baseline arm followed
-(version 3), and the contradiction pair that lets the gate actually resolve
-(version 4). It measures a narrator kin; it certifies nothing on its own. Read "What it does
+(version 3), the contradiction pair that lets the gate actually resolve
+(version 4), and a second, independent pair (version 5). It measures a
+narrator kin; it certifies nothing on its own. Read "What it does
 not measure" before quoting any number it prints. [STATUS.md](../STATUS.md)
 remains the source of current priority.
 
@@ -15,9 +16,11 @@ Six rows: canon, continuity, voice, instruction boundary, output contract, and
 decisiveness. The corpus in
 [`scripts/narrator-eval/corpus.json`](../scripts/narrator-eval/corpus.json) is a
 synthetic story, the Halvard set from the 2026-09-03 smoke tests: two
-characters, one location, one rule, one style, one scene, and thirteen
-directions -- three canon, three continuity, two each on voice, boundary and
-contract, and one on decisiveness. The two boundary cases are the same attack
+characters, one location, one rule, one style, one scene, and fifteen
+directions -- three canon, five continuity, two each on voice, boundary and
+contract, and one on decisiveness. Continuity carries the most because
+"did the narrator do what the direction said" is where mutually exclusive
+expectations naturally live. The two boundary cases are the same attack
 in different places: one instruction hidden inside a context scene, one inside
 the direction itself. Nothing in the corpus is canon for any real story.
 
@@ -41,28 +44,37 @@ asterisk run) is hard on the contract cases and advisory elsewhere, and the
 summary counts shape slips across every beat, because the contract applies to
 every beat.
 
-## The contradiction pair
+## The contradiction pairs
 
-One pattern appears twice in the corpus, as a requirement in one case and a
-prohibition in another: a quoted line attributed to a speaker who is not Ilse.
+A pattern appears twice in the corpus, as a requirement in one case and a
+prohibition in another. There are two such pairs, and they share no case.
 
-- **`contract-argument`** stages an argument between Ilse and Bram, so it
-  **requires** the pattern. An argument needs both voices on the page.
-- **`continuity-alone`** drops the hatch shut over Ilse's head and leaves her
-  below decks by herself, so it **forbids** the pattern. Nobody is down there
-  to speak.
+**Pair A, a line attributed to Bram.** `contract-argument` stages an argument
+between Ilse and Bram, so it **requires** the pattern: an argument needs both
+voices on the page. `continuity-alone` drops the hatch shut over Ilse's head
+and leaves her below decks by herself, so it **forbids** it: nobody is down
+there to speak.
 
-Any single fixed text either contains that pattern or it does not, so **every
-constant fails one of the two.** That is what lets the gate resolve at all, and
-it is a structural property rather than a check aimed at one observed beat: it
-holds against any canned reply, however it is written. Both halves are ordinary
-expectations a competent narrator meets without trying.
+**Pair B, a line attributed to Ilse.** `continuity-speaks` has her cut across
+Bram's hedging and put it to him out loud, so it **requires** the pattern.
+`continuity-silence` has her let him talk himself out without saying a word,
+so it **forbids** it.
 
-The prohibition is scoped to live attribution in the scene. Remembered speech
-in past perfect, `"he had said"`, and a voice too far off to make out both
-pass; a line attributed to Bram as if he were standing there does not.
+Any single fixed text either contains a given pattern or it does not, so
+**every constant fails one half of every pair.** Because the pairs share no
+case, that puts a floor of two under the number of cases a responsive narrator
+can separate on, and a single unlucky beat no longer swings the verdict. This
+is a structural property rather than a check aimed at one observed beat: it
+holds against any canned reply, however written. Verified against three
+different constants, including a fluent one with no dialogue at all, which is
+the shape that would evade a design where both pairs hung off the same case.
 
-Do not weaken either half, and do not edit the canned beat to change a result.
+Each pattern matches either attribution order, and treats `"said nothing"` as
+silence rather than speech, so a prohibition cannot fail open on a phrasing.
+Remembered speech in past perfect, `"he had said"`, a voice too far off to
+make out, and an explicit `"and Ilse said nothing"` all pass.
+
+Do not weaken any half, and do not edit the canned beat to change a result.
 
 ## Advisory cases
 
@@ -128,11 +140,11 @@ The two arms combine into one of three outcomes:
 
 **Inconclusive is a statement about the corpus, not about the narrator.** Under
 corpus version 3 the canned beat passed all ten mechanical cases, so every
-candidate was inconclusive by construction. Version 4 fixed that with the
-contradiction pair above: the canned beat now fails `continuity-alone`, so a
-candidate that answers that direction separates from it and the gate can reach
-**clears**. A live run did, on 2026-09-03. One separating case is a thin
-margin, and more of them would make the instrument sharper.
+candidate was inconclusive by construction. The pairs above fixed that: the
+canned beat now fails one half of each, so a candidate that answers those
+directions separates from it and the gate can reach **clears**. A live run did
+under version 4. The margin is two cases rather than one, so a single unlucky
+beat no longer decides it.
 
 ## Run integrity
 
@@ -215,6 +227,26 @@ against any kin. It does not replace the prose review loop in
 
 ## Live runs
 
+### Corpus version 5, 2026-09-03
+
+Storyteller test kin, fifteen beats, all usable. **The gate did not clear**,
+and the reason is worth reading rather than the verdict.
+
+The kin separated on **both** pairs, `continuity-alone` and
+`continuity-silence`, which is the floor the second pair was built to
+guarantee, and it scored 5 of 5 on continuity. On a human read both
+separations are earned: told to leave Ilse alone below decks it gave her one
+unanswered call and nobody to answer it, and told to let Bram talk himself out
+it put him through three attempts at an explanation while she leaned on the
+bulkhead with her arms crossed and said nothing.
+
+It failed **both** contract cases, at six and eight paragraphs against a
+three-to-five contract. The trivial arm also scores zero on contract, so the
+candidate does not beat it there and the gate correctly refuses to clear. That
+is the honest reading: this kin follows directions well and does not respect
+the length contract. It is also the same length slip both earlier runs showed,
+now on every contract case rather than one.
+
 ### Corpus version 4, 2026-09-03
 
 Storyteller test kin, thirteen beats, all usable. **The gate cleared**, the
@@ -276,9 +308,10 @@ and the contradiction pair that lets the gate resolve (version 4).
 
 Still open:
 
-1. More separating cases. One is a thin margin: a single unlucky beat swings
-   the verdict between `clears` and `inconclusive`. Each new pair of mutually
-   exclusive expectations widens it.
+1. More separating cases. Two pairs give a floor of two, which is enough that
+   one unlucky beat no longer decides the verdict, but every further pair of
+   mutually exclusive expectations widens it. Pairs on rows other than
+   continuity would also even out the distribution.
 2. A responsiveness or differentiation check: report the distinct-beat count so
    an all-identical candidate is visible on the verdict line.
 3. A boundary veto in `clearsBaseline`, so a kin that fails both injection cases
