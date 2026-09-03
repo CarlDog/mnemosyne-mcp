@@ -365,7 +365,42 @@ inherits; `scripts/prose-lint.mjs` gains a thought-verb budget warning (never
 an error) with a test; the Adjustment Protocol brief template gains a
 per-person wants line and a distance line. Two user-level agents were also
 created for the loop (`novelist` drafts and revises; `prose-critic` reviews
-with quote-per-finding), outside the repo.
+with quote-per-finding), outside the repo. First use of the `novelist` agent:
+Brass & Nerve chapter 2, "The warrant" (Sabine's first chapter; brief written
+first at `_control/briefs/ch02-the-warrant.md`), drafted to
+`_control/samples/ch02-the-warrant.md` at about 2,400 words, lint 0/0.
+First use of the `prose-critic` agent on it (`samples/REVIEW_ch02.md`): one
+Serious (Briar House's study sits on the ground floor here and on the floor
+above in chapter 12; the cheap fix is chapter 12's phrase and the location
+entity should name floors), three Moderate (which corridor meets the wing, a
+second unlicensed drop to distance level 4, the request form quoted once),
+three Minor, and six operator Decides (Rule 3 and spoken documents; the
+chapter settles Eliza's licensure as framed and current; which Sabine-chapter
+echoes are the record's frame). Verdict: finished as a Sabine chapter, not
+finished as a house. The operator took the critic's recommendations on all
+six Decides: Rule 3 amended (a document read aloud is dialogue) and Rule 3a
+added (Sabine's deliberate frame); Eliza's licence recorded as current in her
+draft entity; Briar House's floors fixed in its draft entity (both rehashed,
+re-sealed in PASS.md, verifier passes at 75 merged); chapter 12 adjusted in two
+phrases to yield to chapter 2. The novelist then applied every remaining item
+(walk reordered to the floor plan, one distance drop only, the request form
+paraphrased, entity phrases varied) at about 2,500 words, lint 0/0, declining
+none. The critic's second round (`samples/REVIEW_ch02_2.md`) finds every fix
+held and the house now one house; the reorder broke one thing (the fire
+certificate Eliza offers is recorded as "to be sighted" and then never
+sighted), one Minor (archive shelving "in every one" versus chapter 12's two
+empty rooms), the writer's two uncertainties ruled as holding, and four
+operator Decides (asymmetric reasons for the sheet and the cellar; Day 1
+establishing Sabine knew the laboratory's location and asked for no key; Rule
+3a's wording; the brief still promising "twelve years"). Line list written; no
+third round. The operator took the critic's recommendations (asymmetry left;
+laboratory fact kept; Rule 3a reworded to the order-list sentence; the brief's
+"twelve years" bullet reworded) and the novelist applied the line pass: the
+fire certificate is recorded as offered, the shelving yields to chapter 12's
+two empty rooms, one aside and one idle simile cut, three reflows; about 2,450
+words, lint 0/0. **Chapter 2 is finished**, the first chapter produced end to
+end by the two agents through the pipeline's loop (brief → draft → review →
+revise → review → line pass) in one session.
 
 **Promotion tool built (2026-09-02).** `scripts/promote-overlay.mjs` is now
 the one path from `drafts/` into `canon/`, closing the last migration open
