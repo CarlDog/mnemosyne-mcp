@@ -2,6 +2,53 @@
 
 **Last updated:** 2026-09-02.
 
+**Five more gap audits: Brass & Nerve, The Adjustment Protocol, The Noctis
+Veil, Shadowflame, and, on the operator's go-ahead, Star Wars: The Black Ledger
+(2026-09-02).** Each was written by a per-story audit agent against the Midnight
+audit as its template, to `drafts/_control/GAP_AUDIT.md` (gitignored `data/`;
+this entry and the memory notes are the tracked record), and each was then
+verified: control banner present, no operator surname, overlay verifier
+unchanged (Brass & Nerve 36/75/75, Adjustment 38/75/84, Noctis 38/71/89,
+Shadowflame 69/105/133, Black Ledger 54/10/64; writes=0 throughout), scene
+counts by `ls` (12, 43, 50, 59, 10), and two spot-checked claims apiece. The
+common headline: every story's ledgers predate its scene extraction and cite no
+scene, so the bar row "scenes extracted and reconciled" is 0 or 1 everywhere,
+and reconciliation is a ruling first (which threads are the story, the
+substitution of the operator-played roles, the truth tier of source-era play);
+every story lacks a timeline and holds two or three worldbuilding files
+against the bar's dozen. Per story: Brass & Nerve's r3 scaffold is deep
+(eight objects, ledgers, geometry, hook ecology, rules/style inside the bar)
+but the R3_REVIEW fix left residue in six files and the 12 scenes are marked
+established while contradicting Gideon Vale in every scene the patient is in;
+12 Decides. The Adjustment Protocol's retrieval text is clean but its ledgers
+contradict the AN and GC scenes (Phoebe already implanted, the played Renshaw
+a woman, Aurora running the chair) and its rules/style sit below the 55-line
+floor; 13 Decides. The Noctis Veil's ledgers were written to retire what its
+scenes play, the largest thread has no relic, and all 50 scenes say
+`canon_status: established`; 14 Decides; no Wren exists there (the Wren
+reservation is the Adjustment Protocol's). Shadowflame bears out the
+operator's estimate on most rows, yet its ledgers were written from the
+authored Botify blocks rather than the transcript and assert a burned note the
+play sets aside, misorder Day 6, and keep an explosion open the play resolves;
+live OC holds the 2026-08-23 export; 13 Decides. The Black Ledger is the
+inversion: a 2026-08-26 polish pass went live, but the overlay never had a
+scorecard, provenance, or asset review, canon and live OC differ by bytes with
+no declared master, and the crew has never been on-page; 12 Decides, the
+master-copy ruling first (the `_minor.md` pointer defect the brief named was
+already fixed 2026-09-02; CLAUDE.md's stale clause is corrected). Flagship
+defects reported, not fixed: BattleChasers has no `SOURCE_PROVENANCE.md` and no
+`_control/README.md` (Chaos Saga also lacks the README), which contradicted
+the Midnight audit's "present in all four" rows, now corrected; BattleChasers'
+`canon/characters/lilith.md` carries a 130-character sentence in its `name:`
+field. Tooling defects reported: the extraction engine writes `_control/`
+paths into every scene's `location_basis` and left an unrendered
+`{chat['played']}` and `source_bot … None` in the Black Ledger inventory.
+Cross-story name collisions were swept from every canon and drafts tree (Vale
+in five stories; Thorne on three core characters; the Jäger family; Hale,
+Voss, Bell, Quill, Navarro, Crane, Brindle, Marrow, Briar, Evelyn) and listed
+as Decides with no rename proposed. Nothing promoted, imported, or changed
+outside the six audit files.
+
 **Midnight Is a Suggestion gap audit (2026-09-02).** First step of the
 non-flagship story-development pass (Midnight first, then the Black Ledger on
 permission, Brass & Nerve, the Adjustment Protocol, the Noctis Veil,
