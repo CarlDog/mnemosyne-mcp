@@ -32,6 +32,18 @@ maintainers.
 Please check these before reporting — they are deliberate, documented, and
 already tracked, so a report describing one is not a new finding:
 
+- **A companion-chat narrator obeys instructions planted in story text.**
+  Kindroid and Botify accept one user turn and offer no system prompt or
+  side channel, so nothing can mark a span of text as non-instruction.
+  Measured at 7 of 20 samples, a 35% rate with a 95% interval of 18.1% to
+  56.7% (`docs/NARRATOR_EVAL.md`, "The injection rate"). The message
+  builder neutralizes its own delimiters, which stops planted text
+  escalating to the operator's own level, but no string transformation
+  stops a model reading prose. The effective control is provenance: do not
+  place unvetted third-party text into a story's entities. The direct-API
+  providers do have a real system-prompt channel and already neutralize
+  their own section delimiters.
+
 - **Filesystem authority is not confined by transport.** `mnemo_import_story`
   and `mnemo_export_story` accept caller-supplied paths, and the HTTP
   transport currently exposes the same tool surface as stdio. This is

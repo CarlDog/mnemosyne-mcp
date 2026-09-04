@@ -174,6 +174,39 @@ export function selectCompanionMemoryIds(
     .map((e) => e.memory_id);
 }
 
+/**
+ * Neutralize the fence characters in untrusted interpolated content.
+ *
+ * Entity names and bodies come from the memory database and may contain
+ * anything: an imported story, a scene cut from a chat log, a character named
+ * by a stranger. The story-context block below is fenced with a literal
+ * "[Story context ...:" line and a closing "]", so a body carrying "]" closes
+ * that fence early and everything after it reads at the same level as the
+ * operator's own direction. Verified by hand before this was written.
+ *
+ * Square brackets are replaced with parentheses rather than stripped, so the
+ * text still reads and only the delimiter is disarmed. This mirrors what the
+ * other two assembly sites already do for their own delimiter:
+ * `neutralizeSectionDelimiters` in application/prompt-policy.ts turns an
+ * embedded "=== RULES ===" into "--- RULES ---". Both fences are neutralized
+ * here so content moving between the two paths cannot carry a live delimiter
+ * for either.
+ *
+ * This does NOT stop a model obeying an instruction that stays inside the
+ * fence. That is a separate problem, measured at roughly one beat in three,
+ * and it is not solvable by escaping characters.
+ */
+export function neutralizeCompanionFence(text: string): string {
+  return text
+    .replace(/\[/g, "(")
+    .replace(/\]/g, ")")
+    .split("\n")
+    .map((line) =>
+      /^\s*={3,}.*={3,}\s*$/.test(line) ? line.replace(/=/g, "-") : line,
+    )
+    .join("\n");
+}
+
 const REFERENCE_TYPES = [
   "characters",
   "locations",
@@ -238,13 +271,15 @@ export function buildCompanionMessage(
       "[Story context -- background knowledge, not something to quote verbatim:",
     ];
     for (const entry of matched) {
-      lines.push(`- ${entry.name}: ${entry.body}`);
+      lines.push(
+        `- ${neutralizeCompanionFence(entry.name)}: ${neutralizeCompanionFence(entry.body)}`,
+      );
     }
     if (scenes.length > 0) {
       if (matched.length > 0) lines.push("");
       lines.push("Recent scenes:");
       for (const scene of scenes) {
-        lines.push(`- ${scene.body || scene.name}`);
+        lines.push(`- ${neutralizeCompanionFence(scene.body || scene.name)}`);
       }
     }
     lines.push("]");

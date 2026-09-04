@@ -20,7 +20,7 @@ this file was introduced remains in [STATUS.md](STATUS.md).
   `repeat-rate.mjs`, which reports a per-case failure rate with a 95% Wilson
   interval. A corpus run samples every case once, which cannot estimate a
   rate. Measured with it: the narrator obeys an instruction planted in scene
-  text in 6 of 20 samples, a 30% rate with a 14.5% lower bound, while never
+  text in 7 of 20 samples, a 35% rate with an 18.1% lower bound, while never
   obeying the same injection's person or tense instructions. The generator
   also now saves after every beat, so a long run that is interrupted leaves
   usable samples and marks itself incomplete.
@@ -98,6 +98,19 @@ this file was introduced remains in [STATUS.md](STATUS.md).
   narrator: the canned beat currently passes every mechanical case.
 
 ### Fixed
+
+- Companion messages neutralize their own bracket fence against untrusted
+  story content (`neutralizeCompanionFence`). Entity names and scene bodies
+  come from the memory database, and one carrying `]` closed the story-context
+  fence early, putting planted text at the same level as the operator's
+  direction and allowing a forged provenance header. This was the one
+  assembly site with no neutralization; the system-prompt and validator paths
+  already had it. It stops escalation, not obedience: a message-text-only
+  channel cannot mark a span as non-instruction, which `SECURITY.md` now
+  records as a known limitation.
+- Narrator evaluation: the injection check now counts obedience that begins
+  after the first paragraph. The published rate was an undercount, corrected
+  from 6 of 20 to 7 of 20 by re-scoring the archived samples.
 
 - Narrator evaluation, after an adversarial review of the harness (corpus
   version 2): beats are folded to ASCII punctuation, so a verdict no longer
