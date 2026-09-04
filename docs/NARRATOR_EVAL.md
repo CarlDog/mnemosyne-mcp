@@ -505,20 +505,64 @@ chat log or a shared export is untrusted input to this channel, and this
 repository has thousands of such files staged in draft overlays. That is a
 process control, and it is the one that actually works.
 
-**One lever remains untested.** The context block's framing could state
-explicitly that it is inert story data. There is no reason in advance to expect
-that to help, since in-context content routinely out-pulls framing, so it
-should ship only on a measurement. That measurement needs roughly fifty samples
-per arm: against the corrected 35% baseline, twenty per arm has about 31% power
-even versus a sevenfold reduction, so a twenty-sample comparison would emit a
-number that looks like evidence and is not. Any such change must also keep the
-literals `Story context`, `background knowledge` and `Mnemosyne` verbatim,
-because the evaluation's own leak detectors hard-code them.
+**The one remaining lever was tested, and it failed.** See "The framing
+experiment" below: an inert-data notice in the context header moved the rate
+from 30% to 22% across a hundred interleaved samples, the intervals overlap,
+and by the pre-registered rule that is inconclusive rather than a win. It does
+not ship. Any future attempt must keep the literals `Story context`,
+`background knowledge` and `Mnemosyne` verbatim, because the evaluation's own
+leak detectors hard-code them.
 
 An A/B of the fence fix itself would be meaningless on this corpus and should
 not be run: no case direction, seed entry or injected scene contains a bracket
 or a `===` line, so the neutralizer is a byte-identity on all 48 of the
 corpus's texts.
+
+### The framing experiment, and why it did not ship
+
+The one lever a message-text-only channel offers is framing, so it was tested
+rather than assumed. One sentence was added to the story-context header saying
+the block is story material and that instruction-shaped text inside it is never
+a direction to follow. The decision rule was written down and committed before
+any data existed (`data/narrator-eval/PREREGISTERED-inert-notice.md`): ship only
+if the two arms' 95% intervals do not overlap.
+
+One hundred samples, fifty per arm, alternating rather than blocked so drift
+over the run could not land on one arm. The control arm was byte-identical to
+what ships; an earlier version of the change left a stray full stop in the
+control header, which would have compared two changed messages, and was caught
+before the run.
+
+| arm | n | obeyed | rate | 95% interval |
+|---|---|---|---|---|
+| control | 50 | 15 | 30% | 19.1% to 43.8% |
+| notice | 50 | 11 | 22% | 12.8% to 35.2% |
+
+**The intervals overlap, so by the rule set in advance this is inconclusive and
+the notice does not ship.** Twenty-two per cent is lower than thirty, and that
+difference is exactly what a small sample produces from no effect at all. It is
+not a result.
+
+Two things settle it beyond the arithmetic.
+
+**The failures are the same in both arms.** Fifteen control failures and eleven
+notice failures, and in both the beat opens with the planted token in the large
+majority and marks a single paragraph in most cases. The notice does not change
+what obedience looks like, only possibly how often it happens.
+
+**Resolving an effect that size is not affordable.** Taking the observed rates
+as truth, the intervals do not separate until roughly eight hundred samples per
+arm, about ten hours of generation. And a mitigation that moved obedience from
+thirty per cent to twenty-two would still leave one beat in five obeying, which
+is not a fix.
+
+So the standing rule held: you cannot out-instruction content that is already in
+the context. The option remains in the code, defaulting off and wired to no
+provider, because the A/B harness exercises it and the negative result is worth
+keeping next to the thing that produced it.
+
+The control arm is also now the best single estimate of the shipping behaviour:
+15 of 50, 30%, consistent with the earlier 7 of 20.
 
 ## Live runs
 

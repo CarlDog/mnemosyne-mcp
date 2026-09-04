@@ -93,6 +93,52 @@ for (const [id, samples] of groups) {
     failing_repeats: fails.map((s) => s.repeat ?? null),
   });
 }
+// When the beats carry arms, this was an A/B: report each arm and apply the
+// pre-registered rule, which is that the intervals must not overlap. Reporting
+// a difference between overlapping intervals as a win is the failure this
+// whole exercise exists to avoid.
+const arms = new Map();
+for (const b of beats) {
+  if (!b.arm) continue;
+  if (!arms.has(b.arm)) arms.set(b.arm, []);
+  arms.get(b.arm).push(b);
+}
+let armReport = null;
+if (arms.size === 2) {
+  const rows = [];
+  console.log("\narms\n");
+  console.log("  arm        n   fail  rate    95% interval");
+  for (const [arm, samples] of arms) {
+    const c = byId[samples[0].case_id];
+    const usable = samples.filter(
+      (s) => !s.error && String(s.beat_text).trim(),
+    );
+    const fails = usable.filter((s) => !scoreCase(c, s.beat_text).pass).length;
+    const [lo, hi] = wilson(fails, usable.length);
+    rows.push({
+      arm,
+      n: usable.length,
+      failures: fails,
+      rate: fails / Math.max(1, usable.length),
+      interval_95: [lo, hi],
+    });
+    console.log(
+      `  ${arm.padEnd(10)}${String(usable.length).padStart(3)} ${String(fails).padStart(5)}  ` +
+        `${((fails / Math.max(1, usable.length)) * 100).toFixed(0).padStart(4)}%  ` +
+        `${(lo * 100).toFixed(1).padStart(5)}% to ${(hi * 100).toFixed(1).padStart(5)}%`,
+    );
+  }
+  const [a, b2] = rows;
+  const overlap =
+    a.interval_95[0] <= b2.interval_95[1] &&
+    b2.interval_95[0] <= a.interval_95[1];
+  const better = a.rate < b2.rate ? a.arm : b2.arm;
+  armReport = { rows, intervals_overlap: overlap, lower_rate_arm: better };
+  console.log(
+    `\n  intervals ${overlap ? "OVERLAP" : "do NOT overlap"} -> ${overlap ? "INCONCLUSIVE by the pre-registered rule; do not ship on this" : `separated, lower rate on "${better}"`}`,
+  );
+}
+
 console.log(
   "\nA rate is not a verdict either. Read the failing beats in the report before believing one.",
 );
@@ -117,6 +163,7 @@ await writeFile(
             chat_break: file.chat_break ?? null,
           },
       cases: report,
+      arms: armReport,
       beats: file,
     },
     null,

@@ -51,6 +51,10 @@ if (!url || !kin) {
 }
 const doBreak = !args.includes("--no-break");
 const only = opt("--only");
+// --ab interleaves two arms of one case: the shipping message, and the same
+// message with the inert-data notice added. Alternating rather than blocking
+// them keeps service drift over a long run off any single arm.
+const ab = args.includes("--ab");
 const repeats = Number(opt("--repeats", "1"));
 if (!Number.isInteger(repeats) || repeats < 1 || repeats > 200) {
   console.error("--repeats must be a whole number from 1 to 200");
@@ -95,7 +99,14 @@ if (only && selected.length === 0) {
 }
 const plan = [];
 for (const c of selected) {
-  for (let i = 0; i < repeats; i += 1) plan.push({ c, repeat: i });
+  for (let i = 0; i < repeats; i += 1) {
+    if (ab) {
+      plan.push({ c, repeat: i, arm: "control", inertNotice: false });
+      plan.push({ c, repeat: i, arm: "notice", inertNotice: true });
+    } else {
+      plan.push({ c, repeat: i });
+    }
+  }
 }
 console.log(
   `target kin ${kin} -- ${selected.length} case${selected.length === 1 ? "" : "s"} x ${repeats} = ${plan.length} messages${doBreak ? " and chat breaks" : ""} into its persistent chat`,
@@ -124,6 +135,7 @@ async function save(done) {
         user_name: userName,
         only: only ?? null,
         repeats,
+        ab,
         planned: plan.length,
         errors,
         complete: finished && errors === 0,
@@ -135,7 +147,7 @@ async function save(done) {
     "utf8",
   );
 }
-for (const { c, repeat } of plan) {
+for (const { c, repeat, arm, inertNotice } of plan) {
   const context = c.extra_scene
     ? {
         ...baseContext,
@@ -145,7 +157,7 @@ for (const { c, repeat } of plan) {
   const message = buildCompanionMessage(
     c.direction,
     context,
-    undefined,
+    inertNotice ? { inertNotice: true } : undefined,
     userName,
   );
   const t0 = Date.now();
@@ -155,13 +167,14 @@ for (const { c, repeat } of plan) {
     beats.push({
       case_id: c.id,
       repeat,
+      ...(arm ? { arm } : {}),
       beat_text: text,
       message_len: message.length,
       ms: Date.now() - t0,
       provider: "kindroid",
     });
     console.log(
-      `${(repeats > 1 ? `${c.id}#${repeat}` : c.id).padEnd(24)} ${String(text.length).padStart(5)} chars ${Date.now() - t0} ms`,
+      `${(arm ? `${arm}#${repeat}` : repeats > 1 ? `${c.id}#${repeat}` : c.id).padEnd(24)} ${String(text.length).padStart(5)} chars ${Date.now() - t0} ms`,
     );
     await save(false);
   } catch (err) {
@@ -169,6 +182,7 @@ for (const { c, repeat } of plan) {
     beats.push({
       case_id: c.id,
       repeat,
+      ...(arm ? { arm } : {}),
       beat_text: "",
       message_len: message.length,
       ms: Date.now() - t0,
