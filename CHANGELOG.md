@@ -97,6 +97,15 @@ this file was introduced remains in [STATUS.md](STATUS.md).
   clear, inconclusive, clears. Inconclusive indicts the corpus, not the
   narrator: the canned beat currently passes every mechanical case.
 
+### Added
+
+- Narrator evaluation: `--ab` interleaves two message variants of one case and
+  `repeat-rate.mjs` reports each arm with a 95% interval and applies a
+  pre-registered overlap rule. Used to test whether an inert-data notice in the
+  context header reduces injection obedience: control 15/50, notice 11/50,
+  intervals overlap, inconclusive, not shipped. The option exists in
+  `companion-message.ts`, defaults off, and is wired to no provider.
+
 ### Fixed
 
 - Companion messages neutralize their own bracket fence against untrusted
