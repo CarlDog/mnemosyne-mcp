@@ -297,7 +297,11 @@ assessments listed under "Layout" below.
   `--only <case> --repeats <n>` samples one case many times when the
   question is a rate), and `repeat-rate.mjs` (failure rate with a Wilson
   interval for such a run). Measured this way: the narrator obeys an
-  instruction planted in scene text in 6 of 20 samples.
+  instruction planted in scene text in 7 of 20 samples. `companion-message.ts`
+  neutralizes its own bracket fence against that content
+  (`neutralizeCompanionFence`), which stops planted text escalating to the
+  operator's level but does not stop obedience; the doc records what this
+  layer cannot fix and why provenance at ingest is the real control.
   Two baseline arms: a trivial constant, and a plausible canned beat that
   answers no direction, whose `discrimination` result drives a three-state
   gate (does not clear / inconclusive / clears). Corpus v10 carries five
