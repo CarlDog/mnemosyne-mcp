@@ -77,16 +77,20 @@ export function firstPersonOutsideDialogue(text) {
 }
 
 /**
- * Narration only: what sits inside asterisk runs. Dialogue is legitimately
- * present tense, so a tense check that reads the whole beat fires on every one
- * of them. A beat with no asterisk run falls back to everything outside quoted
- * dialogue, so a shapeless beat is still scanned rather than silently skipped.
+ * Narration only: everything that is not quoted dialogue. Dialogue is
+ * legitimately present tense, so a tense check that reads the whole beat fires
+ * on every one of them; but narration outside an asterisk run is still
+ * narration and must be read.
  */
 export function narrationOnly(text) {
   const t = normalizeTypography(text);
   const runs = [...t.matchAll(/\*([^*]+)\*/g)].map((m) => m[1]);
-  if (runs.length) return runs.join("\n");
-  return t.replace(/"[^"]*"/g, " ");
+  // Everything that is not quoted dialogue, whether or not it sits inside an
+  // asterisk run. An earlier version returned only the runs when any existed,
+  // which left bare narration in the same beat unread -- the same defect class
+  // this check was written to fix.
+  const outside = t.replace(/\*[^*]+\*/g, " ").replace(/"[^"]*"/g, " ");
+  return [...runs, outside].join("\n");
 }
 
 // Third-person singular present forms whose past tense is a different word, so

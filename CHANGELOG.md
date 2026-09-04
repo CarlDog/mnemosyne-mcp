@@ -16,6 +16,13 @@ this file was introduced remains in [STATUS.md](STATUS.md).
   measured on the baseline. Beats and reports stay under `data/`.
   Narrator design S5.
 
+- Narrator evaluation: the tense check now scans every region that is not
+  quoted dialogue. It previously returned only asterisk runs whenever a beat
+  had any, leaving bare narration in 13 of 20 beats of a live run unread --
+  the same defect class the check was written to fix. Validated to still fire
+  on none of 109 real beats. Also corrects the documented claim that the
+  contradiction pairs had stopped discriminating: with six runs rather than
+  four, five pair halves have failed on their own pattern.
 - Narrator evaluation: two defects fixed (corpus version 12), both found by
   reading beats rather than by a check failing. `continuity-tells` covered one
   clause of a three-clause direction and passed a beat that broke another, so
