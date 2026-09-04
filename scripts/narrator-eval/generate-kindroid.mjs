@@ -6,6 +6,13 @@
  *
  *   KINDROID_MCP_URL=... node scripts/narrator-eval/generate-kindroid.mjs \
  *     --kin <ai_id> [--out <beats.json>] [--no-break]
+ *     [--only <case_id>] [--repeats <n>]
+ *
+ * --only narrows to one case and --repeats samples it more than once. A full
+ * run samples every case exactly once, which is the wrong shape when a single
+ * case is the open question: estimating a rate needs many samples of one case,
+ * not one sample of many. Score a repeats run with repeat-rate.mjs, not with
+ * score.mjs, which expects one beat per case.
  *
  * The target may also come from KINDROID_STORYTELLING_KIN, but --kin wins and
  * the resolved target is echoed before the first write: this writes twelve
@@ -43,6 +50,12 @@ if (!url || !kin) {
   process.exit(2);
 }
 const doBreak = !args.includes("--no-break");
+const only = opt("--only");
+const repeats = Number(opt("--repeats", "1"));
+if (!Number.isInteger(repeats) || repeats < 1 || repeats > 200) {
+  console.error("--repeats must be a whole number from 1 to 200");
+  process.exit(2);
+}
 const stamp = new Date().toISOString().replace(/[:.]/g, "-");
 const outPath = resolve(
   opt("--out", `data/narrator-eval/beats-kindroid-${stamp}.json`),
@@ -65,17 +78,64 @@ const baseContext = {
   worldbuilding: [],
 };
 
-console.log(
-  `target kin ${kin} -- writing ${corpus.cases.length} messages${doBreak ? " and chat breaks" : ""} into its persistent chat`,
-);
-
 const client = new KindroidClient(
   new URL(url),
   process.env.KINDROID_MCP_AUTH_TOKEN,
 );
+// --only narrows to one case; --repeats samples it more than once, which is
+// what estimating a rate needs. Each repeat gets its own chat break, so the
+// samples are as independent as a chat break can make them. A repeats run is
+// for rate analysis and is not a corpus run: do not feed it to the gate.
+const selected = only
+  ? corpus.cases.filter((c) => c.id === only)
+  : corpus.cases;
+if (only && selected.length === 0) {
+  console.error(`no case with id ${only}`);
+  process.exit(2);
+}
+const plan = [];
+for (const c of selected) {
+  for (let i = 0; i < repeats; i += 1) plan.push({ c, repeat: i });
+}
+console.log(
+  `target kin ${kin} -- ${selected.length} case${selected.length === 1 ? "" : "s"} x ${repeats} = ${plan.length} messages${doBreak ? " and chat breaks" : ""} into its persistent chat`,
+);
+
 const beats = [];
 let errors = 0;
-for (const c of corpus.cases) {
+
+// Written after every beat, not only at the end. A long --repeats run is
+// interruptible, and an interrupted run that saved nothing is a wasted run.
+// `complete` stays false until the loop finishes, so a partial file is
+// self-describing and the scorer's integrity check will withhold the gate.
+let finished = false;
+async function save(done) {
+  finished = done;
+  await mkdir(dirname(outPath), { recursive: true });
+  await writeFile(
+    outPath,
+    JSON.stringify(
+      {
+        generated_at: new Date().toISOString(),
+        corpus_version: corpus.version,
+        provider: "kindroid",
+        kin_id: kin,
+        chat_break: doBreak,
+        user_name: userName,
+        only: only ?? null,
+        repeats,
+        planned: plan.length,
+        errors,
+        complete: finished && errors === 0,
+        beats,
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+}
+for (const { c, repeat } of plan) {
   const context = c.extra_scene
     ? {
         ...baseContext,
@@ -94,47 +154,34 @@ for (const c of corpus.cases) {
     const text = await client.sendMessage(kin, message);
     beats.push({
       case_id: c.id,
+      repeat,
       beat_text: text,
       message_len: message.length,
       ms: Date.now() - t0,
       provider: "kindroid",
     });
     console.log(
-      `${c.id.padEnd(20)} ${String(text.length).padStart(5)} chars ${Date.now() - t0} ms`,
+      `${(repeats > 1 ? `${c.id}#${repeat}` : c.id).padEnd(24)} ${String(text.length).padStart(5)} chars ${Date.now() - t0} ms`,
     );
+    await save(false);
   } catch (err) {
     errors += 1;
     beats.push({
       case_id: c.id,
+      repeat,
       beat_text: "",
       message_len: message.length,
       ms: Date.now() - t0,
       provider: "kindroid",
       error: err.message,
     });
-    console.log(`${c.id.padEnd(20)} ERROR ${err.message.slice(0, 120)}`);
+    console.log(
+      `${(repeats > 1 ? `${c.id}#${repeat}` : c.id).padEnd(24)} ERROR ${err.message.slice(0, 110)}`,
+    );
+    await save(false);
   }
 }
 await client.close();
-await mkdir(dirname(outPath), { recursive: true });
-await writeFile(
-  outPath,
-  JSON.stringify(
-    {
-      generated_at: new Date().toISOString(),
-      corpus_version: corpus.version,
-      provider: "kindroid",
-      kin_id: kin,
-      chat_break: doBreak,
-      user_name: userName,
-      errors,
-      complete: errors === 0,
-      beats,
-    },
-    null,
-    2,
-  ),
-  "utf8",
-);
+await save(true);
 console.log(`beats: ${outPath}${errors ? ` (${errors} FAILED)` : ""}`);
 if (errors > 0) process.exit(1);
