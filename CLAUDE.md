@@ -296,14 +296,16 @@ assessments listed under "Layout" below.
   client and message builder, writing real messages into that kin's chat).
   Two baseline arms: a trivial constant, and a plausible canned beat that
   answers no direction, whose `discrimination` result drives a three-state
-  gate (does not clear / inconclusive / clears). Corpus v9 carries four
+  gate (does not clear / inconclusive / clears). Corpus v10 carries five
   contradiction pairs -- dialogue attribution for Bram, for Ilse, plain
-  dialogue itself, and a spoken question -- each pattern required by one case
-  and forbidden by another, so every constant fails at least three cases and
-  a responsive narrator separates where a canned reply cannot. Only rows
-  whose property varies by occasion can host a pair; canon, voice and
-  boundary encode invariants. Reports go under gitignored `data/`. Read the
-  doc's "What it does not measure" before quoting a number.
+  dialogue itself, a spoken question, and direct address by name -- each
+  pattern required by one case and forbidden by another, so every constant
+  fails at least four cases. Only rows whose property varies by occasion can
+  host a pair; canon, voice and boundary encode invariants. The doc's "What
+  each pair has actually bought" records that the returns have gone flat:
+  no pair half has ever failed on its own pattern across four live runs, so
+  a sixth pair is not the next improvement. Reports go under gitignored
+  `data/`. Read "What it does not measure" before quoting a number.
 - `scripts/scene-extraction/` — `extract_scenes.py`, the shared engine that
   cuts a story's Botify chat exports into per-scene draft files (overlay
   `add`s with the draft banner) plus their `_control/scenes/` docs, driven by

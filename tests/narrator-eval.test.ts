@@ -68,7 +68,7 @@ describe("corpus", () => {
     ]) {
       expect(rows.has(r)).toBe(true);
     }
-    expect(corpus.cases.length).toBe(18);
+    expect(corpus.cases.length).toBe(20);
   });
 
   it("seeds the entity kinds the smoke tests used, and every regex compiles", () => {
@@ -91,7 +91,7 @@ describe("corpus", () => {
     expect(byId("canon-limp").mechanical).toBe(false);
     expect(byId("voice-pov").mechanical).toBe(false);
     expect(byId("continuity-generator").mechanical).toBe(false);
-    expect(mechanicalCases.length).toBe(15);
+    expect(mechanicalCases.length).toBe(17);
   });
 });
 
@@ -500,12 +500,17 @@ describe("plausible baseline arm", () => {
 });
 
 const SPEECH = {
+  names:
+    '*She let the quiet sit.*\n\n"Who opened it, Bram?" she said.\n\n*He did not look up.*',
   asks: '*She let the quiet sit.*\n\n"Who opened it, Bram?" she said.\n\n*He did not look up.*',
   "Bram speaks":
     '*She put her hand flat on the plating.*\n\n"Then somebody came out," he said.\n\n*Neither of them moved.*',
   "Ilse speaks":
     '*She put her hand flat on the plating.*\n\n"Then somebody came out," she said.\n\n*Neither of them moved.*',
 };
+
+const NAMES_BEAT =
+  '*She waited until he had run out of things to do with his hands.*\n\n"Bram, who opened the hatch?" she said, and did not soften it.\n\n*The wind took the gap where his answer should have been.*';
 
 const ASKS_BEAT =
   '*Ilse stopped guessing at it and let the silence do the work for a moment.*\n\n"Who opened the hatch, Bram?" she said.\n\n*He looked at the grating between his boots, and the wind took the rest of the minute while she waited him out.*';
@@ -522,6 +527,7 @@ const ANSWERS: Record<string, string> = {
   "continuity-alone": ALONE_BEAT,
   "continuity-silence": SILENCE_BEAT,
   "continuity-asks": ASKS_BEAT,
+  "continuity-names": NAMES_BEAT,
   "contract-wordless": WORDLESS_BEAT,
 };
 
@@ -557,14 +563,21 @@ describe("the contradiction pairs", () => {
       forbid: "continuity-tells",
       speech: "asks",
     },
+    {
+      name: "direct address",
+      require: "continuity-names",
+      forbid: "continuity-nameless",
+      speech: "names",
+    },
   ];
   // A constant must fail at least one half of every pair, so the fewest
   // failures any constant can take is the size of a minimum cover of the
   // pairs. contract-argument covers two of them (it is the required half of
   // both the Bram pair and the dialogue pair), and continuity-speaks and
-  // continuity-asks cover one each: three. Pair D raised this from two by
-  // bringing its own required half rather than reusing one.
-  const MIN_FAILURES = 3;
+  // continuity-asks and continuity-names cover one each: four. A pair raises
+  // this only by bringing its own required half; the dialogue pair reuses
+  // contract-argument and so does not.
+  const MIN_FAILURES = 4;
 
   it.each(PAIRS)("$name: both halves share one identical pattern", (pair) => {
     const req = byId(pair.require).must_match;
@@ -628,6 +641,7 @@ describe("the contradiction pairs", () => {
     expect(failed.map((c) => c.id).sort()).toEqual([
       "continuity-alone",
       "continuity-asks",
+      "continuity-names",
       "continuity-silence",
       "contract-wordless",
     ]);
@@ -642,6 +656,7 @@ describe("the contradiction pairs", () => {
     expect(disc.separating.sort()).toEqual([
       "continuity-alone",
       "continuity-asks",
+      "continuity-names",
       "continuity-silence",
       "contract-wordless",
     ]);
