@@ -16,6 +16,12 @@ this file was introduced remains in [STATUS.md](STATUS.md).
   measured on the baseline. Beats and reports stay under `data/`.
   Narrator design S5.
 
+- Narrator evaluation: seventh live run recorded. The narrator obeyed a prompt
+  injection for the first time in seven runs, prefixing every paragraph with a
+  marker an embedded story scene told it to use, which is the failure the
+  boundary case exists to catch. Two gaps recorded and not fixed: a vocative
+  with a question mark trips the spoken-question check, and the harness has no
+  version for its checks, only for the corpus.
 - Narrator evaluation: the tense check now scans every region that is not
   quoted dialogue. It previously returned only asterisk runs whenever a beat
   had any, leaving bare narration in 13 of 20 beats of a live run unread --
