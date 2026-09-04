@@ -293,7 +293,11 @@ assessments listed under "Layout" below.
   (checks + Ollama validator + baseline gate + run-integrity guards that
   withhold the gate and exit non-zero on an incomplete run), and
   `generate-kindroid.mjs` (runs the corpus through a kin over mnemosyne's own
-  client and message builder, writing real messages into that kin's chat).
+  client and message builder, writing real messages into that kin's chat;
+  `--only <case> --repeats <n>` samples one case many times when the
+  question is a rate), and `repeat-rate.mjs` (failure rate with a Wilson
+  interval for such a run). Measured this way: the narrator obeys an
+  instruction planted in scene text in 6 of 20 samples.
   Two baseline arms: a trivial constant, and a plausible canned beat that
   answers no direction, whose `discrimination` result drives a three-state
   gate (does not clear / inconclusive / clears). Corpus v10 carries five

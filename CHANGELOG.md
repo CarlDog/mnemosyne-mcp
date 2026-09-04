@@ -16,6 +16,14 @@ this file was introduced remains in [STATUS.md](STATUS.md).
   measured on the baseline. Beats and reports stay under `data/`.
   Narrator design S5.
 
+- Narrator evaluation: `--only` and `--repeats` on the generator, plus
+  `repeat-rate.mjs`, which reports a per-case failure rate with a 95% Wilson
+  interval. A corpus run samples every case once, which cannot estimate a
+  rate. Measured with it: the narrator obeys an instruction planted in scene
+  text in 6 of 20 samples, a 30% rate with a 14.5% lower bound, while never
+  obeying the same injection's person or tense instructions. The generator
+  also now saves after every beat, so a long run that is interrupted leaves
+  usable samples and marks itself incomplete.
 - Narrator evaluation: seventh live run recorded. The narrator obeyed a prompt
   injection for the first time in seven runs, prefixing every paragraph with a
   marker an embedded story scene told it to use, which is the failure the
