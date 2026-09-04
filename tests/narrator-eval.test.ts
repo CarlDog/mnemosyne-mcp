@@ -68,7 +68,7 @@ describe("corpus", () => {
     ]) {
       expect(rows.has(r)).toBe(true);
     }
-    expect(corpus.cases.length).toBe(16);
+    expect(corpus.cases.length).toBe(18);
   });
 
   it("seeds the entity kinds the smoke tests used, and every regex compiles", () => {
@@ -91,7 +91,7 @@ describe("corpus", () => {
     expect(byId("canon-limp").mechanical).toBe(false);
     expect(byId("voice-pov").mechanical).toBe(false);
     expect(byId("continuity-generator").mechanical).toBe(false);
-    expect(mechanicalCases.length).toBe(13);
+    expect(mechanicalCases.length).toBe(15);
   });
 });
 
@@ -353,13 +353,8 @@ describe("baseline gate", () => {
     // A responsive candidate, not one constant: GOOD_BEAT is itself a fixed
     // text, so the contradiction pairs correctly cost it both forbidden
     // halves. Clearing the gate now requires answering the directions.
-    const answers: Record<string, string> = {
-      "continuity-alone": ALONE_BEAT,
-      "continuity-silence": SILENCE_BEAT,
-      "contract-wordless": WORDLESS_BEAT,
-    };
     const good = summarize(
-      corpus.cases.map((c) => scoreCase(c, answers[c.id] ?? GOOD_BEAT)),
+      corpus.cases.map((c) => scoreCase(c, ANSWERS[c.id] ?? GOOD_BEAT)),
     );
     const gate = clearsBaseline(good.rows, base.rows);
     expect(gate.continuity).toBe(true);
@@ -505,17 +500,30 @@ describe("plausible baseline arm", () => {
 });
 
 const SPEECH = {
+  asks: '*She let the quiet sit.*\n\n"Who opened it, Bram?" she said.\n\n*He did not look up.*',
   "Bram speaks":
     '*She put her hand flat on the plating.*\n\n"Then somebody came out," he said.\n\n*Neither of them moved.*',
   "Ilse speaks":
     '*She put her hand flat on the plating.*\n\n"Then somebody came out," she said.\n\n*Neither of them moved.*',
 };
 
+const ASKS_BEAT =
+  '*Ilse stopped guessing at it and let the silence do the work for a moment.*\n\n"Who opened the hatch, Bram?" she said.\n\n*He looked at the grating between his boots, and the wind took the rest of the minute while she waited him out.*';
+
 const WORDLESS_BEAT =
   "*She set the pry bar into the seam and leaned on it until her boots slipped on the grate.*\n\n*The seal gave a quarter inch and stopped, and she reset her grip and did it again.*\n\n*The fourth time it came away all at once and put her down hard on the deck, and nothing above her stirred.*";
 
 const SILENCE_BEAT =
   "*Bram went on about meltwater and frost, building the explanation out of nothing, and Ilse let him.*\n\n*She watched his hands instead of his face. They did not stop moving the whole time he talked.*\n\n*When he ran out he stood there in the quiet he had made, waiting for her to fill it, and she did not.*";
+
+// One beat per case that a constant cannot answer, used to build a
+// responsive candidate wherever a test needs one.
+const ANSWERS: Record<string, string> = {
+  "continuity-alone": ALONE_BEAT,
+  "continuity-silence": SILENCE_BEAT,
+  "continuity-asks": ASKS_BEAT,
+  "contract-wordless": WORDLESS_BEAT,
+};
 
 describe("the contradiction pairs", () => {
   // Each pair puts one identical pattern on both sides of a requirement:
@@ -543,11 +551,20 @@ describe("the contradiction pairs", () => {
       forbid: "contract-wordless",
       speech: "Bram speaks",
     },
+    {
+      name: "a spoken question",
+      require: "continuity-asks",
+      forbid: "continuity-tells",
+      speech: "asks",
+    },
   ];
-  // Pairs A and B share no case, so a constant must fail one from each: the
-  // floor is two. Pair C reuses A's required half, so it widens what a real
-  // narrator can separate on without raising that floor.
-  const INDEPENDENT_PAIRS = 2;
+  // A constant must fail at least one half of every pair, so the fewest
+  // failures any constant can take is the size of a minimum cover of the
+  // pairs. contract-argument covers two of them (it is the required half of
+  // both the Bram pair and the dialogue pair), and continuity-speaks and
+  // continuity-asks cover one each: three. Pair D raised this from two by
+  // bringing its own required half rather than reusing one.
+  const MIN_FAILURES = 3;
 
   it.each(PAIRS)("$name: both halves share one identical pattern", (pair) => {
     const req = byId(pair.require).must_match;
@@ -559,15 +576,15 @@ describe("the contradiction pairs", () => {
     expect(req!).toContain(forb![0]);
   });
 
-  it("pairs A and B use different patterns and share no case", () => {
-    expect(byId(PAIRS[0]!.require).must_match![0]).not.toBe(
-      byId(PAIRS[1]!.require).must_match![0],
-    );
-    const ids = [PAIRS[0]!, PAIRS[1]!].flatMap((p) => [p.require, p.forbid]);
-    expect(new Set(ids).size).toBe(ids.length);
+  it("every pair uses a different pattern, and every half is its own case", () => {
+    const patterns = PAIRS.map((p) => byId(p.forbid).must_not_match![0]);
+    expect(new Set(patterns).size).toBe(PAIRS.length);
     // Every forbidden half is its own case, so no pair can be satisfied by
     // deleting a case.
     expect(new Set(PAIRS.map((p) => p.forbid)).size).toBe(PAIRS.length);
+    // Three distinct required halves is what makes the floor three rather
+    // than two; only the dialogue pair reuses one.
+    expect(new Set(PAIRS.map((p) => p.require)).size).toBe(MIN_FAILURES);
   });
 
   it.each(PAIRS)("$name: no single fixed text can pass both halves", (pair) => {
@@ -596,7 +613,7 @@ describe("the contradiction pairs", () => {
       for (const pair of PAIRS) {
         expect(failed.has(pair.require) || failed.has(pair.forbid)).toBe(true);
       }
-      expect(failed.size).toBeGreaterThanOrEqual(INDEPENDENT_PAIRS);
+      expect(failed.size).toBeGreaterThanOrEqual(MIN_FAILURES);
     }
   });
 
@@ -610,24 +627,21 @@ describe("the contradiction pairs", () => {
     ).filter((c) => c.mechanical && !c.pass);
     expect(failed.map((c) => c.id).sort()).toEqual([
       "continuity-alone",
+      "continuity-asks",
       "continuity-silence",
       "contract-wordless",
     ]);
   });
 
   it("a responsive candidate separates on every pair and clears", () => {
-    const answers: Record<string, string> = {
-      "continuity-alone": ALONE_BEAT,
-      "continuity-silence": SILENCE_BEAT,
-      "contract-wordless": WORDLESS_BEAT,
-    };
     const responsive = corpus.cases.map((c) =>
-      scoreCase(c, answers[c.id] ?? PLAUSIBLE),
+      scoreCase(c, ANSWERS[c.id] ?? PLAUSIBLE),
     );
     const canned = corpus.cases.map((c) => scoreCase(c, PLAUSIBLE));
     const disc = discrimination(summarize(responsive), summarize(canned));
     expect(disc.separating.sort()).toEqual([
       "continuity-alone",
+      "continuity-asks",
       "continuity-silence",
       "contract-wordless",
     ]);

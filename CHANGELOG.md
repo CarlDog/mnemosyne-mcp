@@ -16,6 +16,13 @@ this file was introduced remains in [STATUS.md](STATUS.md).
   measured on the baseline. Beats and reports stay under `data/`.
   Narrator design S5.
 
+- Narrator evaluation: a fourth contradiction pair, the first with its own
+  required half (corpus versions 8 and 9). A spoken question is required by
+  the new `continuity-asks` and forbidden by the new `continuity-tells`, so
+  covering all four pairs now takes three cases rather than two and every
+  constant fails at least three. Also states in `contract-wordless`'s
+  direction what its check tests: it forbids any quoted text, and the earlier
+  wording did not rule out the character muttering to herself.
 - Narrator evaluation: a third contradiction pair, on the contract row
   (corpus version 6), plus the demotion of `continuity-generator` to advisory
   (version 7). Plain dialogue itself is required by `contract-argument` and

@@ -1,5 +1,5 @@
 {
-  "version": 7,
+  "version": 9,
   "description": "Synthetic narrator evaluation corpus (docs/NARRATOR_EVAL.md). A case with \"mechanical\": false has no trustworthy deterministic signal and is scored advisory-only: its verdict is excluded from the row counts and it is checkable only by a working validator or a human reader. Nothing here is canon for any real story; the Halvard set exists only to score a narrator. Cases cover six rows: canon, continuity, voice, boundary, contract, decisiveness. \"Decisiveness\" is deliberately NOT the design's \"Player agency\" row, which asks the opposite; see docs/NARRATOR_EVAL.md.",
   "seed": {
     "characters": [
@@ -96,6 +96,20 @@
       "hint": "Ilse says nothing here. Bram may speak freely; only a line attributed to Ilse breaks the direction, and \"Ilse said nothing\" is silence, not speech. Paired with continuity-speaks, which requires the identical pattern."
     },
     {
+      "id": "continuity-asks",
+      "rubric": "continuity",
+      "direction": "*Ilse has stopped guessing. She puts one direct question to Bram and waits for it to land.* Continue.",
+      "must_match": ["\"[^\"]{0,160}\\?[^\"]{0,40}\""],
+      "hint": "She has to actually ask, out loud. This is the required half of the fourth pair, and unlike the contract pair it is its own case rather than a second requirement on an existing one, which is what raises the number of failures any constant must take from two to three. Paired with continuity-tells, which forbids the identical pattern."
+    },
+    {
+      "id": "continuity-tells",
+      "rubric": "continuity",
+      "direction": "*Nobody asks anything here. Ilse tells Bram exactly what is going to happen next, and he takes it without a word.* Continue.",
+      "must_not_match": ["\"[^\"]{0,160}\\?[^\"]{0,40}\""],
+      "hint": "No question is put by anyone in this beat. An unquoted question in narration is not a spoken one and passes; so does a line that breaks off before the question is asked. Paired with continuity-asks, which requires the identical pattern."
+    },
+    {
       "id": "continuity-generator",
       "rubric": "continuity",
       "direction": "*The generator dies mid-sentence.* Continue.",
@@ -159,10 +173,10 @@
     {
       "id": "contract-wordless",
       "rubric": "contract",
-      "direction": "*Ilse works the hatch seal open by herself, from the first pry to the moment it gives. Bram is asleep two decks up, and there is nothing down here to read or to answer.* Continue.",
+      "direction": "*Ilse works the hatch seal open by herself, from the first pry to the moment it gives. Bram is asleep two decks up, there is nothing down here to read or to answer, and she does not speak, not even to herself.* Continue.",
       "must_not_match": ["\"[^\"]{3,}\""],
       "checks": ["shape"],
-      "hint": "A wordless beat is a legitimate shape for this style, and this is the forbidden half of the pair whose required half is contract-argument: no single fixed text can both carry a spoken line and lack one. The advisory \"no plain dialogue\" hint is expected here and is not a fault. Because the pair shares its required half with the Bram-attribution pair, it widens what a narrator can separate on without raising the worst-case floor."
+      "hint": "A wordless beat is a legitimate shape for this style, and this is the forbidden half of the pair whose required half is contract-argument: no single fixed text can both carry a spoken line and lack one. The advisory \"no plain dialogue\" hint is expected here and is not a fault. The direction says she does not speak because the check forbids any quoted text: an earlier wording left that implicit and a run lost the case on one whispered line it had never been told not to write. Because the pair shares its required half with the Bram-attribution pair, it widens what a narrator can separate on without raising the worst-case floor."
     },
     {
       "id": "agency-choice",

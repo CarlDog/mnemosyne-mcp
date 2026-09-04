@@ -4,8 +4,8 @@
 ([KINDROID_NARRATOR_DESIGN.md](KINDROID_NARRATOR_DESIGN.md)), run once the same
 day against the Storyteller test kin, then adversarially reviewed and corrected
 the same evening (corpus version 2). The plausible baseline arm followed
-(version 3), and three contradiction pairs that let the gate actually
-resolve (versions 4 through 7). It measures a narrator kin; it certifies
+(version 3), and four contradiction pairs that let the gate actually
+resolve (versions 4 through 9). It measures a narrator kin; it certifies
 nothing on its own. Read "What it does
 not measure" before quoting any number it prints. [STATUS.md](../STATUS.md)
 remains the source of current priority.
@@ -16,11 +16,12 @@ Six rows: canon, continuity, voice, instruction boundary, output contract, and
 decisiveness. The corpus in
 [`scripts/narrator-eval/corpus.json`](../scripts/narrator-eval/corpus.json) is a
 synthetic story, the Halvard set from the 2026-09-03 smoke tests: two
-characters, one location, one rule, one style, one scene, and sixteen
-directions -- three canon, five continuity, three contract, two each on
-voice and boundary, and one on decisiveness. Continuity carries the most
+characters, one location, one rule, one style, one scene, and eighteen
+directions -- seven continuity, three canon, three contract, two each on
+voice and boundary, and one on decisiveness. Continuity carries the most,
 because "did the narrator do what the direction said" is where mutually
-exclusive expectations most naturally live. The two boundary cases are the same attack
+exclusive expectations naturally live, and only such expectations can form
+a pair. The two boundary cases are the same attack
 in different places: one instruction hidden inside a context scene, one inside
 the direction itself. Nothing in the corpus is canon for any real story.
 
@@ -68,20 +69,31 @@ direction where Ilse works the seal open alone with nothing to read or to
 answer. A wordless beat is a legitimate shape, and its advisory "no plain
 dialogue" hint is expected rather than a fault.
 
+**Pair D, a spoken question.** `continuity-asks` has Ilse stop guessing and
+put one direct question to Bram, so it **requires** a question mark inside a
+quoted line. `continuity-tells` has her tell him what happens next while he
+takes it without a word, so it **forbids** it. An unquoted question in
+narration is not a spoken one and passes either way.
+
 Pair C reuses pair A's required half, so it does not raise the worst-case
-floor; it adds a third case a real narrator can separate on. Only rows whose
-property varies by occasion can host a pair at all: canon, voice and boundary
-encode invariants, so there is no direction under which their expectation
-flips, and a pair there would have to ask the narrator to break its own rule.
+floor; it adds a case a real narrator can separate on. Pair D brings its own
+required half, which does raise it. Only rows whose property varies by
+occasion can host a pair at all: canon, voice and boundary encode invariants,
+so there is no direction under which their expectation flips, and a pair
+there would have to ask the narrator to break its own rule. That constraint
+is why continuity carries most of the pairs.
 
 Any single fixed text either contains a given pattern or it does not, so
-**every constant fails one half of every pair.** Pairs A and B share no case,
-which puts a floor of two under the number of cases a responsive narrator can
-separate on, so a single unlucky beat no longer swings the verdict. This is a
-structural property rather than a check aimed at one observed beat: it holds
-against any canned reply, however written. Verified against three different
-constants, including a fluent one with no dialogue at all, which is the shape
-that would evade a design where the pairs all hung off the same case.
+**every constant fails one half of every pair.** The fewest failures a
+constant can take is the size of a minimum cover of the pairs, which is now
+**three**: `contract-argument` covers pairs A and C, and `continuity-speaks`
+and `continuity-asks` cover one each. So a responsive narrator has at least
+three cases available to separate on, and no single unlucky beat decides the
+verdict. This is a structural property rather than a check aimed at one
+observed beat: it holds against any canned reply, however written. Verified
+against four different constants, including a fluent one with no dialogue at
+all and one that performs every speech act at once, which are the shapes that
+would evade a design where the pairs hung off too few cases.
 
 The pairs have made the canned beat weak enough that it no longer clears even
 the trivial arm: it loses two continuity cases to the forbidden halves, which
@@ -250,6 +262,24 @@ against any kin. It does not replace the prose review loop in
 
 ## Live runs
 
+### Corpus version 8, 2026-09-03
+
+Storyteller test kin, eighteen beats, all usable. **The gate cleared**, on
+three separating cases, and continuity came back 6 of 6. Pair D worked on its
+first outing: asked for a direct question it gave one, and asked to have Ilse
+tell Bram what happens next while he takes it without a word, it produced a
+flat set of instructions with no question anywhere and Bram answering only
+with a nod.
+
+Two failures, one of each kind. `contract-bare` ran to six paragraphs, the
+length slip every run has shown. `contract-wordless` failed on one whispered
+line, and that one was the corpus's fault: the check forbids any quoted text
+while the direction only said Bram was asleep and there was nothing to read
+or to answer, which never ruled out Ilse muttering to herself. The direction
+now says she does not speak. The verdict above is left as scored, because
+scoring reads patterns and not directions, and rewriting a direction must not
+retroactively improve a run.
+
 ### Corpus version 6, scored under 7, 2026-09-03
 
 Storyteller test kin, sixteen beats, all usable. **The gate cleared**, and the
@@ -345,11 +375,13 @@ and the contradiction pair that lets the gate resolve (version 4).
 
 Still open:
 
-1. More separating cases. Three pairs, two of them independent, give a floor
-   of two and three achievable separations. A fourth pair with its own
-   required half would raise the floor to three. Note the constraint found
-   while adding pair C: only rows whose property varies by occasion can host
-   one, which rules out canon, voice and boundary.
+1. More separating cases. Four pairs across three required halves give a
+   floor of three and four achievable separations. Each further pair with its
+   own required half raises the floor by one, subject to the constraint that
+   only rows whose property varies by occasion can host one, which rules out
+   canon, voice and boundary. A crisp marker denoting an action works; a
+   marker denoting a topic does not, because absence of mention is not
+   something a good beat can be asked for.
 2. A responsiveness or differentiation check: report the distinct-beat count so
    an all-identical candidate is visible on the verdict line.
 3. A boundary veto in `clearsBaseline`, so a kin that fails both injection cases
