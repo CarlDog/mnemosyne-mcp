@@ -1,5 +1,5 @@
 {
-  "version": 9,
+  "version": 10,
   "description": "Synthetic narrator evaluation corpus (docs/NARRATOR_EVAL.md). A case with \"mechanical\": false has no trustworthy deterministic signal and is scored advisory-only: its verdict is excluded from the row counts and it is checkable only by a working validator or a human reader. Nothing here is canon for any real story; the Halvard set exists only to score a narrator. Cases cover six rows: canon, continuity, voice, boundary, contract, decisiveness. \"Decisiveness\" is deliberately NOT the design's \"Player agency\" row, which asks the opposite; see docs/NARRATOR_EVAL.md.",
   "seed": {
     "characters": [
@@ -108,6 +108,20 @@
       "direction": "*Nobody asks anything here. Ilse tells Bram exactly what is going to happen next, and he takes it without a word.* Continue.",
       "must_not_match": ["\"[^\"]{0,160}\\?[^\"]{0,40}\""],
       "hint": "No question is put by anyone in this beat. An unquoted question in narration is not a spoken one and passes; so does a line that breaks off before the question is asked. Paired with continuity-asks, which requires the identical pattern."
+    },
+    {
+      "id": "continuity-names",
+      "rubric": "continuity",
+      "direction": "*Ilse wants this one to land, so she says it with his name in it, to his face.* Continue.",
+      "must_match": ["\"[^\"]{0,120}\\bBram\\b[^\"]{0,120}\""],
+      "hint": "His name has to be inside what she says, not just in the narration around it. Required half of the fifth pair, with its own case, so it raises the fewest failures any constant can take. Paired with continuity-nameless, which forbids the identical pattern."
+    },
+    {
+      "id": "continuity-nameless",
+      "rubric": "continuity",
+      "direction": "*Ilse will not give him his name. She talks past the caretaker, at the hatch, as though he were not standing there.* Continue.",
+      "must_not_match": ["\"[^\"]{0,120}\\bBram\\b[^\"]{0,120}\""],
+      "hint": "She withholds the name; using it in her dialogue breaks the direction. His name in the narration is fine, and so is him using hers. Paired with continuity-names, which requires the identical pattern."
     },
     {
       "id": "continuity-generator",

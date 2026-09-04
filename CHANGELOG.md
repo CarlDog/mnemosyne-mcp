@@ -16,6 +16,13 @@ this file was introduced remains in [STATUS.md](STATUS.md).
   measured on the baseline. Beats and reports stay under `data/`.
   Narrator design S5.
 
+- Narrator evaluation: a fifth contradiction pair, direct address by name
+  (corpus version 10), raising the floor to four. Its marker was chosen from a
+  survey of every real beat rather than by guess; three candidates were
+  rejected because this kin never produces them, so a required half built on
+  one would always fail. Also documents what each pair has actually bought:
+  across four live runs no pair half has ever failed on its own pattern, so
+  the returns are flat and a sixth pair is not the next improvement.
 - Narrator evaluation: a fourth contradiction pair, the first with its own
   required half (corpus versions 8 and 9). A spoken question is required by
   the new `continuity-asks` and forbidden by the new `continuity-tells`, so

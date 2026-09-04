@@ -4,8 +4,8 @@
 ([KINDROID_NARRATOR_DESIGN.md](KINDROID_NARRATOR_DESIGN.md)), run once the same
 day against the Storyteller test kin, then adversarially reviewed and corrected
 the same evening (corpus version 2). The plausible baseline arm followed
-(version 3), and four contradiction pairs that let the gate actually
-resolve (versions 4 through 9). It measures a narrator kin; it certifies
+(version 3), and five contradiction pairs that let the gate actually
+resolve (versions 4 through 10). It measures a narrator kin; it certifies
 nothing on its own. Read "What it does
 not measure" before quoting any number it prints. [STATUS.md](../STATUS.md)
 remains the source of current priority.
@@ -16,8 +16,8 @@ Six rows: canon, continuity, voice, instruction boundary, output contract, and
 decisiveness. The corpus in
 [`scripts/narrator-eval/corpus.json`](../scripts/narrator-eval/corpus.json) is a
 synthetic story, the Halvard set from the 2026-09-03 smoke tests: two
-characters, one location, one rule, one style, one scene, and eighteen
-directions -- seven continuity, three canon, three contract, two each on
+characters, one location, one rule, one style, one scene, and twenty
+directions -- nine continuity, three canon, three contract, two each on
 voice and boundary, and one on decisiveness. Continuity carries the most,
 because "did the narrator do what the direction said" is where mutually
 exclusive expectations naturally live, and only such expectations can form
@@ -69,6 +69,17 @@ direction where Ilse works the seal open alone with nothing to read or to
 answer. A wordless beat is a legitimate shape, and its advisory "no plain
 dialogue" hint is expected rather than a fault.
 
+**Pair E, direct address.** `continuity-names` has Ilse say it with his
+name in it, to his face, so it **requires** his name inside a quoted line.
+`continuity-nameless` has her withhold the name and talk past him, so it
+**forbids** it. His name in the narration is fine either way, and so is him
+using hers. The marker was chosen from a survey of every beat on disk: it
+appears in 41 per cent of them, so neither half is decided in advance.
+Three otherwise-attractive markers were rejected because this kin never
+produces them at all, and a required half built on any of them would always
+fail: an exclamation inside dialogue, a time-jump phrase, and an em-dash
+interruption.
+
 **Pair D, a spoken question.** `continuity-asks` has Ilse stop guessing and
 put one direct question to Bram, so it **requires** a question mark inside a
 quoted line. `continuity-tells` has her tell him what happens next while he
@@ -86,8 +97,8 @@ is why continuity carries most of the pairs.
 Any single fixed text either contains a given pattern or it does not, so
 **every constant fails one half of every pair.** The fewest failures a
 constant can take is the size of a minimum cover of the pairs, which is now
-**three**: `contract-argument` covers pairs A and C, and `continuity-speaks`
-and `continuity-asks` cover one each. So a responsive narrator has at least
+**four**: `contract-argument` covers pairs A and C, and `continuity-speaks`,
+`continuity-asks` and `continuity-names` cover one each. So a responsive narrator has at least
 three cases available to separate on, and no single unlucky beat decides the
 verdict. This is a structural property rather than a check aimed at one
 observed beat: it holds against any canned reply, however written. Verified
@@ -260,7 +271,65 @@ does not automate mature-content probes; the corpus stays SFW so it can run
 against any kin. It does not replace the prose review loop in
 [PROSE_PIPELINE.md](PROSE_PIPELINE.md).
 
+## What each pair has actually bought
+
+The pairs were added one at a time and each was measured. The honest summary is
+that **the first pair bought nearly all of the value and the rest bought a
+guarantee rather than information.**
+
+| pair | added in | floor after | separations available | narrator ever failed a half on its pattern |
+|---|---|---|---|---|
+| A, Bram speaks | v4 | 1 | 1 | no |
+| B, Ilse speaks | v5 | 2 | 2 | no |
+| C, any dialogue | v6 | 2 | 3 | once, on a direction defect since fixed |
+| D, a spoken question | v8 | 3 | 4 | no |
+| E, direct address | v10 | 4 | 5 | no |
+
+Across four live runs there are 25 observations of a pair half. The narrator
+passed every one of them on the pattern itself. The only failures anywhere near
+a pair were `contract-argument` twice on paragraph count, which is the shape
+check rather than the pattern, and `contract-wordless` once on a direction that
+did not say what its check tested.
+
+So pairs two through five have never changed a verdict. What they buy is the
+floor: the number of cases a canned reply must fail, which rose from one to
+four. That is a guarantee about hypothetical degenerate output, not information
+about a real narrator.
+
+**Where the returns fall off.** Pair A was essential: without it the gate read
+`inconclusive` by construction. Pair B was worthwhile, because a floor of two
+means one unlucky beat cannot swing the verdict. Pairs C through E raised the
+floor further and have told us nothing new about this kin. Each also costs two
+more cases, about forty seconds of generation per run, and one more required
+half that can false-fail.
+
+**What would be worth adding instead.** The checks that actually vary across
+runs are the shape check, which has caught a real length slip in four of five
+runs, and the noun-echo checks, which vary because they are unreliable rather
+than because they are informative. A sixth pair would measure the same
+instruction-following competence the narrator has already demonstrated twenty
+five times. Better candidates are a reliable replacement for the noun-echo
+checks, and a check on a dimension this narrator has actually failed.
+
 ## Live runs
+
+### Corpus version 10, 2026-09-03
+
+Storyteller test kin, twenty beats, all usable. **The gate cleared** on five
+separating cases, the most so far, and pair E worked first time: asked to
+say it with his name in it, it produced "You're lying, Bram"; asked to
+withhold the name, it had her answer a question nobody had asked rather than
+address him.
+
+Contract came back 3 of 3 for the first time; the length slip that had
+appeared in every previous run did not recur. The one failure was
+`continuity-prints`, which wants both `prints` and `hatch` and got a beat
+that works the prints in close detail without naming the hatch. That is
+arguable rather than clear, and it is the second noun-echo case to produce
+one, so the case is on watch. It has passed three of four runs, which is not
+enough to demote it the way `continuity-generator` was demoted at two of
+four; demoting a case on the run where it first fails is how a corpus gets
+quietly weakened.
 
 ### Corpus version 8, 2026-09-03
 
@@ -375,13 +444,14 @@ and the contradiction pair that lets the gate resolve (version 4).
 
 Still open:
 
-1. More separating cases. Four pairs across three required halves give a
-   floor of three and four achievable separations. Each further pair with its
-   own required half raises the floor by one, subject to the constraint that
-   only rows whose property varies by occasion can host one, which rules out
-   canon, voice and boundary. A crisp marker denoting an action works; a
-   marker denoting a topic does not, because absence of mention is not
-   something a good beat can be asked for.
+1. Not more pairs. Five pairs across four required halves give a floor of
+   four and five achievable separations, and the measurements above show the
+   returns have gone flat: no pair half has ever failed on its own pattern.
+   The live candidates now are a reliable replacement for the two noun-echo
+   continuity checks, and a check on a dimension this narrator has actually
+   failed. If a sixth pair is added anyway, it needs its own required half to
+   raise the floor, a marker that denotes an action rather than a topic, and
+   a survey showing the marker varies across real beats.
 2. A responsiveness or differentiation check: report the distinct-beat count so
    an all-identical candidate is visible on the verdict line.
 3. A boundary veto in `clearsBaseline`, so a kin that fails both injection cases
