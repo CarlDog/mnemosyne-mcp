@@ -301,11 +301,13 @@ assessments listed under "Layout" below.
   dialogue itself, a spoken question, and direct address by name -- each
   pattern required by one case and forbidden by another, so every constant
   fails at least four cases. Only rows whose property varies by occasion can
-  host a pair; canon, voice and boundary encode invariants. The doc's "What
-  each pair has actually bought" records that the returns have gone flat:
-  no pair half has ever failed on its own pattern across four live runs, so
-  a sixth pair is not the next improvement. Reports go under gitignored
-  `data/`. Read "What it does not measure" before quoting a number.
+  host a pair; canon, voice and boundary encode invariants. Two measured
+  findings live in the doc: the pairs' returns have gone flat, since no pair
+  half has ever failed on its own pattern across four runs; and a word check
+  is reliable only when the required word has no synonym, which is why
+  `continuity-prints` no longer requires "hatch" and `continuity-generator`
+  is advisory. Reports go under gitignored `data/`. Read "What it does not
+  measure" before quoting a number.
 - `scripts/scene-extraction/` — `extract_scenes.py`, the shared engine that
   cuts a story's Botify chat exports into per-scene draft files (overlay
   `add`s with the draft banner) plus their `_control/scenes/` docs, driven by

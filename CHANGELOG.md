@@ -16,6 +16,13 @@ this file was introduced remains in [STATUS.md](STATUS.md).
   measured on the baseline. Beats and reports stay under `data/`.
   Narrator design S5.
 
+- Narrator evaluation: the word checks repaired (corpus version 11). A check
+  that requires a word is reliable only when the word has no natural synonym,
+  measured across four runs. `continuity-prints` keeps the concrete noun with
+  its real synonyms, drops the location word that caused its only failure, and
+  gains a contradiction guard; `canon-knife` accepts "blade";
+  `continuity-generator` stays advisory because no reliable check exists for
+  it, with the three candidate checks and their scores recorded.
 - Narrator evaluation: a fifth contradiction pair, direct address by name
   (corpus version 10), raising the floor to four. Its marker was chosen from a
   survey of every real beat rather than by guess; three candidates were

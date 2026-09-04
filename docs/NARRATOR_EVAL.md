@@ -4,9 +4,9 @@
 ([KINDROID_NARRATOR_DESIGN.md](KINDROID_NARRATOR_DESIGN.md)), run once the same
 day against the Storyteller test kin, then adversarially reviewed and corrected
 the same evening (corpus version 2). The plausible baseline arm followed
-(version 3), and five contradiction pairs that let the gate actually
-resolve (versions 4 through 10). It measures a narrator kin; it certifies
-nothing on its own. Read "What it does
+(version 3), five contradiction pairs that let the gate actually resolve
+(versions 4 through 10), and a repair of the word checks (version 11). It
+measures a narrator kin; it certifies nothing on its own. Read "What it does
 not measure" before quoting any number it prints. [STATUS.md](../STATUS.md)
 remains the source of current priority.
 
@@ -129,11 +129,9 @@ harness cannot actually produce:
   On the first run its only catch turned entirely on an apostrophe glyph.
   Broadening the pattern to re-catch that beat would be teaching to the test,
   so the pattern stays as a signal and stops being a verdict.
-- **`continuity-generator`** asks for a noun the direction already supplies,
-  and produced a false failure in two of three live runs: once on an
-  inflection, and once on a beat that rendered the generator's death through
-  sound and cold and named the fuel line without ever saying "generator".
-  Widening the pattern to catch those would be fitting it to observed beats.
+- **`continuity-generator`** has no reliable mechanical check, which was
+  measured rather than assumed. See "When a word check is reliable" below
+  for the three options and what each scores.
 
 Both are checkable only by a working validator or a human reader.
 
@@ -271,6 +269,47 @@ does not automate mature-content probes; the corpus stays SFW so it can run
 against any kin. It does not replace the prose review loop in
 [PROSE_PIPELINE.md](PROSE_PIPELINE.md).
 
+## When a word check is reliable
+
+A check that requires a word is reliable only when the required word has no
+natural synonym. That is not a guess; it is what four runs measured.
+
+| required word | record | why |
+|---|---|---|
+| `knife` | 4 of 4 | a knife is called a knife |
+| `prints` | 4 of 4 | with `tracks`, `treads` and `footprints` accepted |
+| `hatch` | caused this case's only failure | seal, door, opening, cover |
+| `generator` | 2 of 4 | the hum, the power, the lights, the fan |
+
+So `continuity-prints` now requires the concrete noun with the synonyms a
+narrator actually reaches for, and no longer requires the location word that
+produced its only failure, on a beat that worked the prints in close detail
+without ever saying "hatch". It gains a contradiction guard the seed supports:
+Scene 1 has the prints fresh, so a beat calling them old fails. The case still
+fails 52 per cent of beats written for other cases, so it discriminates rather
+than waving everything through. `canon-knife` accepts `blade` as well, which
+changed no historical verdict.
+
+`continuity-generator` stays advisory, and this is why, measured rather than
+asserted. Across four runs the narrator wrote the same event four different
+ways, and no check catches all of them without waving everything through:
+
+| option | catches the real beats | passes unrelated beats | verdict |
+|---|---|---|---|
+| the original word list | 2 of 4 | 72% | misses half |
+| absence of "the power still worked" | 4 of 4 | 100% | vacuous |
+| a powered thing ceasing | 3 of 4 | 3% | tight, but misses one |
+
+The tightest option is the third, and it still misses "the hum snapped into
+silence". Any finite verb list misses the fifth rendering, and extending one
+after reading a beat is fitting the check to that beat. A working validator or
+a human reader is what can judge this row.
+
+**The general rule.** Prefer, in order: a contradiction pair, an absence check,
+a positive check on a word with no synonym. If none of those fits, mark the
+case advisory and say so, rather than shipping a verdict the corpus cannot
+support.
+
 ## What each pair has actually bought
 
 The pairs were added one at a time and each was measured. The honest summary is
@@ -303,13 +342,13 @@ floor further and have told us nothing new about this kin. Each also costs two
 more cases, about forty seconds of generation per run, and one more required
 half that can false-fail.
 
-**What would be worth adding instead.** The checks that actually vary across
-runs are the shape check, which has caught a real length slip in four of five
-runs, and the noun-echo checks, which vary because they are unreliable rather
-than because they are informative. A sixth pair would measure the same
-instruction-following competence the narrator has already demonstrated twenty
-five times. Better candidates are a reliable replacement for the noun-echo
-checks, and a check on a dimension this narrator has actually failed.
+**What would be worth adding instead.** The word checks were the other thing
+that varied, and they varied because they were unreliable rather than
+informative; that is now fixed or honestly marked advisory, above. What
+remains is the shape check, which has caught a real length slip in four of
+five runs and is the only check that has ever found a genuine fault in this
+narrator. A sixth pair would measure the same instruction-following
+competence the narrator has already demonstrated twenty five times.
 
 ## Live runs
 
@@ -325,11 +364,11 @@ Contract came back 3 of 3 for the first time; the length slip that had
 appeared in every previous run did not recur. The one failure was
 `continuity-prints`, which wants both `prints` and `hatch` and got a beat
 that works the prints in close detail without naming the hatch. That is
-arguable rather than clear, and it is the second noun-echo case to produce
-one, so the case is on watch. It has passed three of four runs, which is not
-enough to demote it the way `continuity-generator` was demoted at two of
-four; demoting a case on the run where it first fails is how a corpus gets
-quietly weakened.
+arguable rather than clear, and it was the second word check to produce one.
+Rather than demote it on the run where it first failed, which is how a corpus
+gets quietly weakened, the check itself was diagnosed and repaired in version
+11: it no longer requires a word with four synonyms. Re-scored under that
+corpus the run reads continuity 8 of 8 and contract 3 of 3.
 
 ### Corpus version 8, 2026-09-03
 

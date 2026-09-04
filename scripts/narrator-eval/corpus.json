@@ -1,5 +1,5 @@
 {
-  "version": 10,
+  "version": 11,
   "description": "Synthetic narrator evaluation corpus (docs/NARRATOR_EVAL.md). A case with \"mechanical\": false has no trustworthy deterministic signal and is scored advisory-only: its verdict is excluded from the row counts and it is checkable only by a working validator or a human reader. Nothing here is canon for any real story; the Halvard set exists only to score a narrator. Cases cover six rows: canon, continuity, voice, boundary, contract, decisiveness. \"Decisiveness\" is deliberately NOT the design's \"Player agency\" row, which asks the opposite; see docs/NARRATOR_EVAL.md.",
   "seed": {
     "characters": [
@@ -43,7 +43,7 @@
       "id": "canon-knife",
       "rubric": "canon",
       "direction": "*Ilse checks her boot before going down.* Continue.",
-      "must_match": ["\\bknife\\b"],
+      "must_match": ["\\b(knife|blade)\\b"],
       "hint": "The seed puts a folding knife in her boot; a beat that checks the boot and finds nothing, or something else, missed the fact."
     },
     {
@@ -66,7 +66,11 @@
       "id": "continuity-prints",
       "rubric": "continuity",
       "direction": "*Ilse goes back to the prints by the hatch.* Continue.",
-      "must_match": ["\\b(prints?|footprints?)\\b", "\\bhatch\\b"]
+      "must_match": ["\\b(prints?|footprints?|tracks?|treads?|bootmarks?)\\b"],
+      "must_not_match": [
+        "\\b(prints?|footprints?|tracks?)\\b[^.!?]{0,40}\\b(years old|ancient|long dry|weeks old)\\b|\\b(old|ancient) (boot )?(prints?|footprints?|tracks?)\\b"
+      ],
+      "hint": "The beat has to work the prints themselves, and must not call them old: Scene 1 has them fresh. The location word was dropped from this check. \"hatch\" has four common synonyms and produced the only failure this case has had, on a beat that worked the prints in close detail without naming the hatch. A positive word check is reliable only when the required word has no natural synonym."
     },
     {
       "id": "continuity-alone",
@@ -129,7 +133,7 @@
       "direction": "*The generator dies mid-sentence.* Continue.",
       "must_match": ["\\b(generator|dark|darkness|lights?|lamps?)\\b"],
       "mechanical": false,
-      "hint": "The generator dies; the beat should engage that. This case is advisory: its expectation is a noun echo of the direction, and it produced a false failure in two of three live runs -- once on an inflection, once on a beat that rendered the failure through sound and cold and named the fuel line without ever saying \"generator\". Widening the pattern to catch those would be fitting it to observed beats, so the pattern stays as a signal and stops being a verdict. A working validator or a human reader is what can judge this one."
+      "hint": "The generator dies; the beat should engage that. This case is advisory because no reliable mechanical check exists for it, and that was measured rather than assumed. Across four live runs the narrator wrote the same event four different ways. The original word list catches 2 of the 4; an absence check for the power still working passes 100% of unrelated beats and so is vacuous; the tightest option, a powered thing ceasing, reaches 3 of 4 at a 3% false-positive rate and still misses \"the hum snapped into silence\". Any finite verb list misses the fifth rendering, so extending one would be fitting the check to observed beats. A working validator or a human reader is what can judge this one."
     },
     {
       "id": "voice-pov",
