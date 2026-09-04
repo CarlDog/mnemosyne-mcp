@@ -16,6 +16,14 @@ this file was introduced remains in [STATUS.md](STATUS.md).
   measured on the baseline. Beats and reports stay under `data/`.
   Narrator design S5.
 
+- Narrator evaluation: two defects fixed (corpus version 12), both found by
+  reading beats rather than by a check failing. `continuity-tells` covered one
+  clause of a three-clause direction and passed a beat that broke another, so
+  it now also forbids a second speaker, reusing an existing pattern verbatim.
+  `voice-tense` was anchored to the character's name and had never fired in 89
+  beats against a narrator that writes pronoun subjects; it is replaced by a
+  check that scans narration only, since dialogue is legitimately present
+  tense. A check that cannot fire is a defect, not a clean record.
 - Narrator evaluation: the word checks repaired (corpus version 11). A check
   that requires a word is reliable only when the word has no natural synonym,
   measured across four runs. `continuity-prints` keeps the concrete noun with

@@ -13,7 +13,9 @@ const {
   clearsBaseline,
   discrimination,
   gateOutcome,
+  narrationOnly,
   normalizeTypography,
+  presentTenseNarration,
   scoreCase,
   shapeSlips,
   shapeChecks,
@@ -442,7 +444,9 @@ describe("plausible baseline arm", () => {
     const canned = summarize(corpus.cases.map((c) => scoreCase(c, PLAUSIBLE)));
     const trivial = summarize(corpus.cases.map((c) => scoreCase(c, TRIVIAL)));
     expect(clearsBaseline(canned.rows, trivial.rows).clears).toBe(false);
-    expect(canned.rows.continuity.pass).toBe(trivial.rows.continuity.pass);
+    expect(canned.rows.continuity.pass).toBeLessThanOrEqual(
+      trivial.rows.continuity.pass,
+    );
   });
 
   it("a candidate identical to the canned beat separates on nothing", () => {
@@ -590,6 +594,68 @@ describe("word checks", () => {
   });
 });
 
+describe("the two defects found by reading the beats", () => {
+  it("catches a second speaker where the direction says he takes it without a word", () => {
+    // A live run passed this case while Bram spoke and Ilse answered him,
+    // because the only check was for a spoken question and the beat had none.
+    const bramSpeaks =
+      '*Ilse kept her eyes on the hatch.*\n\n"I am going to the shed," she said.\n\n"I didn\'t open it," he said.\n\n*She turned on her heel.*';
+    const s = scoreCase(byId("continuity-tells"), bramSpeaks);
+    expect(s.pass).toBe(false);
+    expect(s.hard.join(" ")).toMatch(/matched forbidden/);
+    expect(bramSpeaks).not.toMatch(/\?/); // it still contains no question
+  });
+
+  it("still passes a beat where she tells him and he says nothing", () => {
+    const silent =
+      '*Ilse kept her eyes on the hatch.*\n\n"I am going to the shed. You stay here and keep the door shut."\n\n*Bram looked at the grating between his boots and said nothing.*';
+    expect(scoreCase(byId("continuity-tells"), silent).pass).toBe(true);
+  });
+
+  it("reuses the existing pattern rather than a new one", () => {
+    expect(byId("continuity-tells").must_not_match).toContain(
+      byId("continuity-alone").must_not_match![0],
+    );
+    // The pair's own pattern must stay first, so pair D still resolves on it.
+    expect(byId("continuity-tells").must_not_match![0]).toBe(
+      byId("continuity-asks").must_match![0],
+    );
+  });
+
+  it("catches present tense with a pronoun subject, the form the old check missed", () => {
+    // The old pattern was anchored to the name and fired on none of 89 beats.
+    const slip =
+      "*She crosses the deck and the wind pulls at her.*\n\n*She keeps her head down.*\n\n*She goes on.*";
+    expect(scoreCase(byId("voice-tense"), slip).pass).toBe(false);
+    expect(scoreCase(byId("voice-tense"), slip).hard).toContain(
+      "present-tense narration",
+    );
+  });
+
+  it("does not fire on present tense inside dialogue, which is correct", () => {
+    const fine =
+      '*She set the lamp down on the console.*\n\n"Ice melts, Bram. It always does, and it always will."\n\n*He said nothing to that.*';
+    expect(scoreCase(byId("voice-tense"), fine).pass).toBe(true);
+  });
+
+  it("scans narration, and falls back to non-dialogue when a beat has no asterisks", () => {
+    expect(presentTenseNarration("*She crossed.*\n\n*He watched.*")).toBe(
+      false,
+    );
+    expect(presentTenseNarration("*She crosses.*\n\n*He watched.*")).toBe(true);
+    // No asterisk run at all: still scanned, outside quoted dialogue.
+    expect(
+      presentTenseNarration('She looks at the hatch.\n\n"Fine," he said.'),
+    ).toBe(true);
+    expect(narrationOnly("*A* and *B*").split("\n")).toEqual(["A", "B"]);
+  });
+
+  it("no longer carries the inert name-anchored pattern", () => {
+    expect(byId("voice-tense").must_not_match).toBeUndefined();
+    expect(byId("voice-tense").checks).toEqual(["no_present_tense_narration"]);
+  });
+});
+
 describe("the contradiction pairs", () => {
   // Each pair puts one identical pattern on both sides of a requirement:
   // required by a case whose direction calls for it, forbidden by a case whose
@@ -702,6 +768,7 @@ describe("the contradiction pairs", () => {
       "continuity-asks",
       "continuity-names",
       "continuity-silence",
+      "continuity-tells",
       "contract-wordless",
     ]);
   });

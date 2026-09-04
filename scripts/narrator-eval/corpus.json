@@ -1,5 +1,5 @@
 {
-  "version": 11,
+  "version": 12,
   "description": "Synthetic narrator evaluation corpus (docs/NARRATOR_EVAL.md). A case with \"mechanical\": false has no trustworthy deterministic signal and is scored advisory-only: its verdict is excluded from the row counts and it is checkable only by a working validator or a human reader. Nothing here is canon for any real story; the Halvard set exists only to score a narrator. Cases cover six rows: canon, continuity, voice, boundary, contract, decisiveness. \"Decisiveness\" is deliberately NOT the design's \"Player agency\" row, which asks the opposite; see docs/NARRATOR_EVAL.md.",
   "seed": {
     "characters": [
@@ -110,8 +110,11 @@
       "id": "continuity-tells",
       "rubric": "continuity",
       "direction": "*Nobody asks anything here. Ilse tells Bram exactly what is going to happen next, and he takes it without a word.* Continue.",
-      "must_not_match": ["\"[^\"]{0,160}\\?[^\"]{0,40}\""],
-      "hint": "No question is put by anyone in this beat. An unquoted question in narration is not a spoken one and passes; so does a line that breaks off before the question is asked. Paired with continuity-asks, which requires the identical pattern."
+      "must_not_match": [
+        "\"[^\"]{0,160}\\?[^\"]{0,40}\"",
+        "\"[^\"]{3,}\"[^.!?\"]{0,30}\\b(Bram|he)\\s+(said|asked|answered|replied|whispered|called|shouted|muttered)\\b(?!\\s+nothing)|\\b(Bram|he)\\s+(said|asked|answered|replied|whispered|called|shouted|muttered)\\b(?!\\s+nothing)[^.!?\"]{0,20}\"[^\"]{3,}\""
+      ],
+      "hint": "Two of the direction's three clauses are checked. No question is put by anyone: an unquoted question in narration is not a spoken one and passes. And \"he takes it without a word\": Bram does not speak. The second prohibition reuses continuity-alone's pattern verbatim rather than a new one, because it already handles both attribution orders and treats \"said nothing\" as silence. It was added after a run passed this case while Bram spoke and Ilse answered him, which the question check alone could not see. Paired with continuity-asks, which requires the question pattern; the added prohibition does not create a sixth pair, it covers a clause the case already stated."
     },
     {
       "id": "continuity-names",
@@ -149,10 +152,8 @@
       "id": "voice-tense",
       "rubric": "voice",
       "direction": "*Ilse crosses the deck in the wind.* Continue.",
-      "must_not_match": [
-        "\\bIlse (crosses|walks|steps|looks|turns|goes|stops|pulls)\\b"
-      ],
-      "hint": "Past tense; present-tense narration of Ilse is a tense break."
+      "hint": "Third-person limited, past tense. The check scans narration only, because dialogue is legitimately present tense. It replaces a pattern anchored to the name followed immediately by a present-tense verb (\"Ilse crosses\"), which fired on none of 89 beats across eight runs: this narrator narrates with pronoun subjects (\"She kept her head down\"), which is the exact form a real slip takes. The row's only mechanical case was scoring 1 of 1 while carrying no information.",
+      "checks": ["no_present_tense_narration"]
     },
     {
       "id": "boundary-context",

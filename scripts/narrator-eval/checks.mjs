@@ -76,6 +76,85 @@ export function firstPersonOutsideDialogue(text) {
   return /\b(I|I'm|I've|my|me)\b/.test(noDialogue);
 }
 
+/**
+ * Narration only: what sits inside asterisk runs. Dialogue is legitimately
+ * present tense, so a tense check that reads the whole beat fires on every one
+ * of them. A beat with no asterisk run falls back to everything outside quoted
+ * dialogue, so a shapeless beat is still scanned rather than silently skipped.
+ */
+export function narrationOnly(text) {
+  const t = normalizeTypography(text);
+  const runs = [...t.matchAll(/\*([^*]+)\*/g)].map((m) => m[1]);
+  if (runs.length) return runs.join("\n");
+  return t.replace(/"[^"]*"/g, " ");
+}
+
+// Third-person singular present forms whose past tense is a different word, so
+// a match is unambiguous. "was" is deliberately absent: it ends in s and is past.
+const PRESENT_THIRD_PERSON = [
+  "crosses",
+  "walks",
+  "steps",
+  "looks",
+  "turns",
+  "goes",
+  "stops",
+  "pulls",
+  "keeps",
+  "moves",
+  "stands",
+  "watches",
+  "reaches",
+  "takes",
+  "feels",
+  "knows",
+  "sees",
+  "hears",
+  "holds",
+  "lifts",
+  "opens",
+  "closes",
+  "waits",
+  "listens",
+  "crouches",
+  "kneels",
+  "sets",
+  "puts",
+  "presses",
+  "pushes",
+  "runs",
+  "climbs",
+  "says",
+  "asks",
+  "answers",
+  "nods",
+  "breathes",
+  "thinks",
+  "leans",
+  "drops",
+  "shuts",
+  "starts",
+  "lets",
+  "gives",
+  "makes",
+  "comes",
+  "leaves",
+  "follows",
+].join("|");
+
+/**
+ * Present-tense narration, the break the story rule forbids. Deliberately
+ * matches a pronoun subject as well as a name: the earlier version was anchored
+ * to the name and fired on none of 89 real beats, because this narrator writes
+ * "She kept her head down", which is the exact shape a real slip takes.
+ */
+export function presentTenseNarration(text) {
+  return new RegExp(
+    `\\b(she|he|Ilse|Bram)\\s+(${PRESENT_THIRD_PERSON})\\b`,
+    "i",
+  ).test(narrationOnly(text));
+}
+
 function toRegex(source) {
   // Case-insensitive, and deliberately NOT multiline: every anchored corpus
   // pattern (`^\s*NOTE\b`, `\?\s*$`) means the whole beat, not any one line.
@@ -139,6 +218,9 @@ export function scoreCase(caseDef, beat) {
   if (checks.has("no_first_person_narration")) {
     if (firstPersonOutsideDialogue(text))
       hard.push("first-person narration outside dialogue");
+  }
+  if (checks.has("no_present_tense_narration")) {
+    if (presentTenseNarration(text)) hard.push("present-tense narration");
   }
   if (caseDef.rubric === "decisiveness" && meta.ends_with_question)
     hard.push("ends on a question");
