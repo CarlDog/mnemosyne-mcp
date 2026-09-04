@@ -531,6 +531,65 @@ const ANSWERS: Record<string, string> = {
   "contract-wordless": WORDLESS_BEAT,
 };
 
+describe("word checks", () => {
+  // A positive word check is reliable only when the required word has no
+  // natural synonym. Measured across four live runs: "knife" scored 4/4,
+  // "hatch" and "generator" scored 3/4 and 2/4 because a narrator reaches for
+  // the seal, the door, the hum, the power instead.
+
+  it("accepts the synonyms a narrator actually reaches for", () => {
+    const c = byId("continuity-prints");
+    for (const beat of [
+      '*The prints were clear in the frost.*\n\n"Leave it," he said.\n\n*She did not.*',
+      '*The tread marks ran to the bulkhead.*\n\n"Leave it," he said.\n\n*She did not.*',
+      '*A single footprint sat in the dust.*\n\n"Leave it," he said.\n\n*She did not.*',
+    ]) {
+      expect(scoreCase(c, beat).pass).toBe(true);
+    }
+  });
+
+  it("no longer demands a second word that has four synonyms", () => {
+    // The v10 beat: it works the prints in close detail and never says
+    // "hatch". That was this case's only failure in four runs.
+    const beat =
+      '*She stopped at the edge of the light pool and looked down. The prints were clear in the thin layer of frost, size tens, heavy tread.*\n\n"Leave it," Bram said.\n\n*She crouched instead, and traced the line of the heel.*';
+    expect(scoreCase(byId("continuity-prints"), beat).pass).toBe(true);
+    expect(byId("continuity-prints").must_match!.join(" ")).not.toMatch(
+      /hatch/,
+    );
+  });
+
+  it("still fails a beat that never works the prints at all", () => {
+    const beat =
+      "*She crossed the deck and listened to the wind.*\n\n*Nothing moved below.*\n\n*She went back up.*";
+    expect(scoreCase(byId("continuity-prints"), beat).pass).toBe(false);
+  });
+
+  it("catches a beat that contradicts the seed by calling the prints old", () => {
+    const beat =
+      "*The prints were years old, dried to nothing in the frost.*\n\n*She straightened up.*\n\n*It had been a wasted climb.*";
+    const s = scoreCase(byId("continuity-prints"), beat);
+    expect(s.pass).toBe(false);
+    expect(s.hard.join(" ")).toMatch(/matched forbidden/);
+  });
+
+  it("accepts either word for the knife", () => {
+    for (const beat of [
+      '*She worked the knife out of her boot.*\n\n"Ready," she said.\n\n*She went down.*',
+      '*She worked the blade out of her boot.*\n\n"Ready," she said.\n\n*She went down.*',
+    ]) {
+      expect(scoreCase(byId("canon-knife"), beat).pass).toBe(true);
+    }
+  });
+
+  it("keeps the generator case advisory, because no reliable check exists", () => {
+    // Measured, not assumed: the word list catches 2 of 4 real beats, an
+    // absence check passes 100% of unrelated beats, and the tightest option
+    // still misses "the hum snapped into silence".
+    expect(byId("continuity-generator").mechanical).toBe(false);
+  });
+});
+
 describe("the contradiction pairs", () => {
   // Each pair puts one identical pattern on both sides of a requirement:
   // required by a case whose direction calls for it, forbidden by a case whose
