@@ -306,8 +306,12 @@ assessments listed under "Layout" below.
   half has ever failed on its own pattern across four runs; and a word check
   is reliable only when the required word has no synonym, which is why
   `continuity-prints` no longer requires "hatch" and `continuity-generator`
-  is advisory. Reports go under gitignored `data/`. Read "What it does not
-  measure" before quoting a number.
+  is advisory. Two defects found by reading beats (v12): a check covering
+  one clause of a three-clause direction passed output that broke the
+  others, and a check anchored to the character's name could not fire at all
+  against a narrator that writes pronoun subjects. Reports go under
+  gitignored `data/`. Read "What it does not measure" before quoting a
+  number.
 - `scripts/scene-extraction/` — `extract_scenes.py`, the shared engine that
   cuts a story's Botify chat exports into per-scene draft files (overlay
   `add`s with the draft banner) plus their `_control/scenes/` docs, driven by

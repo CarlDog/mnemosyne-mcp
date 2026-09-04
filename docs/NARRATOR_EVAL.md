@@ -5,8 +5,9 @@
 day against the Storyteller test kin, then adversarially reviewed and corrected
 the same evening (corpus version 2). The plausible baseline arm followed
 (version 3), five contradiction pairs that let the gate actually resolve
-(versions 4 through 10), and a repair of the word checks (version 11). It
-measures a narrator kin; it certifies nothing on its own. Read "What it does
+(versions 4 through 10), a repair of the word checks (version 11), and two
+defect fixes found by reading beats (version 12). It measures a narrator
+kin; it certifies nothing on its own. Read "What it does
 not measure" before quoting any number it prints. [STATUS.md](../STATUS.md)
 remains the source of current priority.
 
@@ -269,6 +270,32 @@ does not automate mature-content probes; the corpus stays SFW so it can run
 against any kin. It does not replace the prose review loop in
 [PROSE_PIPELINE.md](PROSE_PIPELINE.md).
 
+## Two defects, and how they were found
+
+Both were found by reading beats, not by a check failing, and both are worth
+remembering as classes rather than incidents.
+
+**A check that covers one clause of a three-clause direction.** If a direction
+asks for three things, a check on one of them will pass output that breaks the
+other two. `continuity-tells` now carries a second prohibition, reusing
+`continuity-alone`'s pattern verbatim rather than a new one, since that pattern
+already handles both attribution orders and treats "said nothing" as silence.
+It does not create a sixth pair; it covers a clause the case already stated.
+
+**A check aimed at a surface the model does not write.** `voice-tense` was
+anchored to the character's name. The narrator uses pronouns. The check could
+not fire, and a check that cannot fire is worse than no check, because it
+reports a pass. It is replaced by a named check that scans narration only,
+since dialogue is legitimately present tense and a whole-beat tense check fires
+on every beat that has any. The replacement was validated before it shipped:
+it catches pronoun and name subjects, ignores present tense inside dialogue,
+and fires on none of the 89 real beats, all of which are correct past tense.
+
+**The general lesson.** Ask of every check two questions the earlier ones did
+not survive: does it cover everything its direction asks for, and can it fire
+at all on the shape this model actually writes. A check that has never fired
+across a corpus of real output is a defect, not a clean record.
+
 ## When a word check is reliable
 
 A check that requires a word is reliable only when the required word has no
@@ -351,6 +378,43 @@ narrator. A sixth pair would measure the same instruction-following
 competence the narrator has already demonstrated twenty five times.
 
 ## Live runs
+
+### Corpus version 11, read in full, 2026-09-03
+
+Storyteller test kin, twenty beats, all usable, no version mismatch. The
+mechanical result was 17 of 17 with the gate clearing on five separating cases
+and no regressions. **Seven reviewers then read all twenty beats against their
+directions, looking for false passes, and each concern went to a skeptic.** Two
+survived, and both were verified by hand. They are the reason corpus version 12
+exists, and they are the best argument in this document for the standing rule
+that a number is not a verdict until a person has read what produced it.
+
+- **A genuine false pass on `continuity-tells`.** Its direction has three
+  clauses: nobody asks, Ilse tells him, and he takes it without a word. The
+  check covered the first. The beat had Bram say "I didn't open it," and Ilse
+  answer "I didn't ask," so his non-silence became the closing exchange, and the
+  case passed because the beat honestly contains no question mark. The corpus
+  already owned the regex that catches it.
+- **An inert check on `voice-tense`.** Its pattern was anchored to the
+  character's name followed immediately by a present-tense verb. It had fired
+  zero times in 89 beats across eight runs, and it misses "She crosses the
+  deck" while catching only "Ilse crosses the deck". This narrator narrates
+  with pronoun subjects, which is the exact form a real slip takes. Since
+  `voice-pov` is advisory, that made the whole voice row score 1 of 1 while
+  carrying no information.
+
+Three further things the reading surfaced that no case checks, all left as
+recorded observations rather than acted on: three beats broke the house shape
+and passed, because shape is hard only on contract rows; the knife beat has
+Ilse tell Bram "you call the ship and you tell them we found a problem" while
+the seed says there has been no radio contact since the storm; and the reviewers
+found point-of-view strain in roughly four of twenty beats, which only the
+advisory `voice-pov` case would see.
+
+Scored under version 12, the same beats read 16 of 17. Separation stays at five
+rather than rising to six, because the canned beat fails `continuity-tells`
+too, so the case is not one that tells them apart.
+
 
 ### Corpus version 10, 2026-09-03
 
