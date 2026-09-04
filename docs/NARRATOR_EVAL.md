@@ -5,8 +5,8 @@
 day against the Storyteller test kin, then adversarially reviewed and corrected
 the same evening (corpus version 2). The plausible baseline arm followed
 (version 3), five contradiction pairs that let the gate actually resolve
-(versions 4 through 10), a repair of the word checks (version 11), and two
-defect fixes found by reading beats (version 12). It measures a narrator
+(versions 4 through 10), a repair of the word checks (version 11), and
+defect fixes found by reading beats (version 12 and after). It measures a narrator
 kin; it certifies nothing on its own. Read "What it does
 not measure" before quoting any number it prints. [STATUS.md](../STATUS.md)
 remains the source of current priority.
@@ -362,6 +362,30 @@ floor: the number of cases a canned reply must fail, which rose from one to
 four. That is a guarantee about hypothetical degenerate output, not information
 about a real narrator.
 
+**Correction, after two more runs.** The paragraph above was written from four
+runs and is wrong. With six, five pair halves have failed on their own pattern,
+across four distinct cases:
+
+| run | case | failed on |
+|---|---|---|
+| v8 | `contract-wordless` | carried dialogue |
+| v11 | `continuity-tells` | a second speaker |
+| v12 | `continuity-tells` | a second speaker |
+| v12 | `continuity-asks` | no spoken question |
+| v12 | `continuity-nameless` | used the withheld name |
+
+Two of those were invisible at the time, because the check that catches them
+was broken until version 12. So the claim that the pairs had stopped
+discriminating was drawn from too few runs and one instrument that could not
+report. Pairs D and E, the two described above as having told us nothing new,
+both produced failures in the very next run.
+
+What survives of the original point is narrower and still worth keeping: a pair
+that reuses an existing required half does not raise the floor, and the cost of
+each pair is real. What does not survive is the conclusion that further pairs
+are pointless. **Do not draw a returns-have-flattened conclusion from a handful
+of runs, and never from an instrument that has not been shown able to fire.**
+
 **Where the returns fall off.** Pair A was essential: without it the gate read
 `inconclusive` by construction. Pair B was worthwhile, because a floor of two
 means one unlucky beat cannot swing the verdict. Pairs C through E raised the
@@ -378,6 +402,45 @@ narrator. A sixth pair would measure the same instruction-following
 competence the narrator has already demonstrated twenty five times.
 
 ## Live runs
+
+### Corpus version 12, 2026-09-03
+
+Storyteller test kin, twenty beats, all usable. **13 of 17**, down from the
+previous run's 17 of 17, and the four failures were each read against their
+direction and confirmed real:
+
+- `continuity-tells`: Bram said "I understand" where the direction says he
+  takes it without a word. **This beat would have passed under the previous
+  corpus** -- the old question-only check does not fire on it and the new one
+  does -- so the repair caught a real, repeated failure on fresh output.
+- `continuity-asks`: gave an imperative, "Then explain the damp", where the
+  direction asked for a direct question.
+- `continuity-nameless`: used the name it was told to withhold.
+- `contract-bare`: swallowed dialogue inside an asterisk run.
+
+The advisory `voice-pov` case also fired correctly, on a beat that narrates
+Bram's interior in full while Ilse is not in the room. It carries no verdict.
+
+Then a five-reviewer read of the fifteen passing cases, each concern put to a
+skeptic, found **no false passes**. It found two other things, both verified:
+
+- **A canon slip no case can see.** `continuity-alone`'s beat has "She
+  unclipped the folding knife from her belt". The seed says boot, and four
+  other beats in the same run say boot. Canon is checked on two of twenty
+  beats and this is not one of them.
+- **A scan-region hole in the tense check shipped hours earlier**, of exactly
+  the class that check was written to fix: `narrationOnly` returned only
+  asterisk runs whenever a beat had any, leaving bare narration in the same
+  beat unread. Thirteen of twenty beats carried such text. Fixed here to scan
+  every region that is not quoted dialogue, validated to still fire on none of
+  the 109 real beats.
+
+**Most of the score drop is not the repair.** Holding beats constant, the
+previous run's beats score 17 of 17 under the old corpus and 16 of 17 under
+this one. The corpus change costs exactly one case; the other three failures
+come from checks that already existed and simply were not tripped before. One
+point is the fix and three are run-to-run variance.
+
 
 ### Corpus version 11, read in full, 2026-09-03
 

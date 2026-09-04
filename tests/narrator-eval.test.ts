@@ -638,7 +638,7 @@ describe("the two defects found by reading the beats", () => {
     expect(scoreCase(byId("voice-tense"), fine).pass).toBe(true);
   });
 
-  it("scans narration, and falls back to non-dialogue when a beat has no asterisks", () => {
+  it("scans every region that is not quoted dialogue", () => {
     expect(presentTenseNarration("*She crossed.*\n\n*He watched.*")).toBe(
       false,
     );
@@ -647,7 +647,26 @@ describe("the two defects found by reading the beats", () => {
     expect(
       presentTenseNarration('She looks at the hatch.\n\n"Fine," he said.'),
     ).toBe(true);
-    expect(narrationOnly("*A* and *B*").split("\n")).toEqual(["A", "B"]);
+    // And bare narration inside a beat that DOES have runs. An earlier version
+    // returned only the runs, which left 13 of 20 beats in a live run partly
+    // unread -- the same defect class this check was written to fix.
+    expect(
+      presentTenseNarration(
+        "*She crossed the deck.*\n\nShe crosses back again.\n\n*He watched.*",
+      ),
+    ).toBe(true);
+    // Dialogue is excluded, but a present-tense attribution outside it is not.
+    expect(
+      presentTenseNarration('*She set it down.*\n\n"Ice melts, Bram."'),
+    ).toBe(false);
+    expect(
+      presentTenseNarration('*She set it down.*\n\n"Cold," she says.'),
+    ).toBe(true);
+    const scanned = narrationOnly('*A* and *B* and "C"');
+    expect(scanned).toContain("A");
+    expect(scanned).toContain("B");
+    expect(scanned).toContain("and");
+    expect(scanned).not.toContain("C");
   });
 
   it("no longer carries the inert name-anchored pattern", () => {
