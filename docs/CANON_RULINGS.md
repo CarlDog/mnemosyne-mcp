@@ -33,9 +33,16 @@ invention on either side, and it does not by itself move any file.
 
 ### Scope
 
-Fleet-wide. It absorbs eleven decides across all six non-flagship stories:
-`BN-1`, `BN-2`, `SF-1`, `SF-3`, `BL-4`, `AP-3`, `AP-4`, `AP-5`, `AP-8`, `NV-1`,
-`NV-4`. Each audit's existing per-story classification stands under it.
+Fleet-wide. It absorbs eleven decides across five of the six non-flagship
+stories: `BN-1`, `BN-2`, `SF-1`, `SF-3`, `BL-4`, `AP-3`, `AP-4`, `AP-5`, `AP-8`,
+`NV-1`, `NV-4`. Each audit's existing per-story classification stands under it.
+
+**Midnight Is a Suggestion is classified without an absorbed decide, and that is
+deliberate.** It has zero scene files, so the tie-break has no played scene to
+weigh in its own tree; it appears in the table below because its r1 retirement is
+one of the three cases that established the deliberate side of the test. Its own
+`MIS-2` is a source-era disposition question and belongs to a different ruling,
+not to this one. Do not read the table as an absorption list.
 
 ### What it classified
 
@@ -76,10 +83,28 @@ above.
    them, and letting `NV-4`'s flag resolve them by default would classify ten
    played scenes that nobody ruled on.
 
+### Interim control while the recording requirement is open
+
+Until the marker obligation above is ruled on: **write the corrected prose now,
+and do not invent a marker form.** A missing marker is cheaply enumerable later
+from this register and each story's `PASS.md`; a marker form invented in one
+story and propagated through six is silent drift that nothing will surface.
+
+This is not hypothetical. Deriving the ruling's consequences immediately produced
+two stories assuming it in opposite directions inside a single pass — one writing
+`(r3: ...)` markers at each changed claim, the other explicitly withholding them
+and saying so — and both had a live in-tree marker form to point at. Two stories
+with a form diverged, which is exactly why the rule has to be stated rather than
+left to each pass's judgement.
+
 ### Consequence for sequencing
 
 Canon-side records — ledgers, timelines, profiles, consequence and evidence
 records — are writable under this ruling now, because seat 10 does not touch
-them. Anything that edits a file under `drafts/scenes/` should wait, because
+them. That list is exhaustive, not illustrative. **Worldbuilding system records
+are not on it**, and a pass that wants to write them is reaching for the scope
+answer in sheet seat 07, not for this ruling. The distinction matters because
+this ruling settles which of two *existing* records wins; work that invents a
+record neither of them contains is unblocked by something else or by nothing. Anything that edits a file under `drafts/scenes/` should wait, because
 substitution will touch those files again and every touched file rehashes and
 re-seals its overlay. Answer wide, then build once.
