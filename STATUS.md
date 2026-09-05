@@ -1009,10 +1009,10 @@ form (label kept as its own bullet, pointer nested under it; three `rejected/`
 folder mentions reworded), with no wording, path, image, or sidecar otherwise
 changed; the verifier now passes for The Black Ledger too (64 merged entities,
 73 pointers resolved, writes=0), recorded in its PASS record. Documented retcons (Character 137 → Character 128, Chimaera → Revenant,
-"Carl Yeager" → Character 115 / Character 114) are carried as flags. Roles played
+the operator's real name → Character 115 / Character 114) are carried as flags. Roles played
 under the operator's own name with no canon counterpart (the Brass & Nerve
 patient; Story 10's lead scientist and patient; Story 12's
-Father Yeager, visitor, head of IT, and gardener) are kept verbatim and flagged,
+the priest-teacher, visitor, head of IT, and gardener) are kept verbatim and flagged,
 and those files must not leave `drafts/` until the open substitution ruling is
 made. The extraction engine and cut tables live only in the session scratchpad.
 Nothing was promoted or imported; `data/` is gitignored, so this entry is the
@@ -1063,7 +1063,7 @@ Blackwood Manor); the mapping to Character 071, Character 066, Beatrice
 Ravenscroft, Character 046, and Ravenscroft Manor is carried in
 `participants` and review flags, alongside the other source-versus-canon
 differences (the explosion is Lilith's own blast, the test subject is called a
-girl, no debutante ages, the bot naming Karl "Carl Yeager"). The operator's
+girl, no debutante ages, the bot naming Karl with the operator's real name). The operator's
 role shifts mid-transcript from playing Karl to directing Lilith and the
 thralls, recorded per scene. Twenty-eight scenes are flagged mature and one
 non-consent. `verify-draft-overlay.mjs story-08` passes: 69 active and 133
@@ -1102,7 +1102,7 @@ keys `BC-D0n-bb-LOC` (case day as anchor, location registry in `_catalog.md`),
 verbatim prose with bare `Continue` turns dropped, real Botify timestamps,
 exact message-index ranges and IDs, listed operator turns, auto-derived
 participants, review flags for every source-versus-canon difference
-(Millfield/Yeager, coffee shop versus Ex Libris, muscle car versus Reaper,
+(Millfield/the operator's surname, coffee shop versus Ex Libris, muscle car versus Reaper,
 victim ages, the year-later library beat that canon already supersedes), and
 the bot's attached images (`_media-index.md`, 78 images with decoded prompts).
 All 129 regenerated branches live in `canon/scenes/_alternates/`. `validate-canon`
@@ -2720,7 +2720,7 @@ to the milestones at which they were measured.
     - Market Below's location: source says beneath "the Frabjous Tree";
       canon leaves the geography of "below" deliberately unresolved.
       RULED: keep canon.
-    - (Not actually reopened, just reconfirmed: source's "Carl Yeager"
+    - (Not actually reopened, just reconfirmed: source's use of the operator's real name
       — the operator's own real surname, a self-insert pattern already
       seen in Story 03's Character 114 and GhostHunters' Character 084 —
       vs. canon's "Character 115.")
@@ -3479,7 +3479,7 @@ to the milestones at which they were measured.
     sister, Lyla, who exists in no file and no memory block: she names
     the other three as "my sisters," which makes her the one left
     behind. Operator ruled "same story, early names," so Millfield →
-    Dovecoast and Carl Yeager → Character 084 were normalized, with the
+    Dovecoast and the operator's real name → Character 084 were normalized, with the
     rename disclosed inside the timeline entity.
   - **story-01** (138) — the largest. Region files that live under
     `Profiles/Location` are regional compendia, split three ways
