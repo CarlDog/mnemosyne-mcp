@@ -13,12 +13,20 @@ Status lives in [STATUS.md](STATUS.md) — read it first. This section names
 only what is in flight; it must never restate STATUS.md's Done log. (When
 the two disagree, STATUS.md is newer.)
 
-**In flight (2026-09-02): the non-flagship story-development pass.** Step 1,
+**In flight (2026-09-04): the non-flagship story-development pass.** Step 1,
 the gap audit, is written for all six non-flagship stories (Midnight Is a
 Suggestion, Brass & Nerve, The Adjustment Protocol, The Noctis Veil,
 Shadowflame, Star Wars: The Black Ledger) to each story's
-`drafts/_control/GAP_AUDIT.md` and stopped for the operator's rulings (see
-STATUS.md's top two entries); no overlay was changed. Otherwise nothing is in
+`drafts/_control/GAP_AUDIT.md`; no overlay was changed. Those audits hold **75**
+numbered decides, which collapse into **eleven** fleet-wide rulings. The first
+was ratified 2026-09-04 -- the informed-retirement test, "play governs if the
+ledger didn't read the scenes" -- and lives in
+[docs/CANON_RULINGS.md](docs/CANON_RULINGS.md), the register for any ruling that
+binds more than one story; each story's `drafts/_control/DECISIONS.md` cites it
+rather than restating it. `_control` is manifest-excluded, so recording a ruling
+never rehashes an overlay. Seat 10 (substitution: the operator's name is in 105
+of the 174 draft scene files) is the next ruling and **nothing promotes until it
+is answered**. Otherwise nothing is in
 flight. The data architecture migration
 (`docs/DATA_ARCHITECTURE_PROPOSAL.md`, ratified; `docs/DATA_LAYOUT.md` now
 normative) completed all six phases on 2026-09-02: `data/archive/` is the one
