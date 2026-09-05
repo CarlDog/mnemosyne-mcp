@@ -108,3 +108,62 @@ this ruling settles which of two *existing* records wins; work that invents a
 record neither of them contains is unblocked by something else or by nothing. Anything that edits a file under `drafts/scenes/` should wait, because
 substitution will touch those files again and every touched file rehashes and
 re-seals its overlay. Answer wide, then build once.
+
+---
+
+## Ruling 2 — substitution happens before promotion
+
+**Ratified 2026-09-04.** Sheet seat 10.
+
+> Substitute the canon name before promotion, never at promotion.
+
+Where a played role carried the operator's own name and its thread is promotable,
+the canon name is substituted **in `drafts/`, as an editorial edit**: the scene
+body and frontmatter are changed, the affected `add` entries rehash, and the
+overlay re-seals. Only then can the thread be promoted.
+
+**This overrules `BL-9`'s recommended wording**, which proposed substituting "on
+promotion, catalog-flagged". That is not a preference the ruling declined; it is
+mechanically impossible, and `SF-6` had already established why:
+`scripts/draft-notice.mjs` exists so that staged bytes equal promoted bytes, and
+the promotion tool strips the draft banner and nothing else. A pass that
+ratified `BL-9` as written would have discovered this at promotion time.
+
+### Where it bites
+
+Ruling 1 decided this before Ruling 2 could: a source-era thread never promotes,
+so it is never substituted. That leaves three of the six stories untouched.
+
+| Story | State under both rulings |
+|---|---|
+| Brass & Nerve | **Moot.** `BN-1(a)` is absorbed by Ruling 1: the twelve scenes are source-era, stay out of every ledger, and never promote. |
+| Midnight Is a Suggestion | **Moot.** Zero scene files. |
+| The Noctis Veil | **Moot for GC and MT** — `NV-1(a)` and `NV-2` make both threads retired-premise play. SL and KM remain unruled (Ruling 1, open item 3). |
+| Shadowflame | **Actionable.** Two lines in two named scene files; the canon name exists. |
+| Star Wars: The Black Ledger | **Actionable.** The played role's source name was retconned to a canon name, so a counterpart exists; two further slips are the bot's own use of the operator's platform name and first name. |
+| The Adjustment Protocol | **Blocked on one name.** See below. |
+
+**Do not run the two actionable stories in isolation.** Each substitution
+rehashes and re-seals, and each story's Ruling-1 ledger corrections rehash the
+same overlay again. Bundle the substitution with that story's other revision work
+and seal once.
+
+### What this ruling does not settle
+
+1. **A role canon does not hold.** The Adjustment Protocol's lead scientist of
+   the ER and AN threads is played under the operator's own name and **canon
+   holds neither role**, so there is no canon name to substitute in. It reaches
+   42 of that story's 43 scene files. `AP-1` records the one hard constraint —
+   the substituted name must **not** be Renshaw, because the AN thread already
+   plays a Renshaw beside the scientist — and states that inventing a name is
+   the operator's call. Nothing in that story moves until a name is supplied.
+2. **The departure-from-verbatim record.** `SF-6` asks that a substitution be
+   recorded in `PASS.md` as a departure from verbatim with the original hash
+   kept. That is a recording convention, structurally identical to Ruling 1's
+   open marker obligation, and it is parked the same way: **make the
+   substitution, do not invent a record format.** Two independently invented
+   conventions across six stories is the drift both parks exist to prevent.
+3. **The archive is not in scope, and never was.** `data/archive/` staying
+   verbatim is governed by [DATA_LAYOUT.md](DATA_LAYOUT.md)'s archive-as-master-of-originals
+   rule, whose only writer is `scripts/intake.py`. This ruling concerns
+   `drafts/` alone. Cite the standard, not this ruling.

@@ -2,6 +2,40 @@
 
 **Last updated:** 2026-09-03.
 
+**Seat 10 ratified: substitution happens before promotion (2026-09-04).**
+"Substitute the canon name before promotion, never at promotion." Recorded as
+Ruling 2 in `docs/CANON_RULINGS.md` and in each affected story's
+`drafts/_control/DECISIONS.md`; all three spot-checked overlays still verify, as
+`_control` is manifest-excluded. The ruling takes the mechanically correct form
+and **overrules `BL-9`'s recommended "substitute on promotion, catalog-flagged"**
+-- not a declined preference but an impossible step, since `draft-notice.mjs`
+exists so staged bytes equal promoted bytes and the promotion tool strips the
+draft banner and nothing else. THE DECISIVE INTERACTION: Ruling 1 had already
+settled this for half the fleet, because a source-era thread never promotes and
+so is never substituted. Brass & Nerve (`BN-1(a)` absorbed) and the Noctis Veil's
+GC and MT threads (`NV-1(a)`, `NV-2`) are therefore MOOT, as is Midnight with no
+scene files -- `NV-3`'s reach of 48 frontmatters, 26 bodies, three catalog
+entries, the index rows, five flag names and seven control documents is cost now
+avoided rather than incurred. Two stories are actionable with a canon name
+already in hand: Shadowflame (two lines in two named files, `SF-6`) and the Black
+Ledger, whose played role used a source name family canon retconned to a canon
+one, plus two of the bot's own slips into the operator's platform and first names
+(flagged in `bl-mj-01` and `bl-mj-03`). Neither should run in isolation: each
+substitution rehashes and re-seals, and each story's Ruling-1 ledger corrections
+rehash the same overlay again, so they bundle. ONE STORY IS BLOCKED ON ONE NAME:
+the Adjustment Protocol's lead scientist of the ER and AN threads is played under
+the operator's own name and canon holds neither role, so there is nothing to
+substitute in; it reaches 42 of that story's 43 scene files, the name must not be
+Renshaw (AN already plays a Renshaw beside the scientist), and `AP-1` states
+inventing one is the operator's call, so no drafting pass may make it. TWO THINGS
+THE RULING DOES NOT SETTLE, parked rather than assumed: the departure-from-verbatim
+record format (`SF-6` asks for a `PASS.md` entry with the original hash kept),
+parked exactly like Ruling 1's marker obligation -- make the substitution, do not
+invent a record format; and the archive, which was never in scope, since
+`data/archive/` staying verbatim is governed by `DATA_LAYOUT.md`'s
+archive-as-master-of-originals rule and not by this ruling. Nothing was
+substituted, no scene file was touched, and no overlay was promoted.
+
 **Seat 09 ratified: the informed-retirement test (2026-09-04).** The six
 2026-09-02 gap audits stopped for **75** numbered decides, not the ~46 an earlier
 grep estimated (BN 12, MIS 11, SF 13, BL 12, AP 13, NV 14). Reading all six
