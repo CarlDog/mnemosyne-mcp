@@ -7,7 +7,7 @@ SCHOOL = "SCHOOL_FRAMING_IN_SOURCE_CANON_RATIFIES_ADULT_COLLEGE"
 NONCON = "NONCONSENT_OR_COERCION_CONTENT"
 
 MARY = "Mary Thorne (called 'Mary Worthington' by the bot and the operator at #0503-#0507; 'Mary Elizabeth' at #0049 and #0343)"
-FATHER = "'Father Yeager' (the operator's own name in a priest-teacher role; canon's provenance says this role is not canon)"
+FATHER = "the priest-teacher role, played under the operator's own real name (redacted here; canon's provenance says this role is not canon)"
 AMELIA = "Amelia Ward (played as Amelia, surname not given)"
 CANDACE = "Candace Van Houten (not in canon; shares only a first name with The Adjustment Protocol's Candace Raines)"
 TINA = "Tina Lovelace (not in canon)"
@@ -17,21 +17,21 @@ ANASTASIA = "Sister Anastasia Vey (played as Sister Anastasia)"
 SOPHIA = "Sister Sophia Bell (played as Novice Sophia, nineteen in the source; canon 22)"
 MR_THORNE = "Mr. Thorne, Mary's father (not in canon)"
 LUCIA = "Sister Lucia Navarro (played as Sister Lucia)"
-CARL_V = "'Carl Yeager' (the operator's own name as a visitor; canon's provenance excludes operator-associated roles)"
+CARL_V = "a visitor, played under the operator's own real name (redacted here; canon's provenance excludes operator-associated roles)"
 MOTHER = "the Mother Superior (unnamed; canon: Mother Celestine Arnaud)"
 NOVICE = "an unnamed auburn-haired Irish novice of about nineteen (not in canon; only superficially like Kaitlyn MacDonald)"
 KAITLYN = "Kaitlyn MacDonald"
-CARL_IT = "'Carl Yeager', the new head of IT (the operator's own name; canon's provenance excludes operator-associated roles)"
+CARL_IT = "the new head of IT, played under the operator's own real name (redacted here; canon's provenance excludes operator-associated roles)"
 
 LOCATIONS = {
-    "CLS": ("a classroom at the college (Father Yeager's, then a history and a mathematics lecture)", "canon/locations/st-lucias-college-and-convent.md"),
+    "CLS": ("a classroom at the college (the priest-teacher's, then a history and a mathematics lecture)", "canon/locations/st-lucias-college-and-convent.md"),
     "BTH": ("the students' bathroom", "canon/locations/st-lucias-college-and-convent.md"),
     "ALC": ("an empty alcove off the corridor", "canon/locations/st-lucias-college-and-convent.md"),
     "HAL": ("the corridors and hallways of the college", "canon/locations/st-lucias-college-and-convent.md"),
     "THH": ("the Thorne family estate: the side door and the grand staircase (no canon counterpart; canon houses Mary at the college)", None),
     "MBR": ("Mary's bedroom at the family estate: four-poster bed, closet, the window (no canon counterpart)", None),
     "GYM": ("the gymnasium", "canon/locations/st-lucias-college-and-convent.md"),
-    "FYO": ("Father Yeager's office: desk, leather couch, gym bag (no canon counterpart; the role is not canon)", None),
+    "FYO": ("the priest-teacher's office: desk, leather couch, gym bag (no canon counterpart; the role is not canon)", None),
     "FYQ": ("the private quarters off that office: bed, washroom, mirror (no canon counterpart)", None),
     "ANS": ("Sister Anastasia's study: armchairs, desk, laptop, monitor", "canon/locations/st-lucias-college-and-convent.md"),
     "DRM": ("Mary's room on campus with a window and the bells within earshot (contradicts the family-estate bedroom)", "canon/locations/st-lucias-college-and-convent.md"),
@@ -50,10 +50,10 @@ MT = dict(
     bot_dir="data/archive/botify/mary-thorne/", export="b2", story_end=777,
     played="the thread was played on 2025-07-07/08, 07-10, 07-14/15, 09-04..09, 12-02, 2026-04-06..13, and 2026-06-04/05; the story runs three days with summarised days between the second and third",
     days="1: mesmerism, Amelia, the evening at home; 2: the night and the days after (summarised); 3: the hallway, the gym, the office, the sisters, the sanctum",
-    pov="Botify private chat with the Mary Thorne bot: the bot writes Mary in third person and voices Amelia, the sisters, and others; the operator plays Father Yeager in first person and elsewhere writes Mary, Amelia, Candace, Tina, Mr. Thorne, the sisters, and Sophia as director; operator turns are listed in operator_turns and kept as written",
-    participants_basis="rule-derived from the prose; played names map to canon's Amelia Ward, Sister Anastasia Vey, Sister Sophia Bell, Sister Beatrice Quill, and Sister Margaret Hale (canon/characters/_minor.md); Father Yeager is the operator's own name in a role canon's provenance calls not canon; verify before relying on it",
+    pov="Botify private chat with the Mary Thorne bot: the bot writes Mary in third person and voices Amelia, the sisters, and others; the operator plays the priest-teacher in first person and elsewhere writes Mary, Amelia, Candace, Tina, Mr. Thorne, the sisters, and Sophia as director; operator turns are listed in operator_turns and kept as written",
+    participants_basis="rule-derived from the prose; played names map to canon's Amelia Ward, Sister Anastasia Vey, Sister Sophia Bell, Sister Beatrice Quill, and Sister Margaret Hale (canon/characters/_minor.md); the priest-teacher is the operator's own name in a role canon's provenance calls not canon; verify before relying on it",
     scenes=[
-        ("NV-MT-01-CLS", "Mesmerism", 0, 1, "CLS", "Day 1, morning: Father Yeager's classroom; the phantom fingers",
+        ("NV-MT-01-CLS", "Mesmerism", 0, 1, "CLS", "Day 1, morning: the priest-teacher's classroom; the phantom fingers",
          [MARY, FATHER, AMELIA, "the class"],
          [MATURE, "OPENING_GREETING_IS_THE_BOT_INTRO_LINE", FATHER_FLAG, SCHOOL, "MARY_EYES_BLUE_IN_SOURCE_CANON_BROWN", "AMELIAS_PHANTOM_TOUCH_MATCHES_CANON_TELEKINESIS", NONCON, "PUBLIC_EPISODE"]),
         ("NV-MT-02-BTH", "Pull Yourself Together", 46, 1, "BTH", "Day 1: the bathroom mirror",
@@ -83,16 +83,16 @@ MT = dict(
         ("NV-MT-10-HAL", "Little Miss Perfect", 298, 3, "HAL", "The hallway: Candace and Tina",
          [MARY, CANDACE, TINA],
          ["CANDACE_AND_TINA_NOT_IN_CANON", "CANDACE_EYES_ICE_BLUE_HERE_GREEN_AT_0391", "FATHER_YUMMY_LINE", "STRIPPED_IN_THE_HALLWAY", NONCON]),
-        ("NV-MT-11-GYM", "Nice Undies, Mary", 336, 3, "GYM", "The gymnasium, class in session; Father Yeager crosses the floor",
+        ("NV-MT-11-GYM", "Nice Undies, Mary", 336, 3, "GYM", "The gymnasium, class in session; the priest-teacher crosses the floor",
          [MARY, FATHER, "the gym class", CANDACE + " (at the door)", TINA + " (at the door)"],
          ["PUBLIC_HUMILIATION", FATHER_FLAG, SCHOOL]),
-        ("NV-MT-12-FYO", "The Hoodie", 351, 3, "FYO", "The halls, then Father Yeager's office",
+        ("NV-MT-12-FYO", "The Hoodie", 351, 3, "FYO", "The halls, then the priest-teacher's office",
          [MARY, FATHER],
          [MATURE, "CONFESSION_OF_THE_HALLWAY_ACT", "CHANGES_AND_HORMONES_LINE_AT_0368_CANON_RATIFIES_ADULT", "MARY_EYES_BROWN_AT_0367_BLUE_ELSEWHERE", FATHER_FLAG]),
-        ("NV-MT-13-FYO", "The Belt", 371, 3, "FYO", "Father Yeager's office: Candace and Tina summoned",
+        ("NV-MT-13-FYO", "The Belt", 371, 3, "FYO", "the priest-teacher's office: Candace and Tina summoned",
          [MARY, FATHER, CANDACE, TINA],
          ["CORPORAL_PUNISHMENT_ON_PAGE", "SURNAMES_VAN_HOUTEN_AND_LOVELACE_AT_0371", FATHER_FLAG]),
-        ("NV-MT-14-FYO", "You Are Perfect", 402, 3, "FYO", "Father Yeager's office, alone with Mary",
+        ("NV-MT-14-FYO", "You Are Perfect", 402, 3, "FYO", "the priest-teacher's office, alone with Mary",
          [MARY, FATHER],
          [MATURE, "PRIEST_AND_STUDENT_SEX_ON_PAGE", FATHER_FLAG, SCHOOL, "OPERATOR_NOTES_OTHER_STUDENTS_SEEK_HIS_GUIDANCE_AT_0498"]),
         ("NV-MT-15-FYQ", "Make Yourself at Home", 498, 3, "FYQ", "The private quarters off the office",
@@ -102,7 +102,7 @@ MT = dict(
          [MARY, BEATRICE, MARGARET],
          [MATURE, "SURNAME_SLIP_WORTHINGTON_0503_0507", "SISTERS_BEATRICE_AND_MARGARET_CANON_QUILL_AND_HALE", "SACRED_FLAGELLATION_INTRODUCED", "STRAP_ON_INITIATION_TEST", NONCON,
           "OPERATOR_WRITES_MARY_AND_THE_SISTERS", "ECHOED_TURN_0598_0600"]),
-        ("NV-MT-17-FYQ", "The Sisters of Mary Magdalene", 603, 3, "FYQ", "The quarters: Father Yeager in the doorway; the oath; the corset",
+        ("NV-MT-17-FYQ", "The Sisters of Mary Magdalene", 603, 3, "FYQ", "The quarters: the priest-teacher in the doorway; the oath; the corset",
          [MARY, FATHER, BEATRICE, MARGARET],
          [MATURE, "ORDER_NAMED_AT_0606", "MARY_ACCEPTS_INITIATION", "LEATHER_CORSET_TOKEN", "PLAY_GAP_SEP_9_TO_DEC_2_AT_0636", FATHER_FLAG, NONCON]),
         ("NV-MT-18-CLS", "Back to Class", 660, 3, "CLS", "The hallway, the history lecture, the corridor after",
@@ -114,7 +114,7 @@ MT = dict(
         ("NV-MT-20-CLS", "Advanced Mathematics", 674, 3, "CLS", "The next classroom; alone after the bell",
          [MARY],
          [MATURE, "PLAY_GAP_DEC_2025_TO_APR_2026_AT_0674", "DELETED_RUN_0676_0683_TEXT_NOT_RETAINED", "SOLO_ACT_IN_THE_CLASSROOM"]),
-        ("NV-MT-21-CLS", "Sister Anastasia Has a Free Period", 687, 3, "CLS", "The classroom: Father Yeager at the door",
+        ("NV-MT-21-CLS", "Sister Anastasia Has a Free Period", 687, 3, "CLS", "The classroom: the priest-teacher at the door",
          [MARY, FATHER],
          [FATHER_FLAG]),
         ("NV-MT-22-ANS", "Novice Sophia", 695, 3, "ANS", "Sister Anastasia's study; the videos; the slap",
@@ -236,7 +236,7 @@ Canon's provenance ratifies St. Lucia's as an **adult collegiate institution**
 and **every potentially sexualised participant as an adult**, and says the
 source's "identity bleed involving an operator-associated priest/teacher/father
 role is not canon and was not retained." The `MT` thread is exactly that
-material: the operator plays **"Father Yeager"**, a priest who teaches Mary's
+material: the operator plays **a priest, under his own real name**, who teaches Mary's
 class, and the prose is framed as a school (uniforms and ties, a class that
 giggles, parents at home, "Catholic schoolgirl", and at `#0368` "your body is
 going through a lot of changes"). The source never states Mary's age; the only
@@ -246,9 +246,9 @@ Every `MT` scene with that framing carries
 read the prose under canon's ratification (Mary is 19, St. Lucia's is a
 college), not the other way round.
 
-The same operator identity appears as a **visitor named "Carl Yeager"** in
-`SL`, as the **new head of IT, "Carl Yeager"**, in `KM`, and as the convent's
-**new gardener, "Mr. Yeager"**, in `GC` (Kaitlyn's fantasy object from
+The same operator identity appears as a **visitor** in
+`SL`, as the **new head of IT** in `KM`, and as the convent's
+**new gardener** in `GC` -- all three under the operator's own real name (Kaitlyn's fantasy object from
 `#0410`, and the operator's only turns in that thread, `#0453`-`#0477`). Canon
 has none of these roles. As with Brass & Nerve and The Adjustment Protocol, the prose is
 kept verbatim and every affected scene is flagged
@@ -320,14 +320,14 @@ logic, and nothing here changes that.
 NOCTIS = "Noctis Veil (the living garment; the Noctis Veil bot account)"
 GARDENER_FLAG = "OPERATOR_REAL_NAME_AS_THE_GARDENER_MR_YEAGER_ROLE_NOT_CANON"
 SPEAKERS = "SPEAKER_LABELS_ARE_BOT_ACCOUNTS_NOT_CHARACTERS"
-GARDENER = "'Carl Yeager', the convent's new gardener (the operator's own name; the operator's only turns in the thread; canon's provenance excludes operator-associated roles)"
+GARDENER = "the convent's new gardener, played under the operator's own real name (redacted here; the operator's only turns in the thread; canon's provenance excludes operator-associated roles)"
 
 GC = dict(
     code="GC", label="\"Mary and Noctis Veil\" group chat (bots 3472620 Mary Thorne, 4080268 Noctis Veil, 4096103 Kaitlyn MacDonald, 4095850 Sister Lucia; chat 518affe6\u2026)", group=True,
     bot_dir="data/archive/botify/_group-chats/", export="518affe6", story_end=478,
     played="the thread was played 2025-10-22..27 almost entirely by the bot accounts talking to each other (467 of 479 messages); the operator's twelve turns are all the gardener at #0453-#0477",
     days="1: the chapel, the dormitory; 2-7: the week after, summarised; 7: the garden, the window seat; 8: the gardens, evening prayers, the corridor, Mary's room, Kaitlyn's room; ~12: the days after, the garden, lights-out",
-    pov="Botify group chat: four bot accounts write their own characters in third person and sometimes each other's (the Mary Thorne account writes Sister Lucia's half of #0088-#0201 and her entrance at #0324; the Sister Lucia account itself first speaks at #0229); the operator plays the gardener 'Carl Yeager' in first person at #0453-#0477 only, labelled Operator; every message carries its export speaker label",
+    pov="Botify group chat: four bot accounts write their own characters in third person and sometimes each other's (the Mary Thorne account writes Sister Lucia's half of #0088-#0201 and her entrance at #0324; the Sister Lucia account itself first speaks at #0229); the operator plays the gardener in first person at #0453-#0477 only, labelled Operator; every message carries its export speaker label",
     participants_basis="rule-derived from the prose, read under the speaker labels (which name the bot account, not always the character speaking); the gardener is the operator's own name in a role canon's provenance excludes; verify before relying on it",
     scenes=[
         ("NV-GC-01-CHP", "Someone... or Something", 0, 1, "CHP", "Day 1, night: the empty chapel; the relic wakes and feeds",

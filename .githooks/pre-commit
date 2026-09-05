@@ -115,6 +115,25 @@ if [ -n "$INTERNAL_HOSTS" ]; then
   [ -n "$HOST_ALT" ] && PII_PATTERNS+=("($HOST_ALT)")
 fi
 
+# Operator/personal NAMES, supplied OUT OF BAND.
+#
+# Same reasoning as the hosts above: naming the string here would publish the
+# very thing the check exists to hide. Set it per-clone:
+#
+#   git config fleet.personalNames 'Surname,Given Surname'
+#
+# On 2026-09-04 an audit of this public repo found the operator's real full
+# name in 8 tracked files (52 occurrences) and 6 commits of history. Nothing
+# had ever checked: the patterns above match home paths and personal email
+# domains only, and a bare name matches none of them. Configure this and it
+# cannot recur.
+PERSONAL_NAMES=$(git config --get fleet.personalNames 2>/dev/null || true)
+if [ -n "$PERSONAL_NAMES" ]; then
+  NAME_ALT=$(printf '%s' "$PERSONAL_NAMES" | tr ',' '
+'     | sed 's/[][\.|$(){}?+*^]/\&/g' | paste -sd '|' -)
+  [ -n "$NAME_ALT" ] && PII_PATTERNS+=("($NAME_ALT)")
+fi
+
 # ACMR (not AM): renamed/copied files must be PII-scanned too — a `git mv` of a
 # file containing a home path / personal email would otherwise bypass this scan.
 STAGED=$(git diff --cached --name-only --diff-filter=ACMR)

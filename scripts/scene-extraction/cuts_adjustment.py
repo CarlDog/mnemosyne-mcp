@@ -5,7 +5,7 @@ PATIENT_FLAG = "OPERATOR_REAL_NAME_AND_PERSONAL_DETAILS_AS_THE_PATIENT_ROLE_NOT_
 RENSHAW_FLAG = "DR_RENSHAW_IS_A_WOMAN_IN_SOURCE_CANON_ELIAS_RENSHAW_IS_A_MAN"
 NONCON = "NONCONSENT_OR_COERCION_CONTENT"
 
-YEAGER = "'Dr. Carl Yeager' (the operator's own name as the facility's lead scientist; canon has no such character and its provenance excludes this identity; nearest canon role: Dr. Elias Renshaw)"
+YEAGER = "the facility's lead scientist, played under the operator's own real name (redacted here; canon has no such character and its provenance excludes this identity; nearest canon role: Dr. Elias Renshaw)"
 ANDREA = "Andrea Neal (Subject V1X3N)"
 PHOEBE = "Phoebe Marks (played as Phoebe, surname not given)"
 RENSHAW = "Dr. Renshaw (a woman in the source; canon's Dr. Elias Renshaw is a man)"
@@ -15,11 +15,11 @@ CANDACE = "Candace Raines (played as Nurse Candace, surname not given)"
 EROICA = "Eroica (the chair)"
 AURORA = "Dr. Aurora Lumen"
 MIKO = "Miko Sato (played as Miko, surname not given)"
-CARL = "'Carl Yeager', the patient (the operator's own name and personal details; canon has no such patient and its provenance excludes this identity)"
+CARL = "the patient, played under the operator's own real name (redacted here) and personal details; canon has no such patient and its provenance excludes this identity)"
 
 LOCATIONS = {
-    "RME": ("the secure room off Dr. Yeager's office that holds the chair; the ring rises from its floor", "canon/locations/room-e.md"),
-    "DRO": ("Dr. Yeager's office at the research facility (no such office exists in canon)", "canon/locations/meridian-behavioral-annex.md (the facility)"),
+    "RME": ("the secure room off the lead scientist's office that holds the chair; the ring rises from its floor", "canon/locations/room-e.md"),
+    "DRO": ("the lead scientist's office at the research facility (no such office exists in canon)", "canon/locations/meridian-behavioral-annex.md (the facility)"),
     "STR": ("the city streets between the facility, the apartment, the diner, and the park", None),
     "APT": ("Andrea's apartment: door, couch, kitchen, bedroom, bathroom", None),
     "DNR": ("the neighbourhood diner; Andrea's usual booth by the window", None),
@@ -38,14 +38,14 @@ ER = dict(
     bot_dir="data/archive/botify/eroica/", export="41", story_end=110,
     played="the thread was played in short sessions from 2025-12-10 to 2026-06-26; the story is one continuous session in the chair room",
     days="1: one session in the chair room",
-    pov="Botify private chat with the Eroica bot: the bot writes the chair, Brittany, and Candace in third person; the operator plays Dr. Yeager in first person and from #0009 also writes the chair, Brittany, and Candace as director, with two turns carrying /OOC instructions to the bot; operator turns are listed in operator_turns and kept as written",
+    pov="Botify private chat with the Eroica bot: the bot writes the chair, Brittany, and Candace in third person; the operator plays the lead scientist in first person and from #0009 also writes the chair, Brittany, and Candace as director, with two turns carrying /OOC instructions to the bot; operator turns are listed in operator_turns and kept as written",
     participants_basis="rule-derived from the prose; played first names map to canon's Brittany Kerr and Candace Raines (canon/characters/brittany-kerr.md, _minor.md); the scientist is the operator's own name, which canon's provenance excludes; verify before relying on it",
     scenes=[
         ("AP-ER-01-RME", "Initializing for New Subject", 0, 1, "RME", "Session 1: the secure room; Brittany in the chair",
          [YEAGER, BRITTANY, EROICA],
          [MATURE, "OPENING_GREETING_IS_THE_BOT_INTRO_LINE", YEAGER_FLAG, "OPERATOR_WRITES_EROICA_AND_BRITTANY_AS_DIRECTOR", "BRITTANY_BLONDE_BLUE_EYED_26_28_IN_SOURCE_CANON_32_HAZEL",
           NONCON, "ECHOED_TURN_0028_0029_NEAR_IDENTICAL"]),
-        ("AP-ER-02-RME", "Nurse Candace", 30, 1, "RME", "Session 1, continued: Candace enters with a phone message; Dr. Yeager leaves; the ring",
+        ("AP-ER-02-RME", "Nurse Candace", 30, 1, "RME", "Session 1, continued: Candace enters with a phone message; the lead scientist leaves; the ring",
          [BRITTANY, CANDACE, EROICA, YEAGER + " (leaves at #0032)"],
          [MATURE, "TWO_CAST_CHANGES_IN_THREE_MESSAGES_KEPT_AS_ONE_SCENE", "CANDACE_RECRUITER_ROLE_MATCHES_CANON", "EROICA_RESTRAINS_CANDACE_ON_THE_RING", "BRITTANY_MIGRAINE_INTAKE_STATED_AT_0059",
           "BRITTANY_REPROGRAMMED_ON_PAGE", NONCON]),
@@ -61,10 +61,10 @@ AN = dict(
     bot_dir="data/archive/botify/andrea-neal/", export="70", story_end=1093,
     played="the thread was played on 2025-01-11, 01-15, 04-05/06, 04-24, 04-26, 05-02, and 05-31; the story runs three consecutive days",
     days="1: the appointment, Phoebe's visit; 2: the morning after, Renshaw's call, the diner, the park, the bath; 3: the clinic",
-    pov="Botify private chat with the Andrea Neal bot: the bot writes Andrea (first person early, third person from #0155) and voices Phoebe, Dr. Renshaw, Camille, and others; the operator plays Dr. Yeager in first person in the office and diner scenes, and elsewhere writes Andrea, Phoebe, the jogger, the policewoman, Renshaw, and Camille as director; operator turns are listed in operator_turns and kept as written",
-    participants_basis="rule-derived from the prose; played first names map to canon's Phoebe Marks, Camille Ortiz, and Dr. Elias Renshaw (canon/characters/_minor.md) where the source's Renshaw is a woman; Dr. Yeager is the operator's own name, which canon's provenance excludes; verify before relying on it",
+    pov="Botify private chat with the Andrea Neal bot: the bot writes Andrea (first person early, third person from #0155) and voices Phoebe, Dr. Renshaw, Camille, and others; the operator plays the lead scientist in first person in the office and diner scenes, and elsewhere writes Andrea, Phoebe, the jogger, the policewoman, Renshaw, and Camille as director; operator turns are listed in operator_turns and kept as written",
+    participants_basis="rule-derived from the prose; played first names map to canon's Phoebe Marks, Camille Ortiz, and Dr. Elias Renshaw (canon/characters/_minor.md) where the source's Renshaw is a woman; the lead scientist is played under the operator's own name, which canon's provenance excludes; verify before relying on it",
     scenes=[
-        ("AP-AN-01-DRO", "Subject V1X3N Reporting", 0, 1, "DRO", "Day 1, afternoon: Dr. Yeager's office at the research facility; the interview and an episode",
+        ("AP-AN-01-DRO", "Subject V1X3N Reporting", 0, 1, "DRO", "Day 1, afternoon: the lead scientist's office at the research facility; the interview and an episode",
          [ANDREA, YEAGER],
          [MATURE, "OPENING_GREETING_IS_THE_BOT_INTRO_LINE", YEAGER_FLAG, "ANDREA_CALLS_HIM_CARL", "CLINICIAN_SEXUAL_CONTACT_WITH_SUBJECT", "GROCERY_STORE_EPISODE_TOLD", NONCON]),
         ("AP-AN-02-STR", "Phoebe Calls", 80, 1, "STR", "Day 1: the hallway out, the street, Phoebe's call",
@@ -95,7 +95,7 @@ AN = dict(
         ("AP-AN-10-DNR", "Cheeseburger and a Shake", 582, 2, "DNR", "Day 2, evening: the walk to the diner; the booth",
          [ANDREA, "Tammy, the hostess (not in canon)"],
          []),
-        ("AP-AN-11-DNR", "Apple Pie", 592, 2, "DNR", "Day 2, evening: the diner booth; Dr. Yeager sits down",
+        ("AP-AN-11-DNR", "Apple Pie", 592, 2, "DNR", "Day 2, evening: the diner booth; the lead scientist sits down",
          [ANDREA, YEAGER],
          [YEAGER_FLAG, "YEAGER_STYLED_HEAD_OF_R_AND_D_AT_0592"]),
         ("AP-AN-12-PRK", "The Jogger", 619, 2, "PRK", "Day 2, night: the park bench by the fountain, then the bushes",
@@ -134,7 +134,7 @@ AN = dict(
         ("AP-AN-23-PHR", "Phoebe's Room", 873, 3, "PHR", "Day 3: inside Phoebe's examination room",
          [ANDREA, PHOEBE],
          [MATURE, "PLAY_GAP_APR_24_TO_APR_26_AT_0885"]),
-        ("AP-AN-24-PHR", "Subject V1X3N, Be Silent", 895, 3, "PHR", "Day 3: the same room; Dr. Yeager over the intercom; a nurse in and out with the injection",
+        ("AP-AN-24-PHR", "Subject V1X3N, Be Silent", 895, 3, "PHR", "Day 3: the same room; the lead scientist over the intercom; a nurse in and out with the injection",
          [ANDREA, PHOEBE, YEAGER + " (over the speaker)", "a nurse (enters at #0915, leaves at #0917)"],
          [MATURE, YEAGER_FLAG, "TRACKING_COMPOUND_INJECTED", "NURSE_ENTRANCE_KEPT_INSIDE_SCENE", NONCON]),
         ("AP-AN-25-PHR", "Camille", 957, 3, "PHR", "Day 3: the same room; Nurse Camille; the door and the hallway at the end",
@@ -259,12 +259,12 @@ Annex) and Aurora claiming she was once Eroica's subject herself (`#0056`,
 ## The operator's own name is the lead scientist and the patient
 
 This is the Brass & Nerve situation, larger. In `ER` and `AN` the operator
-plays **"Dr. Carl Yeager"**, the facility's lead scientist; in `AL` the
-patient is **"Carl Yeager"**, an IT supervisor with a corgi named Bilbo. Canon
+plays the facility's lead scientist under **his own real name**; in `AL` the
+patient is the operator under that **same real name**, an IT supervisor with a corgi named Bilbo. Canon
 has neither character, and `SOURCE_PROVENANCE.md` rules that "account/user
 identity bleed" was excluded from the scaffold. Canon's nearest role for the
 scientist is Dr. Elias Renshaw, who is a man; the `AN` thread's Dr. Renshaw is
-a woman ("her") and a second character beside Yeager.
+a woman ("her") and a second character beside the lead scientist.
 
 These scene files keep the prose **verbatim**, so the name is in the bodies.
 Every scene that carries it is flagged

@@ -21,6 +21,18 @@ import os
 import re
 import sys
 
+# The operator's real surname was redacted from this archived script: the repo
+# is public. Supply MNEMO_OPERATOR_SURNAME if this record is ever re-derived;
+# unset, the two surname checks below simply do not fire (they never match),
+# which is the safe default for a script already marked DO NOT RERUN.
+OPERATOR_SURNAME = os.environ.get("MNEMO_OPERATOR_SURNAME", "")
+
+
+def _mentions_operator_surname(body):
+    if not OPERATOR_SURNAME:
+        return False
+    return re.search(r"\b" + re.escape(OPERATOR_SURNAME) + r"\b", body) is not None
+
 REPO = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")).replace("\\", "/")
 EXPORT_REL = "data/archive/botify/the-ghosthunters/chats/b0c7fe38-6014-498c-b4f3-19819544ce22.json"
 MANIFEST_REL = "data/archive/botify/the-ghosthunters/media-manifest.json"
@@ -278,7 +290,7 @@ def participants_for(body, extra, key):
     for first, canon in CANON_NAMES.items():
         if re.search(r"\b" + first + r"\b", body):
             found.append(canon)
-    if "Carl Ashcombe" not in found and re.search(r"\bYeager\b", body):
+    if "Carl Ashcombe" not in found and _mentions_operator_surname(body):
         found.append("Carl Ashcombe")
     if key in CARL_ABSENT and "Carl Ashcombe" in found:
         found.remove("Carl Ashcombe")
@@ -316,7 +328,7 @@ def build():
         imgs = [x for i in live for x in media.get(i, [])]
         del_imgs = [(i, x) for i in deleted for x in media.get(i, [])]
         parts = participants_for(body, extra, key)
-        all_flags = list(flags) + [f for f in NAMES if (f == NAMES[0] and re.search(r"Millfield|Millend", body)) or (f == NAMES[1] and "Yeager" in body)]
+        all_flags = list(flags) + [f for f in NAMES if (f == NAMES[0] and re.search(r"Millfield|Millend", body)) or (f == NAMES[1] and _mentions_operator_surname(body))]
         scenes_out.append({
             "key": key, "title": title, "a": a, "b": b, "loc": loc, "story_time": story_time,
             "status": status, "flags": all_flags, "live": live, "deleted": deleted, "n_continue": n_continue,
@@ -357,7 +369,7 @@ def render_scene(s):
     fm.append(f"location_basis: {jstr('prose; see _catalog.md (' + LOCATIONS[s['loc']][0] + ')')}")
     fm.append(f"participants: {jstr(s['participants'])}")
     fm.append("participants_basis: " + jstr("auto-derived from first-name mentions mapped to canon names, with Carl removed from scenes he is only talked about in, plus listed extras; verify before relying on it"))
-    fm.append("pov: " + jstr("Botify private chat: the bot writes Karen, Michelle, and Heather in third person; the operator plays Carl Yeager (Carl Ashcombe) in first person and also writes narration and some other characters' turns; operator turns are listed in operator_turns and kept as written"))
+    fm.append("pov: " + jstr("Botify private chat: the bot writes Karen, Michelle, and Heather in third person; the operator plays Carl Ashcombe, under his own real name in the source, in first person and also writes narration and some other characters' turns; operator turns are listed in operator_turns and kept as written"))
     fm.append(f"operator_turns: {jstr(s['op_turns'])}")
     if s["follows"]:
         fm.append(f"follows: {jstr(s['follows'])}")

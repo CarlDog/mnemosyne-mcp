@@ -4,7 +4,7 @@ NAME = "NAME_RETCON_KARL_JAGER_TO_RHYDAN_VEYR"
 SHIP = "ISD_CHIMAERA_IN_SOURCE_RETCONNED_TO_ISD_REVENANT"
 
 MARA = "Mara Jade"
-VEYR = "Rhydan Veyr (played as 'Master Karl Jager'; the bot also writes 'Karl', 'Carl Yeager', and 'Carl'; canon retires every one of those names for Rhydan Veyr)"
+VEYR = "Rhydan Veyr (played as 'Master Karl Jager'; the bot also writes 'Karl', the operator's real name, and 'Carl'; canon retires every one of those names for Rhydan Veyr)"
 THRAWN = "Grand Admiral Thrawn (a transmission; canon ratifies the sender as genuine, the channel unresolved)"
 CATES = "Trooper Cates (75U1)"
 ZHARAD = "Commander Zharad"
@@ -134,7 +134,7 @@ carry the mapping. These are documented canon retcons, not open questions:
 
 | Played in the source | Canon |
 |---|---|
-| "Master Karl Jager", "Karl", and the bot's slips "Carl Yeager" (`#0088`) and "Carl" (`#0200`-`#0203`) | **Rhydan Veyr**. `recovered-botify-continuity…` rules that the retired names are not aliases and "must not appear in new canon prose except in provenance audits"; the platform-name slip is the failure mode `dossier-contradictions-and-identity-noise.md` already names. |
+| "Master Karl Jager", "Karl", and the bot's slips to the operator's real name (`#0088`) and "Carl" (`#0200`-`#0203`) | **Rhydan Veyr**. `recovered-botify-continuity…` rules that the retired names are not aliases and "must not appear in new canon prose except in provenance audits"; the platform-name slip is the failure mode `dossier-contradictions-and-identity-noise.md` already names. |
 | the ISD Chimaera as Zharad's ship (`#0016`, `#0018`) | **ISD Revenant** (operator retcon; Thrawn's own Chimaera exists separately) |
 | Mara "the Sith", a crimson blade | an Emperor's Hand with a magenta-cast blade |
 | "near the Byss sector" (`#0208`) | unverified locator; the meeting world is unknown |

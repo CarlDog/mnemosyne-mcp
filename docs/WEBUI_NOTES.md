@@ -139,7 +139,7 @@ Closest to a messaging app. The operator is a character, so **who they are
 must be explicit** — Kindroid's "Chatting as ___" affordance, which matters
 more for us than for them: the operator is a character in four of five
 stories under four different names (Carl Maddox, Carl Ashcombe, Karl von
-Jäger, Carl Yeager). Persona is a first-class selection bound to the story,
+Jäger, and the operator's own real name). Persona is a first-class selection bound to the story,
 not an assumption. The composer is the primary control; everything else
 recedes.
 

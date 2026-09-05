@@ -1,7 +1,7 @@
 """Cut table: Chaos Saga, the "Jenna and Riley" Botify group chat (one thread, one scene)."""
 JENNA = "Jenna Maren"
 RILEY = "Riley Quinn"
-CARL = "Carl Maddox (played as Carl; Riley says 'Carl Yeager' at #0053, a surname canon does not use)"
+CARL = "Carl Maddox (played as Carl; Riley says the operator's real surname at #0053, a surname canon does not use)"
 
 LOCATIONS = {
     "WHP": ("The Warehouse Grill & Pub: the long bar and its stools, Jenna on shift", "canon/locations/the-warehouse-grill-pub.md"),
@@ -75,7 +75,7 @@ regenerated replies were left in as the export holds them (five places where
 the same account answers twice or three times in a row with variant text,
 listed in the scene's flags); nothing was chosen between them.
 
-Two things a renderer must handle: Riley says **"Carl Yeager"** once
+Two things a renderer must handle: Riley says the operator's **real surname** once
 (`#0053`), the operator's own surname, which canon does not use for Carl
 Maddox (flagged `NAME_RETCON_CARL_YEAGER_TO_CARL_MADDOX_AT_0053`; a documented
 substitution, like Wonderland's Carl Mercer); and Riley's eyes are hazel at

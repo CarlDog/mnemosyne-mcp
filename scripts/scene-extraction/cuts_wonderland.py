@@ -4,7 +4,7 @@ NAME = "NAME_RETCON_CARL_YEAGER_TO_CARL_MERCER"
 NONCON = "NONCONSENT_OR_COERCION_CONTENT"
 
 ALICE = "Alice Grimm"
-CARL = "Carl Mercer (played as Carl; the bot and the operator write 'Carl Yeager' in seven messages, a string canon retires for Carl Mercer)"
+CARL = "Carl Mercer (played as Carl; the bot and the operator write the operator's real full name in seven messages, a string canon retires for Carl Mercer)"
 CHESH = "the Cheshire Cat (played as Chesh)"
 QUEEN = "the White Queen"
 CHILD = "the Wrong-Song Child (the source calls her Marywraithe at #0437 and #0441)"
@@ -133,9 +133,9 @@ are dropped from bodies and counted.
 ## The surname in the prose
 
 Carl is played under the operator's own surname: the bot and the operator write
-**"Carl Yeager"** in seven messages (`#0150`, `#0153`, `#0219`, `#0257`,
+the operator's **real full name** in seven messages (`#0150`, `#0153`, `#0219`, `#0257`,
 `#0259`, `#0669`, `#0706`). Canon's Carl is **Carl Mercer**, and canon
-explicitly retires the "Carl Yeager" string, so this is a documented retcon
+explicitly retires that real-name string, so this is a documented retcon
 (the Black Ledger's Karl Jager → Rhydan Veyr situation), not the open
 operator-identity question the Brass & Nerve, Adjustment Protocol, and Noctis
 Veil extractions carry. The prose is kept verbatim; every affected scene is
@@ -146,7 +146,7 @@ a renderer substitutes on the page and nothing else changes.
 
 | Played in the source | Canon |
 |---|---|
-| Carl Yeager (seven messages) | Carl Mercer |
+| the operator's real name (seven messages) | Carl Mercer |
 | Marywraithe (`#0437`, `#0441`) | the Wrong-Song Child |
 | Chesh | the Cheshire Cat |
 | the Inkroot Vale, the cave by the stream, the abandoned mill | Inkroot Vale, the Vale-side cave stream, the Abandoned Mill |
