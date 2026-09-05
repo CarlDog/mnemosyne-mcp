@@ -501,9 +501,24 @@ fixes that.
 
 **So the real mitigation is provenance, not code.** Do not place unvetted
 third-party text into a story's scenes or characters. Every extraction from a
-chat log or a shared export is untrusted input to this channel, and this
-repository has thousands of such files staged in draft overlays. That is a
-process control, and it is the one that actually works.
+chat log or a shared export is untrusted input to this channel.
+
+**Where that stands today, measured rather than assumed.** The reachable
+surface is live OC and nothing else: `gatherContext` in `src/prompt.ts` pulls
+only from OC, and no code path in `src/` reads a story's `canon/` or `drafts/`
+tree at runtime. Live OC currently holds zero scene entities for Shadowflame
+and for Star Wars: The Black Ledger, and three for Chaos Saga -- the
+export-established ones, generated in-house. Meanwhile 513 extracted scene
+files sit in nine stories' `drafts/scenes/`, every one of them third-party
+chat-log prose, and none of them has been imported.
+
+So the staged extractions are **not** input to this channel today. They become
+input at exactly one place, `mnemo_import_story`, which has never been run for
+any of them and which requires an explicit operator decision. That is the point
+to attach the control to, and there is no content gate on that path today --
+neither `src/import.ts` nor `scripts/promote-overlay.mjs` inspects a body for
+instruction-shaped text. Building the gate before the first promotion is
+cheap; retrofitting it after 513 scenes are live is not.
 
 **The one remaining lever was tested, and it failed.** See "The framing
 experiment" below: an inert-data notice in the context header moved the rate
