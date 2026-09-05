@@ -129,8 +129,8 @@ fi
 # cannot recur.
 PERSONAL_NAMES=$(git config --get fleet.personalNames 2>/dev/null || true)
 if [ -n "$PERSONAL_NAMES" ]; then
-  NAME_ALT=$(printf '%s' "$PERSONAL_NAMES" | tr ',' '
-'     | sed 's/[][\.|$(){}?+*^]/\&/g' | paste -sd '|' -)
+  NAME_ALT=$(printf '%s' "$PERSONAL_NAMES" | tr ',' '\n' \
+    | sed 's/[][\.|$(){}?+*^]/\\&/g' | paste -sd '|' -)
   [ -n "$NAME_ALT" ] && PII_PATTERNS+=("($NAME_ALT)")
 fi
 
