@@ -24,6 +24,11 @@
 // parse (e.g., the story marker, or non-Mnemosyne memories that somehow
 // bear the tag) are skipped.
 
+import {
+  describeInjectionSignals,
+  OVERRIDE_FLAGGED_CONTENT_PARAM,
+  scanForInjectionSignals,
+} from "./injection-scan.js";
 import { type OcClient, type OcMemory } from "./oc-client.js";
 
 export const ENTITY_TYPES = [
@@ -207,6 +212,27 @@ export interface SaveEntityArgs {
    * the exact failure a complete preflight exists to prevent. Undefined
    * = search as before (the interactive mnemo_save_entity path). */
   existing?: KnownExistingEntity | null;
+  /**
+   * Skip the injection-provenance scan (src/injection-scan.ts) for this
+   * write. Default false — every write is scanned. This is a deliberate,
+   * documented exception, not a general escape hatch: the only current use
+   * is mnemo_continue's generated-beat save (src/adapters/continuation.ts),
+   * because that content is the narrator's own LLM output, not third-party
+   * text — scanning it would add reflexive friction to the core product
+   * loop over content outside the actual threat model
+   * (docs/NARRATOR_EVAL.md). mnemo_import_story's executed writes also set
+   * this: planImport already scanned every record up front as part of its
+   * all-or-nothing preflight, so the write itself must not re-decide.
+   */
+  skipInjectionScan?: boolean;
+  /**
+   * Write anyway when the scan (not skipped) finds a signal, instead of
+   * throwing. Mirrors ImportOptions.allowFlagged: the write proceeds under
+   * its normal disposition, and the matched signals are still returned on
+   * SaveEntityResult.flagged_content_override as an audit trail — an
+   * override is a recorded decision, not a silent bypass.
+   */
+  allowFlagged?: boolean;
 }
 
 export interface SaveEntityResult {
@@ -215,6 +241,9 @@ export interface SaveEntityResult {
   created: boolean;
   pinned: boolean;
   tags: string[];
+  /** Present only when the scan found a signal and allowFlagged let the
+   * write proceed anyway — the matched pattern labels, for audit. */
+  flagged_content_override?: string[];
 }
 
 export async function saveEntity(
@@ -222,6 +251,23 @@ export async function saveEntity(
   storyId: string,
   args: SaveEntityArgs,
 ): Promise<SaveEntityResult> {
+  const signals = args.skipInjectionScan
+    ? []
+    : scanForInjectionSignals(args.body);
+  if (signals.length > 0 && !args.allowFlagged) {
+    throw new Error(
+      `${describeInjectionSignals(signals)} Re-invoke with ` +
+        `${OVERRIDE_FLAGGED_CONTENT_PARAM}=true to write anyway, or edit ` +
+        "the content and re-invoke. Nothing was written.",
+    );
+  }
+
+  // Nothing was written for a "skip"-style outcome here (saveEntity always
+  // writes when it returns normally, unlike planImport's plan-only mode),
+  // so an override note is only ever attached to an actual create/update.
+  const flaggedContentOverride =
+    signals.length > 0 ? signals.map((s) => s.label) : undefined;
+
   const content = formatEntityContent(args.type, args.name, args.body);
   const tags = buildTags(args.type, args.extraTags);
   const existing: KnownExistingEntity | null =
@@ -263,6 +309,9 @@ export async function saveEntity(
       created: false,
       pinned: finalPinned,
       tags: finalTags,
+      ...(flaggedContentOverride && {
+        flagged_content_override: flaggedContentOverride,
+      }),
     };
   }
 
@@ -277,6 +326,9 @@ export async function saveEntity(
   return {
     entity: { type: args.type, name: args.name, body: args.body },
     memory_id: saved.id,
+    ...(flaggedContentOverride && {
+      flagged_content_override: flaggedContentOverride,
+    }),
     created: true,
     pinned,
     tags,

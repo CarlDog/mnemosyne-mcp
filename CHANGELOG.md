@@ -7,6 +7,24 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 
 ### Added
 
+- Injection-provenance gate (`src/injection-scan.ts`): a deterministic,
+  precision-leaning regex scan for instruction-shaped text, wired as the
+  default behavior of `src/entities.ts`'s `saveEntity()` -- the chokepoint
+  every entity write funnels through (`mnemo_save_entity`,
+  `mnemo_import_story`, `mnemo_session_break`'s greeting-as-scene). A
+  matching record refuses by default, quoting the exact excerpt; a shared
+  `OVERRIDE_FLAGGED_CONTENT_PARAM` param on all three tool surfaces writes
+  anyway, keeping the quote as an audit trail. `mnemo_session_break` scans
+  before `chatBreak` specifically, since that call transmits the greeting
+  to the kin ahead of the later OC save. `mnemo_continue`'s generated-beat
+  save is the one permanent exception (LLM's own output, not third-party
+  text). An adversarial review (pre-deploy-review.md) disproved the first
+  version's premise that `mnemo_import_story` was the only place staged
+  content became live; see the Fixed entries below and STATUS.md's
+  2026-09-07 entry for the full record. Measured against all 513 staged
+  `drafts/scenes/**` files: a 0.2% flag rate (1 file), an accepted false
+  positive.
+
 - Narrator evaluation (`docs/NARRATOR_EVAL.md`, `scripts/narrator-eval/`): a
   synthetic corpus of twelve cases across the rubric's six rows, deterministic
   checks shared with the unit tests, Ollama validator scoring by row, a
@@ -108,6 +126,13 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 
 ### Fixed
 
+- Injection-provenance gate, `mnemo_import_story`'s `planImport`: the
+  flagged-content early return skipped the batch's duplicate-key
+  bookkeeping, so a duplicate sibling of a flagged record was misreported
+  as a normal create instead of `duplicate_in_batch` (the same pre-existing
+  flaw affected the oversized-content branch too, fixed the same way --
+  register the key before any check that can return early). Found by
+  adversarial review, empirically reproduced, mutation-verified.
 - Companion messages neutralize their own bracket fence against untrusted
   story content (`neutralizeCompanionFence`). Entity names and scene bodies
   come from the memory database, and one carrying `]` closed the story-context

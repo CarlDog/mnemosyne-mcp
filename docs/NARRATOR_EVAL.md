@@ -520,6 +520,51 @@ neither `src/import.ts` nor `scripts/promote-overlay.mjs` inspects a body for
 instruction-shaped text. Building the gate before the first promotion is
 cheap; retrofitting it after 513 scenes are live is not.
 
+**CORRECTED 2026-09-07: "`mnemo_import_story` is the one place" was wrong.**
+The gate above was built exactly as described, then an adversarial review
+(pre-deploy-review.md, 27 agents) checked the premise instead of trusting it
+and found two other live, reachable tools wrote entity/scene content with
+zero scanning: `mnemo_save_entity` (the general single-entity write tool --
+`scanForInjectionSignals` had exactly two call sites in the whole tree, its
+own module and `import.ts`) and `mnemo_session_break`'s `greeting` param
+(saved verbatim as a scene, and recent scenes are *always* in companion
+context, never keyphrase-gated). Both were real bypasses, not hypothetical
+ones: nothing stopped `mnemo_save_entity` being used as a one-at-a-time
+alternate import path for the same 513 files. Measured before deciding
+scope, not assumed: the real scanner against all 513 already-staged
+`drafts/scenes/**` files flags exactly 1 (0.2%) -- an accepted false
+positive ("they will guide **your instruction** here"), which is what made
+widening the gate look cheap rather than risky.
+
+The fix moved the scan into `src/entities.ts`'s `saveEntity()` -- the true
+chokepoint under every entity write (`mnemo_save_entity`,
+`mnemo_import_story`'s writes, `mnemo_session_break`'s greeting-as-scene,
+and `mnemo_continue`'s generated-beat save) -- rather than duplicating the
+check at each bypass site. One subtlety the review didn't name but
+implementation surfaced: `mnemo_session_break` calls `chatBreak` (which
+transmits the greeting directly to the kin) *before* the later OC scene
+save, so a scan gating only the save would be too late -- the kin would
+already have seen a flagged greeting. That scan runs first, before
+`chatBreak`, in `src/application/session-break.ts` itself (the one
+application-layer file allowed to import `src/injection-scan.ts` directly,
+per `tests/architecture-boundaries.test.ts`'s allowlist), throwing before
+any mutation. `mnemo_continue`'s generated-beat save is the one deliberate,
+permanent exception -- that content is the narrator's own LLM output, not
+third-party text, and scanning it would add reflexive friction to the core
+product loop over content outside the actual threat model. Grep
+`skipInjectionScan` in `src/` to enumerate every exception; each site's own
+comment says which kind it is (already-scanned-upstream vs. never-scan).
+All three tool surfaces now carry a matching `override_flagged_content`
+param sharing one constant (`OVERRIDE_FLAGGED_CONTENT_PARAM` in
+`src/injection-scan.ts`) so a tool's own hint text can't drift from its zod
+field name. Verified, not assumed: two real end-to-end MCP-wire tests in
+`tests/http-integration.test.ts` prove the override reaches the gate over
+the actual transport for both `mnemo_import_story` and `mnemo_save_entity`;
+`sessionBreak`'s scan-before-`chatBreak` ordering was hand mutation-tested
+(moved after `chatBreak`, confirmed the guarding test fails, reverted). 550
+tests passing. Nothing has been imported or promoted -- the 513 staged
+scenes remain exactly where this section left them.
+
 **The one remaining lever was tested, and it failed.** See "The framing
 experiment" below: an inert-data notice in the context header moved the rate
 from 30% to 22% across a hundred interleaved samples, the intervals overlap,

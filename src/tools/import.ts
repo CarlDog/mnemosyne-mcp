@@ -43,7 +43,14 @@ export function registerImportTool(
         "conflict with an existing entity under the default " +
         "on_conflict=error, aborts the whole batch with nothing written — " +
         "the manifest shows every record's would-be status so you can fix " +
-        "and re-invoke. dry_run previews the same plan without writing. " +
+        "and re-invoke. Any record whose content matches instruction-shaped " +
+        "phrasing (a prompt-injection signal — this is the one path that " +
+        "can put third-party chat-log content in front of a companion-chat " +
+        "narrator) also aborts the whole batch by default; the manifest " +
+        "quotes the exact matched excerpt per flagged record, and " +
+        "override_flagged_content=true imports anyway with that quote kept " +
+        "as an audit trail on the written record. dry_run previews the " +
+        "same plan without writing. " +
         "A file's embedded kindroid_target is reported but never applied — " +
         "bind it explicitly via mnemo_story_use if wanted. Large batches " +
         "write sequentially (OC rate limits); expect roughly a second per " +
@@ -80,6 +87,17 @@ export function registerImportTool(
             "What to do when a record's (type, name) already exists in the " +
               "story. Default error: abort the batch, write nothing.",
           ),
+        override_flagged_content: z
+          .boolean()
+          .optional()
+          .describe(
+            "Import records flagged for instruction-shaped content anyway. " +
+              "Default false: any flagged record aborts the whole batch, " +
+              "nothing written. Only set true after reading the quoted " +
+              "excerpt in the manifest and deciding it's a false positive " +
+              "or acceptable — the quote is kept on the written record " +
+              "either way.",
+          ),
         story: z
           .string()
           .min(1)
@@ -96,6 +114,7 @@ export function registerImportTool(
         file_path?: string;
         dry_run?: boolean;
         on_conflict?: "skip" | "overwrite" | "error";
+        override_flagged_content?: boolean;
         story?: string;
       }) => {
         if (args.file_path !== undefined) {
@@ -141,6 +160,7 @@ export function registerImportTool(
         const manifest = await importStory(oc, story, records, {
           dryRun: args.dry_run ?? false,
           onConflict: args.on_conflict ?? "error",
+          allowFlagged: args.override_flagged_content ?? false,
         });
         return asText({ ...manifest, ...(file && { file }) });
       },

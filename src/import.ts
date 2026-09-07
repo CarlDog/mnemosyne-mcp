@@ -34,6 +34,11 @@ import {
   saveEntity,
   type EntityType,
 } from "./entities.js";
+import {
+  describeInjectionSignals,
+  OVERRIDE_FLAGGED_CONTENT_PARAM,
+  scanForInjectionSignals,
+} from "./injection-scan.js";
 import type { OcClient } from "./oc-client.js";
 import type { KindroidTarget, MnemoStory } from "./stories.js";
 
@@ -157,6 +162,7 @@ export type ImportStatus =
   | "conflict"
   | "duplicate_in_batch"
   | "invalid"
+  | "flagged"
   // executed
   | "created"
   | "overwritten"
@@ -172,11 +178,14 @@ export interface ImportResultEntry {
   memory_id?: string;
 }
 
+export type ImportAbortReason =
+  "invalid_records" | "flagged_content" | "duplicates_in_batch" | "conflicts";
+
 export interface ImportPlan {
   entries: ImportResultEntry[];
   /** Set when nothing may be written: every entry keeps its would-be
    * status so the caller can fix the batch and re-invoke. */
-  aborted?: "invalid_records" | "duplicates_in_batch" | "conflicts";
+  aborted?: ImportAbortReason;
 }
 
 // OC rejects memory content past 100,000 chars (DomainValidationError,
@@ -204,23 +213,31 @@ function entityKey(type: string, name: string): string {
 }
 
 /** Pure preflight: classify every record against the existing set and
- * the batch itself. Unit-testable without OC. */
+ * the batch itself. Unit-testable without OC.
+ *
+ * `allowFlagged` is the injection-provenance override
+ * (src/injection-scan.ts): every record's content is scanned regardless of
+ * its conflict disposition (create/overwrite/skip all become live writes,
+ * or already are). A match aborts the whole batch with nothing written —
+ * same all-or-nothing shape as an oversized or duplicate record — unless
+ * the caller explicitly overrides, in which case the record proceeds under
+ * its normal disposition but carries the matched signal in `reason` as an
+ * audit trail, not a silent bypass. */
 export function planImport(
   records: ImportRecord[],
   existingKeys: Set<string>,
   onConflict: OnConflict,
+  allowFlagged = false,
 ): ImportPlan {
   const seenInBatch = new Map<string, number>();
   const entries: ImportResultEntry[] = records.map((record, index) => {
-    if (storedContentLength(record) > OC_MEMORY_CONTENT_CAP) {
-      return {
-        index,
-        type: record.type,
-        name: record.name,
-        status: "invalid" as const,
-        reason: `Content exceeds OC's ${OC_MEMORY_CONTENT_CAP.toLocaleString("en-US")}-char memory cap (stored size ${storedContentLength(record).toLocaleString("en-US")} incl. the [Type] Name header).`,
-      };
-    }
+    // Duplicate-key registration runs first, for every record, before any
+    // check that can return early (size cap, flagged content) — otherwise a
+    // record that returns early never registers its key, and a later
+    // batch-mate sharing that (type, name) silently misses the duplicate
+    // check instead of being reported as one. This fixes that for the new
+    // "flagged" branch below and for the pre-existing "invalid" (oversized)
+    // branch, which had the identical bug before this change.
     const key = entityKey(record.type, record.name);
     const firstIndex = seenInBatch.get(key);
     if (firstIndex !== undefined) {
@@ -233,6 +250,35 @@ export function planImport(
       };
     }
     seenInBatch.set(key, index);
+
+    if (storedContentLength(record) > OC_MEMORY_CONTENT_CAP) {
+      return {
+        index,
+        type: record.type,
+        name: record.name,
+        status: "invalid" as const,
+        reason: `Content exceeds OC's ${OC_MEMORY_CONTENT_CAP.toLocaleString("en-US")}-char memory cap (stored size ${storedContentLength(record).toLocaleString("en-US")} incl. the [Type] Name header).`,
+      };
+    }
+
+    const signals = scanForInjectionSignals(record.content);
+    if (signals.length > 0 && !allowFlagged) {
+      return {
+        index,
+        type: record.type,
+        name: record.name,
+        status: "flagged" as const,
+        reason:
+          `${describeInjectionSignals(signals)} Re-invoke with ` +
+          `${OVERRIDE_FLAGGED_CONTENT_PARAM}=true to import anyway, or edit ` +
+          "the source content and re-invoke.",
+      };
+    }
+    const flagNote =
+      signals.length > 0
+        ? `${describeInjectionSignals(signals)} Imported anyway: ${OVERRIDE_FLAGGED_CONTENT_PARAM}=true.`
+        : undefined;
+
     if (existingKeys.has(key)) {
       if (onConflict === "overwrite") {
         return {
@@ -240,9 +286,13 @@ export function planImport(
           type: record.type,
           name: record.name,
           status: "overwrite" as const,
+          ...(flagNote && { reason: flagNote }),
         };
       }
       if (onConflict === "skip") {
+        // No flagNote here: skip means nothing gets written for this
+        // record regardless of the override, so a flagged-content note
+        // would misleadingly read as "imported anyway."
         return {
           index,
           type: record.type,
@@ -265,28 +315,32 @@ export function planImport(
       type: record.type,
       name: record.name,
       status: "create" as const,
+      ...(flagNote && { reason: flagNote }),
     };
   });
 
   const hasInvalid = entries.some((e) => e.status === "invalid");
+  const hasFlagged = entries.some((e) => e.status === "flagged");
   const hasDuplicates = entries.some((e) => e.status === "duplicate_in_batch");
   const hasConflicts = entries.some((e) => e.status === "conflict");
   return {
     entries,
     ...(hasInvalid
       ? { aborted: "invalid_records" as const }
-      : hasDuplicates
-        ? { aborted: "duplicates_in_batch" as const }
-        : hasConflicts
-          ? { aborted: "conflicts" as const }
-          : {}),
+      : hasFlagged
+        ? { aborted: "flagged_content" as const }
+        : hasDuplicates
+          ? { aborted: "duplicates_in_batch" as const }
+          : hasConflicts
+            ? { aborted: "conflicts" as const }
+            : {}),
   };
 }
 
 export interface ImportManifest {
   dry_run: boolean;
   on_conflict: OnConflict;
-  aborted?: "invalid_records" | "duplicates_in_batch" | "conflicts";
+  aborted?: ImportAbortReason;
   results: ImportResultEntry[];
   counts: Record<ImportStatus, number> | Record<string, number>;
   total_written: number;
@@ -310,6 +364,10 @@ function countStatuses(entries: ImportResultEntry[]): Record<string, number> {
 export interface ImportOptions {
   dryRun: boolean;
   onConflict: OnConflict;
+  /** Injection-provenance override (src/injection-scan.ts). Default false:
+   * a record whose content matches an instruction-shaped signal aborts the
+   * whole batch with nothing written. */
+  allowFlagged?: boolean;
 }
 
 /**
@@ -344,7 +402,12 @@ export async function importStory(
     entities.map((e) => [entityKey(e.type, e.name), e]),
   );
   const existingKeys = new Set(existingByKey.keys());
-  const plan = planImport(records, existingKeys, opts.onConflict);
+  const plan = planImport(
+    records,
+    existingKeys,
+    opts.onConflict,
+    opts.allowFlagged ?? false,
+  );
 
   if (opts.dryRun || plan.aborted) {
     return {
@@ -381,6 +444,11 @@ export async function importStory(
               pinned: known.pinned,
             }
           : null,
+        // planImport already scanned this record's content (and, if it
+        // matched, only reached here at all because allowFlagged let it
+        // through) as part of the batch's all-or-nothing preflight -- the
+        // write itself must not re-decide.
+        skipInjectionScan: true,
       });
       results.push({
         index: entry.index,
@@ -388,6 +456,7 @@ export async function importStory(
         name: record.name,
         status: saved.created ? "created" : "overwritten",
         memory_id: saved.memory_id,
+        ...(entry.reason && { reason: entry.reason }),
       });
     } catch (err) {
       results.push({

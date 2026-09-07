@@ -123,6 +123,13 @@ describe("hexagonal source boundaries", () => {
       join(srcDir, "context-plan.js"),
       join(srcDir, "run-context.js"),
       join(srcDir, "run-outcome.js"),
+      // Pure, side-effect-free (no I/O, no OC dependency) -- same bar as
+      // context-plan.js above. session-break.ts needs it directly: the
+      // injection-provenance scan must run before chatBreak (which
+      // transmits the greeting to the kin), not only at the later OC save,
+      // so it can't be pushed down into an adapter the way a normal
+      // outbound capability would be.
+      join(srcDir, "injection-scan.js"),
     ]);
     const violations = sourceFiles(join(srcDir, "application")).flatMap(
       (path) =>

@@ -17,6 +17,11 @@
 import type { KindroidTarget } from "./model.js";
 import type { SessionPort } from "./ports/session.js";
 import { narratorTag } from "./narrator-policy.js";
+import {
+  describeInjectionSignals,
+  OVERRIDE_FLAGGED_CONTENT_PARAM,
+  scanForInjectionSignals,
+} from "../injection-scan.js";
 import { makeRunContext, type RunContext } from "../run-context.js";
 import { RunOutcomeError } from "../run-outcome.js";
 
@@ -30,6 +35,10 @@ export interface SessionBreakOptions {
   explicitKin?: string;
   /** How the caller should continue afterwards, quoted in the message. */
   reinvokeHint: string;
+  /** See src/entities.ts's SaveEntityArgs.allowFlagged -- the greeting is
+   * scanned up front, before chatBreak, since that call transmits it
+   * directly to the kin (the OC scene save happens strictly after). */
+  overrideFlaggedContent?: boolean;
 }
 
 export interface SessionBreakResult {
@@ -41,6 +50,9 @@ export interface SessionBreakResult {
     save_error?: string;
   };
   narrator_profile?: string;
+  /** Present only when the injection-provenance scan found a signal in the
+   * greeting and overrideFlaggedContent let the call proceed anyway. */
+  flagged_content_override?: string[];
   message: string;
 }
 
@@ -67,6 +79,24 @@ export async function sessionBreak(
         "the first message of the new session; nothing was changed.",
     );
   }
+
+  // Injection-provenance check (src/injection-scan.ts), before ANY
+  // mutation -- specifically before chatBreak below, which transmits the
+  // greeting directly to the kin. Gating only the later OC scene save
+  // would be too late: the kin would already have seen it. The scene save
+  // itself skips its own scan (skipInjectionScan below) since this is the
+  // authoritative decision for both exposures.
+  const signals = scanForInjectionSignals(greeting);
+  if (signals.length > 0 && !opts.overrideFlaggedContent) {
+    throw rejected(
+      `${describeInjectionSignals(signals)} This greeting becomes the ` +
+        "kin's newest message immediately on chat break, before any save. " +
+        `Re-invoke with ${OVERRIDE_FLAGGED_CONTENT_PARAM}=true if this is ` +
+        "intentional, or reword the greeting; nothing was changed.",
+    );
+  }
+  const flaggedContentOverride =
+    signals.length > 0 ? signals.map((s) => s.label) : undefined;
 
   const binding = await port.storyBinding(storyId);
   const target: KindroidTarget | undefined = opts.explicitKin
@@ -99,7 +129,11 @@ export async function sessionBreak(
   let memoryId: string | undefined;
   let saveError: string | undefined;
   try {
-    const saved = await port.saveScene(storyId, name, greeting, tags);
+    // Already scanned (and, if flagged, explicitly overridden) above --
+    // skip the redundant re-scan at the write itself.
+    const saved = await port.saveScene(storyId, name, greeting, tags, {
+      skipInjectionScan: true,
+    });
     memoryId = saved.memory_id;
   } catch (err) {
     saveError = (err as Error).message;
@@ -116,6 +150,9 @@ export async function sessionBreak(
     },
     ...(binding.narratorProfile !== undefined && {
       narrator_profile: binding.narratorProfile,
+    }),
+    ...(flaggedContentOverride && {
+      flagged_content_override: flaggedContentOverride,
     }),
     message: saveError
       ? `The chat break was applied and the greeting is the kin's newest ` +

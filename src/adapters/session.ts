@@ -23,8 +23,8 @@ export function createSessionAdapter(
       }
       await generator.chatBreak(target.id, greeting);
     },
-    saveScene: (storyId, name, body, extraTags) =>
-      saveSceneEntity(oc, storyId, name, body, extraTags),
+    saveScene: (storyId, name, body, extraTags, opts) =>
+      saveSceneEntity(oc, storyId, name, body, extraTags, opts),
     nowIso: () => new Date().toISOString(),
     warn: (event, message, fields) => log.warn(event, message, fields),
   };
