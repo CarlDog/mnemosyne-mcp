@@ -1,10 +1,14 @@
 # Position Tracking Design
 
-**Status:** Proposal, recorded 2026-09-07 following a design conversation
-with the operator. Not yet ratified — see "Decisions needed at ratification"
-below. [STATUS.md](../STATUS.md) remains the source of current priority;
-this document exists because the `What's next` backlog entry said "design
-not started — this is a shape, not a spec," and this is that spec.
+**Status:** **Ratified 2026-09-07** (operator: "ratify it, go ahead and
+implement") with the five decisions below the original ratification
+questions, plus four refinements an adversarial pre-implementation pass
+surfaced the same day (see "Refinements added at implementation time"):
+the parser-level atomic-invariant requirement, the `set_date`-predates-epoch
+refusal (resolving a contradiction in the original draft), the
+validation-context gating rule, and the accepted position-advance-before-
+generation-failure semantics. [STATUS.md](../STATUS.md) remains the source
+of current priority.
 
 ## Problem
 
@@ -67,7 +71,16 @@ lines are ignored on parse, same as every other optional marker field.
 `Epoch-Location` together (the minimum to be "started" — `Elapsed-Hours`
 defaults to `0` and `Current-Location`/`Current-Spot` default to the epoch's
 own values when first initialized). There is no valid state with elapsed
-time tracked but no epoch.
+time tracked but no epoch. **This invariant is enforced in the *parser*,
+not only at write time** — `parseMarkerContent` treats any marker missing
+either `Epoch-Date` or `Epoch-Location` as "position tracking not started"
+regardless of what other position lines are present, rather than
+constructing a half-initialized `position` object or throwing. Every write
+path in this codebase goes through `setPosition`/`mnemo_position_set`, so a
+malformed block can only arise from a hand-edited marker — and the parser
+degrading it to "not started" (the same state as never having set it) is
+the safe, honest reading: better than crashing, and better than trusting
+partial data.
 
 `current_story_datetime` is **always derived**, never stored:
 `epoch_date + elapsed_hours`. `Elapsed-Hours` is the one field that changes
@@ -96,6 +109,18 @@ for in the moment, all converging on the same stored number:
 - `set_date: <iso-datetime>` — jump straight to a known target instead of
   counting forward (`elapsed_hours` becomes `(set_date - epoch_date)`
   computed once). For "this scene happens on Halloween" style cases.
+  **`set_date` before the current `epoch_date` is refused with a thrown
+  error and nothing written** — it would compute a negative
+  `elapsed_hours`, and per "Explicitly out of scope" below, negative
+  elapsed (flashback framing) is deliberately not designed for in v1. This
+  resolves what was a contradiction in an earlier draft of this doc (which
+  said elapsed "can decrease" while also citing negative elapsed as
+  unsupported); refuse-with-no-write is the one behavior consistent with
+  both statements, and matches every other pre-mutation refusal already in
+  this codebase (`mnemo_session_break`'s validation chain, `RunOutcomeError`
+  `rejected_before_dispatch`). A target **after** the epoch but **before**
+  the current derived date is fine — that's an ordinary correction, not a
+  flashback, and `elapsed_hours` simply decreases.
 
 `advance`, `set_elapsed_hours` (an absolute jump in the stored unit), and
 `set_date` are mutually exclusive on any one call — same
@@ -171,12 +196,42 @@ boundary already used for Kindroid target binding — a convenience param
 buried in a generation call must not be the thing that silently turns a
 feature on for the first time.
 
+**If the marker write succeeds but generation subsequently fails** (a
+provider timeout, `provider_dispatch_unknown`, `completed_but_readback_
+failed`, or any other post-dispatch failure), **the position advance is
+not rolled back.** This is a deliberate choice, not an oversight: `advance`/
+`set_date`/`move_to` are explicit operator directives, not inferred from
+prose, and the same "the first mutation stands even if a later step fails"
+principle already governs `mnemo_session_break` (its chat-break is real
+and not undone just because the follow-up save fails; the documented
+recovery is to re-save the greeting). Position tracking follows the same
+shape: the operator declared the scene moves forward in time/place, and
+that declaration is a fact about the story regardless of whether a beat
+describing it was successfully written. Recovery, same as session-break's,
+is manual — `mnemo_position_set` to correct it back if the failure meant
+the scene truly didn't happen. The alternative (deferring the write until
+a successful save, rendering a *prospective* position into context without
+committing it) was considered and rejected as unwarranted complexity for a
+case with a cheap manual fix.
+
 ### Rendering into generation context
 
 The operator's call: **always included**, not gated behind mode or
 provider — the entire point of tracking this is so a beat can correctly
 reference "it's been three days since the incident." This is a genuinely
-new integration point, not just a new tool:
+new integration point, not just a new tool. **"Always included" scopes to
+generation, not validation**: `gatherContext` is shared by `mnemo_continue`
+(generation) and `mnemo_validate`/`mnemo_revalidate_scenes`
+(`validationOnly`, which deliberately skips scene-gathering too). A
+validator is checking an existing beat against rules/style/continuity, not
+producing new prose that needs to know "how long has it been" — and
+`mnemo_revalidate_scenes` already runs `gatherContext` once per scene in a
+loop, a path STATUS.md's Known Gaps already flags as rate-limit-sensitive.
+The marker's position lines are read only when `!validationOnly`, so a
+revalidate pass over N scenes costs zero extra OC reads for this feature,
+and the field is simply absent from validation's `ContextBundle` — the
+validator was never going to be told the current position, mirroring how
+it was never given scene context to begin with:
 
 - `ContextBundle` (`src/prompt.ts`) gains an optional `position` field —
   `{ current_story_datetime, current_location: { name, spot? } }` — populated
@@ -213,8 +268,11 @@ new integration point, not just a new tool:
   position tracking.
 - **Negative elapsed / flashback framing.** Position tracking here is "where
   the ongoing narrative currently stands," not a flashback-authoring tool.
-  Not validated against (no explicit forbid), but not designed for either —
-  parked rather than decided.
+  A `set_date` that would produce negative elapsed (predating the epoch) is
+  refused outright (see "Granularity" above) — the one place this gets an
+  explicit forbid, because leaving it unvalidated would silently corrupt
+  `current_story_datetime`. Flashback framing as a *feature* remains parked,
+  not decided.
 - **Multiple concurrent positions per story** (parallel timelines/threads).
   All five live stories are single-timeline; no evidence of a need.
 - **Web UI display.** MCP tool surface + backend only, per the operator's
@@ -236,8 +294,9 @@ new integration point, not just a new tool:
   (`elapsed_hours` increases by `78`, not overwritten).
 - `set_date` computes the correct `elapsed_hours` delta against the current
   `epoch_date`, including a case where the target date is *before* the
-  current derived date (elapsed can decrease, still non-negative overall
-  unless the target predates the epoch itself, which is refused).
+  current derived date but *after* the epoch (elapsed decreases, nothing
+  refused), and a separate case where the target date is *before* the
+  epoch itself (throws, nothing written, `elapsed_hours` unchanged).
 - Correcting `epoch_date` after `elapsed_hours` is already non-zero shifts
   `current_story_datetime` by exactly the epoch delta, with `elapsed_hours`
   unchanged.
@@ -253,31 +312,79 @@ new integration point, not just a new tool:
 - Location `name` resolves fresh from the entity on every read — renaming a
   `type:location` entity is reflected in the very next `mnemo_position_get`
   without needing to re-set position.
+- `gatherContext` called with `validationOnly: true` on a story with
+  position tracking on produces a `ContextBundle` with `position` absent,
+  and makes zero marker reads for it — `mnemo_validate`/
+  `mnemo_revalidate_scenes` never see or pay for this field.
+- A hand-edited marker with `Elapsed-Hours` but no `Epoch-Date` (or vice
+  versa) parses as "position tracking not started," not a crash and not a
+  half-populated `position` object.
+- If `mnemo_continue`'s `advance`/`move_to` marker write succeeds and the
+  subsequent generation then fails, a following `mnemo_position_get`
+  reflects the already-applied advance — it is not rolled back.
 
-## Slices (dependency order, each independently shippable)
+## Slices (dependency order; 1+2 ship as one commit, then 3, then 4)
 
 1. **Marker schema 5** — `Epoch-*`/`Elapsed-Hours`/`Current-*` lines,
-   parse/build in `src/stories.ts`, the atomic-block invariant enforced at
-   write time.
-2. **`mnemo_position_get`/`mnemo_position_set`** — the standalone tools,
-   fully usable on their own before any generation-context integration
-   exists.
-3. **`gatherContext` + rendering** — the `ContextBundle.position` field,
-   `buildSystemPrompt` and `buildCompanionMessage` changes.
+   parse/build in `src/stories.ts`, the atomic-block invariant enforced in
+   both the parser and at write time.
+2. **`mnemo_position_get`/`mnemo_position_set`** — the standalone tools.
+   Bundled with slice 1 in the same commit: a schema bump with no tool to
+   exercise it is an invisible, unverifiable change (nothing observable
+   happens, and the parser's new branches can only be tested against
+   hand-built strings). Together, slices 1+2 give the smallest independently
+   verifiable unit — set then get and see the round-trip.
+3. **`gatherContext` + rendering** — the `ContextBundle.position` field
+   (generation-only, gated on `!validationOnly`), `buildSystemPrompt` and
+   `buildCompanionMessage` changes.
 4. **`mnemo_continue` integration** — `advance`/`set_date`/`move_to` params,
-   applied pre-`gatherContext`, with the not-yet-initialized refusal.
+   applied pre-`gatherContext`, with the not-yet-initialized refusal and the
+   accepted advance-survives-generation-failure semantics.
 
-## Decisions needed at ratification
+## Decisions ratified 2026-09-07
 
-1. Confirm the schema-5 marker line set and the single-purpose-line
-   (no delimiter-packing) choice for `spot`.
-2. Confirm `Elapsed-Hours` as the sole stored unit, with `advance`'s
+1. The schema-5 marker line set and the single-purpose-line (no
+   delimiter-packing) choice for `spot`.
+2. `Elapsed-Hours` as the sole stored unit, with `advance`'s
    `{hours, days, weeks}` as the only tool-layer convenience shape (no
    `months`/`seasons` unit).
-3. Confirm epoch stays correctable indefinitely in v1 (no lock-after-first-
-   use).
-4. Confirm `mnemo_continue`'s position params refuse pre-dispatch on an
+3. Epoch stays correctable indefinitely in v1 (no lock-after-first-use).
+4. `mnemo_continue`'s position params refuse pre-dispatch on an
    uninitialized story rather than implicitly bootstrapping tracking.
-5. Confirm position renders as its own labeled context section, not folded
-   into the rules/style block, in both the direct-provider system prompt
-   and the companion-message builder.
+5. Position renders as its own labeled context section, not folded into the
+   rules/style block, in both the direct-provider system prompt and the
+   companion-message builder.
+
+## Refinements added at implementation time
+
+A scoped pre-implementation adversarial pass (2026-09-07, before any code
+was written) found the original ratified draft under-specified in four
+places. Each is folded into the sections above; listed here as the record
+of what changed and why, per this repo's own practice of citing rationale
+rather than re-deriving it later:
+
+1. **The atomic-block invariant must be enforced in the parser, not only at
+   write time.** Every write path goes through `setPosition`, but a
+   hand-edited marker could still violate it; the parser now degrades any
+   incomplete `Epoch-*`/`Elapsed-Hours` combination to "not started" rather
+   than risking a crash or a half-populated result. Matters because slice
+   1 bumps every story's marker to schema 5 on its *next* write for any
+   reason (`setKindroidTarget`, `setNarratorProfile`, `mnemo_story_use`),
+   not just when position tracking is actually used — so schema-5-with-no-
+   position-block must be provably identical in meaning to schema-4, for
+   all seven live stories, not just the ones that opt in.
+2. **`set_date` predating the epoch is refused, not clamped.** The original
+   draft was self-contradictory (see the "Granularity" and "Explicitly out
+   of scope" sections above) — resolved in favor of refuse-with-no-write,
+   consistent with the codebase's existing pre-mutation refusal pattern and
+   with parking (not attempting) flashback framing.
+3. **Position renders in generation context only, gated on
+   `!validationOnly`.** `gatherContext` is shared with the validator path,
+   which was never in scope for "always included" — that phrase described
+   generation. Gating also avoids adding an OC read to
+   `mnemo_revalidate_scenes`'s per-scene loop, an existing rate-limit
+   pressure point.
+4. **A successful position write is not rolled back if generation
+   subsequently fails.** Matches `mnemo_session_break`'s existing
+   break-then-save precedent rather than introducing a new
+   pending-position-until-save concept.

@@ -2,6 +2,78 @@
 
 **Last updated:** 2026-09-07.
 
+**Position tracking, slices 1+2, shipped (2026-09-07).**
+[docs/POSITION_TRACKING_DESIGN.md](docs/POSITION_TRACKING_DESIGN.md) was
+ratified the same day the operator said "ratify it, go ahead and
+implement." A scoped pre-implementation adversarial pass (advisor())
+found the ratified draft under-specified in four places before any code
+was written -- each is folded into the doc's own sections and recorded
+under "Refinements added at implementation time": (1) the atomic
+`Epoch-Date`/`Epoch-Location` invariant must be enforced in the *parser*,
+not only at write time, since every write path bumps a story's marker to
+schema 5 on its next unrelated write (`setKindroidTarget`,
+`setNarratorProfile`, `mnemo_story_use`) whether or not that story ever
+opts into position tracking -- a schema-5 marker with no position lines
+must parse identically in meaning to schema 4; (2) `set_date` predating
+the epoch is refused, not clamped, resolving a genuine contradiction in
+the original draft; (3) position renders in *generation* context only,
+gated on `!validationOnly`, since `gatherContext` is shared with the
+validator path and "always included" was never meant to describe that
+path; (4) a successful position advance from `mnemo_continue` is not
+rolled back if generation subsequently fails, matching
+`mnemo_session_break`'s existing break-then-save precedent rather than
+inventing a new pending-write concept.
+
+Slices 1+2 (of the doc's four, deliberately bundled since a schema bump
+with no tool to exercise it is unobservable): the marker
+(`src/stories.ts`) bumps to schema 5, gaining the six-line position block;
+`mnemo_position_get`/`mnemo_position_set` (new `src/tools/position.ts`)
+are wired into `registerTools`. `mergePositionUpdate` (partial-merge,
+bootstrap-or-update) and `resolveElapsedHours` (`advance`/
+`set_elapsed_hours`/`set_date` arithmetic) are pure functions in
+`stories.ts`, unit-tested directly. Location fields (`epoch_location`,
+`current_location`) store `memory_id` only; both tools resolve the
+display name fresh via `getEntityByMemoryId` on every read and validate
+the memory_id actually resolves to a `type:location` entity, refusing
+otherwise.
+
+**A real bug was caught and fixed before it could reach any live
+story.** `setKindroidTarget` and `setNarratorProfile` each rebuild the
+*entire* marker content from scratch; neither originally threaded
+`story.position` through. Left as written, the very next
+`mnemo_story_use` call touching a Kindroid target or narrator profile on
+*any* story with position tracking on would have silently wiped its
+position block -- a real-OC mutation test (revert the fix, rerun) caught
+it immediately: the regression test in `tests/stories.test.ts` failed
+with the position field coming back `undefined` after an unrelated
+`setKindroidTarget` call, exactly the corruption the fix prevents.
+
+Verified: typecheck/lint/format clean. Pure tests: `tests/story-marker.test.ts`
+(schema-5 round-trip, backward-compat-with-schema-4 pin, the atomic
+invariant enforced in the parser -- both the Epoch-Date-without-location
+and Elapsed-Hours-without-Epoch-Date shapes) and new
+`tests/position-state.test.ts` (`mergePositionUpdate`, `resolveElapsedHours`,
+`currentStoryDatetime` -- bootstrap requirements, partial-update
+independence of time vs. location, epoch-correction reflow, spot clearing
+via `""`, `set_date` delta computation including the before-epoch refusal).
+Real-OC integration: `tests/stories.test.ts` gained `setPosition` bootstrap/
+partial-update/survives-an-unrelated-rewrite coverage, and new
+`tests/position-tool.test.ts` exercises both MCP tools over a real
+`McpServer`/`Client`/HTTP transport round trip against real OC and real
+location entities -- the not-started refusal, location-type validation, the
+`advance`/`set_date` mutual-exclusion refusal, the before-epoch refusal
+with the marker provably unchanged afterward, and fresh name resolution
+after renaming a location entity in place. Two of the riskiest pieces of
+new logic were hand mutation-tested against real OC and confirmed to fail
+loudly when reverted: the parser-level atomic invariant, and the
+`setKindroidTarget`/`setNarratorProfile` position pass-through described
+above. Full suite green (`npx vitest run` with `OC_URL` and the Ollama
+generator/validator vars exported).
+
+Slices 3 (`gatherContext`/`buildSystemPrompt`/`buildCompanionMessage`
+rendering) and 4 (`mnemo_continue` integration) remain -- see the
+backlog entry below for the full design.
+
 **`mnemo_status` shipped (2026-09-07).** The other concrete, ready-to-build
 item identified alongside Web UI entity edit/delete: `GET /api/status`
 (`src/readiness.ts`'s prober -- OC/generator/validator semantic readiness,
@@ -4491,21 +4563,27 @@ consider only when real use exposes the corresponding pressure:
   generated prose; and how to represent travel/duration between two
   locations if that distance ever matters.
   **Design written up 2026-09-07** — the "shape, not a spec" is now a
-  spec: [docs/POSITION_TRACKING_DESIGN.md](docs/POSITION_TRACKING_DESIGN.md),
-  proposal, not yet ratified. A live-data check while writing it overturned
-  part of the original sketch: Chaos Saga's "Master Suite"/"Garage"/
-  "Backyard" (the example cited above) turned out to be prose sub-headings
-  inside "Chaos House"'s own body, not separate location entities — so
-  "spot" is free text the operator types, not a second entity pointer, and
-  no formal sub-location graph gets built. The three open questions above
-  are answered there (OC-canonical marker, confirmed; explicit tool call,
-  confirmed, with an `mnemo_continue`-integrated convenience path; travel/
-  duration explicitly out of scope, no demonstrated need) plus two more the
-  operator settled in conversation: elapsed time stores as a single hours
-  offset with flexible tool-layer units, since "depends on the storyline";
-  and epoch stays correctable indefinitely rather than locking after first
-  use, since there's no demonstrated need for the restriction yet. Nothing
-  implemented; no marker schema bump has landed.
+  spec: [docs/POSITION_TRACKING_DESIGN.md](docs/POSITION_TRACKING_DESIGN.md).
+  A live-data check while writing it overturned part of the original
+  sketch: Chaos Saga's "Master Suite"/"Garage"/"Backyard" (the example
+  cited above) turned out to be prose sub-headings inside "Chaos House"'s
+  own body, not separate location entities — so "spot" is free text the
+  operator types, not a second entity pointer, and no formal sub-location
+  graph gets built. The three open questions above are answered there
+  (OC-canonical marker, confirmed; explicit tool call, confirmed, with an
+  `mnemo_continue`-integrated convenience path; travel/duration explicitly
+  out of scope, no demonstrated need) plus two more the operator settled in
+  conversation: elapsed time stores as a single hours offset with flexible
+  tool-layer units, since "depends on the storyline"; and epoch stays
+  correctable indefinitely rather than locking after first use, since
+  there's no demonstrated need for the restriction yet. **Ratified
+  2026-09-07** (operator: "ratify it, go ahead and implement"), and a
+  pre-implementation adversarial pass the same day resolved four
+  under-specified corners before any code shipped — see the doc's
+  "Refinements added at implementation time." **Slices 1+2 shipped
+  2026-09-07** — see the dated entry above for what landed; slices 3
+  (generation-context rendering) and 4 (`mnemo_continue` integration)
+  remain.
 - **Deterministic RNG for procedural rolls.** No random-number
   generator exists for encounter checks, loot tables, or other
   procedural rolls — related to, but narrower than, the "Game

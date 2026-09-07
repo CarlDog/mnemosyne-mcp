@@ -20,6 +20,8 @@ import {
   listStories,
   resolveStoryId,
   setKindroidTarget,
+  setNarratorProfile,
+  setPosition,
   STORY_MARKER_TAGS,
 } from "../src/stories.js";
 import { isolateDataDirs, teardownStory, testStoryName } from "./helpers.js";
@@ -229,6 +231,76 @@ suite("Phase A — story management (real OC)", () => {
     const cleared = await setKindroidTarget(oc, rebound, undefined);
     expect(cleared.kindroid_target).toBeUndefined();
     expect((await findStory(oc, storyId!))?.kindroid_target).toBeUndefined();
+  });
+
+  it("setPosition bootstraps, partial-updates, and survives an unrelated marker rewrite (real OC)", async () => {
+    const posStoryName = testStoryName("position");
+    const story = await createStory(oc, posStoryName);
+    expect(story.position).toBeUndefined();
+
+    const bootstrapped = await setPosition(oc, story, {
+      epochDate: "2026-10-01T00:00:00Z",
+      epochLocationId: "loc-epoch-1",
+      epochSpot: "the porch",
+    });
+    expect(bootstrapped.position).toEqual({
+      epochDate: "2026-10-01T00:00:00.000Z",
+      epochLocationId: "loc-epoch-1",
+      epochSpot: "the porch",
+      elapsedHours: 0,
+      currentLocationId: "loc-epoch-1",
+      currentSpot: "the porch",
+    });
+    expect((await findStory(oc, story.id))?.position).toEqual(
+      bootstrapped.position,
+    );
+
+    // Partial: only elapsed_hours changes -- location/spot untouched.
+    const advanced = await setPosition(oc, bootstrapped, {
+      elapsedHours: 78,
+    });
+    expect(advanced.position?.elapsedHours).toBe(78);
+    expect(advanced.position?.currentLocationId).toBe("loc-epoch-1");
+
+    // Partial: only current_location changes -- elapsed_hours untouched.
+    const moved = await setPosition(oc, advanced, {
+      currentLocationId: "loc-new",
+      currentSpot: "",
+    });
+    expect(moved.position?.elapsedHours).toBe(78);
+    expect(moved.position?.currentLocationId).toBe("loc-new");
+    expect(moved.position?.currentSpot).toBeUndefined();
+
+    // Regression pin for the bug the pre-implementation review caught:
+    // setKindroidTarget/setNarratorProfile rewrite the WHOLE marker, and
+    // must carry the position block through unchanged -- not silently wipe
+    // it on the next unrelated write.
+    const retargeted = await setKindroidTarget(oc, moved, {
+      type: "ai",
+      id: "some-kin",
+    });
+    expect(retargeted.position).toEqual(moved.position);
+    expect((await findStory(oc, story.id))?.position).toEqual(moved.position);
+
+    const relabeled = await setNarratorProfile(
+      oc,
+      retargeted,
+      "storyteller-v1",
+    );
+    expect(relabeled.position).toEqual(moved.position);
+    expect((await findStory(oc, story.id))?.position).toEqual(moved.position);
+
+    await oc.projectDelete(story.id);
+  });
+
+  it("setPosition throws on a first call missing epoch_date or epoch_location, and writes nothing (real OC)", async () => {
+    const freshStoryName = testStoryName("position-unstarted");
+    const fresh = await createStory(oc, freshStoryName);
+    await expect(
+      setPosition(oc, fresh, { currentLocationId: "loc-1" }),
+    ).rejects.toThrow(/hasn't started/i);
+    expect((await findStory(oc, fresh.id))?.position).toBeUndefined();
+    await oc.projectDelete(fresh.id);
   });
 
   it("reads a legacy schema-2 'Kindroid-Kin:' line as an ai target (backward compat)", async () => {
