@@ -1,6 +1,65 @@
 # Status
 
-**Last updated:** 2026-09-03.
+**Last updated:** 2026-09-07.
+
+**Injection-provenance gate shipped, widened past its original scope after
+an adversarial review disproved its premise (2026-09-07).** The operator
+asked to close the gap `docs/NARRATOR_EVAL.md`'s "The injection rate"
+section had named: "the gate belongs on the import path... there is no
+content gate on that path today." A first pass built exactly that --
+`src/injection-scan.ts` (seven precision-leaning regex patterns modeled on
+the measured `boundary-context` payload) wired into `src/import.ts`'s
+`planImport`: any record's content matching a signal aborts the whole
+`mnemo_import_story` batch, quoting the exact excerpt, with an
+`override_flagged_content` param to proceed anyway. Per standing practice
+(`pre-deploy-review.md`), a 27-agent adversarial review ran before this
+shipped and found the premise false: `scanForInjectionSignals` had exactly
+two call sites in the whole tree, and two other live tools wrote entity/
+scene content with zero scanning -- `mnemo_save_entity` (the general
+single-entity write tool, a real alternate one-at-a-time import path for
+the same 513 staged files, not a hypothetical one) and
+`mnemo_session_break`'s `greeting` param (saved verbatim as a scene, and
+recent scenes are *always* in companion context, never keyphrase-gated).
+The review also found and the fix corrected a real bug (the flagged
+branch returned before registering its `seenInBatch` key, so a duplicate
+sibling of a flagged record was misreported as a normal create -- the
+same pre-existing flaw affected the oversized-content branch too) and
+five test-honesty gaps, the worst being `describeInjectionSignals`'s own
+unit test checking 2 of the 3 signals its own fixture fires and never
+verifying excerpt text, so a mutant that dropped a signal or blanked an
+excerpt would have passed. Measured before deciding scope, not assumed:
+the real scanner run against all 513 already-staged `drafts/scenes/**`
+files flags exactly 1 (0.2%) -- an accepted false positive ("they will
+guide **your instruction** here") -- which is the number that made
+widening the gate look cheap rather than risky. The operator chose to
+close both bypasses by moving the scan into `src/entities.ts`'s
+`saveEntity()`, the true chokepoint under every entity write, rather than
+duplicating the check at each site. One subtlety surfaced during
+implementation, not by the review: `mnemo_session_break` calls
+`chatBreak` (which transmits the greeting directly to the kin) *before*
+the later OC scene save, so gating only the save would be too late -- the
+kin would already have seen a flagged greeting. That scan now runs first,
+in `src/application/session-break.ts` itself, before `chatBreak`,
+throwing before any mutation; the later scene save sets
+`skipInjectionScan` since the decision is already made. `mnemo_continue`'s
+generated-beat save is the one deliberate, permanent exception (grep
+`skipInjectionScan` to enumerate every one, each with its own comment
+naming which kind it is) -- that content is the narrator's own LLM
+output, not third-party text, and scanning it would add reflexive
+friction to the core product loop over content outside the actual threat
+model. All three tool surfaces now carry a matching
+`override_flagged_content` param sharing one constant
+(`OVERRIDE_FLAGGED_CONTENT_PARAM`) so a tool's hint text can't drift from
+its zod field name. 550 tests passing (up from 531 before this entry),
+including two real end-to-end MCP-wire tests
+(`tests/http-integration.test.ts`) proving the override reaches the gate
+over the actual transport for both `mnemo_import_story` and
+`mnemo_save_entity`, and the session-break scan-before-`chatBreak`
+ordering was hand mutation-tested (moved after `chatBreak`, confirmed the
+guarding test fails, reverted). `docs/NARRATOR_EVAL.md`'s "The injection
+rate" section carries a matching correction rather than a silent rewrite.
+Nothing has been imported or promoted -- the 513 staged scenes remain
+exactly where that section left them.
 
 **Seat 10 ratified: substitution happens before promotion (2026-09-04).**
 "Substitute the canon name before promotion, never at promotion." Recorded as

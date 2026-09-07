@@ -16,6 +16,17 @@ export type ContinuationUsage = ModelUsage;
 export interface SavedScene {
   memory_id: string;
   tags: string[];
+  /** Present only when the injection-provenance scan (src/injection-scan.ts)
+   * found a signal and an explicit override let the save proceed anyway --
+   * the matched pattern labels, kept as an audit trail. */
+  flagged_content_override?: string[];
+}
+
+/** See src/entities.ts's SaveEntityArgs -- the same skipInjectionScan/
+ * allowFlagged pair, one level up at the saveScene port boundary. */
+export interface SaveSceneOptions {
+  skipInjectionScan?: boolean;
+  allowFlagged?: boolean;
 }
 
 /** Outbound capabilities required by the continuation use case. */
@@ -56,6 +67,7 @@ export interface ContinuationPort {
     name: string,
     body: string,
     extraTags?: string[],
+    opts?: SaveSceneOptions,
   ): Promise<SavedScene>;
   validate(
     context: ContextBundle,

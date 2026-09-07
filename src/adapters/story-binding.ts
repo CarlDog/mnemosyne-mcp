@@ -21,18 +21,36 @@ export async function readStoryBinding(
   };
 }
 
+export interface SaveSceneOptions {
+  /** See SaveEntityArgs.skipInjectionScan -- the deliberate, documented
+   * exception is the continuation adapter's generated-beat save; every
+   * other caller of saveSceneEntity leaves this unset. */
+  skipInjectionScan?: boolean;
+  /** See SaveEntityArgs.allowFlagged. */
+  allowFlagged?: boolean;
+}
+
 export async function saveSceneEntity(
   oc: OcClient,
   storyId: string,
   name: string,
   body: string,
   extraTags?: string[],
+  opts?: SaveSceneOptions,
 ): Promise<SavedScene> {
   const saved = await saveEntity(oc, storyId, {
     type: "scene",
     name,
     body,
     extraTags,
+    skipInjectionScan: opts?.skipInjectionScan,
+    allowFlagged: opts?.allowFlagged,
   });
-  return { memory_id: saved.memory_id, tags: saved.tags };
+  return {
+    memory_id: saved.memory_id,
+    tags: saved.tags,
+    ...(saved.flagged_content_override && {
+      flagged_content_override: saved.flagged_content_override,
+    }),
+  };
 }

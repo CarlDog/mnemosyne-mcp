@@ -1,5 +1,9 @@
 import type { KindroidTarget } from "../model.js";
-import type { SavedScene, StoryBinding } from "./continuation.js";
+import type {
+  SavedScene,
+  SaveSceneOptions,
+  StoryBinding,
+} from "./continuation.js";
 
 /**
  * Outbound capabilities required by the session-break use case
@@ -23,6 +27,7 @@ export interface SessionPort {
     name: string,
     body: string,
     extraTags?: string[],
+    opts?: SaveSceneOptions,
   ): Promise<SavedScene>;
   nowIso(): string;
   warn(event: string, message: string, fields?: Record<string, unknown>): void;

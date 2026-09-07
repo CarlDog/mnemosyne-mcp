@@ -8,6 +8,7 @@ import type { OcClient } from "../oc-client.js";
 import type { ListEntityCatalog } from "../application/list-entities.js";
 import { deleteEntity, ENTITY_TYPES, recall, saveEntity } from "../entities.js";
 import { requireCurrentStoryId } from "../config.js";
+import { OVERRIDE_FLAGGED_CONTENT_PARAM } from "../injection-scan.js";
 import { findStory, resolveStoryId } from "../stories.js";
 import { asText, withLogging } from "./helpers.js";
 
@@ -25,7 +26,9 @@ export function registerEntityTools(
     {
       title: "Save Story Entity",
       description:
-        "Save a story-domain entity (character, location, rule, style guide, scene, lore, or worldbuilding) to the active story. If an entity with the same type+name already exists, it is updated in place; otherwise a new memory is created. Rules default to pinned; everything else defaults to unpinned. Pin state can be overridden via the `pinned` parameter.",
+        "Save a story-domain entity (character, location, rule, style guide, scene, lore, or worldbuilding) to the active story. If an entity with the same type+name already exists, it is updated in place; otherwise a new memory is created. Rules default to pinned; everything else defaults to unpinned. Pin state can be overridden via the `pinned` parameter. " +
+        "`content` matching instruction-shaped phrasing (a prompt-injection signal) is refused by default -- nothing is written, and the error quotes the exact matched excerpt; " +
+        `${OVERRIDE_FLAGGED_CONTENT_PARAM}=true writes it anyway, keeping the quote on the result as an audit trail.`,
       inputSchema: {
         type: z.enum(ENTITY_TYPES).describe(ENTITY_TYPE_DESCRIPTIONS),
         // No line breaks: the name lives on the [Type] Name header line,
@@ -52,6 +55,15 @@ export function registerEntityTools(
           .describe(
             'Additional tags appended to the base set ["mnemosyne", "story", <type>]. Useful for sub-categorization (e.g., "primary" vs "npc" for characters).',
           ),
+        override_flagged_content: z
+          .boolean()
+          .optional()
+          .describe(
+            "Write anyway when `content` matches instruction-shaped " +
+              "phrasing. Default false: refused, nothing written. Only " +
+              "set true after reading the quoted excerpt in the error " +
+              "and deciding it's a false positive or acceptable.",
+          ),
         story: z
           .string()
           .min(1)
@@ -67,6 +79,7 @@ export function registerEntityTools(
         content: string;
         pinned?: boolean;
         extra_tags?: string[];
+        override_flagged_content?: boolean;
         story?: string;
       }) => {
         const storyId = await resolveStoryId(oc, args.story);
@@ -76,6 +89,7 @@ export function registerEntityTools(
           body: args.content,
           pinned: args.pinned,
           extraTags: args.extra_tags,
+          allowFlagged: args.override_flagged_content ?? false,
         });
         return asText(result);
       },

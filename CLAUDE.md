@@ -180,7 +180,24 @@ assessments listed under "Layout" below.
 - `src/entities.ts` — entity CRUD + recall, plus `listAllEntities()` (a
   complete, unranked enumeration — no cap, unlike `recall()`) and
   `filterListedEntities()` (pure: optional type filter + default body
-  strip, backing `mnemo_list_entities`).
+  strip, backing `mnemo_list_entities`). `saveEntity()` is the default
+  chokepoint every entity write funnels through and scans by default
+  (`src/injection-scan.ts`) unless the caller sets `skipInjectionScan`
+  (already scanned upstream, or — the one true "never scan" exception —
+  `mnemo_continue`'s generated-beat save) or `allowFlagged` (write anyway,
+  keeping the matched signals as an audit trail on the result).
+- `src/injection-scan.ts` — `scanForInjectionSignals()` /
+  `describeInjectionSignals()`: the deterministic, precision-leaning
+  regex scan for instruction-shaped text (docs/NARRATOR_EVAL.md's
+  measured 35% companion-chat obedience rate). `saveEntity()` is the
+  default chokepoint; `mnemo_import_story`'s `planImport` and
+  `mnemo_session_break`'s greeting check scan directly via this module
+  instead, because each needs the verdict before `saveEntity` would even
+  run (a whole-batch preflight; a check before `chatBreak` transmits the
+  greeting to the kin, ahead of the later OC save). Exports
+  `OVERRIDE_FLAGGED_CONTENT_PARAM`, the one shared constant every tool's
+  `override_flagged_content` zod field and hint text reference, so they
+  can't drift apart.
 - `src/prompt.ts`, `src/validator.ts`, `src/llm.ts`, `src/export.ts`,
   `src/import.ts` — domain logic.
 - `src/kindroid-provider.ts` — `KindroidProvider implements LlmProvider`;

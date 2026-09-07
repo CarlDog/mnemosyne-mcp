@@ -68,8 +68,17 @@ export function createContinuationAdapter(
       capabilityWarnings(generator.name, options),
     storyBinding: (storyId) => readStoryBinding(oc, storyId),
     generate: (options) => generator.generate(options),
+    // skipInjectionScan: true, unconditionally -- this is the ONE call
+    // site that saves a generated beat, and a beat is the narrator's own
+    // LLM output, not third-party content. Scanning it would add
+    // reflexive friction to the core product loop over content outside
+    // the actual threat model (docs/NARRATOR_EVAL.md's "unvetted
+    // third-party text"). Every other saveScene/saveEntity call site
+    // leaves the scan on.
     saveScene: (storyId, name, body, extraTags) =>
-      saveSceneEntity(oc, storyId, name, body, extraTags),
+      saveSceneEntity(oc, storyId, name, body, extraTags, {
+        skipInjectionScan: true,
+      }),
     validate: (context, content) =>
       validateContentWithUsage(validator, context, content),
     retagValidation: async (memoryId, tags, verdict) => {
