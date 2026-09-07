@@ -142,8 +142,11 @@ assessments listed under "Layout" below.
 - `src/api/` — the REST layer the web UI talks to: `index.ts`
   (`createApiRouter()`, mirrors `tools/index.ts`'s orchestrator shape),
   `stories.ts`, `entities.ts`, and `interactive.ts` (route handlers — thin
-  JSON driver adapters over the same application use cases the MCP tools wrap),
-  `helpers.ts` (`asyncRoute()`, input/error handling).
+  JSON driver adapters; `interactive.ts` wraps the same application use
+  cases the MCP tools do, while `entities.ts`'s single-entity GET/PATCH/
+  DELETE call `src/entities.ts`'s domain functions directly — no
+  application-layer write use case exists yet, and the GET route set this
+  precedent first), `helpers.ts` (`asyncRoute()`, input/error handling).
 - `src/application/` — transport-independent application use cases shared by
   MCP and REST drivers. Continuation, standalone validation, and bulk scene
   revalidation plus story/entity catalog reads live here. `application/ports/`
@@ -156,8 +159,12 @@ assessments listed under "Layout" below.
   persistence, environment, clock, and logging. `src/index.ts` constructs these
   bindings once, assembles one `ApplicationUseCases` contract, and injects it
   into both inbound drivers.
-- `webui/` — the actual web UI: entity-library browse/detail plus the
-  interactive continue/validate flow. A separate npm package — React 19 +
+- `webui/` — the actual web UI: entity-library browse/detail/edit/delete
+  plus the interactive continue/validate flow. Edit is a partial update
+  (missing fields echo back the existing value, never blanked) and refusing
+  flagged content surfaces a dedicated banner with the matched excerpts and
+  an explicit override button; delete has an inline (non-native) confirm
+  step. A separate npm package — React 19 +
   Vite + react-router,
   its own tsconfig (browser/JSX target, incompatible with the server's
   `NodeNext`/no-DOM config) and its own eslint config (pinned to eslint 9;
@@ -180,12 +187,21 @@ assessments listed under "Layout" below.
 - `src/entities.ts` — entity CRUD + recall, plus `listAllEntities()` (a
   complete, unranked enumeration — no cap, unlike `recall()`) and
   `filterListedEntities()` (pure: optional type filter + default body
-  strip, backing `mnemo_list_entities`). `saveEntity()` is the default
-  chokepoint every entity write funnels through and scans by default
-  (`src/injection-scan.ts`) unless the caller sets `skipInjectionScan`
-  (already scanned upstream, or — the one true "never scan" exception —
-  `mnemo_continue`'s generated-beat save) or `allowFlagged` (write anyway,
-  keeping the matched signals as an audit trail on the result).
+  strip, backing `mnemo_list_entities`), and `deleteEntityByMemoryId()` (the
+  id-keyed counterpart to `deleteEntity()`'s (type, name) lookup, for a
+  caller — the web UI — that only has the memory id; reuses
+  `getEntityByMemoryId`'s story-ownership check rather than `deleteEntity`'s
+  ranked search, which can miss or resolve to the wrong record in a
+  same-type-crowded story). `saveEntity()` is the default chokepoint every
+  entity write funnels through and scans by default (`src/injection-scan.ts`)
+  unless the caller sets `skipInjectionScan` (already scanned upstream, or —
+  the one true "never scan" exception — `mnemo_continue`'s generated-beat
+  save) or `allowFlagged` (write anyway, keeping the matched signals as an
+  audit trail on the result). A flagged, non-overridden write throws
+  `FlaggedContentError` (not a plain `Error`) carrying the matched
+  `InjectionSignal[]` as structured data, so a caller like `src/api/
+  entities.ts`'s PATCH route can catch it specifically and return a clean
+  4xx instead of losing the excerpt to a generic error handler.
 - `src/injection-scan.ts` — `scanForInjectionSignals()` /
   `describeInjectionSignals()`: the deterministic, precision-leaning
   regex scan for instruction-shaped text (docs/NARRATOR_EVAL.md's

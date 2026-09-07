@@ -2,6 +2,63 @@
 
 **Last updated:** 2026-09-07.
 
+**Web UI entity edit/delete shipped (2026-09-07).** Selected from the
+`What's next` backlog as the one unbuilt Web UI piece that didn't need a
+design conversation first -- unlike the other four items in that bullet
+(postures, assembly inspection, media, watch parties, all "design input...
+explicitly not ratified" per `docs/WEBUI_NOTES.md`), this is a conventional
+CRUD extension of the already-shipped browse/detail flow, built entirely on
+already-ratified server tool semantics (`mnemo_save_entity`,
+`mnemo_delete_entity`). `src/api/entities.ts` gained `PATCH`/`DELETE
+/stories/:storyId/entities/:memoryId` (previously GET-only); both call
+`src/entities.ts`'s `saveEntity`/a new `deleteEntityByMemoryId` directly, per
+the existing precedent the single-entity GET route already set (no
+application-layer write use case exists yet in this codebase). The PATCH
+route is a genuine partial update -- it fetches the existing entity first and
+echoes back whatever the caller didn't mention (body, pinned, extra tags),
+since `saveEntity` itself has no partial-merge concept and would otherwise
+silently blank a custom tag on an edit that only touched the body
+(`api-integration.md`'s "PUT is a full replace" trap, applied here even
+though the verb is PATCH). `saveEntity`'s injection-provenance throw
+(`docs/NARRATOR_EVAL.md`) changed from a plain `Error` to a new
+`FlaggedContentError` subclass carrying structured `signals: InjectionSignal[]`,
+specifically so the PATCH route can catch it and return a clean `422` with
+the matched excerpts as data -- deliberately NOT reusing `RunOutcomeError`
+(the LLM-dispatch-outcome type used elsewhere), since a content-write refusal
+dispatches nothing to any provider and that type's vocabulary
+(`provider_charge_possible`, etc.) would be permanently meaningless here.
+
+Verification, in order: typecheck/lint/format clean at every step; a pure
+unit-test suite (mocked OC, real Express app, real `fetch` calls) plus a
+real-OC integration suite; three hand-run mutation tests confirming the
+riskiest behaviors are actually pinned, not just plausible (the
+`FlaggedContentError` catch really firing -- a mutant that skips it produces
+exactly the silent-500-discards-the-excerpt failure the design was built to
+avoid; the extra-tags-preserved fallback; and, after an independent review
+pass, the `??` vs `||` distinction on `pinned` -- `false` must survive as
+"unpin," not be treated as omitted); and a full live-browser pass against a
+real OC-backed dev server (Chrome DevTools MCP, screenshot-verified) walking
+the actual edit form, the flagged-content banner with its quoted excerpts and
+override button, and the delete confirmation, end to end. A scoped
+independent code review (not the full multi-agent treatment the
+injection-gate closure warranted -- this is a standard CRUD feature reusing
+already-hardened backend functions, not a new security boundary) found two
+real gaps before commit: `pinned` had zero test coverage and the test mock
+couldn't have proven it correct even if asserted (fixed: the mock's
+`memoryPin` now actually flips state, with a hand-verified mutation test); and
+the web client's new `editEntity`/`deleteEntity` functions, plus the
+refactored `patch`/`del`/no-body request branches, had zero automated
+coverage beyond the manual browser pass (fixed: added to
+`tests/webui-client.test.ts`, including a mutation-verified proof that
+`deleteEntity` sends no request body). 626 tests passing (up from 620).
+
+One side effect worth recording, not a code change: verifying this live
+required a throwaway OC story, created via the operator's own live
+mnemosyne-mcp connection (`mnemo_story_use`, which unconditionally persists
+the active-story pointer as a side effect) -- the scratch story was deleted
+after verification, but the pointer itself was left pointing at nothing and
+needs an explicit `mnemo_story_use` to reset.
+
 **Injection-provenance gate shipped, widened past its original scope after
 an adversarial review disproved its premise (2026-09-07).** The operator
 asked to close the gap `docs/NARRATOR_EVAL.md`'s "The injection rate"
@@ -4273,10 +4330,10 @@ consider only when real use exposes the corresponding pressure:
   `MNEMO_WARMUP=true` opts stdio in. A client heartbeat remains deliberately
   rejected as duplication.
 - **Web UI — partially shipped.** The standalone React frontend now provides
-  story/entity browse/detail and a shared continue/validate flow, bypassing a
-  host LLM for direct browser use. Entity edit/delete, differentiated
-  participant/director/audience postures, assembly inspection, media, and
-  watch parties remain unbuilt design input.
+  story/entity browse/detail, entity edit/delete (**shipped 2026-09-07**, see
+  Done), and a shared continue/validate flow, bypassing a host LLM for direct
+  browser use. Differentiated participant/director/audience postures, assembly
+  inspection, media, and watch parties remain unbuilt design input.
   Design input, captured 2026-08-23 and explicitly not ratified:
   [docs/WEBUI_NOTES.md](docs/WEBUI_NOTES.md) — three modes as three
   postures, a storyline control plane alongside the character one,

@@ -7,6 +7,24 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 
 ### Added
 
+- Web UI entity edit/delete: `PATCH`/`DELETE /stories/:storyId/entities/:memoryId`
+  (previously GET-only) plus the corresponding `EntityDetailPage` edit form and
+  delete confirmation. Edit is a genuine partial update -- a field the caller
+  omits is echoed back from the existing entity, not blanked, since `saveEntity`
+  itself always rebuilds the full tag set. `saveEntity`'s injection-provenance
+  refusal now throws `FlaggedContentError` (carrying structured `signals`)
+  instead of a plain `Error`, so the PATCH route can return a clean 422 with
+  the matched excerpts rather than losing them to the generic 500 handler; the
+  web UI renders them in a dedicated banner with an explicit override button.
+  Delete uses a new `deleteEntityByMemoryId` (id-keyed, story-scoped) rather
+  than the existing (type, name)-keyed `deleteEntity`, since the UI only has
+  the memory id and a ranked-search lookup could resolve to the wrong record.
+  Verified with a scoped independent code review (two real gaps found and
+  fixed: `pinned` had no test coverage and the mock couldn't have proven it
+  correct either way; the web client's new functions had none beyond manual
+  verification) and a full live-browser pass against a real OC-backed dev
+  server. See STATUS.md's 2026-09-07 entry for the full verification record.
+
 - Injection-provenance gate (`src/injection-scan.ts`): a deterministic,
   precision-leaning regex scan for instruction-shaped text, wired as the
   default behavior of `src/entities.ts`'s `saveEntity()` -- the chokepoint

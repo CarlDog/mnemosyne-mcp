@@ -46,6 +46,38 @@ export interface EntityDetail extends EntitySummary {
   body: string;
 }
 
+export interface EditEntityRequest {
+  body?: string;
+  pinned?: boolean;
+  extra_tags?: string[];
+  override_flagged_content?: boolean;
+}
+
+/** One instruction-shaped-text match from the injection-provenance scan
+ * (src/injection-scan.ts on the server) -- excerpt is the exact matched
+ * text, never paraphrased, so the UI can show precisely what tripped it. */
+export interface FlaggedContentSignal {
+  label: string;
+  excerpt: string;
+}
+
+/** The 422 body a PATCH .../entities/:memoryId returns when `body`
+ * matches instruction-shaped text and override_flagged_content wasn't
+ * set. Distinct from RunOutcomeErrorResponse -- a content-write refusal
+ * dispatches nothing to any provider, so that shape's fields don't apply. */
+export interface FlaggedContentErrorResponse {
+  error: "flagged_content";
+  message: string;
+  signals: FlaggedContentSignal[];
+}
+
+export interface DeleteEntityResponse {
+  type: EntityType;
+  name: string;
+  memory_id: string;
+  deleted: true;
+}
+
 export interface ContinueRequest {
   direction: string;
   mode?: Mode;
