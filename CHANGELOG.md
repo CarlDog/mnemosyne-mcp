@@ -7,6 +7,31 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 
 ### Added
 
+- Position tracking, slices 1+2 (docs/POSITION_TRACKING_DESIGN.md, ratified
+  2026-09-07): a story's optional in-story clock/place. The marker
+  (`src/stories.ts`) bumps to schema 5, gaining an atomic `Epoch-Date`/
+  `Epoch-Location`/`Epoch-Spot`/`Elapsed-Hours`/`Current-Location`/
+  `Current-Spot` block enforced in the *parser*, not only at write time --
+  a schema-5 marker with none of those lines parses identically to schema
+  4. New `mnemo_position_get`/`mnemo_position_set` tools
+  (`src/tools/position.ts`); the latter's first call on a story must supply
+  `epoch_date` + `epoch_location` together (that's what starts tracking),
+  later calls are a genuine partial update, and `advance`/`set_elapsed_hours`/
+  `set_date` are mutually exclusive per call. `set_date` predating the
+  epoch is refused, not clamped. Location fields store `memory_id` only,
+  never a name -- both surfaces resolve the display name fresh via
+  `getEntityByMemoryId` on every read. `setKindroidTarget`/
+  `setNarratorProfile` now thread the position block through their marker
+  rewrites -- missing this would have silently wiped position tracking on
+  any story's next unrelated marker write; caught by a mutation-tested real-OC
+  regression test. Verified: typecheck/lint/format clean, the atomic-invariant
+  parser guard and the position-survives-an-unrelated-rewrite fix were both
+  hand mutation-tested against real OC, and a real MCP-wire test
+  (`tests/position-tool.test.ts`) exercises both tools end to end including
+  the not-started refusal, location-type validation, and fresh name
+  resolution after a rename. See STATUS.md's 2026-09-07 entry for the full
+  record.
+
 - `mnemo_status`: the stdio-side counterpart to `GET /api/status`, closing
   the Known Gaps entry that recorded it as deliberately deferred. A stdio
   host has no HTTP endpoint to poll, so it previously had no way to check

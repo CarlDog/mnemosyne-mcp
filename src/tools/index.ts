@@ -12,6 +12,7 @@ import { registerContinueTool } from "./continue.js";
 import { registerEntityTools } from "./entities.js";
 import { registerExportTool } from "./export.js";
 import { registerImportTool } from "./import.js";
+import { registerPositionTool } from "./position.js";
 import { registerStoryTools } from "./stories.js";
 import { registerStatusTool } from "./status.js";
 import { registerValidateTool } from "./validate.js";
@@ -38,6 +39,7 @@ export function registerTools(
   readinessProber?: ReadinessProber,
 ): void {
   registerStoryTools(server, oc, useCases.listStoryCatalog);
+  registerPositionTool(server, oc);
   registerEntityTools(server, oc, useCases.listEntityCatalog);
   registerExportTool(server, oc, allowFilesystemPaths);
   registerImportTool(server, oc, allowFilesystemPaths);

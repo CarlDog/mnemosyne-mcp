@@ -26,7 +26,7 @@ describe("story marker content (pure)", () => {
     expect(content.split("\n")).toEqual([
       "[Mnemosyne Story] Halvard",
       `Created: ${CREATED}`,
-      "Schema: 4",
+      "Schema: 5",
       "Kindroid-Target: ai:kin-1",
       "Narrator-Profile: storyteller-v1",
     ]);
@@ -105,5 +105,135 @@ describe("story marker content (pure)", () => {
 
   it("derives the scene tag from the label", () => {
     expect(narratorTag("storyteller-v1")).toBe("narrator:storyteller-v1");
+  });
+});
+
+describe("story marker position block (pure)", () => {
+  const POSITION = {
+    epochDate: "2026-10-01T00:00:00.000Z",
+    epochLocationId: "loc-epoch-1",
+    epochSpot: "the porch",
+    elapsedHours: 78,
+    currentLocationId: "loc-current-2",
+    currentSpot: "the kitchen",
+  };
+
+  it("round-trips a full position block alongside target and narrator profile", () => {
+    const content = buildMarkerContent(
+      "Halvard",
+      CREATED,
+      { type: "ai", id: "kin-1" },
+      "storyteller-v1",
+      POSITION,
+    );
+    expect(content.split("\n")).toEqual([
+      "[Mnemosyne Story] Halvard",
+      `Created: ${CREATED}`,
+      "Schema: 5",
+      "Kindroid-Target: ai:kin-1",
+      "Narrator-Profile: storyteller-v1",
+      "Epoch-Date: 2026-10-01T00:00:00.000Z",
+      "Epoch-Location: loc-epoch-1",
+      "Epoch-Spot: the porch",
+      "Elapsed-Hours: 78",
+      "Current-Location: loc-current-2",
+      "Current-Spot: the kitchen",
+    ]);
+    expect(parseMarkerContent(content)).toEqual({
+      name: "Halvard",
+      created: CREATED,
+      kindroidTarget: { type: "ai", id: "kin-1" },
+      narratorProfile: "storyteller-v1",
+      position: POSITION,
+    });
+  });
+
+  it("omits epoch_spot/current_spot lines when unset, and parses their absence as undefined", () => {
+    const { epochSpot: _es, currentSpot: _cs, ...rest } = POSITION;
+    void _es;
+    void _cs;
+    const content = buildMarkerContent(
+      "Halvard",
+      CREATED,
+      undefined,
+      undefined,
+      rest,
+    );
+    expect(content).not.toContain("Epoch-Spot");
+    expect(content).not.toContain("Current-Spot");
+    expect(parseMarkerContent(content)?.position).toEqual(rest);
+  });
+
+  it("a schema-5 marker with no position lines parses identically in meaning to a schema-4 marker -- position is entirely absent", () => {
+    const content = buildMarkerContent(
+      "Halvard",
+      CREATED,
+      { type: "ai", id: "kin-1" },
+      "storyteller-v1",
+    );
+    expect(content).not.toContain("Epoch-");
+    expect(content).not.toContain("Elapsed-Hours");
+    expect(content).not.toContain("Current-");
+    const parsed = parseMarkerContent(content);
+    expect(parsed?.position).toBeUndefined();
+    // Same shape a schema-4 marker (no position lines at all) parses to.
+    const schema4 = [
+      "[Mnemosyne Story] Halvard",
+      `Created: ${CREATED}`,
+      "Schema: 4",
+      "Kindroid-Target: ai:kin-1",
+      "Narrator-Profile: storyteller-v1",
+    ].join("\n");
+    expect(parseMarkerContent(schema4)).toEqual(parsed);
+  });
+
+  it("the atomic invariant is enforced in the parser: Elapsed-Hours with no Epoch-Date parses as not-started, not a crash or a half-populated object", () => {
+    const handEdited = [
+      "[Mnemosyne Story] Odd",
+      `Created: ${CREATED}`,
+      "Schema: 5",
+      "Elapsed-Hours: 40",
+      "Current-Location: loc-current-2",
+    ].join("\n");
+    const parsed = parseMarkerContent(handEdited);
+    expect(parsed?.name).toBe("Odd");
+    expect(parsed?.position).toBeUndefined();
+  });
+
+  it("the atomic invariant also catches Epoch-Date with no Epoch-Location", () => {
+    const handEdited = [
+      "[Mnemosyne Story] Odd",
+      `Created: ${CREATED}`,
+      "Schema: 5",
+      "Epoch-Date: 2026-10-01T00:00:00.000Z",
+    ].join("\n");
+    expect(parseMarkerContent(handEdited)?.position).toBeUndefined();
+  });
+
+  it("an unparseable Epoch-Date parses as not-started rather than corrupting derived arithmetic", () => {
+    const handEdited = [
+      "[Mnemosyne Story] Odd",
+      `Created: ${CREATED}`,
+      "Schema: 5",
+      "Epoch-Date: not-a-date",
+      "Epoch-Location: loc-epoch-1",
+    ].join("\n");
+    expect(parseMarkerContent(handEdited)?.position).toBeUndefined();
+  });
+
+  it("Current-Location defaults to Epoch-Location and Elapsed-Hours defaults to 0 when hand-edited without them", () => {
+    const handEdited = [
+      "[Mnemosyne Story] Fresh",
+      `Created: ${CREATED}`,
+      "Schema: 5",
+      "Epoch-Date: 2026-10-01T00:00:00.000Z",
+      "Epoch-Location: loc-epoch-1",
+    ].join("\n");
+    expect(parseMarkerContent(handEdited)?.position).toEqual({
+      epochDate: "2026-10-01T00:00:00.000Z",
+      epochLocationId: "loc-epoch-1",
+      elapsedHours: 0,
+      currentLocationId: "loc-epoch-1",
+    });
   });
 });
