@@ -4489,8 +4489,23 @@ consider only when real use exposes the corresponding pressure:
   latter, since the Web UI/API caller needs to read/set it too);
   whether advancing position is an explicit tool call or inferred from
   generated prose; and how to represent travel/duration between two
-  locations if that distance ever matters. Design not started — this
-  is a shape, not a spec.
+  locations if that distance ever matters.
+  **Design written up 2026-09-07** — the "shape, not a spec" is now a
+  spec: [docs/POSITION_TRACKING_DESIGN.md](docs/POSITION_TRACKING_DESIGN.md),
+  proposal, not yet ratified. A live-data check while writing it overturned
+  part of the original sketch: Chaos Saga's "Master Suite"/"Garage"/
+  "Backyard" (the example cited above) turned out to be prose sub-headings
+  inside "Chaos House"'s own body, not separate location entities — so
+  "spot" is free text the operator types, not a second entity pointer, and
+  no formal sub-location graph gets built. The three open questions above
+  are answered there (OC-canonical marker, confirmed; explicit tool call,
+  confirmed, with an `mnemo_continue`-integrated convenience path; travel/
+  duration explicitly out of scope, no demonstrated need) plus two more the
+  operator settled in conversation: elapsed time stores as a single hours
+  offset with flexible tool-layer units, since "depends on the storyline";
+  and epoch stays correctable indefinitely rather than locking after first
+  use, since there's no demonstrated need for the restriction yet. Nothing
+  implemented; no marker schema bump has landed.
 - **Deterministic RNG for procedural rolls.** No random-number
   generator exists for encounter checks, loot tables, or other
   procedural rolls — related to, but narrower than, the "Game
