@@ -36,6 +36,7 @@ import { createSessionBreak } from "./application/session-break.js";
 import { createListEntityCatalog } from "./application/list-entities.js";
 import { createListStoryCatalog } from "./application/list-stories.js";
 import type { ApplicationUseCases } from "./application/use-cases.js";
+import { createReadinessProber } from "./readiness.js";
 import { MNEMOSYNE_VERSION } from "./version.js";
 import { INSTRUCTIONS } from "./instructions.js";
 // Importing this validates the environment and exits on a bad value; it must
@@ -181,6 +182,11 @@ const validator = new OllamaProvider({
 });
 const validateStory = createStoryValidationAdapter(oc, validator);
 const revalidateScenes = createSceneRevalidationAdapter(oc, validator);
+// One shared instance for the whole process -- both mnemo_status (every
+// session, both transports) and, in HTTP mode, GET /api/status read
+// through it, so its TTL cache actually bounds probe frequency across
+// every caller rather than resetting per session.
+const readinessProber = createReadinessProber({ oc, generator, validator });
 const useCases: ApplicationUseCases = {
   continueScene: createContinueScene(
     createContinuationAdapter(oc, generator, validator),
@@ -265,6 +271,7 @@ function makeServer(): McpServer {
     // stdio is a local-operator channel; HTTP is not. Same tool surface, so
     // the path-bearing export/import variants are refused when serving HTTP.
     httpConfig.port === undefined,
+    readinessProber,
   );
   return server;
 }
@@ -315,6 +322,7 @@ if (httpConfig.port === undefined) {
       validator,
       sceneContextStrategy: SCENE_CONTEXT_STRATEGY,
       sceneContextFallbackStrategy: SCENE_CONTEXT_FALLBACK_STRATEGY,
+      readinessProber,
     }),
   );
 

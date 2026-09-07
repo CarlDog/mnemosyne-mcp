@@ -2,6 +2,46 @@
 
 **Last updated:** 2026-09-07.
 
+**`mnemo_status` shipped (2026-09-07).** The other concrete, ready-to-build
+item identified alongside Web UI entity edit/delete: `GET /api/status`
+(`src/readiness.ts`'s prober -- OC/generator/validator semantic readiness,
+non-mutating, non-billable, 15s TTL cache) existed only for HTTP callers; a
+stdio host (Claude Desktop, Claude Code -- every current deployment) had no
+HTTP endpoint to poll at all, so it had no way to ask short of a real tool
+call and reading the failure. Closes the Known Gaps entry that recorded this
+as deliberately deferred at the 2026-08-28 NemoClaw work ("the stdio-side
+`mnemo_status` twin is recorded as an open option rather than smuggled in").
+
+New `src/tools/status.ts` (`registerStatusTool`) registers `mnemo_status` on
+both transports -- nothing about the tool itself is stdio-specific, only the
+motivation was, so an HTTP host gets it too at no extra cost. The prober
+instance itself moved up to a single process-wide singleton constructed once
+in `src/index.ts` (previously built fresh inside `createApiRouter`, called
+once for the whole HTTP app -- correct on its own, but a second independent
+instance for the new tool would mean two uncoordinated 15-second caches
+instead of one that actually bounds probe frequency across every caller).
+`registerTools` gained an optional `readinessProber` param specifically so
+call sites that don't care (most tests) don't need to construct one just to
+register everything else; `mnemo_status` is conditionally registered only
+when one is supplied. `ApiRouterOptions` gained the same optional field,
+falling back to its original always-construct-one-internally behavior when
+omitted, so no existing caller changed behavior.
+
+Verified: typecheck/lint/format clean; extended `tests/readiness.test.ts`
+(already the home for the prober's own ready/unavailable/not_probed and
+TTL-cache tests) with three new cases -- a real MCP-wire round trip (real
+`McpServer`/`Client`/HTTP transport, mocked OC) proving the tool actually
+returns the same report shape as the REST route; that `mnemo_status` is
+absent from `tools/list` when `registerTools` is called without a prober
+(proving the conditional registration is real, not accidentally
+always-on); and that `GET /api/status` and `mnemo_status` genuinely share
+one cache when given the same prober instance (primed the cache directly,
+then confirmed the route returned the identical `checked_at` with no
+second OC call). Both new pieces of logic -- the shared-instance wiring and
+the conditional-registration gate -- were hand mutation-tested (each
+reverted to a naive alternative, confirmed the corresponding test fails,
+restored). 629 tests passing (up from 626).
+
 **Web UI entity edit/delete shipped (2026-09-07).** Selected from the
 `What's next` backlog as the one unbuilt Web UI piece that didn't need a
 design conversation first -- unlike the other four items in that bullet
@@ -4522,7 +4562,8 @@ consider only when real use exposes the corresponding pressure:
   semantic readiness (OC contract, generator, validator) with non-mutating,
   non-billable probes — see the Done entry above and
   [NEMOCLAW_ADOPTION_ASSESSMENT.md §3](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md#3-separate-liveness-from-semantic-readiness).
-  A stdio-side `mnemo_status` tool remains an open option.
+  ~~A stdio-side `mnemo_status` tool remains an open option.~~ **Shipped
+  2026-09-07** — see the Done log.
 - ~~**Credential-bearing endpoint diagnostics need a single safe boundary.**~~
   **Closed 2026-08-29**: `src/service-url.ts` central parser on every
   configured endpoint (loopback/RFC1918 deliberately still allowed),

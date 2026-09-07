@@ -7,6 +7,20 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 
 ### Added
 
+- `mnemo_status`: the stdio-side counterpart to `GET /api/status`, closing
+  the Known Gaps entry that recorded it as deliberately deferred. A stdio
+  host has no HTTP endpoint to poll, so it previously had no way to check
+  OC/generator/validator readiness short of a real tool call and reading
+  the failure. Registered on both transports via a new optional
+  `readinessProber` param on `registerTools`. The `ReadinessProber` itself
+  is now a single process-wide singleton (`src/index.ts`) shared by both
+  `GET /api/status` and `mnemo_status`, rather than one instance per
+  surface with two uncoordinated TTL caches. `tests/readiness.test.ts`
+  gained a real MCP-wire round trip, a check that the tool is genuinely
+  absent when no prober is supplied, and a check that both surfaces share
+  one cache -- the shared-instance wiring and the conditional-registration
+  gate were each mutation-verified by hand.
+
 - Web UI entity edit/delete: `PATCH`/`DELETE /stories/:storyId/entities/:memoryId`
   (previously GET-only) plus the corresponding `EntityDetailPage` edit form and
   delete confirmation. Edit is a genuine partial update -- a field the caller
