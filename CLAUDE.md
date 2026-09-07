@@ -104,6 +104,7 @@ Written down but **not ratified** — design input, not specification:
 [WEBUI_NOTES.md](docs/WEBUI_NOTES.md),
 [CONTENT_ROUTING_DESIGN.md](docs/CONTENT_ROUTING_DESIGN.md),
 [COMPANION_PROFILE_DESIGN.md](docs/COMPANION_PROFILE_DESIGN.md),
+[POSITION_TRACKING_DESIGN.md](docs/POSITION_TRACKING_DESIGN.md),
 [HOOK_VAULT.md](docs/HOOK_VAULT.md), and the four external-system adoption
 assessments listed under "Layout" below.
 
