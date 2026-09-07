@@ -257,7 +257,12 @@ assessments listed under "Layout" below.
   posts. Zero `tools/call` by construction.
 - `src/readiness.ts` — the protected `GET /api/status` prober (NemoClaw
   §3): non-mutating, non-billable probes; cloud generators honestly
-  `not_probed`; 15s TTL cache. `/health` stays public liveness-only.
+  `not_probed`; 15s TTL cache. `/health` stays public liveness-only. One
+  `ReadinessProber` instance is constructed as a process-wide singleton in
+  `src/index.ts` and shared by both `GET /api/status` and `mnemo_status`
+  (`src/tools/status.ts`) — a second independent instance per surface would
+  mean two uncoordinated caches instead of one that actually bounds probe
+  frequency across every caller.
 - `src/service-url.ts` — the one parser every configured service endpoint
   passes through (NemoClaw §4): http(s)-only, no embedded
   credentials/fragment/query; private addresses deliberately allowed.

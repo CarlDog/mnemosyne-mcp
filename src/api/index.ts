@@ -13,7 +13,7 @@ import { registerStoryRoutes } from "./stories.js";
 import { registerEntityRoutes } from "./entities.js";
 import { registerInteractiveRoutes } from "./interactive.js";
 import { apiErrorHandler, asyncRoute } from "./helpers.js";
-import { createReadinessProber } from "../readiness.js";
+import { createReadinessProber, type ReadinessProber } from "../readiness.js";
 import { resolveCapabilities } from "../capabilities.js";
 
 export interface ApiRouterOptions {
@@ -22,6 +22,11 @@ export interface ApiRouterOptions {
   validator?: LlmProvider;
   sceneContextStrategy?: SceneContextStrategy;
   sceneContextFallbackStrategy?: SceneContextStrategy;
+  /** Shared with mnemo_status (src/tools/status.ts) when the caller has one
+   * -- one TTL cache across every caller instead of two independent ones.
+   * Falls back to constructing a fresh prober (this router's own, scoped to
+   * its lifetime) when omitted, matching the prior behavior exactly. */
+  readinessProber?: ReadinessProber;
 }
 
 export function createApiRouter(
@@ -44,7 +49,9 @@ export function createApiRouter(
     // Every probe is non-mutating and non-billable; a cloud generator
     // reports not_probed rather than a guessed ready.
     const { generator, validator } = options;
-    const prober = createReadinessProber({ oc, generator, validator });
+    const prober =
+      options.readinessProber ??
+      createReadinessProber({ oc, generator, validator });
     router.get(
       "/status",
       asyncRoute(async (_req, res) => {
