@@ -5,11 +5,14 @@
 
 import type {
   GeneratorCapabilities,
+  DeleteEntityResponse,
+  EditEntityRequest,
   EntityDetail,
   EntitySummary,
   ContinueRequest,
   ContinueResponse,
   EntityType,
+  FlaggedContentSignal,
   RunOutcomeErrorResponse,
   StorySummary,
 } from "./types.js";
@@ -19,6 +22,9 @@ export type { ContinueResponse };
 export type ApiErrorBody = {
   error?: string;
   message?: string;
+  /** Present only on a flagged_content (422) body -- see
+   * FlaggedContentErrorResponse. */
+  signals?: FlaggedContentSignal[];
 } & Partial<Omit<RunOutcomeErrorResponse, "error" | "message">>;
 
 export class ApiError extends Error {
@@ -31,20 +37,21 @@ export class ApiError extends Error {
   }
 }
 
-async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`/api${path}`);
-  if (!res.ok) {
-    const body = await res.json().catch(() => undefined);
-    throw new ApiError(res.status, body);
-  }
-  return res.json() as Promise<T>;
-}
-
-async function post<T>(path: string, body: unknown): Promise<T> {
+// One fetch wrapper for every verb -- get/post/patch/del all share the
+// same error-handling rule (a non-ok response's JSON body, best-effort
+// parsed, becomes an ApiError), and that rule has already drifted once
+// between get/post before this existed.
+async function request<T>(
+  method: string,
+  path: string,
+  body?: unknown,
+): Promise<T> {
   const res = await fetch(`/api${path}`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
+    method,
+    ...(body !== undefined && {
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    }),
   });
   if (!res.ok) {
     const responseBody = await res.json().catch(() => undefined);
@@ -52,6 +59,13 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   }
   return res.json() as Promise<T>;
 }
+
+const get = <T>(path: string): Promise<T> => request<T>("GET", path);
+const post = <T>(path: string, body: unknown): Promise<T> =>
+  request<T>("POST", path, body);
+const patch = <T>(path: string, body: unknown): Promise<T> =>
+  request<T>("PATCH", path, body);
+const del = <T>(path: string): Promise<T> => request<T>("DELETE", path);
 
 export function listStories(): Promise<{
   stories: StorySummary[];
@@ -86,6 +100,26 @@ export function getEntity(
   memoryId: string,
 ): Promise<{ entity: EntityDetail }> {
   return get(
+    `/stories/${encodeURIComponent(storyId)}/entities/${encodeURIComponent(memoryId)}`,
+  );
+}
+
+export function editEntity(
+  storyId: string,
+  memoryId: string,
+  body: EditEntityRequest,
+): Promise<{ entity: EntityDetail }> {
+  return patch(
+    `/stories/${encodeURIComponent(storyId)}/entities/${encodeURIComponent(memoryId)}`,
+    body,
+  );
+}
+
+export function deleteEntity(
+  storyId: string,
+  memoryId: string,
+): Promise<DeleteEntityResponse> {
+  return del(
     `/stories/${encodeURIComponent(storyId)}/entities/${encodeURIComponent(memoryId)}`,
   );
 }

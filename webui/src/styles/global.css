@@ -1004,6 +1004,88 @@ button:not(:disabled) {
   margin-bottom: 0;
 }
 
+.detail-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  max-width: 72ch;
+}
+
+.detail-edit-form .composer-textarea {
+  min-height: 12rem;
+  max-height: none;
+}
+
+.detail-edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.detail-footer {
+  margin-top: 2.4rem;
+  padding-top: 1.4rem;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.8rem;
+}
+
+.detail-delete-trigger {
+  background: none;
+  border: 1px solid var(--danger-line);
+  border-radius: var(--radius-small);
+  color: var(--danger-text);
+  padding: 0.45rem 0.9rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.detail-delete-trigger:hover {
+  background: var(--danger-glow-soft);
+}
+
+.detail-delete-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--danger-line);
+  border-radius: var(--radius-small);
+  background: var(--danger-glow-soft);
+}
+
+.detail-delete-confirm p {
+  margin: 0;
+  color: var(--danger-text);
+}
+
+.detail-delete-confirm-yes {
+  background: var(--danger-glow);
+  border: 1px solid var(--danger-line);
+  border-radius: var(--radius-small);
+  color: var(--danger-text);
+  padding: 0.45rem 0.9rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.detail-delete-confirm-yes:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 22%, transparent);
+}
+
+.detail-delete-confirm-yes:disabled,
+.detail-delete-trigger:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .empty-block,
 .manuscript-empty {
   display: grid;

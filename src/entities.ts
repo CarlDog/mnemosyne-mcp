@@ -28,8 +28,31 @@ import {
   describeInjectionSignals,
   OVERRIDE_FLAGGED_CONTENT_PARAM,
   scanForInjectionSignals,
+  type InjectionSignal,
 } from "./injection-scan.js";
 import { type OcClient, type OcMemory } from "./oc-client.js";
+
+// Thrown by saveEntity in place of a plain Error so a caller (a REST route,
+// in particular) can catch specifically this and translate it into a
+// well-formed response carrying the matched signals as structured data --
+// not just a formatted message string. Deliberately NOT RunOutcomeError
+// (src/run-outcome.ts): that type's vocabulary (provider_charge_possible,
+// external_conversation_mutation_possible) is about LLM/provider dispatch
+// outcomes, and a content-write refusal dispatches nothing to any
+// provider -- reusing it would leave those fields permanently meaningless.
+export class FlaggedContentError extends Error {
+  readonly signals: InjectionSignal[];
+
+  constructor(signals: InjectionSignal[]) {
+    super(
+      `${describeInjectionSignals(signals)} Re-invoke with ` +
+        `${OVERRIDE_FLAGGED_CONTENT_PARAM}=true to write anyway, or edit ` +
+        "the content and re-invoke. Nothing was written.",
+    );
+    this.name = "FlaggedContentError";
+    this.signals = signals;
+  }
+}
 
 export const ENTITY_TYPES = [
   "character",
@@ -255,11 +278,7 @@ export async function saveEntity(
     ? []
     : scanForInjectionSignals(args.body);
   if (signals.length > 0 && !args.allowFlagged) {
-    throw new Error(
-      `${describeInjectionSignals(signals)} Re-invoke with ` +
-        `${OVERRIDE_FLAGGED_CONTENT_PARAM}=true to write anyway, or edit ` +
-        "the content and re-invoke. Nothing was written.",
-    );
+    throw new FlaggedContentError(signals);
   }
 
   // Nothing was written for a "skip"-style outcome here (saveEntity always
@@ -477,4 +496,28 @@ export async function getEntityByMemoryId(
   const memory = await oc.memoryGet(memoryId);
   if (!memory || memory.project_id !== storyId) return null;
   return memoryToRecalled(memory);
+}
+
+/**
+ * Delete one entity by its OC memory id, scoped to a specific story --
+ * the memory_id-keyed counterpart to deleteEntity's (type, name) lookup,
+ * for a caller (the web UI) that only has the id. Reuses
+ * getEntityByMemoryId's story-ownership check rather than deleteEntity's
+ * own (type, name) ranked search: that search's dedupe window
+ * (SAVE_DEDUPE_SEARCH_TOPK) can miss or resolve to the wrong record in a
+ * story with many same-type entities, which is exactly the risk an
+ * id-keyed delete exists to avoid. Returns null (not a thrown error) when
+ * the id doesn't resolve in this story, matching getEntityByMemoryId's
+ * own null-for-both-cases contract; the caller decides how to report
+ * "not found."
+ */
+export async function deleteEntityByMemoryId(
+  oc: OcClient,
+  storyId: string,
+  memoryId: string,
+): Promise<DeleteEntityResult | null> {
+  const entity = await getEntityByMemoryId(oc, storyId, memoryId);
+  if (!entity) return null;
+  await oc.memoryDelete(memoryId);
+  return { type: entity.type, name: entity.name, memory_id: memoryId };
 }

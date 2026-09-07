@@ -5,6 +5,8 @@ import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import type { OcClient } from "../src/oc-client.js";
 import {
   deleteEntity,
+  deleteEntityByMemoryId,
+  FlaggedContentError,
   parseEntityContent,
   recall,
   retagValidation,
@@ -388,6 +390,76 @@ describe("entities — saveEntity injection-provenance gate (pure)", () => {
     });
     expect(memorySave).toHaveBeenCalled();
     expect(result.flagged_content_override).toBeUndefined();
+  });
+
+  it("throws FlaggedContentError specifically, carrying the matched signals as structured data", async () => {
+    // A caller (a REST route, in particular) needs to catch this ONE
+    // error type and get real signal objects back, not just parse a
+    // message string -- see src/api/entities.ts's PATCH route.
+    const { oc } = ocMock();
+    const failure: unknown = await saveEntity(oc, "story-1", {
+      type: "lore",
+      name: "Suspicious Note",
+      body: FLAGGED_BODY,
+    }).catch((err: unknown) => err);
+    expect(failure).toBeInstanceOf(FlaggedContentError);
+    const err = failure as FlaggedContentError;
+    expect(err.signals.map((s) => s.label)).toEqual([
+      "discard-prior-instructions",
+      "meta-instruction-reference",
+      "prompt-terminology",
+    ]);
+    expect(err.signals[0]!.excerpt).toContain(
+      "Ignore all previous instructions",
+    );
+  });
+});
+
+describe("entities — deleteEntityByMemoryId (pure)", () => {
+  function ocMock(memory: Record<string, unknown> | null) {
+    const memoryGet = vi.fn().mockResolvedValue(memory);
+    const memoryDelete = vi.fn().mockResolvedValue(undefined);
+    const oc = { memoryGet, memoryDelete } as unknown as OcClient;
+    return { oc, memoryGet, memoryDelete };
+  }
+
+  it("deletes by memory id and reports the resolved type/name", async () => {
+    const { oc, memoryDelete } = ocMock({
+      id: "mem-1",
+      content: "[Character] Aria Voss\n\nA cartographer.",
+      project_id: "story-1",
+      tags: ["mnemosyne", "story", "character"],
+      pinned: false,
+      created_at: "2026-01-01T00:00:00Z",
+    });
+    const result = await deleteEntityByMemoryId(oc, "story-1", "mem-1");
+    expect(result).toEqual({
+      type: "character",
+      name: "Aria Voss",
+      memory_id: "mem-1",
+    });
+    expect(memoryDelete).toHaveBeenCalledWith("mem-1");
+  });
+
+  it("returns null (not a throw) for an id absent from this story, and never calls memoryDelete", async () => {
+    const { oc, memoryDelete } = ocMock(null);
+    const result = await deleteEntityByMemoryId(oc, "story-1", "nope");
+    expect(result).toBeNull();
+    expect(memoryDelete).not.toHaveBeenCalled();
+  });
+
+  it("returns null for an id that belongs to a different story", async () => {
+    const { oc, memoryDelete } = ocMock({
+      id: "mem-1",
+      content: "[Character] Aria Voss\n\nA cartographer.",
+      project_id: "some-other-story",
+      tags: ["mnemosyne", "story", "character"],
+      pinned: false,
+      created_at: "2026-01-01T00:00:00Z",
+    });
+    const result = await deleteEntityByMemoryId(oc, "story-1", "mem-1");
+    expect(result).toBeNull();
+    expect(memoryDelete).not.toHaveBeenCalled();
   });
 });
 
