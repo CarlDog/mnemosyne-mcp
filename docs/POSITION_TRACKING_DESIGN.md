@@ -275,8 +275,8 @@ it was never given scene context to begin with:
   the code; the corrected cost accounting is below.
 - `buildSystemPrompt` (direct providers) renders it as its own labeled
   section, structurally separate from rules/style (it's declarative story
-  state, not a constraint) — exact placement TBD at implementation, but
-  never merged into the rules block.
+  state, not a constraint). Shipped placement: between LOCATIONS and RECENT
+  SCENES — pinned by `tests/prompt.test.ts`'s block-ordering test.
 - `buildCompanionMessage` (Kindroid/Botify, `src/companion-message.ts`)
   folds it into the `ALWAYS_INCLUDED_TYPES` treatment scenes/locations
   already get — present in every message when set, never keyphrase-gated.
