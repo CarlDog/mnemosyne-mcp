@@ -60,8 +60,16 @@ already tracked, so a report describing one is not a new finding:
   govern who may connect; they do not make caller-selected server-side paths
   safe. See `MCP_ALLOWED_HOSTS` and `MCP_AUTH_TOKEN` in
   [.env.example](.env.example).
-- **Sibling MCP results are not schema-validated at runtime.** Responses from
-  OpenChronicle, Kindroid, and Botify are unwrapped and cast.
+- **Mnemosyne adds no authentication layer in front of its configured
+  Ollama endpoint (`OLLAMA_URL`, default `http://localhost:11434`).**
+  Ollama's own API has none, and `src/service-url.ts` deliberately still
+  allows loopback/private addresses. Same-host Ollama is no different from
+  any other localhost service, but a remote (e.g. NAS-hosted) Ollama needs
+  operator-side hardening: keep its port on a trusted private network, or
+  put it behind TLS with a reverse proxy adding mTLS or bearer auth. This
+  is deployment guidance, not a gap in this project's own boundary -- the
+  Host/Origin + bearer-auth defenses above protect *this* server's HTTP
+  surface, not the model backend it calls out to.
 
 A concrete exploit that defeats a control which is *supposed* to hold — an
 allowlist bypass, an auth bypass, a path escape in a context the docs claim is

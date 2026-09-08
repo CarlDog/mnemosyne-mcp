@@ -62,7 +62,7 @@ now says so.
 | P1 | Typed native request/response contract | **Partially shipped** — `ebb6d36` fixed numeric `keep_alive` and pinned placement/shape in tests; the typed-error half **shipped 2026-08-29**: `classifyOllamaHttpError` (404 exact-tag, `exceed_context_size_error` with the daemon's counts, 429/503 no-auto-retry) + configurable `OLLAMA_TIMEOUT_MS` with a no-blind-retry timeout message. The remaining builder/parser extraction is refactoring with no behavior gap |
 | P1 | Stable `num_ctx`, preload without inference (empty-message load), `/api/ps` residency | **Shipped 2026-08-28** — [CONTEXT_PLAN_DESIGN.md](CONTEXT_PLAN_DESIGN.md) slice 2, decision #1. Verified against code 2026-09-08: stable per-model `num_ctx` and the warmup/`/api/ps` plumbing are both in `src/ollama-provider.ts` |
 | P1 | Consume native usage/route/error metadata | **Partially shipped** — usage/timing landed 2026-08-28 (`ModelUsage` envelope, exact tokens + ns→ms load/eval durations); typed error classification landed 2026-08-29 (`classifyOllamaHttpError`, see the row above). **Still genuinely open** (verified against code 2026-09-08: neither `ModelUsage` nor `GeneratedBeat` carries a `route` field): carrying route fields through results |
-| P2 | Bounded preflight/diagnostics + deployment guidance | Open candidate |
+| P2 | Bounded preflight/diagnostics + deployment guidance | **Split 2026-09-08.** The diagnostics-breadth half (capability-mismatch/transport-failure/malformed-JSON classification, a preemptive `/api/tags`/`/api/version` client) is **rejected at triage** — no incident shows the existing generic fallback (`Ollama HTTP {status}: {bodyText}`) is actually opaque in practice, same reasoning as the rejected per-story run registry. The deployment-hardening half **shipped 2026-09-08** — see `SECURITY.md`'s new "no authentication layer in front of Ollama" bullet |
 
 ## NemoClaw ([NEMOCLAW_ADOPTION_ASSESSMENT.md](NEMOCLAW_ADOPTION_ASSESSMENT.md))
 
@@ -119,15 +119,16 @@ metadata" row, split into its true state — typed error classification
 shipped 2026-08-29, route-field-through-results genuinely still open (no
 `route` field exists on `ModelUsage`/`GeneratedBeat`).
 
-**Phase 2 — triage before any code.**
-- 2a. Ollama P2 "bounded preflight/diagnostics + deployment guidance" has
-  no design behind it. Read the assessment's own P2 text, then either
-  scope a real subphase or reject at triage like its siblings.
-- 2b. Re-confirm the two correctly-Parked items still have unmet
-  prerequisites (Open WebUI's recoverable-runs/SSE: no incident has ever
-  justified it; OpenClaw's provenance-bound proposals: needs an OC
-  compare-and-set contract that doesn't exist). Expected to stay parked —
-  a confirmation pass, not a redesign.
+**Phase 2 — triage before any code (done, 2026-09-08).**
+- 2a. Ollama P2 "bounded preflight/diagnostics + deployment guidance" was
+  really two unrelated things under one row. Split: the diagnostics-
+  breadth half rejected at triage (no incident, existing fallback already
+  actionable); the deployment-hardening half shipped as a `SECURITY.md`
+  addition — see the Ollama-table row above.
+- 2b. Re-confirmed the two correctly-Parked items still have unmet
+  prerequisites: no race/duplicate-generation incident anywhere in
+  STATUS.md since 2026-08-28, and no OC compare-and-set contract exists
+  anywhere in the docs. Both stay parked, unchanged.
 
 **Phase 3 — content-routing design gate.**
 - 3a. Refresh `CONTENT_ROUTING_DESIGN.md` against current architecture and
