@@ -131,14 +131,24 @@ shipped 2026-08-29, route-field-through-results genuinely still open (no
   anywhere in the docs. Both stay parked, unchanged.
 
 **Phase 3 — content-routing design gate.**
-- 3a. Refresh `CONTENT_ROUTING_DESIGN.md` against current architecture and
-  put it up for an explicit ratify/reject/revise decision — the same
-  discuss-before-code gate CONTEXT_PLAN_DESIGN, RUN_OUTCOMES_DESIGN,
+- 3a. **Done, ratified 2026-09-08.** Refreshed `CONTENT_ROUTING_DESIGN.md`
+  against current architecture first — two claims had drifted (the
+  generate() call site moved to `dispatchGenerate()` in
+  `continue-scene.ts`; the story marker schema is 5 in code, not the 3 the
+  design assumed, so the proposed `Content-Rating` line now needs schema
+  6) — then put it up for an explicit ratify/reject/revise decision, the
+  same gate CONTEXT_PLAN_DESIGN, RUN_OUTCOMES_DESIGN,
   GENERATOR_CAPABILITIES_DESIGN, and RETRIEVAL_CONTROLS_DESIGN each went
-  through before any of them shipped a line.
-- 3b. Conditional on ratification only: implement in slices, same pattern
-  as those four designs, each slice its own commit + tests. This is what
-  unblocks "Ollama generator local-by-default" (Ollama-table row above).
+  through. Ratified as refined, with four decisions resolved: undeclared
+  rating stays permanently non-blocking; vocabulary is `sfw`/`nsfw` (not
+  the originally proposed `sfw`/`mature`); `content_rating` stays optional
+  on new story creation; no escape hatch for cloud providers, final. Full
+  record in the design doc's "Ratified decisions" section.
+- 3b. **Next up.** Implement in slices, same pattern as the four designs
+  above, each slice its own commit + tests: (1) marker schema 6 +
+  `contentRating` field + `mnemo_story_use` param, (2) per-provider
+  `contentCapability` + env vars, (3) the gate in `dispatchGenerate()`.
+  Unblocks "Ollama generator local-by-default" (Ollama-table row above).
 
 **Phase 4 — query-enrichment fixture labeling (operator-owned).**
 RETRIEVAL_CONTROLS_DESIGN slice 3's settled-fixtures benchmark needs

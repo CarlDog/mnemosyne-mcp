@@ -1,9 +1,12 @@
 # Content Routing Design
 
-**Status: proposed 2026-08-26, refreshed 2026-09-08, not yet ratified.**
-The 2026-09-08 refresh corrected two claims this doc made that a later
-refactor overtook: the call site and the schema number below now match
-current code, not the 2026-08-26 snapshot. This document exists to
+**Status: proposed 2026-08-26, refreshed and ratified 2026-09-08.** The
+2026-09-08 refresh corrected two claims this doc made that a later
+refactor overtook (the call site and the schema number below now match
+current code, not the 2026-08-26 snapshot) before the operator ratified
+it; the "Ratified decisions" section near the end records the four calls
+that were open. Nothing is built yet — ratification unblocks
+implementation, it isn't implementation. This document exists to
 close a real gap: [Living Canon Standard](LIVING_CANON_STANDARD.md) §10
 ("Routing boundary") already requires that "text and image generation must
 be routed independently to explicitly configured SFW or NSFW-capable models
@@ -159,10 +162,15 @@ precedents exactly — optional, appended only when set, older markers
 Created: 2026-05-12T02:59:43Z
 Schema: 6
 Kindroid-Target: ai:abc123
-Content-Rating: mature
+Content-Rating: nsfw
 ```
 
-- `contentRating?: "sfw" | "mature"` added to `MnemoStory` /
+**Vocabulary ratified 2026-09-08: `sfw`/`nsfw`**, not the originally
+proposed `sfw`/`mature` — matches Living Canon Standard §10's own literal
+wording ("SFW or NSFW-capable") exactly rather than introducing a second,
+non-matching vocabulary for the same concept.
+
+- `contentRating?: "sfw" | "nsfw"` added to `MnemoStory` /
   `StorySummary` (`src/stories.ts`), following `kindroid_target`'s exact
   pattern: optional, `undefined` when unset.
 - Set via a new `content_rating` param on `mnemo_story_use`, same
@@ -183,48 +191,53 @@ proposal — it's an auto-derived/instance-keyed table of model *mechanics*
 (context window, temperature range, structured-output support), whereas
 `contentCapability` here is an operator *declaration* nothing can
 introspect. Deliberately kept separate rather than folded into that
-table for that reason. Add a `contentCapability: "sfw" | "mature"` field
+table for that reason. Add a `contentCapability: "sfw" | "nsfw"` field
 to each provider's config, following the existing
 per-provider-literal-env-var convention in `src/index.ts` (so the
 `.env.example` schema-drift test keeps seeing every reference):
 
-| Provider | Default | Operator-overridable to `mature`? |
+| Provider | Default | Operator-overridable to `nsfw`? |
 |---|---|---|
-| `anthropic` / `openai` / `gemini` | `sfw` | **No.** Their own upstream content policy enforces this regardless of what mnemosyne declares; an override would just be a lie that gets caught by a 400/refusal later, after already spending the call. |
-| `ollama` | `sfw` | Yes, via `OLLAMA_CONTENT_CAPABILITY=mature` — capability genuinely depends on which model is loaded, which only the operator knows. |
+| `anthropic` / `openai` / `gemini` | `sfw` | **No — ratified final 2026-09-08.** Their own upstream content policy enforces this regardless of what mnemosyne declares; an override would just be a lie that gets caught by a 400/refusal later, after already spending the call. No per-call escape hatch either (considered and rejected at ratification). |
+| `ollama` | `sfw` | Yes, via `OLLAMA_CONTENT_CAPABILITY=nsfw` — capability genuinely depends on which model is loaded, which only the operator knows. |
 | `kindroid` / `botify` | `sfw` | Yes, via `KINDROID_CONTENT_CAPABILITY` / `BOTIFY_CONTENT_CAPABILITY` — capability depends on the target kin/bot's own configuration, which mnemosyne can't inspect. |
 | `atlascloud` | `sfw` | Yes, via `ATLASCLOUD_CONTENT_CAPABILITY` — depends on which underlying model Atlas Cloud routes to. |
 
 Defaulting every provider to `sfw` is the deliberately conservative
-choice: an operator who wants `mature` has to say so explicitly, matching
+choice: an operator who wants `nsfw` has to say so explicitly, matching
 this repo's own `docker-deployments.md` instinct (fail toward the
 restrictive default, not the permissive one) and matching how
 `OLLAMA_VALIDATOR_MODEL` etc. are already required-explicit rather than
 inferred.
 
-### 3. The gate itself, in `continue.ts`
+### 3. The gate itself, in `dispatchGenerate()`
+
+**Updated 2026-09-08** — see the call-site correction above;
+`src/tools/continue.ts` no longer calls `generate()` directly.
 
 ```
-resolvedRating = story.contentRating           // "sfw" | "mature" | undefined
-providerCapability = generator.contentCapability // "sfw" | "mature"
+resolvedRating = story.contentRating           // "sfw" | "nsfw" | undefined
+providerCapability = generator.contentCapability // "sfw" | "nsfw"
 
-if resolvedRating === "mature" and providerCapability === "sfw":
+if resolvedRating === "nsfw" and providerCapability === "sfw":
     throw ContentRoutingError(
-      `Story "${story.name}" requires a mature content rating, but the ` +
+      `Story "${story.name}" requires an nsfw content rating, but the ` +
       `configured generator (${generator.name}) is only sfw-capable. ` +
-      `Either deploy with a mature-capable provider, or set this story's ` +
-      `content rating explicitly via mnemo_story_use if "mature" was set ` +
+      `Either deploy with an nsfw-capable provider, or set this story's ` +
+      `content rating explicitly via mnemo_story_use if "nsfw" was set ` +
       `in error.`
     )
 ```
 
 - `resolvedRating === undefined` (no rating declared) does **not** throw —
-  it's a currently-unmigrated or deliberately-unrated story, and refusing
-  every existing story the day this ships would be its own regression.
-  Surface it as a warning field in the tool response instead
-  (`content_rating_declared: false`), so it's visible without being
-  blocking. Whether to eventually make an undeclared rating an error too
-  is one of the open decisions below.
+  **ratified final 2026-09-08: this stays non-blocking permanently**, not
+  just until migration completes. It's a currently-unmigrated or
+  deliberately-unrated story; refusing every existing story the day this
+  ships would be its own regression, and no future flag-day forces
+  migration either. Surface it as a warning field in the tool response
+  instead (`content_rating_declared: false`), so it's visible without
+  being blocking. `mnemo_story_use`'s `content_rating` param stays
+  optional on new story creation too, for the same reason.
 - One check, one call site, unconditional — the exact property v1's
   design lacked.
 
@@ -233,7 +246,7 @@ if resolvedRating === "mature" and providerCapability === "sfw":
 `OLLAMA_CONTENT_CAPABILITY`, `KINDROID_CONTENT_CAPABILITY`,
 `BOTIFY_CONTENT_CAPABILITY`, `ATLASCLOUD_CONTENT_CAPABILITY` — each
 documented with its default (`sfw`) and the one valid override
-(`mature`). Anthropic/OpenAI/Gemini get no env var at all, since they're
+(`nsfw`). Anthropic/OpenAI/Gemini get no env var at all, since they're
 not operator-overridable; that absence is itself part of the design and
 worth a comment in `.env.example` saying why, so it doesn't read as an
 oversight later.
@@ -274,28 +287,39 @@ workflow.
   Standard §10 was written to end — the Standard's own text explicitly
   rules out "the system should fail... transparently" being satisfied by
   hoping the operator got the deployment right.
-- **Defaulting `ollama`/`kindroid`/`botify`/`atlascloud` to `mature`
+- **Defaulting `ollama`/`kindroid`/`botify`/`atlascloud` to `nsfw`
   since all current storylines are already mature-rated.** Rejected —
   optimizing the default for today's five stories would make the
   restrictive case (a future SFW story) the one that silently gets it
   wrong, which is backwards for a safety-shaped default.
+- **A per-call `content_rating` override on `mnemo_continue`** letting a
+  deliberately-tame scene route through an sfw-only cloud provider even
+  within an nsfw-rated story. Considered and rejected at ratification
+  (2026-09-08) alongside the "no override for cloud providers" decision
+  below — more surface area for a need that hasn't come up.
 
-## Decisions needed from the operator
+## Ratified decisions (2026-09-08)
 
-1. Does an **undeclared** story rating stay non-blocking (warning field
-   only) permanently, or become an error once every current story has
-   been migrated to declare one explicitly?
-2. Exact field name/values — `Content-Rating: mature` as proposed, or a
-   different vocabulary (the Standard's own §10 language is "SFW or
-   NSFW-capable," which doesn't line up one-to-one with "sfw"/"mature" —
-   worth deciding the vocabulary once, since it'll appear in the marker
-   format, the env vars, and the tool schema).
-3. Should `mnemo_story_use`'s new `content_rating` param require an
-   explicit value on every *new* story creation (forcing the operator to
-   decide up front), or stay optional with the undeclared state from
-   decision 1?
-4. Is the "no override for cloud providers" table entry final, or should
-   there be an explicit escape hatch (e.g. for a deliberately-tame scene
-   the operator wants to route through Claude even for a mature-rated
-   story) — and if so, does that live as a per-call override on
-   `mnemo_continue` rather than a provider-level env var?
+The four questions this design was blocked on, each with the operator's
+answer:
+
+1. **Undeclared rating stays non-blocking permanently** — not just until
+   migration completes. No future flag-day is planned to force every
+   story to declare a rating.
+2. **Vocabulary is `sfw`/`nsfw`** — not the originally proposed
+   `sfw`/`mature`. Matches Living Canon Standard §10's own literal
+   wording exactly, appearing consistently in the marker format, the env
+   vars, and the tool schema.
+3. **`mnemo_story_use`'s `content_rating` param stays optional on new
+   story creation** — follows directly from decision 1; forcing a
+   decision at creation time when it's not enforced later would be
+   inconsistent friction.
+4. **No escape hatch for cloud providers — final.** No per-call override
+   on `mnemo_continue` either (considered as part of this decision, see
+   Rejected alternatives above). Cloud providers' own upstream content
+   policy already gates this regardless of what mnemosyne declares.
+
+Overall disposition: **ratified as refined** (not revised further, not
+rejected). Phase 1 implementation proceeds in slices per the "Concrete
+shape" section above, each its own commit with tests, tracked in
+[RESEARCH_DECISION_QUEUE.md](RESEARCH_DECISION_QUEUE.md)'s Phase 3b.
