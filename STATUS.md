@@ -133,6 +133,56 @@ matching the pre-regression 2026-09-02 state. `docs/NARRATOR_EVAL.md`
 carries a matching "FIXED 2026-09-08" correction rather than a silent
 rewrite of the earlier "accepted false positive" claim.
 
+**Non-flagship pass: all three remaining stories' thirteen-Decide
+reconciliation passes fully executed (2026-09-08) -- Adjustment Protocol,
+Shadowflame, and the Black Ledger.** (Backfilled from CLAUDE.md's Current
+Sprint paragraph, where this was recorded in detail but never mirrored
+here -- a phase-end-audit finding; STATUS.md is this project's single
+source of truth and had no entry for any of the three until now.)
+
+The Black Ledger's pass was this story's first-ever Living Canon review (a
+2026-08-26 pass had run directly against live OpenChronicle, never scored
+or sealed): declared `canon/` the master over a byte-diverged live OC copy
+(`README.md`), ratified the 2026-08-26 pass's unplayed inventions,
+reconciled all ten scenes into the ledgers, dated the Mara thread at 4 ABY,
+split `rules.md` (321 -> 97 pinned lines, ~225 moved to
+`_control/AUTHORING_GUIDES.md`), and substituted the operator's real name
+-- which turned out to be addressed pervasively across a 190-message
+scene, not just the two lines the audit's own summary flagged, caught by a
+direct grep-tally. `overlay.json` resealed at 62 entries (was 10 -- this
+story had no non-scene overlay before), 75 merged entities, both
+`verify-draft-overlay.mjs` and `verify-references.mjs` clean. Full record
+in `star-wars-the-black-ledger/drafts/_control/PASS.md` ("Re-seal
+2026-09-08") and `LCS_SCORECARD.md`.
+
+Shadowflame's pass ratified the played ballroom-explosion reading (closing
+it as Lilith's own chamber-wall blast, not a mystery), corrected a
+burned-note error and a Day-6 ordering error across several ledgers,
+restored Lady Elaea's particulars, resolved two in-continuity name
+collisions by renaming Shadowflame's own characters (Seraphine Vale ->
+Auriel Wynter, Ansel Greaves -> Ansel Hollis -- no story event, canon left
+untouched per the legacy-slug precedent), fixed a two-line bot naming slip
+to Karl's own existing canon name, and added four worldbuilding files, a
+timeline, a consequence ledger, and two object records; `overlay.json`
+resealed at 111 entries (was 99), verified clean. Full record in
+`shadowflame/drafts/_control/PASS.md` ("Re-seal 2026-09-08") and
+`LCS_SCORECARD.md`.
+
+For the Adjustment Protocol: the lead scientist's name (Dr. Edmund
+Halloway, supplied 2026-09-07) unblocked the substitution; the full
+bundled reconciliation then ran in one pass -- 30 of 43 scene files
+substituted (AL correctly untouched, off-premise), the current-state
+ledger/relationship geometry/knowledge map reconciled against played
+scenes, eight worldbuilding system files plus a timeline plus seven
+locations plus four objects plus two arc records plus a consequence ledger
+written, five characters promoted to recurring tier and a sixth (Halloway)
+added at core tier where none existed, `rules.md`/`style.md` raised to the
+floor, and `overlay.json` resealed (92 entries, verified clean). Full
+record in that story's `drafts/_control/PASS.md` ("Re-seal 2026-09-08")
+and `LCS_SCORECARD.md`'s before/after regrade -- every dimension reaches 2
+except reference families (0, deliberately deferred, still the one thing
+open for this story).
+
 **Position tracking: pre-commit adversarial review found two real bugs in
 slices 3+4 (2026-09-07), both fixed and mutation-tested before commit.**
 Per this repo's standing pre-deploy-review practice, a `feature-dev:

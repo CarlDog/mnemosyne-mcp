@@ -13,97 +13,19 @@ Status lives in [STATUS.md](STATUS.md) — read it first. This section names
 only what is in flight; it must never restate STATUS.md's Done log. (When
 the two disagree, STATUS.md is newer.)
 
-**In flight (2026-09-04): the non-flagship story-development pass.** Step 1,
-the gap audit, is written for all six non-flagship stories (Midnight Is a
-Suggestion, Brass & Nerve, The Adjustment Protocol, The Noctis Veil,
-Shadowflame, Star Wars: The Black Ledger) to each story's
-`drafts/_control/GAP_AUDIT.md`; no overlay was changed. Those audits hold **75**
-numbered decides, which collapse into **eleven** fleet-wide rulings. The first
-was ratified 2026-09-04 -- the informed-retirement test, "play governs if the
-ledger didn't read the scenes" -- and lives in
-[docs/CANON_RULINGS.md](docs/CANON_RULINGS.md), the register for any ruling that
-binds more than one story; each story's `drafts/_control/DECISIONS.md` cites it
-rather than restating it. `_control` is manifest-excluded, so recording a ruling
-never rehashes an overlay. **Seat 10 (substitution) is also ratified**
-(2026-09-04, same day, Ruling 2 in `docs/CANON_RULINGS.md`): "Substitute the
-canon name before promotion, never at promotion." Three stories are moot
-(Brass & Nerve, Midnight, Noctis Veil's GC/MT threads — Ruling 1 already keeps
-their scenes source-era). **All three remaining non-flagship stories'
-thirteen-Decide reconciliation passes are fully executed (2026-09-08):
-Adjustment Protocol, Shadowflame, and the Black Ledger.** The Black Ledger's
-pass was this story's first-ever Living Canon review (a 2026-08-26 pass had
-run directly against live OpenChronicle, never scored or sealed): declared
-`canon/` the master over a byte-diverged live OC copy (`README.md`),
-ratified the 2026-08-26 pass's unplayed inventions, reconciled all ten
-scenes into the ledgers, dated the Mara thread at 4 ABY, split `rules.md`
-(321 → 97 pinned lines, ~225 moved to `_control/AUTHORING_GUIDES.md`), and
-substituted the operator's real name -- which turned out to be addressed
-pervasively across a 190-message scene, not just the two lines the audit's
-own summary flagged, caught by a direct grep-tally. `overlay.json` resealed
-at 62 entries (was 10 -- this story had no non-scene overlay before), 75
-merged entities, both `verify-draft-overlay.mjs` and `verify-references.mjs`
-clean. Full record in `star-wars-the-black-ledger/drafts/_control/PASS.md`
-("Re-seal 2026-09-08") and `LCS_SCORECARD.md`. Shadowflame's pass ratified the
-played ballroom-explosion reading (closing it as Lilith's own chamber-wall
-blast, not a mystery), corrected a burned-note error and a Day-6 ordering
-error across several ledgers, restored Lady Elaea's particulars, resolved two
-in-continuity name collisions by renaming Shadowflame's own characters
-(Seraphine Vale → Auriel Wynter, Ansel Greaves → Ansel Hollis — no story event,
-canon left untouched per the same legacy-slug precedent below), fixed a
-two-line bot naming slip to Karl's own existing canon name, and added four
-worldbuilding files, a timeline, a consequence ledger, and two object records;
-`overlay.json` resealed at 111 entries (was 99), verified clean. Full record in
-`shadowflame/drafts/_control/PASS.md` ("Re-seal 2026-09-08") and
-`LCS_SCORECARD.md`. For the Adjustment Protocol: the lead scientist's name
-(Dr. Edmund Halloway,
-supplied 2026-09-07) unblocked the substitution; the full bundled
-reconciliation then ran in one pass — 30 of 43 scene files substituted (AL
-correctly untouched, off-premise), the current-state ledger/relationship
-geometry/knowledge map reconciled against played scenes, eight worldbuilding
-system files plus a timeline plus seven locations plus four objects plus two
-arc records plus a consequence ledger written, five characters promoted to
-recurring tier and a sixth (Halloway) added at core tier where none existed,
-`rules.md`/`style.md` raised to the floor, and `overlay.json` resealed (92
-entries, verified clean). Full record in that story's `drafts/_control/PASS.md`
-("Re-seal 2026-09-08") and `LCS_SCORECARD.md`'s before/after regrade — every
-dimension reaches 2 except reference families (0, deliberately deferred).
-One thing remains open for this story: reference families. The
-recording-marker question itself is **closed (2026-09-08)** — see
-`docs/CANON_RULINGS.md` Ruling 1, item 1: revision markers (`(rN: revised
-from ... -- ...)`) turned out to already be a de facto fleet standard, four
-stories having independently converged on the same shape; a new
-retirement-marker convention (`(retired-premise: ...)`) was ratified and
-applied to the 7 canon entities across the-noctis-veil and brass-and-nerve
-where a played thread was examined and canon deliberately won. Ruling 2's
-separate, narrower SF-6 question (whether a *substitution* needs its own
-`PASS.md` record format beyond what already exists) is **also closed
-(2026-09-08)**: going forward, a Ruling-2 substitution records both its
-pre- and post-edit SHA-256 in `PASS.md` (a hash proves the change without
-re-quoting the operator's real name inline, unlike a revision marker);
-substitutions already completed keep their existing prose documentation,
-not backfilled with a hash. All six non-flagship stories' `DECISIONS.md`
-updated to match. **The
-Noctis Veil's SL/KM threads are also now ruled (2026-09-08)**: both
-classified retired-premise play — canon governs, the same as GC and MT,
-since neither touches the Noctis/relic premise and canon's existing
-character records for both women contradict the played content. The
-per-thread source-era flag is now applied to all fifty scenes across all
-four threads (GC and MT had been classified since 2026-09-04 but never
-actually flagged). Full record in
-`the-noctis-veil/drafts/_control/PASS.md`'s "Re-seal 2026-09-08" entry.
-That reseal also surfaced a real regression: a 2026-09-07 security commit
-(`bb521e9`, `src/injection-scan.ts`) had tightened the instruction-shaped-
-text scanner, and one pre-existing scene's narrative dialogue about
-joining a religious order ("...guide your instruction here...") tripped
-it, where it had passed clean as recently as 2026-09-02. Fixed the same
-day on operator instruction: `meta-instruction-reference` now requires
-the plural "instructions" (the injection-flavored phrasing), since
-singular "your instruction" is ordinary teaching/schooling-sense English
-and was the scanner's one measured false positive
-(`docs/NARRATOR_EVAL.md`). Two regression tests added, mutation-tested;
-full suite/typecheck/lint/format clean; `verify-draft-overlay.mjs
-the-noctis-veil` re-run end to end passes clean again (89 merged
-entities, writes=0). Otherwise nothing is in flight. The data architecture migration
+**Nothing is currently in flight.** The non-flagship story-development pass
+(gap audits for all six non-flagship stories, two fleet-wide canon rulings
+in [docs/CANON_RULINGS.md](docs/CANON_RULINGS.md), full 13-Decide
+reconciliation for Adjustment Protocol/Shadowflame/the Black Ledger, the
+Noctis Veil's SL/KM tiering ruling, a cleanup pass, cross-story
+name-collision renames, and a promotion-readiness check) is fully closed —
+see [STATUS.md](STATUS.md)'s dated entries for the complete, itemized
+record; this section intentionally does not restate it. One narrow item
+stays open: the Adjustment Protocol's reference-family dimension
+(deliberately deferred). **Promotion is set aside indefinitely on operator
+instruction** (2026-09-08, STATUS.md's top entry) — mechanically ready for
+all three reconciled overlays, but do not propose or push toward it unless
+the operator raises it first. The data architecture migration
 (`docs/DATA_ARCHITECTURE_PROPOSAL.md`, ratified; `docs/DATA_LAYOUT.md` now
 normative) completed all six phases on 2026-09-02: `data/archive/` is the one
 master of originals (written only by `scripts/intake.py`), every story has
@@ -148,7 +70,7 @@ extraction), Brass & Nerve (20 → 43; 32 → 55 since the scene extraction; 49 
 2026-09-02 r3 synthesis pass), Chaos
 Saga (60 → 73; 317 → 330 since the 2026-09-02 scene move and the group-chat scene), The Miskatonic Archives: The
 Blackwood Case (formerly GhostHunters; 60 → 105; 110 → 155 since the scene move), Midnight Is a Suggestion (41 → 70),
-Shadowflame (40 → 74; 99 → 133 since the scene extraction), The Adjustment Protocol (19 → 41; 62 → 84 since the scene extraction), and The Noctis Veil (13 → 39; 63 → 89 since the scene extraction). Each retains PASS/control evidence and passed the zero-write import
+Shadowflame (40 → 74; 99 → 133 since the scene extraction; **111 since the 2026-09-08 reconciliation** -- see STATUS.md), The Adjustment Protocol (19 → 41; 62 → 84 since the scene extraction; **92 since the 2026-09-08 reconciliation**), and The Noctis Veil (13 → 39; 63 → 89 since the scene extraction, unchanged by the SL/KM tiering ruling -- see STATUS.md). Each retains PASS/control evidence and passed the zero-write import
 preflight. At that checkpoint none was promoted or imported, active canon
 remained hash-stable, and promotion still required explicit operator approval.
 The 2026-09-01 title-only rename refreshed the affected canon wording and
@@ -188,7 +110,7 @@ STATUS.md's dated entries.
 
 ## Stack
 
-- TypeScript (Node 24+, ESM, `NodeNext` module resolution)
+- TypeScript (Node >=26, ESM, `NodeNext` module resolution)
 - `@modelcontextprotocol/sdk` (high-level `McpServer` API)
 - `zod` for tool input schemas
 - `vitest` for tests
@@ -799,14 +721,14 @@ Key architectural decisions (see ARCHITECTURE.md for full reasoning):
 ## Common Commands
 
 ```bash
-npm ci                 # deterministic install (Node 24, npm 11.19.0)
+npm ci                 # deterministic install (Node >=26, npm 11.19.0)
 npm run build          # compile server + build/copy Web UI into dist/
 npm run dev            # tsx src/index.ts
 npm run typecheck      # tsc -p tsconfig.typecheck.json (src + tests)
 npm run lint           # eslint .
 npm run format         # prettier --write .
 npm run format:check   # prettier --check . (CI gates on this -- run before pushing)
-npm test               # vitest run (64 of 482 tests are env-gated; see below)
+npm test               # vitest run (91 of 708 tests are env-gated; see below)
 ```
 
 `npm test` green does **not** mean the integration surface ran. Every
