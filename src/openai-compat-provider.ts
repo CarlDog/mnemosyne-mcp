@@ -23,8 +23,7 @@
 // the same API). Env-gated integration tests exercise the live path
 // whenever the operator sets the relevant API key.
 
-import { llmPostJson } from "./llm-http.js";
-import { log } from "./log.js";
+import { runCloudGenerate } from "./llm-http.js";
 import { completionFromFinishReason, omitUndefined } from "./llm.js";
 import type {
   GeneratedBeat,
@@ -138,26 +137,17 @@ export class OpenAICompatProvider implements LlmProvider {
   }
 
   async generate(opts: LlmGenerateOptions): Promise<GeneratedBeat> {
+    const model = opts.model ?? this.config.defaultModel;
     const body = buildChatCompletionsBody(this.config.defaultModel, opts);
-    const start = Date.now();
-    log.info(this.name, "generate", {
-      model: body.model,
-      system_chars: opts.systemPrompt.length,
-      user_chars: opts.userMessage.length,
-    });
-    const data = await llmPostJson({
-      provider: this.name,
+    return runCloudGenerate({
+      name: this.name,
       url: `${this.config.baseUrl.replace(/\/+$/, "")}/chat/completions`,
       headers: { Authorization: `Bearer ${this.config.apiKey}` },
       body,
+      model,
+      systemPrompt: opts.systemPrompt,
+      userMessage: opts.userMessage,
+      extract: (data) => extractChatCompletionText(this.name, data),
     });
-    const beat = extractChatCompletionText(this.name, data);
-    log.info(this.name, "generate ok", {
-      model: body.model,
-      ms: Date.now() - start,
-      chars: beat.text.length,
-      finish_reason: beat.finishReason ?? "(unreported)",
-    });
-    return beat;
   }
 }

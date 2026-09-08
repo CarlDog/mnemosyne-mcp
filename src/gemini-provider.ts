@@ -15,8 +15,7 @@
 // Live-verification status: documented contract, exercised by an
 // env-gated integration test whenever GEMINI_API_KEY is set.
 
-import { llmPostJson } from "./llm-http.js";
-import { log } from "./log.js";
+import { runCloudGenerate } from "./llm-http.js";
 import {
   completionFromFinishReason,
   computeTotalTokens,
@@ -139,25 +138,15 @@ export class GeminiProvider implements LlmProvider {
   async generate(opts: LlmGenerateOptions): Promise<GeneratedBeat> {
     const model = opts.model ?? this.config.defaultModel;
     const body = buildGeminiBody(opts);
-    const start = Date.now();
-    log.info(this.name, "generate", {
-      model,
-      system_chars: opts.systemPrompt.length,
-      user_chars: opts.userMessage.length,
-    });
-    const data = await llmPostJson({
-      provider: this.name,
+    return runCloudGenerate({
+      name: this.name,
       url: `${GEMINI_BASE_URL}/v1beta/models/${encodeURIComponent(model)}:generateContent`,
       headers: { "x-goog-api-key": this.config.apiKey },
       body,
-    });
-    const beat = extractGeminiText(data);
-    log.info(this.name, "generate ok", {
       model,
-      ms: Date.now() - start,
-      chars: beat.text.length,
-      finish_reason: beat.finishReason ?? "(unreported)",
+      systemPrompt: opts.systemPrompt,
+      userMessage: opts.userMessage,
+      extract: extractGeminiText,
     });
-    return beat;
   }
 }
