@@ -2,6 +2,66 @@
 
 **Last updated:** 2026-09-08.
 
+**Content routing shipped end-to-end (2026-09-08), closing
+docs/CONTENT_ROUTING_DESIGN.md.** Living Canon Standard §10's routing
+boundary ("text and image generation must be routed independently to
+explicitly configured SFW or NSFW-capable models before generation
+begins") had no implementing mechanism until today. Design refreshed
+against current architecture, ratified with four operator decisions
+(undeclared rating stays permanently non-blocking; vocabulary is
+`sfw`/`nsfw`, matching the Standard's own wording; `mnemo_story_use`'s
+`content_rating` stays optional on new-story creation; no escape hatch
+for cloud providers, final), then implemented in three slices the same
+day:
+
+1. **Marker schema 6** (`src/stories.ts`): optional `Content-Rating`
+   line, `setContentRating()`, `mnemo_story_use`'s new `content_rating`
+   param. Round-trip preservation across `setKindroidTarget`/
+   `setNarratorProfile`/`applyPositionUpdate` mutation-tested against
+   real OC -- one attempt (`applyPositionUpdate`) initially passed a
+   broken mutant because the test trusted the in-memory return value
+   rather than re-fetching, caught and fixed before shipping.
+2. **Per-provider `contentCapability`** (`LlmProvider`, all six
+   providers): four new env vars (`OLLAMA_CONTENT_CAPABILITY`/
+   `KINDROID_CONTENT_CAPABILITY`/`BOTIFY_CONTENT_CAPABILITY`/
+   `ATLASCLOUD_CONTENT_CAPABILITY`), default `sfw`; anthropic/openai/
+   gemini get no override var at all -- their own upstream content
+   policy enforces `sfw` regardless of what mnemosyne declares. No test
+   file exists for `generator-config.ts`'s env-parsing (a pre-existing
+   gap), so the one genuinely risky branch (only atlascloud reads an
+   override) was verified by executing the real module with real env
+   vars via a throwaway probe script, not just read.
+3. **The gate**, in `dispatchGenerate()` before `port.generate()`: an
+   nsfw-rated story on an sfw-only provider refuses
+   (`RunOutcomeError("rejected_before_dispatch")`) before spending an
+   LLM call; an undeclared rating never blocks, surfaced instead as
+   `content_rating_declared:false` on every response shape.
+   `content_rating` rides `gatherContext`'s existing story-marker fetch
+   (the same one `position` already needed) at zero extra OC round
+   trips. Both gate-condition directions mutation-tested (disabled
+   entirely; the "undeclared never blocks" rule broken specifically),
+   plus the position-write relabeling branch -- a second pre-dispatch
+   throw site in the "still nominally pre-dispatch" span the
+   `continueScene()` try/catch's own comment anticipated, given its own
+   shared helper (`positionAppliedNote()`) rather than duplicated text.
+
+Also fixed along the way: `docs/RESEARCH_DECISION_QUEUE.md`'s own
+"Ranked next-up" section and several table rows had gone stale --
+claiming several already-shipped items (NemoClaw's two P1 rows, the
+OpenClaw §7 operational-safety remainder, two Ollama-table ContextPlan
+rows) were still open. Corrected against real code, not just re-read
+tables. The Ollama P2 "bounded preflight/diagnostics + deployment
+guidance" row turned out to be two unrelated things: the deployment-
+hardening half shipped as a new `SECURITY.md` bullet (no auth layer in
+front of Ollama; operator-side hardening needed for a remote deployment);
+the diagnostics-breadth half was rejected at triage (no incident shows
+the existing generic HTTP-error fallback is actually opaque).
+
+Verification across all three slices: typecheck/lint/format clean at
+every commit; full suite 638 passed (was 621 before this arc began),
+95 env-gated skipped; every affected real-OC suite re-run green against
+the live NAS instance, not left unexercised.
+
 **`continueScene()`'s phase extraction, deferred by the phase-end audit,
 done the same day as a planned follow-up (2026-09-08).** The design
 (which phase becomes which named function, exact inputs/outputs) was

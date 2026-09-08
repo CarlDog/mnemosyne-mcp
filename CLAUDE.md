@@ -100,13 +100,18 @@ explicitly directed.
 
 Written down but **not ratified** — design input, not specification:
 [WEBUI_NOTES.md](docs/WEBUI_NOTES.md),
-[CONTENT_ROUTING_DESIGN.md](docs/CONTENT_ROUTING_DESIGN.md),
 [COMPANION_PROFILE_DESIGN.md](docs/COMPANION_PROFILE_DESIGN.md),
 [HOOK_VAULT.md](docs/HOOK_VAULT.md), and the four external-system adoption
 assessments listed under "Layout" below.
 [POSITION_TRACKING_DESIGN.md](docs/POSITION_TRACKING_DESIGN.md) is
 **ratified and fully implemented** (2026-09-07, all four slices) — see
 STATUS.md's dated entries.
+[CONTENT_ROUTING_DESIGN.md](docs/CONTENT_ROUTING_DESIGN.md) is
+**ratified and fully implemented** (2026-09-08, all three slices) — a
+story's `mnemo_story_use`-declared `content_rating` (`sfw`/`nsfw`) is
+checked against the configured generator's declared capability before
+every generation, refusing before dispatch on a mismatch; see STATUS.md's
+dated entry.
 
 ## Stack
 
@@ -493,13 +498,17 @@ STATUS.md's dated entries.
   the storyline control plane, the retrieval-assembly panel, media in the beat
   flow, watch-companion watch parties, and a parked graphic-novel reading
   format.
-- `docs/CONTENT_ROUTING_DESIGN.md` — proposal (not yet ratified) for
-  implementing Living Canon Standard §10's SFW/NSFW routing boundary: a
-  story-level content-rating declaration on the story marker, a
-  provider-level capability declaration, and a fail-closed pre-flight
-  check at `mnemo_continue`'s one real generation call site. Grounded in
-  OpenChronicle v1's `ContentRoutingConfig`/`ModelSelector` (a real
-  design that was built and never wired to anything).
+- `docs/CONTENT_ROUTING_DESIGN.md` — **ratified and fully implemented**
+  (2026-09-08, all three slices) closing Living Canon Standard §10's
+  SFW/NSFW routing boundary: a story-level `content_rating` declaration
+  on the story marker (schema 6), a per-provider `contentCapability`
+  declaration (four new env vars; anthropic/openai/gemini fixed `sfw`,
+  no override), and a fail-closed check in `dispatchGenerate()`, the one
+  real generation call site — refuses before dispatch on a mismatch, never
+  blocks an undeclared rating. Grounded in OpenChronicle v1's
+  `ContentRoutingConfig`/`ModelSelector` (a real design that was built and
+  never wired to anything) — this design's own single, unconditional call
+  site was built specifically to not repeat that failure.
 - `docs/COMPANION_PROFILE_DESIGN.md` — proposal for keeping canonical
   character/voice identity separate from desired provider projections,
   observed Kindroid/Botify snapshots, and account-specific bindings. Records
