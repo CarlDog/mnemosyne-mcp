@@ -7,6 +7,7 @@
 // predates it and keeps its own working copy (don't rewrite what works).
 
 import { describeTransportError } from "./llm.js";
+import type { GeneratedBeat } from "./llm.js";
 import { log } from "./log.js";
 
 // Cloud inference is fast relative to the CPU-NAS Ollama path (which
@@ -55,4 +56,43 @@ export async function llmPostJson(opts: {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+// The three cloud providers (anthropic, gemini, openai-compat) each wrapped
+// llmPostJson in the identical log-post-extract-log shape -- log the
+// request, POST, parse, log the result with the same field names/order.
+// Extracted once the third provider repeated it verbatim (the
+// helper-extraction-scan bar). Each provider still builds its own request
+// body and parses its own response shape via `extract` -- those genuinely
+// differ per API and stay separate.
+export async function runCloudGenerate(opts: {
+  name: string;
+  url: string | URL;
+  headers: Record<string, string>;
+  body: Record<string, unknown>;
+  model: string;
+  systemPrompt: string;
+  userMessage: string;
+  extract: (data: unknown) => GeneratedBeat;
+}): Promise<GeneratedBeat> {
+  const start = Date.now();
+  log.info(opts.name, "generate", {
+    model: opts.model,
+    system_chars: opts.systemPrompt.length,
+    user_chars: opts.userMessage.length,
+  });
+  const data = await llmPostJson({
+    provider: opts.name,
+    url: opts.url,
+    headers: opts.headers,
+    body: opts.body,
+  });
+  const beat = opts.extract(data);
+  log.info(opts.name, "generate ok", {
+    model: opts.model,
+    ms: Date.now() - start,
+    chars: beat.text.length,
+    finish_reason: beat.finishReason ?? "(unreported)",
+  });
+  return beat;
 }

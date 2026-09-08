@@ -650,7 +650,7 @@ export async function setPosition(
  * it turns a silent mismatch (pointing position at a character by mistake)
  * into a clear error. Shared by mnemo_position_set and mnemo_continue's
  * move_to (via applyPositionUpdate below). */
-export async function resolveLocationId(
+async function resolveLocationId(
   oc: OcClient,
   storyId: string,
   memoryId: string | undefined,

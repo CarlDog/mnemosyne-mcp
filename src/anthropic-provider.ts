@@ -21,8 +21,7 @@
 // Live-verification status: documented contract, exercised by an
 // env-gated integration test whenever ANTHROPIC_API_KEY is set.
 
-import { llmPostJson } from "./llm-http.js";
-import { log } from "./log.js";
+import { runCloudGenerate } from "./llm-http.js";
 import {
   completionFromFinishReason,
   computeTotalTokens,
@@ -128,29 +127,20 @@ export class AnthropicProvider implements LlmProvider {
   constructor(private readonly config: AnthropicConfig) {}
 
   async generate(opts: LlmGenerateOptions): Promise<GeneratedBeat> {
+    const model = opts.model ?? this.config.defaultModel;
     const body = buildAnthropicBody(this.config.defaultModel, opts);
-    const start = Date.now();
-    log.info(this.name, "generate", {
-      model: body.model,
-      system_chars: opts.systemPrompt.length,
-      user_chars: opts.userMessage.length,
-    });
-    const data = await llmPostJson({
-      provider: this.name,
+    return runCloudGenerate({
+      name: this.name,
       url: `${ANTHROPIC_BASE_URL}/v1/messages`,
       headers: {
         "x-api-key": this.config.apiKey,
         "anthropic-version": ANTHROPIC_VERSION,
       },
       body,
+      model,
+      systemPrompt: opts.systemPrompt,
+      userMessage: opts.userMessage,
+      extract: extractAnthropicText,
     });
-    const beat = extractAnthropicText(data);
-    log.info(this.name, "generate ok", {
-      model: body.model,
-      ms: Date.now() - start,
-      chars: beat.text.length,
-      finish_reason: beat.finishReason ?? "(unreported)",
-    });
-    return beat;
   }
 }
