@@ -2,6 +2,52 @@
 
 **Last updated:** 2026-09-08.
 
+**Phase-end audit run at the non-flagship arc's close (2026-09-08).**
+With the whole non-flagship reconciliation arc closed and promotion
+declined, this was a genuine phase boundary -- ran the standing
+phase-end-audit practice rather than starting undirected work. Five
+parallel investigative checks (status-doc currency, README currency,
+CHANGELOG completeness, a `src/` refactor/streamline scan, memory
+currency + a deprived-env check) plus the fast deterministic baseline
+(typecheck/lint/format/tests, all clean going in). Findings fixed, one
+category per commit, tests/lint verified before each:
+
+1. **CLAUDE.md's Current Sprint was badly stale** -- still headed "In
+   flight (2026-09-04)" for a closed arc, and three major closures
+   (Adjustment Protocol/Shadowflame/Black Ledger reconciliation)
+   existed only in CLAUDE.md, never recorded in STATUS.md itself,
+   inverting the project's own single-source-of-truth rule. Backfilled
+   STATUS.md, collapsed CLAUDE.md's Current Sprint to a short pointer,
+   fixed a stale overlay-count table and stale test/Node-version counts.
+2. **README.md had two confident falsehoods** (entity editing "not
+   built" -- shipped 2026-09-07; HTTP filesystem-path confinement "not
+   implemented" -- shipped 2026-08-28, the doc section was written 98
+   minutes before the guard landed and never caught up) plus stale
+   tool/test/Node-version counts.
+3. **SECURITY.md carried the identical stale HTTP-guard claim** as
+   README -- corrected the same way.
+4. **Two auto-memory files had drifted out from under the day's own
+   closures** (Midnight's Silas/Tomas renames, Brass & Nerve's Marrow
+   rename) -- updated; MEMORY.md's index line-length cleaned up for the
+   worst offenders.
+5. **Three `src/` refactors**, each mechanical (no behavior change) and
+   verified with the full suite before and after: extracted a shared
+   `runCloudGenerate` helper for the three cloud providers' identical
+   generate() shape (~40 duplicated lines); split `stories.ts`'s
+   position-tracking arithmetic into `src/position.ts`; split
+   `OllamaProvider` out of `llm.ts` into `src/ollama-provider.ts`,
+   matching every sibling provider's own file. All three re-verified
+   against the full 617-test suite (zero regression) plus targeted
+   re-runs of the affected test files and `architecture-boundaries.test.ts`.
+
+**Deliberately queued, not fixed** (flagged in Known Gaps below, with
+reasoning): `continueScene()`'s phase extraction (real design decisions
+required, not pure code motion, in already-hardened core orchestration)
+and the ~85 exported-but-file-local `src/` types (not itemized by the
+audit, real risk in a blind sweep). Cross-story name collisions
+(`Thorne`, `Jäger`, Midnight's `Aurora`) were already ruled earlier the
+same day and are not part of this audit.
+
 **Promotion set aside indefinitely (2026-09-08) — operator decision, not a
 blocker.** With the three reconciled overlays (Adjustment Protocol,
 Shadowflame, Star Wars: The Black Ledger) all mechanically ready --
@@ -5030,6 +5076,26 @@ consider only when real use exposes the corresponding pressure:
 
 ## Known Gaps
 
+- **`continueScene()`'s ~390-line body would benefit from named phase
+  extraction** (found in the 2026-09-08 phase-end audit's refactor scan,
+  deliberately not fixed). The function itself is correct and well-
+  commented, not a defect -- but it's dense orchestration with a lot of
+  state threaded across phases (gather, context-plan, generate, save,
+  validate) and a subtle, deliberately-scoped try/catch (RunOutcomeError
+  relabeling when a position write already landed before a later
+  failure). Extraction requires real design decisions about what
+  threads through each new boundary as parameters vs. return values --
+  not pure code motion like the stories.ts/position.ts and
+  llm.ts/ollama-provider.ts splits done the same day. Queue as its own
+  planned stage, with a focused review pass, rather than a mechanical
+  audit fix.
+- **~85 exported `src/` interfaces/types used only within their
+  declaring file** (same audit, same day, deliberately not fixed). Not
+  itemized by the audit -- a human/agent sweep would need to enumerate
+  them fresh across the whole tree, with real risk of missing an
+  indirect usage and silently breaking something. Low severity
+  (cosmetic export-boundary cleanup), so queue for a dedicated pass
+  rather than rush now.
 - ~~**HTTP import/export paths exceed the remote story-operation boundary.**~~
   **Closed 2026-08-28** (`a12e992`): caller-supplied `out_path`/`file_path`
   are refused over the HTTP transport (flat rejection, stdio unchanged) — see
