@@ -140,6 +140,14 @@ export interface ContinueSceneResult {
  * target -> generate -> group-yield detection -> save-first scene
  * persist -> optional validation -> verdict retag -> response assembly.
  * Both MCP and HTTP route paths call this.
+ *
+ * The body below is a readable top-to-bottom sequence of named phase
+ * functions (defined after this one, in call order) -- split out 2026-09-08
+ * (phase-end audit) for skimmability. No behavior change from the split;
+ * every phase function's inputs/outputs, and the try/catch + abort-check
+ * placements between them, are exactly what continueScene did inline
+ * before. See git history for the pre-split version if a diff is ever
+ * needed.
  */
 export async function continueScene(
   port: ContinuationPort,
@@ -167,30 +175,7 @@ export async function continueScene(
   // supply epoch_date/epoch_location, so calling any of them against an
   // untracked story throws "hasn't started... use mnemo_position_set"
   // before anything is dispatched.
-  let positionApplied = false;
-  if (opts.advance || opts.setDate !== undefined || opts.moveTo) {
-    try {
-      await port.applyPosition(storyId, {
-        advance: opts.advance,
-        setDate: opts.setDate,
-        moveTo: opts.moveTo,
-      });
-      positionApplied = true;
-    } catch (err) {
-      // Accepted residual (docs/POSITION_TRACKING_DESIGN.md refinement 5):
-      // this catch cannot distinguish "the write never reached OC" from
-      // "OC committed it but the response was lost" -- a transport error
-      // here always reports rejected_before_dispatch/retry_safe:true even
-      // in the second, rarer case. Every other single-write OC path in
-      // this codebase carries the same ambiguity; resolving it needs error
-      // typing this repo doesn't have yet, so it's documented rather than
-      // silently claimed fixed.
-      throw new RunOutcomeError(
-        "rejected_before_dispatch",
-        (err as Error).message,
-      );
-    }
-  }
+  const positionApplied = await applyPositionIfRequested(port, storyId, opts);
 
   // Everything below, through the generate dispatch, is still nominally
   // "pre-dispatch" -- but if the position write above just landed,
@@ -200,109 +185,15 @@ export async function continueScene(
   // throw site (context gathering's own abort check, context-admission
   // rejection, the generate-dispatch abort check), so a future phase
   // boundary added in this span inherits the same honesty for free.
-  let context: Awaited<ReturnType<ContinuationPort["gatherContext"]>>;
-  let contextPlan: ContextPlanManifest & { companion_selection?: string[] };
-  let renderedContext: ReturnType<ContinuationPort["renderAdmittedContext"]>;
-  let systemPrompt: string;
-  let kindroidTarget: KindroidTarget | undefined;
-  let narratorProfile: string | undefined;
-  let capability_warnings: string[];
-  let gatherMs: number;
-  let planResult: ReturnType<typeof planContext>;
+  //
+  // TODO(2026-09-08, tracked for a follow-up pass): this try/catch spans
+  // exactly one phase function call (gatherAndPlan) by construction, which
+  // is easy to read now -- but it's still a cross-cutting concern bolted
+  // onto the call site rather than expressed in the phase boundary itself.
+  // Deliberately left as-is for this pass; revisit the shape separately.
+  let gathered: GatherAndPlanResult;
   try {
-    // Phase-boundary abort checks (RUN_OUTCOMES_DESIGN, ratified): before
-    // gather and before the generate dispatch -- NEVER after generation has
-    // been dispatched, so a disconnected caller's beat still completes and
-    // saves (the tokens are spent; the scene is recoverable afterwards).
-    assertNotAborted(run, "context gathering");
-
-    const gatherStart = Date.now();
-    context = await port.gatherContext(storyId, opts.direction, {
-      sceneStrategy: opts.sceneStrategy,
-      sceneFallbackStrategy: opts.sceneFallbackStrategy,
-      signal: run.signal,
-    });
-    gatherMs = Date.now() - gatherStart;
-
-    // Context admission (CONTEXT_PLAN_DESIGN, ratified). The budget is the
-    // Ollama effective window when the generator can supply one (cached
-    // /api/show); cloud windows are all-unknown by ratified decision, so
-    // those plans instrument without dropping.
-    let inputBudget: number | undefined;
-    const window = await port.effectiveContextWindow(opts.model);
-    if (typeof window === "number") inputBudget = window;
-    const emptyBundle = {
-      rules: [],
-      style: [],
-      characters: [],
-      locations: [],
-      scenes: [],
-      lore: [],
-      worldbuilding: [],
-    };
-    planResult = planContext(context.entries ?? [], {
-      provider: port.generatorName,
-      model: opts.model,
-      inputBudget,
-      outputReserve: opts.maxTokens ?? port.defaultMaxTokens,
-      estFixedTokens: estimateTokens(
-        port.buildSystemPrompt(mode, emptyBundle).length,
-      ),
-      directionChars: opts.direction.length,
-      marginTokens: port.contextMarginTokens,
-    });
-    contextPlan = toManifest(planResult.plan, planResult.entries);
-    if (planResult.plan.verdict === "rejected") {
-      const detail =
-        "protected rules/style plus the direction alone exceed the " +
-        `effective context window (${inputBudget} tokens, model-aware). ` +
-        "Nothing droppable would make this fit -- trim rules/style, raise " +
-        "OLLAMA_NUM_CTX (within the model's trained context), or use a " +
-        "larger-context model.";
-      if (port.admissionMode === "enforce") {
-        throw new RunOutcomeError("rejected_before_dispatch", detail);
-      }
-      port.warn("continueScene", "context plan rejected (warn mode)", {
-        run_id: run.runId,
-        input_budget: inputBudget,
-      });
-    }
-
-    // Plan-driven rendering: the prompt contains exactly the admitted set,
-    // so the manifest can never describe a payload the model didn't see.
-    const admittedIds = new Set(planResult.admitted.map((e) => e.memory_id));
-    renderedContext = port.renderAdmittedContext(context, admittedIds);
-    systemPrompt = port.buildSystemPrompt(mode, renderedContext);
-
-    // Only fetch the story marker (an extra OC round trip) when it could
-    // actually matter: no explicit override, a story-bound target is
-    // meaningless to any generator but Kindroid, and the caller didn't
-    // already fetch it.
-    let storyTarget = opts.storyKindroidTarget;
-    narratorProfile = opts.storyNarratorProfile;
-    if (
-      !opts.storyKindroidTargetPrefetched &&
-      opts.explicitKindroidTarget === undefined &&
-      port.generatorName === "kindroid"
-    ) {
-      const binding = await port.storyBinding(storyId);
-      storyTarget = binding.kindroidTarget;
-      narratorProfile = binding.narratorProfile;
-    }
-    kindroidTarget =
-      opts.explicitKindroidTarget ??
-      (port.generatorName === "kindroid" ? storyTarget : undefined);
-
-    // Warn-don't-break (GENERATOR_CAPABILITIES_DESIGN, ratified): options
-    // the provider ignores produce a response warning, never an error --
-    // legacy callers keep working.
-    capability_warnings = port.capabilityWarnings({
-      temperature: opts.temperature,
-      maxTokens: opts.maxTokens,
-      model: opts.model,
-    });
-
-    assertNotAborted(run, "the generate dispatch");
+    gathered = await gatherAndPlan(port, storyId, opts, mode, run);
   } catch (err) {
     if (positionApplied && err instanceof RunOutcomeError) {
       throw new RunOutcomeError(
@@ -318,34 +209,41 @@ export async function continueScene(
     }
     throw err;
   }
-
-  const generateStart = Date.now();
-  const beat = await port.generate({
+  const {
+    context,
+    contextPlan,
+    renderedContext,
     systemPrompt,
-    userMessage: opts.direction,
-    temperature: opts.temperature,
-    maxTokens: opts.maxTokens,
-    model: opts.model,
-    context: renderedContext,
     kindroidTarget,
-    groupMaxTurns: opts.groupMaxTurns,
-    allowUser: opts.allowUser,
-  });
-  const generateMs = Date.now() - generateStart;
-  if (beat.context_selection !== undefined) {
-    contextPlan.companion_selection = beat.context_selection;
-  }
-  // Estimator calibration (stage 1): logged, never substituted.
-  port.calibration(
-    planResult.plan.est_fixed_tokens +
-      planResult.plan.est_direction_tokens +
-      planResult.admitted.reduce((sum, e) => sum + e.est_tokens, 0),
-    beat.usage?.input_tokens,
+    narratorProfile,
+    capability_warnings,
+    gatherMs,
+    planResult,
+  } = gathered;
+
+  const { beat, generateMs } = await dispatchGenerate(
+    port,
+    opts,
+    systemPrompt,
+    renderedContext,
+    kindroidTarget,
+    planResult,
+    contextPlan,
   );
   const beatText = beat.text;
   const groupMeta = {
     ...(beat.groupEnded !== undefined && { group_ended: beat.groupEnded }),
     ...(beat.groupTurns !== undefined && { group_turns: beat.groupTurns }),
+  };
+  const common: CommonResponseFields = {
+    runId: run.runId,
+    capability_warnings,
+    contextPlan,
+    position: context.position,
+    mode,
+    gatherMs,
+    generateMs,
+    groupMeta,
   };
 
   // A group can hand the floor back before anyone speaks (allow_user:
@@ -355,28 +253,7 @@ export async function continueScene(
   // advanceGroup, so say so: the caller must continue the scene, not
   // re-send, or the group sees it twice.
   if (beatText.trim() === "") {
-    return {
-      run_id: run.runId,
-      ...(capability_warnings.length > 0 && { capability_warnings }),
-      context_plan: contextPlan,
-      ...(context.position && { position: context.position }),
-      yielded_to_user: true,
-      beat_text: "",
-      saved: false,
-      message:
-        "The group handed the floor straight back to you -- no AI " +
-        "turns were generated, so nothing was saved. Your direction " +
-        "was already posted to the group; do not re-send it. Take " +
-        `the turn: ${opts.reinvokeHint} with what you say next.`,
-      mode,
-      stages_ms: {
-        gather_ms: gatherMs,
-        generate_ms: generateMs,
-        save_ms: 0,
-        validate_ms: 0,
-      },
-      ...groupMeta,
-    };
+    return buildGroupYieldResponse(common, opts.reinvokeHint);
   }
 
   // An incomplete beat -- the provider reports the output was cut off at
@@ -387,33 +264,7 @@ export async function continueScene(
   // caller decision, not a default. No silent retry either: a second
   // generation is a different scene, not this one finished.
   if (beat.complete === false) {
-    return {
-      run_id: run.runId,
-      ...(capability_warnings.length > 0 && { capability_warnings }),
-      context_plan: contextPlan,
-      ...(context.position && { position: context.position }),
-      incomplete: true,
-      saved: false,
-      beat_text: beatText,
-      ...(beat.finishReason !== undefined && {
-        finish_reason: beat.finishReason,
-      }),
-      ...(beat.usage !== undefined && { usage: { generator: beat.usage } }),
-      message:
-        "The generator hit its output-token budget before finishing the " +
-        "beat (finish reason 'length'). The text below was NOT saved as a " +
-        "scene and NOT validated. Either raise max_tokens and regenerate, " +
-        "or -- after reviewing it -- save the partial deliberately via " +
-        "mnemo_save_entity (type 'scene').",
-      mode,
-      stages_ms: {
-        gather_ms: gatherMs,
-        generate_ms: generateMs,
-        save_ms: 0,
-        validate_ms: 0,
-      },
-      ...groupMeta,
-    };
+    return buildIncompleteResponse(common, beatText, beat);
   }
 
   // Guard the save: the beat is an expensive LLM generation, and a
@@ -421,53 +272,17 @@ export async function continueScene(
   // still return the beat text with a save_error field so the user
   // can retry the persist (e.g., via mnemo_save_entity) without
   // regenerating.
-  const saveStart = Date.now();
-  const beatName = `Scene ${port.nowIso()}`;
-  let memoryId: string | undefined;
-  let savedTags: string[] | undefined;
-  let saveError: string | undefined;
-  try {
-    const saved = await port.saveScene(
-      storyId,
-      beatName,
-      beatText,
-      narratorProfile ? [narratorTag(narratorProfile)] : undefined,
-    );
-    memoryId = saved.memory_id;
-    savedTags = saved.tags;
-  } catch (err) {
-    saveError = (err as Error).message;
-    port.warn("continueScene", "scene save failed", { msg: saveError });
-  }
-  // A dispatched-save failure leaves the canonical write outcome UNKNOWN
-  // (RUN_OUTCOMES_DESIGN, ratified): the transport may have failed after
-  // OC committed. Success-shaped -- the beat text is preserved and the
-  // caller decides. The one provably-pre-dispatch failure is OC's
-  // rate-limit rejection (its middleware rejects before handler
-  // dispatch), which stays a plainly retryable save_error.
-  const canonWriteUnknown =
-    saveError !== undefined && !/rate limit/i.test(saveError);
-  const saveMs = Date.now() - saveStart;
+  const {
+    beatName,
+    memoryId,
+    savedTags,
+    saveError,
+    canonWriteUnknown,
+    saveMs,
+  } = await saveBeat(port, storyId, beatText, narratorProfile);
 
-  let validateMs = 0;
-  let validation: ValidationReport | undefined;
-  let validatorUsage: ContinuationUsage | undefined;
-  let validationError: string | undefined;
-  if (opts.validate) {
-    const validateStart = Date.now();
-    try {
-      const outcome = await port.validate(context, beatText);
-      validation = outcome.report;
-      validatorUsage = outcome.usage;
-    } catch (err) {
-      validationError = (err as Error).message;
-      port.warn("continueScene", "validation pass failed", {
-        msg: validationError,
-      });
-    } finally {
-      validateMs = Date.now() - validateStart;
-    }
-  }
+  const { validation, validatorUsage, validationError, validateMs } =
+    await validateBeat(port, context, beatText, opts.validate);
 
   // Tag the saved scene with its validation verdict (v0.1.3
   // validator-gated inclusion — see STATUS.md). Only when both the
@@ -475,23 +290,7 @@ export async function continueScene(
   // means nothing to tag, no validation means no verdict to classify
   // (validate=false, or the validator pass itself failed). Best-effort
   // metadata — must never fail the call for an already-saved beat.
-  if (
-    memoryId !== undefined &&
-    savedTags !== undefined &&
-    validation !== undefined
-  ) {
-    try {
-      await port.retagValidation(
-        memoryId,
-        savedTags,
-        classifyVerdict(validation),
-      );
-    } catch (err) {
-      port.warn("continueScene", "validation retag failed", {
-        msg: (err as Error).message,
-      });
-    }
-  }
+  await retagIfValidated(port, memoryId, savedTags, validation);
 
   return {
     run_id: run.runId,
@@ -501,7 +300,9 @@ export async function continueScene(
     beat_name: beatName,
     beat_text: beatText,
     ...(memoryId !== undefined && { memory_id: memoryId }),
-    ...(narratorProfile !== undefined && { narrator_profile: narratorProfile }),
+    ...(narratorProfile !== undefined && {
+      narrator_profile: narratorProfile,
+    }),
     ...(saveError !== undefined && { save_error: saveError }),
     ...(canonWriteUnknown && { canon_write_outcome: "unknown" as const }),
     mode,
@@ -532,6 +333,433 @@ export async function continueScene(
     },
     ...groupMeta,
   };
+}
+
+// --- Phase functions, in the order continueScene() calls them -------------
+
+/** Position update phase. Returns whether a position write actually landed
+ * (false when the caller passed none of advance/setDate/moveTo -- the
+ * common case). Throws RunOutcomeError on failure; continueScene's own
+ * abort check for this phase runs before calling this, not inside it. */
+async function applyPositionIfRequested(
+  port: ContinuationPort,
+  storyId: string,
+  opts: ContinueSceneOptions,
+): Promise<boolean> {
+  if (!opts.advance && opts.setDate === undefined && !opts.moveTo) {
+    return false;
+  }
+  try {
+    await port.applyPosition(storyId, {
+      advance: opts.advance,
+      setDate: opts.setDate,
+      moveTo: opts.moveTo,
+    });
+    return true;
+  } catch (err) {
+    // Accepted residual (docs/POSITION_TRACKING_DESIGN.md refinement 5):
+    // this catch cannot distinguish "the write never reached OC" from
+    // "OC committed it but the response was lost" -- a transport error
+    // here always reports rejected_before_dispatch/retry_safe:true even
+    // in the second, rarer case. Every other single-write OC path in
+    // this codebase carries the same ambiguity; resolving it needs error
+    // typing this repo doesn't have yet, so it's documented rather than
+    // silently claimed fixed.
+    throw new RunOutcomeError(
+      "rejected_before_dispatch",
+      (err as Error).message,
+    );
+  }
+}
+
+interface GatherAndPlanResult {
+  context: Awaited<ReturnType<ContinuationPort["gatherContext"]>>;
+  contextPlan: ContextPlanManifest & { companion_selection?: string[] };
+  renderedContext: ReturnType<ContinuationPort["renderAdmittedContext"]>;
+  systemPrompt: string;
+  kindroidTarget: KindroidTarget | undefined;
+  narratorProfile: string | undefined;
+  capability_warnings: string[];
+  gatherMs: number;
+  planResult: ReturnType<typeof planContext>;
+}
+
+/** Gather context, run context admission, render the admitted set into a
+ * system prompt, resolve the effective Kindroid target/narrator profile,
+ * and collect capability warnings. Throws RunOutcomeError on an enforced
+ * context-admission rejection; continueScene's positionApplied relabeling
+ * wraps the call to this function, not any logic inside it. */
+async function gatherAndPlan(
+  port: ContinuationPort,
+  storyId: string,
+  opts: ContinueSceneOptions,
+  mode: Mode,
+  run: RunContext,
+): Promise<GatherAndPlanResult> {
+  // Phase-boundary abort checks (RUN_OUTCOMES_DESIGN, ratified): before
+  // gather and before the generate dispatch -- NEVER after generation has
+  // been dispatched, so a disconnected caller's beat still completes and
+  // saves (the tokens are spent; the scene is recoverable afterwards).
+  assertNotAborted(run, "context gathering");
+
+  const gatherStart = Date.now();
+  const context = await port.gatherContext(storyId, opts.direction, {
+    sceneStrategy: opts.sceneStrategy,
+    sceneFallbackStrategy: opts.sceneFallbackStrategy,
+    signal: run.signal,
+  });
+  const gatherMs = Date.now() - gatherStart;
+
+  // Context admission (CONTEXT_PLAN_DESIGN, ratified). The budget is the
+  // Ollama effective window when the generator can supply one (cached
+  // /api/show); cloud windows are all-unknown by ratified decision, so
+  // those plans instrument without dropping.
+  let inputBudget: number | undefined;
+  const window = await port.effectiveContextWindow(opts.model);
+  if (typeof window === "number") inputBudget = window;
+  const emptyBundle = {
+    rules: [],
+    style: [],
+    characters: [],
+    locations: [],
+    scenes: [],
+    lore: [],
+    worldbuilding: [],
+  };
+  const planResult = planContext(context.entries ?? [], {
+    provider: port.generatorName,
+    model: opts.model,
+    inputBudget,
+    outputReserve: opts.maxTokens ?? port.defaultMaxTokens,
+    estFixedTokens: estimateTokens(
+      port.buildSystemPrompt(mode, emptyBundle).length,
+    ),
+    directionChars: opts.direction.length,
+    marginTokens: port.contextMarginTokens,
+  });
+  const contextPlan: ContextPlanManifest & { companion_selection?: string[] } =
+    toManifest(planResult.plan, planResult.entries);
+  if (planResult.plan.verdict === "rejected") {
+    const detail =
+      "protected rules/style plus the direction alone exceed the " +
+      `effective context window (${inputBudget} tokens, model-aware). ` +
+      "Nothing droppable would make this fit -- trim rules/style, raise " +
+      "OLLAMA_NUM_CTX (within the model's trained context), or use a " +
+      "larger-context model.";
+    if (port.admissionMode === "enforce") {
+      throw new RunOutcomeError("rejected_before_dispatch", detail);
+    }
+    port.warn("continueScene", "context plan rejected (warn mode)", {
+      run_id: run.runId,
+      input_budget: inputBudget,
+    });
+  }
+
+  // Plan-driven rendering: the prompt contains exactly the admitted set,
+  // so the manifest can never describe a payload the model didn't see.
+  const admittedIds = new Set(planResult.admitted.map((e) => e.memory_id));
+  const renderedContext = port.renderAdmittedContext(context, admittedIds);
+  const systemPrompt = port.buildSystemPrompt(mode, renderedContext);
+
+  // Only fetch the story marker (an extra OC round trip) when it could
+  // actually matter: no explicit override, a story-bound target is
+  // meaningless to any generator but Kindroid, and the caller didn't
+  // already fetch it.
+  let storyTarget = opts.storyKindroidTarget;
+  let narratorProfile = opts.storyNarratorProfile;
+  if (
+    !opts.storyKindroidTargetPrefetched &&
+    opts.explicitKindroidTarget === undefined &&
+    port.generatorName === "kindroid"
+  ) {
+    const binding = await port.storyBinding(storyId);
+    storyTarget = binding.kindroidTarget;
+    narratorProfile = binding.narratorProfile;
+  }
+  const kindroidTarget =
+    opts.explicitKindroidTarget ??
+    (port.generatorName === "kindroid" ? storyTarget : undefined);
+
+  // Warn-don't-break (GENERATOR_CAPABILITIES_DESIGN, ratified): options
+  // the provider ignores produce a response warning, never an error --
+  // legacy callers keep working.
+  const capability_warnings = port.capabilityWarnings({
+    temperature: opts.temperature,
+    maxTokens: opts.maxTokens,
+    model: opts.model,
+  });
+
+  assertNotAborted(run, "the generate dispatch");
+
+  return {
+    context,
+    contextPlan,
+    renderedContext,
+    systemPrompt,
+    kindroidTarget,
+    narratorProfile,
+    capability_warnings,
+    gatherMs,
+    planResult,
+  };
+}
+
+interface DispatchGenerateResult {
+  beat: ContinuationBeat;
+  generateMs: number;
+}
+
+/** Dispatch generation and record estimator calibration. Mutates
+ * contextPlan.companion_selection in place when the beat reports one
+ * (same as the pre-split inline code -- the manifest object is shared with
+ * the caller, not copied). */
+async function dispatchGenerate(
+  port: ContinuationPort,
+  opts: ContinueSceneOptions,
+  systemPrompt: string,
+  renderedContext: ReturnType<ContinuationPort["renderAdmittedContext"]>,
+  kindroidTarget: KindroidTarget | undefined,
+  planResult: ReturnType<typeof planContext>,
+  contextPlan: ContextPlanManifest & { companion_selection?: string[] },
+): Promise<DispatchGenerateResult> {
+  const generateStart = Date.now();
+  const beat = await port.generate({
+    systemPrompt,
+    userMessage: opts.direction,
+    temperature: opts.temperature,
+    maxTokens: opts.maxTokens,
+    model: opts.model,
+    context: renderedContext,
+    kindroidTarget,
+    groupMaxTurns: opts.groupMaxTurns,
+    allowUser: opts.allowUser,
+  });
+  const generateMs = Date.now() - generateStart;
+  if (beat.context_selection !== undefined) {
+    contextPlan.companion_selection = beat.context_selection;
+  }
+  // Estimator calibration (stage 1): logged, never substituted.
+  port.calibration(
+    planResult.plan.est_fixed_tokens +
+      planResult.plan.est_direction_tokens +
+      planResult.admitted.reduce((sum, e) => sum + e.est_tokens, 0),
+    beat.usage?.input_tokens,
+  );
+  return { beat, generateMs };
+}
+
+/** Fields common to both early-return responses (group-yield, incomplete)
+ * and shared with the final success response -- bundled once at the call
+ * site so the two response builders below take one param instead of eight
+ * positional ones. */
+interface CommonResponseFields {
+  runId: string;
+  capability_warnings: string[];
+  contextPlan: ContextPlanManifest & { companion_selection?: string[] };
+  position: PositionContext | undefined;
+  mode: Mode;
+  gatherMs: number;
+  generateMs: number;
+  groupMeta: Pick<ContinueSceneResult, "group_ended" | "group_turns">;
+}
+
+/** A group handed the floor back before anyone spoke (allow_user: true
+ * only) -- nothing was generated, so there is no beat to save. */
+function buildGroupYieldResponse(
+  common: CommonResponseFields,
+  reinvokeHint: string,
+): ContinueSceneResult {
+  return {
+    run_id: common.runId,
+    ...(common.capability_warnings.length > 0 && {
+      capability_warnings: common.capability_warnings,
+    }),
+    context_plan: common.contextPlan,
+    ...(common.position && { position: common.position }),
+    yielded_to_user: true,
+    beat_text: "",
+    saved: false,
+    message:
+      "The group handed the floor straight back to you -- no AI " +
+      "turns were generated, so nothing was saved. Your direction " +
+      "was already posted to the group; do not re-send it. Take " +
+      `the turn: ${reinvokeHint} with what you say next.`,
+    mode: common.mode,
+    stages_ms: {
+      gather_ms: common.gatherMs,
+      generate_ms: common.generateMs,
+      save_ms: 0,
+      validate_ms: 0,
+    },
+    ...common.groupMeta,
+  };
+}
+
+/** The provider reported the beat was cut off at the token budget --
+ * returned but deliberately not saved or validated. */
+function buildIncompleteResponse(
+  common: CommonResponseFields,
+  beatText: string,
+  beat: ContinuationBeat,
+): ContinueSceneResult {
+  return {
+    run_id: common.runId,
+    ...(common.capability_warnings.length > 0 && {
+      capability_warnings: common.capability_warnings,
+    }),
+    context_plan: common.contextPlan,
+    ...(common.position && { position: common.position }),
+    incomplete: true,
+    saved: false,
+    beat_text: beatText,
+    ...(beat.finishReason !== undefined && {
+      finish_reason: beat.finishReason,
+    }),
+    ...(beat.usage !== undefined && { usage: { generator: beat.usage } }),
+    message:
+      "The generator hit its output-token budget before finishing the " +
+      "beat (finish reason 'length'). The text below was NOT saved as a " +
+      "scene and NOT validated. Either raise max_tokens and regenerate, " +
+      "or -- after reviewing it -- save the partial deliberately via " +
+      "mnemo_save_entity (type 'scene').",
+    mode: common.mode,
+    stages_ms: {
+      gather_ms: common.gatherMs,
+      generate_ms: common.generateMs,
+      save_ms: 0,
+      validate_ms: 0,
+    },
+    ...common.groupMeta,
+  };
+}
+
+interface SaveBeatResult {
+  beatName: string;
+  memoryId: string | undefined;
+  savedTags: string[] | undefined;
+  saveError: string | undefined;
+  canonWriteUnknown: boolean;
+  saveMs: number;
+}
+
+/** Persist the beat as a scene. A save failure is captured, not thrown --
+ * the expensive generation must not be discarded on a transient OC write
+ * failure; the caller gets save_error and can retry the persist. */
+async function saveBeat(
+  port: ContinuationPort,
+  storyId: string,
+  beatText: string,
+  narratorProfile: string | undefined,
+): Promise<SaveBeatResult> {
+  const saveStart = Date.now();
+  const beatName = `Scene ${port.nowIso()}`;
+  let memoryId: string | undefined;
+  let savedTags: string[] | undefined;
+  let saveError: string | undefined;
+  try {
+    const saved = await port.saveScene(
+      storyId,
+      beatName,
+      beatText,
+      narratorProfile ? [narratorTag(narratorProfile)] : undefined,
+    );
+    memoryId = saved.memory_id;
+    savedTags = saved.tags;
+  } catch (err) {
+    saveError = (err as Error).message;
+    port.warn("continueScene", "scene save failed", { msg: saveError });
+  }
+  // A dispatched-save failure leaves the canonical write outcome UNKNOWN
+  // (RUN_OUTCOMES_DESIGN, ratified): the transport may have failed after
+  // OC committed. Success-shaped -- the beat text is preserved and the
+  // caller decides. The one provably-pre-dispatch failure is OC's
+  // rate-limit rejection (its middleware rejects before handler
+  // dispatch), which stays a plainly retryable save_error.
+  const canonWriteUnknown =
+    saveError !== undefined && !/rate limit/i.test(saveError);
+  const saveMs = Date.now() - saveStart;
+  return {
+    beatName,
+    memoryId,
+    savedTags,
+    saveError,
+    canonWriteUnknown,
+    saveMs,
+  };
+}
+
+interface ValidateBeatResult {
+  validation: ValidationReport | undefined;
+  validatorUsage: ContinuationUsage | undefined;
+  validationError: string | undefined;
+  validateMs: number;
+}
+
+/** Optional validation pass. Returns all-undefined/zero-ms when the caller
+ * didn't ask for validation -- same shape either way, so the caller never
+ * branches on whether this ran. */
+async function validateBeat(
+  port: ContinuationPort,
+  context: Awaited<ReturnType<ContinuationPort["gatherContext"]>>,
+  beatText: string,
+  shouldValidate: boolean | undefined,
+): Promise<ValidateBeatResult> {
+  if (!shouldValidate) {
+    return {
+      validation: undefined,
+      validatorUsage: undefined,
+      validationError: undefined,
+      validateMs: 0,
+    };
+  }
+  const validateStart = Date.now();
+  let validation: ValidationReport | undefined;
+  let validatorUsage: ContinuationUsage | undefined;
+  let validationError: string | undefined;
+  try {
+    const outcome = await port.validate(context, beatText);
+    validation = outcome.report;
+    validatorUsage = outcome.usage;
+  } catch (err) {
+    validationError = (err as Error).message;
+    port.warn("continueScene", "validation pass failed", {
+      msg: validationError,
+    });
+  }
+  const validateMs = Date.now() - validateStart;
+  return { validation, validatorUsage, validationError, validateMs };
+}
+
+/** Tag the saved scene with its validation verdict (v0.1.3 validator-gated
+ * inclusion — see STATUS.md). Only when both the save succeeded and a
+ * verdict was actually produced: no memoryId means nothing to tag, no
+ * validation means no verdict to classify (validate=false, or the
+ * validator pass itself failed). Best-effort metadata — must never fail
+ * the call for an already-saved beat. */
+async function retagIfValidated(
+  port: ContinuationPort,
+  memoryId: string | undefined,
+  savedTags: string[] | undefined,
+  validation: ValidationReport | undefined,
+): Promise<void> {
+  if (
+    memoryId === undefined ||
+    savedTags === undefined ||
+    validation === undefined
+  ) {
+    return;
+  }
+  try {
+    await port.retagValidation(
+      memoryId,
+      savedTags,
+      classifyVerdict(validation),
+    );
+  } catch (err) {
+    port.warn("continueScene", "validation retag failed", {
+      msg: (err as Error).message,
+    });
+  }
 }
 
 export type ContinueScene = (
