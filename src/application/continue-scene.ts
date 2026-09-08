@@ -186,11 +186,16 @@ export async function continueScene(
   // rejection, the generate-dispatch abort check), so a future phase
   // boundary added in this span inherits the same honesty for free.
   //
-  // TODO(2026-09-08, tracked for a follow-up pass): this try/catch spans
-  // exactly one phase function call (gatherAndPlan) by construction, which
-  // is easy to read now -- but it's still a cross-cutting concern bolted
-  // onto the call site rather than expressed in the phase boundary itself.
-  // Deliberately left as-is for this pass; revisit the shape separately.
+  // Reviewed 2026-09-08 whether this should move into the phase boundary
+  // itself (a named wrapper, or a guard returned from
+  // applyPositionIfRequested) -- rejected: neither alternative actually
+  // prevents a future phase inserted between applyPositionIfRequested and
+  // dispatchGenerate from skipping the relabel, since both still require
+  // the same call-site discipline this comment does. Kept as a lexical
+  // try/catch around exactly one call. If a new phase function ever goes
+  // in this span, it must sit inside this try/catch (or get its own
+  // relabel) -- and tests/continue-scene-phases.test.ts must grow a case
+  // for it.
   let gathered: GatherAndPlanResult;
   try {
     gathered = await gatherAndPlan(port, storyId, opts, mode, run);
