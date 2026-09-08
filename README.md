@@ -12,10 +12,12 @@ mother of the Muses — the force by which memory becomes story.
 
 ## Status
 
-**The current v0.1.3 codebase exposes eleven tools** —
-`mnemo_story_list`, `mnemo_story_use`, `mnemo_save_entity`,
+**The current v0.1.3 codebase exposes fifteen tools** —
+`mnemo_story_list`, `mnemo_story_use`, `mnemo_position_get`,
+`mnemo_position_set`, `mnemo_save_entity`,
 `mnemo_recall`, `mnemo_list_entities`, `mnemo_delete_entity`,
 `mnemo_continue`, `mnemo_validate`, `mnemo_revalidate_scenes`,
+`mnemo_session_break`, `mnemo_status`,
 `mnemo_export_story`, and `mnemo_import_story`.
 `mnemo_continue(validate=true)` now tags scenes with their validation
 verdict, and the RECENT SCENES prompt block filters on it — the fix for
@@ -36,6 +38,8 @@ live-verification status per provider. Related docs:
   decisions and the reasoning behind them
 - [docs/DATA_LAYOUT.md](docs/DATA_LAYOUT.md) — canonical authoring layout,
   compile contract, and review-gated draft-overlay workflow
+- [docs/CANON_RULINGS.md](docs/CANON_RULINGS.md) — the register for
+  operator rulings that bind more than one story's canon authoring
 - [docs/LIVING_CANON_STANDARD.md](docs/LIVING_CANON_STANDARD.md) — ratified
   editorial minimum for complete, playable, provenance-backed story canon
 - [docs/OLLAMA_ADOPTION_ASSESSMENT.md](docs/OLLAMA_ADOPTION_ASSESSMENT.md)
@@ -151,14 +155,14 @@ instead, plus a REST API and the web UI at that port. Read
 
 **Web UI.** `npm run build` also builds the React app in `webui/` into
 `dist/webui/`, served automatically in HTTP mode. It covers the entity library
-and the continue/validate flow; entity editing and the remaining
+(browse/detail/edit/delete) and the continue/validate flow; the remaining
 [WEBUI_NOTES](docs/WEBUI_NOTES.md) slices are not built. For UI development,
 `npm --prefix webui run dev` runs Vite with `/api/*` proxied to the server
 started by `npm run dev`.
 
 ## Stack
 
-- TypeScript (Node 24+, ESM, `NodeNext` module resolution)
+- TypeScript (Node >=26, ESM, `NodeNext` module resolution)
 - `@modelcontextprotocol/sdk` (high-level `McpServer` API)
 - `zod` for tool input schemas
 - `vitest` for tests
@@ -166,19 +170,21 @@ started by `npm run dev`.
 ## HTTP Trust Boundary
 
 The default stdio transport treats explicit import/export paths as local
-operator capabilities. The HTTP server currently exposes the same tool
-schemas, including `mnemo_import_story(file_path)` and
-`mnemo_export_story(out_path)`. Until transport-specific path confinement is
-implemented, do not give an untrusted or third-party HTTP host the unrestricted
-tool surface. Loopback binding, Host/Origin checks, and bearer authentication
-reduce who can connect; they do not turn arbitrary server-side paths into a
-safe remote capability. See the
+operator capabilities. The HTTP server exposes the same tool schemas,
+including `mnemo_import_story(file_path)` and `mnemo_export_story(out_path)`
+— but both flatly refuse a caller-supplied path over HTTP
+(`assertFilesystemPathAllowed()` in `src/tools/helpers.ts`, wired in
+`src/index.ts` via `allowFilesystemPaths = httpConfig.port === undefined`).
+That guard covers filesystem paths specifically; it is not a substitute for
+restricting who can reach the HTTP transport at all. Loopback binding,
+Host/Origin checks, and bearer authentication remain the controls for that.
+See the
 [NemoClaw assessment](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md#1-constrain-filesystem-authority-by-transport).
 
 ## Common Commands
 
 ```bash
-npm ci                 # deterministic install (Node 24, npm 11.19.0)
+npm ci                 # deterministic install (Node >=26, npm 11.19.0)
 npm run build          # compile server + build/copy Web UI into dist/
 npm run dev            # tsx src/index.ts
 npm run typecheck      # tsc -p tsconfig.typecheck.json (src + tests)
@@ -195,17 +201,24 @@ first so the script can use the runtime's real import parser and preflight:
 npm run build:server
 node scripts/compile-story.mjs <story-slug> --check
 node scripts/verify-draft-overlay.mjs <story-slug>
+node scripts/promote-overlay.mjs <story-slug> --revision <label> --all
 ```
 
 The check compiles `data/stories/<story-slug>/canon/` in memory and performs
 zero writes. Pass `--dir <path>` for a staged canon-shaped tree. The `--out
 <file>` mode exclusively creates a checked `mnemosyne_export:1` artifact
 without importing it. See [docs/DATA_LAYOUT.md](docs/DATA_LAYOUT.md) for the
-authoring mapping and rejection rules. The overlay verifier checks the exact
+authoring mapping and rejection rules and
+[docs/CANON_RULINGS.md](docs/CANON_RULINGS.md) for the fleet-wide rulings
+that bind more than one story. The overlay verifier checks the exact
 manifest, baseline/draft hashes, active/isolated/merged structures, and merged
-import preflight; it performs no promotion or import.
+import preflight; it performs no promotion or import. `promote-overlay.mjs`
+is the only path from a verified `drafts/` overlay into active `canon/` —
+run as shown (no `--apply`) it only plans and writes nothing; add `--apply
+--approved-by <name>` to actually promote, which takes a content backup
+first and restores automatically on any failure.
 
-`npm test` green does **not** mean the integration surface ran. 64 of the 482
+`npm test` green does **not** mean the integration surface ran. 91 of the 708
 tests are env-gated and skip unless their variables are exported **into the
 shell** — `vitest.config.ts` loads no dotenv, so a populated `.env` does not
 enable them. Use `OC_URL=...` for the OpenChronicle suites, adding
