@@ -155,10 +155,21 @@ shipped 2026-08-29, route-field-through-results genuinely still open (no
   (`applyPositionUpdate`) initially survived because the test asserted
   only the in-memory return value, which stays correct via object-spread
   even when the persisted write drops the field; fixed to re-fetch via
-  `findStory` before any later write could mask it. **Slice 2 next**:
-  per-provider `contentCapability` + env vars. **Slice 3 after that**:
-  the gate in `dispatchGenerate()`. Unblocks "Ollama generator
-  local-by-default" (Ollama-table row above).
+  `findStory` before any later write could mask it. **Slice 2 done,
+  2026-09-08** (`f546f1c`): `LlmProvider.contentCapability` on every
+  provider (getter over config, mirroring `name`); four new env vars
+  (`OLLAMA_CONTENT_CAPABILITY`/`KINDROID_CONTENT_CAPABILITY`/
+  `BOTIFY_CONTENT_CAPABILITY`/`ATLASCLOUD_CONTENT_CAPABILITY`), each
+  default `sfw`; anthropic/openai/gemini hardcoded `sfw` with no env var
+  at all, per ratified decision 4. No test file exists for
+  `generator-config.ts` (a pre-existing gap, not new scope for this
+  slice), so the one genuinely risky branch -- only atlascloud reads an
+  override -- was verified by executing the real module with real env
+  vars via a throwaway probe script, not just read: all 7 provider/
+  override combinations resolved correctly, and an invalid value failed
+  startup with the expected actionable error. **Slice 3 next**: the gate
+  in `dispatchGenerate()`. Unblocks "Ollama generator local-by-default"
+  (Ollama-table row above).
 
 **Phase 4 — query-enrichment fixture labeling (operator-owned).**
 RETRIEVAL_CONTROLS_DESIGN slice 3's settled-fixtures benchmark needs
