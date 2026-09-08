@@ -77,9 +77,10 @@ seven live story markers were read for real (not just synthetic tests)
 via `mcp__openchronicle__memory_search`, confirming schema-3, zero
 position lines, parsing cleanly with `position: undefined` -- the real
 backward-compat case this feature needed to handle. One test-artifact OC
-project (`mnemosyne-test-position-*`, from an earlier interrupted manual
-test run this session) was found alongside the seven and left in place
-pending operator confirmation before deleting a live OC project.
+project (`mnemosyne-test-position-*`, `e0bc0777-cbb8-4fbf-96a4-ee6aac3df98c`,
+from an earlier interrupted manual test run this session) was found
+alongside the seven; flagged rather than deleted unilaterally, then
+removed on operator confirmation (`project_delete`, 1 memory).
 
 **Position tracking, slice 4, shipped (2026-09-07) -- the feature is
 complete.** `mnemo_continue` (and the REST `/stories/:storyId/continue`
