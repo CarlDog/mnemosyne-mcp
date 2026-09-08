@@ -28,9 +28,22 @@ never rehashes an overlay. **Seat 10 (substitution) is also ratified**
 (2026-09-04, same day, Ruling 2 in `docs/CANON_RULINGS.md`): "Substitute the
 canon name before promotion, never at promotion." Three stories are moot
 (Brass & Nerve, Midnight, Noctis Veil's GC/MT threads — Ruling 1 already keeps
-their scenes source-era); the Black Ledger remains mechanically actionable,
-not yet run. **Both the Adjustment Protocol's and Shadowflame's own thirteen
-Decides are fully executed (2026-09-08).** Shadowflame's pass ratified the
+their scenes source-era). **All three remaining non-flagship stories'
+thirteen-Decide reconciliation passes are fully executed (2026-09-08):
+Adjustment Protocol, Shadowflame, and the Black Ledger.** The Black Ledger's
+pass was this story's first-ever Living Canon review (a 2026-08-26 pass had
+run directly against live OpenChronicle, never scored or sealed): declared
+`canon/` the master over a byte-diverged live OC copy (`README.md`),
+ratified the 2026-08-26 pass's unplayed inventions, reconciled all ten
+scenes into the ledgers, dated the Mara thread at 4 ABY, split `rules.md`
+(321 → 97 pinned lines, ~225 moved to `_control/AUTHORING_GUIDES.md`), and
+substituted the operator's real name -- which turned out to be addressed
+pervasively across a 190-message scene, not just the two lines the audit's
+own summary flagged, caught by a direct grep-tally. `overlay.json` resealed
+at 62 entries (was 10 -- this story had no non-scene overlay before), 75
+merged entities, both `verify-draft-overlay.mjs` and `verify-references.mjs`
+clean. Full record in `star-wars-the-black-ledger/drafts/_control/PASS.md`
+("Re-seal 2026-09-08") and `LCS_SCORECARD.md`. Shadowflame's pass ratified the
 played ballroom-explosion reading (closing it as Lilith's own chamber-wall
 blast, not a mystery), corrected a burned-note error and a Day-6 ordering
 error across several ledgers, restored Lady Elaea's particulars, resolved two
