@@ -1,14 +1,14 @@
 # External-System Research Decision Queue
 
-**Status:** Reconciliation artifact, created 2026-08-28. The four adoption
-assessments (Ollama, OpenClaw, Open WebUI, NemoClaw) were read end-to-end and
-triaged on 2026-08-28 (see [STATUS.md](../STATUS.md)'s Done log); that entry
-claims "a decision queue of 20 live proposals" without enumerating it. This
-document is that enumeration: every row of the four docs' recommendation
-tables, with its current disposition. **Nothing here is ratified.** An "open
-candidate" becomes work only by explicit operator decision, and the
-2026-08-28 pause ("next direction deliberately unset, shaped by live use")
-stands.
+**Status:** Reconciliation artifact, created 2026-08-28, last revised
+2026-09-08. The four adoption assessments (Ollama, OpenClaw, Open WebUI,
+NemoClaw) were read end-to-end and triaged on 2026-08-28 (see
+[STATUS.md](../STATUS.md)'s Done log); that entry claims "a decision queue
+of 20 live proposals" without enumerating it. This document is that
+enumeration: every row of the four docs' recommendation tables, with its
+current disposition. **Nothing here is ratified.** An "open candidate"
+becomes work only by explicit operator decision, and the 2026-08-28 pause
+("next direction deliberately unset, shaped by live use") stands.
 
 Dispositions:
 
@@ -58,10 +58,10 @@ now says so.
 | — | Ollama *generator* local-by-default (assessment §2's second half: expose Ollama Cloud only as an explicit named route with content-routing semantics) | **Open candidate** — deliberately not folded into the validator P0; needs the content-routing design |
 | P0 | Schema-constrained + runtime-validated validator verdicts (Ollama `format` + strict runtime schema) | **Shipped 2026-08-28** — strict zod report schema replaces the permissive fallback (malformed verdict throws, never reads clean); Ollama sends the literal JSON Schema as top-level `format` via a narrow `StructuredOutputCapable` surface, live-verified against the deployed daemon (0.32.15); drift guard pins the two schema copies together; `tests/validator-schema.test.ts`. Validator `think: false` deliberately deferred pending its own compatibility verification per the doc's sequencing |
 | — | Cloud providers adopt the `complete`/`finishReason` contract | **Shipped 2026-08-28** — all four cloud providers (Anthropic `max_tokens`, OpenAI-compat/Atlas `length`, Gemini `MAX_TOKENS`) now map their finish reasons through one shared `completionFromFinishReason()` normalizer, so a truncated cloud beat hits the same no-auto-save guard as Ollama; kindroid/botify report nothing (no truncation concept), treated as complete by design |
-| P1 | Model-aware, fail-closed context admission (`/api/show` profile, `truncate:false`/`shift:false`) | Open candidate — designed as part of [CONTEXT_PLAN_DESIGN.md](CONTEXT_PLAN_DESIGN.md) (this row and the OpenClaw ContextPlan row are one design) |
+| P1 | Model-aware, fail-closed context admission (`/api/show` profile, `truncate:false`/`shift:false`) | **Shipped 2026-08-28** — this row and the OpenClaw ContextPlan row (below) are one design; [CONTEXT_PLAN_DESIGN.md](CONTEXT_PLAN_DESIGN.md) slices 1–2. Verified against code 2026-09-08: `truncate: false`/`shift: false` are set on every Ollama request in `src/ollama-provider.ts` |
 | P1 | Typed native request/response contract | **Partially shipped** — `ebb6d36` fixed numeric `keep_alive` and pinned placement/shape in tests; the typed-error half **shipped 2026-08-29**: `classifyOllamaHttpError` (404 exact-tag, `exceed_context_size_error` with the daemon's counts, 429/503 no-auto-retry) + configurable `OLLAMA_TIMEOUT_MS` with a no-blind-retry timeout message. The remaining builder/parser extraction is refactoring with no behavior gap |
-| P1 | Stable `num_ctx`, preload without inference (empty-message load), `/api/ps` residency | Open candidate — designed as part of [CONTEXT_PLAN_DESIGN.md](CONTEXT_PLAN_DESIGN.md) slice 2 (stable-context policy is that design's decision #1) |
-| P1 | Consume native usage/route/error metadata | **Partially shipped 2026-08-28** — the usage/timing half landed with the `ModelUsage` envelope (exact tokens + ns→ms load/eval durations). Still open: carrying route fields through results, and the typed error classification (missing model / capability mismatch / 429/503 / timeout / abort mapping, configurable timeout) |
+| P1 | Stable `num_ctx`, preload without inference (empty-message load), `/api/ps` residency | **Shipped 2026-08-28** — [CONTEXT_PLAN_DESIGN.md](CONTEXT_PLAN_DESIGN.md) slice 2, decision #1. Verified against code 2026-09-08: stable per-model `num_ctx` and the warmup/`/api/ps` plumbing are both in `src/ollama-provider.ts` |
+| P1 | Consume native usage/route/error metadata | **Partially shipped** — usage/timing landed 2026-08-28 (`ModelUsage` envelope, exact tokens + ns→ms load/eval durations); typed error classification landed 2026-08-29 (`classifyOllamaHttpError`, see the row above). **Still genuinely open** (verified against code 2026-09-08: neither `ModelUsage` nor `GeneratedBeat` carries a `route` field): carrying route fields through results |
 | P2 | Bounded preflight/diagnostics + deployment guidance | Open candidate |
 
 ## NemoClaw ([NEMOCLAW_ADOPTION_ASSESSMENT.md](NEMOCLAW_ADOPTION_ASSESSMENT.md))
@@ -100,24 +100,54 @@ now says so.
 
 ## Ranked next-up, if and when the pause ends
 
-Dependency-and-severity order from the docs' own rankings — a menu, not a
-schedule:
+The 2026-08-28 pause stands: "next direction deliberately unset, shaped by
+live use." What follows is a punch list for whenever the pause lifts, not
+a schedule. Recorded 2026-09-08 after finding this section itself had
+drifted — it named NemoClaw P1×2 and the OpenClaw §7 remainder as still
+open when the tables above already showed both shipped, and two
+Ollama-table ContextPlan rows the same way. That drift is what Phase 1
+below fixed.
 
-1. ~~**Ollama P0 ×3**~~ — all three shipped 2026-08-28 (completion
-   integrity, validator locality, schema-validated verdicts — see the
-   Ollama table above). No P0 remains anywhere in the set.
-2. ~~**NemoClaw §1 integration test**~~ — shipped 2026-08-28 (see above).
-3. **NemoClaw P1 ×2** — sibling-MCP contract validation, then semantic
-   readiness (readiness builds on the discovery machinery). The largest
-   remaining items; each wants its own design pass before code.
-4. ~~**Privacy-safe logging**~~ — the logging half shipped 2026-08-28 (see
-   the OpenClaw table); the §7 remainder (shutdown ownership, OC retry
-   classification, atomic config writes, final-sink redaction) stays open.
-5. ~~**Usage telemetry**~~ — shipped 2026-08-28 (see the Open WebUI
-   table). (Cloud finish-reason adoption, added later, also shipped
-   2026-08-28.) Every item on this ranked list is now shipped except the
-   §7 operational-safety remainder.
-6. Everything else waits for its documented trigger.
+**Phase 1 — doc accuracy (this revision, done).** Corrected five stale
+disposition claims by checking real code, not just re-reading tables:
+NemoClaw P1×2 and the OpenClaw §7 remainder (both already shipped, this
+section hadn't caught up); the two Ollama-table ContextPlan rows
+(model-aware context admission; stable `num_ctx`/preload/`/api/ps` — both
+shipped via CONTEXT_PLAN_DESIGN slices 1–2, confirmed against
+`src/ollama-provider.ts`); and the "consume native usage/route/error
+metadata" row, split into its true state — typed error classification
+shipped 2026-08-29, route-field-through-results genuinely still open (no
+`route` field exists on `ModelUsage`/`GeneratedBeat`).
+
+**Phase 2 — triage before any code.**
+- 2a. Ollama P2 "bounded preflight/diagnostics + deployment guidance" has
+  no design behind it. Read the assessment's own P2 text, then either
+  scope a real subphase or reject at triage like its siblings.
+- 2b. Re-confirm the two correctly-Parked items still have unmet
+  prerequisites (Open WebUI's recoverable-runs/SSE: no incident has ever
+  justified it; OpenClaw's provenance-bound proposals: needs an OC
+  compare-and-set contract that doesn't exist). Expected to stay parked —
+  a confirmation pass, not a redesign.
+
+**Phase 3 — content-routing design gate.**
+- 3a. Refresh `CONTENT_ROUTING_DESIGN.md` against current architecture and
+  put it up for an explicit ratify/reject/revise decision — the same
+  discuss-before-code gate CONTEXT_PLAN_DESIGN, RUN_OUTCOMES_DESIGN,
+  GENERATOR_CAPABILITIES_DESIGN, and RETRIEVAL_CONTROLS_DESIGN each went
+  through before any of them shipped a line.
+- 3b. Conditional on ratification only: implement in slices, same pattern
+  as those four designs, each slice its own commit + tests. This is what
+  unblocks "Ollama generator local-by-default" (Ollama-table row above).
+
+**Phase 4 — query-enrichment fixture labeling (operator-owned).**
+RETRIEVAL_CONTROLS_DESIGN slice 3's settled-fixtures benchmark needs
+operator-labeled expected-entity fixtures before `MNEMO_QUERY_ENRICHMENT`
+can get a real win/no-win verdict (see the OpenClaw table's retrieval-
+controls row). 4a: generate a labeling worksheet from the existing corpus
+— candidate labels to correct, not a blank page — to lower the labeling
+burden. 4b: operator reviews/corrects the candidates — genuinely their
+call, not something to automate. 4c: run the benchmark, record the
+verdict in the design doc, decide the flag's state accordingly.
 
 The ~60 explicit non-adoptions across the four docs are not restated here;
 each doc's own "Explicit non-adoptions" table remains authoritative for what
