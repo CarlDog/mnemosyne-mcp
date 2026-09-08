@@ -28,15 +28,21 @@ never rehashes an overlay. **Seat 10 (substitution) is also ratified**
 (2026-09-04, same day, Ruling 2 in `docs/CANON_RULINGS.md`): "Substitute the
 canon name before promotion, never at promotion." Three stories are moot
 (Brass & Nerve, Midnight, Noctis Veil's GC/MT threads — Ruling 1 already keeps
-their scenes source-era); Shadowflame and the Black Ledger are mechanically
-actionable now (canon name already in hand, bundle with each story's other
-pending Ruling-1 corrections since both rehash the same overlay); **the
-Adjustment Protocol is blocked on one name** — its lead scientist (ER + AN
-threads, 42 of 43 scene files) is played under the operator's own name and
-canon holds no role for it, so there is nothing to substitute in, and the name
-must not be Renshaw (a separate, already-played character in the same story).
-Inventing that name is explicitly the operator's call, not a drafting pass's.
-Two things remain open and unrelated to either ruling: the recording-marker
+their scenes source-era); Shadowflame and the Black Ledger remain mechanically
+actionable, not yet run. **The Adjustment Protocol's own thirteen Decides are
+fully executed (2026-09-08).** The lead scientist's name (Dr. Edmund Halloway,
+supplied 2026-09-07) unblocked the substitution; the full bundled
+reconciliation then ran in one pass — 30 of 43 scene files substituted (AL
+correctly untouched, off-premise), the current-state ledger/relationship
+geometry/knowledge map reconciled against played scenes, eight worldbuilding
+system files plus a timeline plus seven locations plus four objects plus two
+arc records plus a consequence ledger written, five characters promoted to
+recurring tier and a sixth (Halloway) added at core tier where none existed,
+`rules.md`/`style.md` raised to the floor, and `overlay.json` resealed (92
+entries, verified clean). Full record in that story's `drafts/_control/PASS.md`
+("Re-seal 2026-09-08") and `LCS_SCORECARD.md`'s before/after regrade — every
+dimension reaches 2 except reference families (0, deliberately deferred). Two
+things remain open and unrelated to either ruling: the recording-marker
 format for a revised/substituted claim (parked — write corrected prose now,
 invent no marker form), and the Noctis Veil's SL/KM threads (10 scenes), which
 carry no tier decide at all under either ruling. Otherwise nothing is in
