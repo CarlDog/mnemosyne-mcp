@@ -76,8 +76,16 @@ const PATTERNS: Pattern[] = [
   },
   {
     label: "meta-instruction-reference",
+    // "instructions" (not "instructions?") deliberately: singular "your
+    // instruction" is common, benign narrative English for the teaching/
+    // schooling sense ("guide your instruction here at the academy") and
+    // was measured as this scanner's one false positive in a 513-scene
+    // corpus (docs/NARRATOR_EVAL.md). The injection sense — a set of
+    // system-prompt-like rules — is reliably plural ("your new
+    // instructions"); requiring the "s" removes that specific false
+    // positive without narrowing what the pattern is meant to catch.
     regex:
-      /\byour (?:new |own |real )?(?:instructions?|rules?|system prompt|directives?|guidelines?)\b/i,
+      /\byour (?:new |own |real )?(?:instructions|rules?|system prompt|directives?|guidelines?)\b/i,
   },
   {
     label: "reply-format-directive",
