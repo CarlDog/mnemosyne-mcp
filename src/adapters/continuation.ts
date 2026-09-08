@@ -50,6 +50,7 @@ export function createContinuationAdapter(
 ): ContinuationPort {
   return {
     generatorName: generator.name,
+    contentCapability: generator.contentCapability,
     admissionMode: admissionModeFromEnv(),
     defaultMaxTokens: DEFAULT_MAX_TOKENS,
     contextMarginTokens: NUM_CTX_MARGIN_TOKENS,

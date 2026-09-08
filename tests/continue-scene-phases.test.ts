@@ -35,6 +35,7 @@ function basePort(overrides: Partial<ContinuationPort> = {}): ContinuationPort {
   };
   return {
     generatorName: "ollama",
+    contentCapability: "sfw",
     admissionMode: "warn",
     defaultMaxTokens: 512,
     contextMarginTokens: 0,
@@ -201,5 +202,142 @@ describe("continueScene position-write relabeling (gatherAndPlan phase)", () => 
 
     expect(port.applyPosition).not.toHaveBeenCalled();
     expect(result.yielded_to_user).toBe(true);
+  });
+});
+
+describe("content-routing gate (docs/CONTENT_ROUTING_DESIGN.md, ratified 2026-09-08)", () => {
+  function contextWith(
+    contentRating: "sfw" | "nsfw" | undefined,
+  ): ContextBundle {
+    return {
+      ...EMPTY_CONTEXT,
+      ...(contentRating && { content_rating: contentRating }),
+    };
+  }
+
+  it("refuses before dispatch when an nsfw-rated story hits an sfw-only provider", async () => {
+    const generate = vi.fn(async () => {
+      throw new Error("unexpected call: generate");
+    });
+    const port = basePort({
+      contentCapability: "sfw",
+      gatherContext: vi.fn(async () => contextWith("nsfw")),
+      generate,
+    });
+
+    await expect(
+      continueScene(port, "story-1", {
+        direction: "go on",
+        sceneStrategy: "recency-first",
+        reinvokeHint: "call again",
+      }),
+    ).rejects.toMatchObject({
+      outcome: "rejected_before_dispatch",
+      retry_safe: true,
+      message: expect.stringContaining("requires an nsfw content rating"),
+    });
+    expect(generate).not.toHaveBeenCalled();
+  });
+
+  it("succeeds when an nsfw-rated story hits an nsfw-capable provider", async () => {
+    const port = basePort({
+      contentCapability: "nsfw",
+      gatherContext: vi.fn(async () => contextWith("nsfw")),
+      generate: vi.fn(async () => ({ text: "A beat." })),
+      saveScene: vi.fn(async () => ({ memory_id: "m1", tags: [] })),
+    });
+
+    const result = await continueScene(port, "story-1", {
+      direction: "go on",
+      sceneStrategy: "recency-first",
+      reinvokeHint: "call again",
+    });
+    expect(result.beat_text).toBe("A beat.");
+  });
+
+  it("succeeds when an sfw-rated story hits an sfw-only provider (the common case)", async () => {
+    const port = basePort({
+      contentCapability: "sfw",
+      gatherContext: vi.fn(async () => contextWith("sfw")),
+      generate: vi.fn(async () => ({ text: "A beat." })),
+      saveScene: vi.fn(async () => ({ memory_id: "m1", tags: [] })),
+    });
+
+    const result = await continueScene(port, "story-1", {
+      direction: "go on",
+      sceneStrategy: "recency-first",
+      reinvokeHint: "call again",
+    });
+    expect(result.beat_text).toBe("A beat.");
+    expect(result.content_rating_declared).toBeUndefined();
+  });
+
+  it("never blocks an undeclared rating, regardless of provider capability, and surfaces content_rating_declared:false", async () => {
+    for (const contentCapability of ["sfw", "nsfw"] as const) {
+      const port = basePort({
+        contentCapability,
+        gatherContext: vi.fn(async () => contextWith(undefined)),
+        generate: vi.fn(async () => ({ text: "A beat." })),
+        saveScene: vi.fn(async () => ({ memory_id: "m1", tags: [] })),
+      });
+
+      const result = await continueScene(port, "story-1", {
+        direction: "go on",
+        sceneStrategy: "recency-first",
+        reinvokeHint: "call again",
+      });
+      expect(result.beat_text).toBe("A beat.");
+      expect(result.content_rating_declared).toBe(false);
+    }
+  });
+
+  it("content_rating_declared:false also appears on the group-yield early return", async () => {
+    const port = basePort({
+      contentCapability: "sfw",
+      gatherContext: vi.fn(async () => contextWith(undefined)),
+      generate: vi.fn(async () => ({ text: "" })), // empty -> group-yield path
+    });
+
+    const result = await continueScene(port, "story-1", {
+      direction: "go on",
+      sceneStrategy: "recency-first",
+      reinvokeHint: "call again",
+    });
+    expect(result.yielded_to_user).toBe(true);
+    expect(result.content_rating_declared).toBe(false);
+  });
+
+  it("relabels the gate's refusal retry_safe:false when a position write already landed this call", async () => {
+    const port = basePort({
+      contentCapability: "sfw",
+      applyPosition: vi.fn(async () => {
+        // succeeds -- positionApplied becomes true
+      }),
+      gatherContext: vi.fn(async () => contextWith("nsfw")),
+      generate: vi.fn(async () => {
+        throw new Error("unexpected call: generate");
+      }),
+    });
+
+    let caught: unknown;
+    try {
+      await continueScene(port, "story-1", {
+        direction: "go on",
+        sceneStrategy: "recency-first",
+        reinvokeHint: "call again",
+        advance: { hours: 5 },
+      });
+      throw new Error("expected continueScene to throw");
+    } catch (err) {
+      caught = err;
+    }
+
+    expect(caught).toBeInstanceOf(RunOutcomeError);
+    const err = caught as RunOutcomeError;
+    expect(err.outcome).toBe("rejected_before_dispatch");
+    expect(err.retry_safe).toBe(false);
+    expect(err.message).toContain("requires an nsfw content rating");
+    expect(err.message).toContain("already applied to the story's position");
+    expect(err.message).toContain("was NOT rolled back");
   });
 });

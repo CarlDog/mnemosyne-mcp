@@ -37,6 +37,7 @@ import {
 import { findStory } from "./stories.js";
 import { currentStoryDatetime } from "./position.js";
 import type {
+  ContentRating,
   ContextBundle,
   PositionContext,
   SceneContextStrategy,
@@ -395,25 +396,40 @@ async function maybeEnrichReferenceQuery(
  * how long an abort can be delayed by it. Called only when
  * !options.validationOnly -- see GatherContextOptions.validationOnly.
  */
-async function resolvePosition(
+interface ResolvedStoryFields {
+  position?: PositionContext;
+  contentRating?: ContentRating;
+}
+
+/** Resolves the two story-marker-derived ContextBundle fields (position,
+ * content_rating) from ONE findStory call -- content_rating rides the
+ * exact fetch position already needed, at zero extra OC round trips
+ * (docs/CONTENT_ROUTING_DESIGN.md, ratified 2026-09-08). */
+async function resolveStoryFields(
   oc: OcClient,
   storyId: string,
-): Promise<PositionContext | undefined> {
+): Promise<ResolvedStoryFields> {
   const story = await findStory(oc, storyId);
-  if (!story?.position) return undefined;
-  const location = await getEntityByMemoryId(
-    oc,
-    storyId,
-    story.position.currentLocationId,
-  );
-  return {
-    current_story_datetime: currentStoryDatetime(story.position),
-    current_location: {
-      name:
-        location?.name ?? "(unknown -- this location entity no longer exists)",
-      ...(story.position.currentSpot && { spot: story.position.currentSpot }),
-    },
-  };
+  if (!story) return {};
+  const result: ResolvedStoryFields = {};
+  if (story.content_rating) result.contentRating = story.content_rating;
+  if (story.position) {
+    const location = await getEntityByMemoryId(
+      oc,
+      storyId,
+      story.position.currentLocationId,
+    );
+    result.position = {
+      current_story_datetime: currentStoryDatetime(story.position),
+      current_location: {
+        name:
+          location?.name ??
+          "(unknown -- this location entity no longer exists)",
+        ...(story.position.currentSpot && { spot: story.position.currentSpot }),
+      },
+    };
+  }
+  return result;
 }
 
 export interface GatherContextOptions {
@@ -549,9 +565,9 @@ export async function gatherContext(
     ...worldbuilding.map((e) => toContextEntry(e, "reference")),
   );
   // Generation-only (never validationOnly, handled by the early return
-  // above) -- see resolvePosition's doc comment for the two-round-trip cost
+  // above) -- see resolveStoryFields's doc comment for the round-trip cost
   // and why it isn't signal-threaded.
-  const position = await resolvePosition(oc, storyId);
+  const { position, contentRating } = await resolveStoryFields(oc, storyId);
   return {
     rules: rules.map(flattenEntity),
     style: style.map(flattenEntity),
@@ -562,5 +578,6 @@ export async function gatherContext(
     worldbuilding: worldbuilding.map(flattenEntity),
     entries,
     ...(position && { position }),
+    ...(contentRating && { content_rating: contentRating }),
   };
 }

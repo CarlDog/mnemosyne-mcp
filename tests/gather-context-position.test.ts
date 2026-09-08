@@ -1,12 +1,15 @@
-// gatherContext's position resolution against real OC
-// (docs/POSITION_TRACKING_DESIGN.md): the ContextBundle.position field is
-// populated only for generation contexts, resolves the current location's
-// name fresh, and costs zero extra reads when validationOnly or when the
-// story never opted in. Skipped unless OC_URL is set.
+// gatherContext's story-marker-derived field resolution against real OC:
+// position (docs/POSITION_TRACKING_DESIGN.md) and content_rating
+// (docs/CONTENT_ROUTING_DESIGN.md, ratified 2026-09-08), both resolved by
+// the SAME findStory call (resolveStoryFields in prompt.ts) -- so
+// content_rating rides position's existing zero-extra-cost fetch rather
+// than adding one. Both fields: populated only for generation contexts,
+// absent when validationOnly or when the story never opted in. Skipped
+// unless OC_URL is set.
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { OcClient } from "../src/oc-client.js";
-import { createStory } from "../src/stories.js";
+import { createStory, setContentRating, findStory } from "../src/stories.js";
 import { saveEntity } from "../src/entities.js";
 import { registerPositionTool } from "../src/tools/position.js";
 import { gatherContext } from "../src/prompt.js";
@@ -118,5 +121,33 @@ suite("gatherContext position resolution (real OC)", () => {
       validationOnly: true,
     });
     expect(context.position).toBeUndefined();
+  });
+
+  it("content_rating is absent when the story has no declared rating", async () => {
+    const context = await gatherContext(oc, storyId, "Continue.");
+    expect(context.content_rating).toBeUndefined();
+  });
+
+  it("resolves content_rating once declared, alongside position -- one fetch serves both", async () => {
+    const story = await findStory(oc, storyId);
+    await setContentRating(oc, story!, "nsfw");
+
+    const context = await gatherContext(oc, storyId, "Continue.");
+    expect(context.content_rating).toBe("nsfw");
+    // Position (set earlier in this suite) survives the unrelated
+    // setContentRating rewrite -- the same round-trip-preservation
+    // property tests/stories.test.ts already pins, confirmed here from
+    // the read side too.
+    expect(context.position).toEqual({
+      current_story_datetime: "2026-10-04T06:00:00.000Z",
+      current_location: { name: "The Porch (Rebuilt)" },
+    });
+  });
+
+  it("content_rating is skipped by validationOnly too", async () => {
+    const context = await gatherContext(oc, storyId, "Continue.", {
+      validationOnly: true,
+    });
+    expect(context.content_rating).toBeUndefined();
   });
 });
