@@ -28,9 +28,21 @@ never rehashes an overlay. **Seat 10 (substitution) is also ratified**
 (2026-09-04, same day, Ruling 2 in `docs/CANON_RULINGS.md`): "Substitute the
 canon name before promotion, never at promotion." Three stories are moot
 (Brass & Nerve, Midnight, Noctis Veil's GC/MT threads — Ruling 1 already keeps
-their scenes source-era); Shadowflame and the Black Ledger remain mechanically
-actionable, not yet run. **The Adjustment Protocol's own thirteen Decides are
-fully executed (2026-09-08).** The lead scientist's name (Dr. Edmund Halloway,
+their scenes source-era); the Black Ledger remains mechanically actionable,
+not yet run. **Both the Adjustment Protocol's and Shadowflame's own thirteen
+Decides are fully executed (2026-09-08).** Shadowflame's pass ratified the
+played ballroom-explosion reading (closing it as Lilith's own chamber-wall
+blast, not a mystery), corrected a burned-note error and a Day-6 ordering
+error across several ledgers, restored Lady Elaea's particulars, resolved two
+in-continuity name collisions by renaming Shadowflame's own characters
+(Seraphine Vale → Auriel Wynter, Ansel Greaves → Ansel Hollis — no story event,
+canon left untouched per the same legacy-slug precedent below), fixed a
+two-line bot naming slip to Karl's own existing canon name, and added four
+worldbuilding files, a timeline, a consequence ledger, and two object records;
+`overlay.json` resealed at 111 entries (was 99), verified clean. Full record in
+`shadowflame/drafts/_control/PASS.md` ("Re-seal 2026-09-08") and
+`LCS_SCORECARD.md`. For the Adjustment Protocol: the lead scientist's name
+(Dr. Edmund Halloway,
 supplied 2026-09-07) unblocked the substitution; the full bundled
 reconciliation then ran in one pass — 30 of 43 scene files substituted (AL
 correctly untouched, off-premise), the current-state ledger/relationship
