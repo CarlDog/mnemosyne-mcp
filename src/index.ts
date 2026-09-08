@@ -11,7 +11,8 @@ import { apiSecurity } from "./api-security.js";
 import { createApiRouter } from "./api/index.js";
 import { log } from "./log.js";
 import { OcClient } from "./oc-client.js";
-import { OllamaProvider, type LlmProvider } from "./llm.js";
+import type { LlmProvider } from "./llm.js";
+import { OllamaProvider } from "./ollama-provider.js";
 import { DEFAULT_TIMEOUT_MS, KindroidClient } from "./kindroid-client.js";
 import {
   DEFAULT_GROUP_MAX_TURNS,

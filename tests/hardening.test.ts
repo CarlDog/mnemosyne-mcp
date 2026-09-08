@@ -11,7 +11,8 @@
 
 import { describe, it, expect, vi } from "vitest";
 import { parseServiceUrl, describeServiceUrl } from "../src/service-url.js";
-import { classifyOllamaHttpError, OllamaProvider } from "../src/llm.js";
+import { classifyOllamaHttpError } from "../src/llm.js";
+import { OllamaProvider } from "../src/ollama-provider.js";
 import { log } from "../src/log.js";
 
 describe("parseServiceUrl", () => {

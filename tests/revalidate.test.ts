@@ -13,7 +13,7 @@
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import type { OcClient } from "../src/oc-client.js";
-import { OllamaProvider } from "../src/llm.js";
+import { OllamaProvider } from "../src/ollama-provider.js";
 import { saveEntity, recall } from "../src/entities.js";
 import { createSceneRevalidationAdapter } from "../src/adapters/scene-validation.js";
 import { setupTestStory, teardownStory } from "./helpers.js";

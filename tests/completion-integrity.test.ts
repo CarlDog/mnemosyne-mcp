@@ -10,7 +10,8 @@
 //      verdict instead of parsing possibly-truncated JSON into a report.
 
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { OllamaProvider, type LlmProvider } from "../src/llm.js";
+import type { LlmProvider } from "../src/llm.js";
+import { OllamaProvider } from "../src/ollama-provider.js";
 import { continueScene } from "./helpers/application.js";
 import { validateContent } from "../src/validator.js";
 import type { OcClient, OcMemory } from "../src/oc-client.js";

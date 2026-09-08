@@ -19,11 +19,11 @@ import {
   VALIDATION_REPORT_JSON_SCHEMA,
 } from "../src/validator.js";
 import {
-  OllamaProvider,
   type GeneratedBeat,
   type LlmGenerateOptions,
   type LlmProvider,
 } from "../src/llm.js";
+import { OllamaProvider } from "../src/ollama-provider.js";
 import type { ContextBundle } from "../src/prompt.js";
 
 const emptyContext: ContextBundle = {

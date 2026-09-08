@@ -14,7 +14,6 @@
 // source of truth).
 
 import {
-  OllamaProvider,
   supportsStructuredOutput,
   MIN_TEMPERATURE,
   MAX_TEMPERATURE,
@@ -22,6 +21,7 @@ import {
   MAX_GENERATION_TOKENS,
   type LlmProvider,
 } from "./llm.js";
+import { OllamaProvider } from "./ollama-provider.js";
 
 export type RangeCapability =
   | { supported: true; min: number; max: number; passthrough_only: boolean }

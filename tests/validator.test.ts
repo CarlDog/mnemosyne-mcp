@@ -2,7 +2,7 @@
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import type { OcClient } from "../src/oc-client.js";
-import { OllamaProvider } from "../src/llm.js";
+import { OllamaProvider } from "../src/ollama-provider.js";
 import { saveEntity } from "../src/entities.js";
 import { gatherContext } from "../src/prompt.js";
 import { parseValidatorJson, validateContent } from "../src/validator.js";

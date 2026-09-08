@@ -9,11 +9,8 @@
 //     response, and the envelope is absent when nothing reported.
 
 import { describe, it, expect, vi, afterEach } from "vitest";
-import {
-  OllamaProvider,
-  computeTotalTokens,
-  type LlmProvider,
-} from "../src/llm.js";
+import { computeTotalTokens, type LlmProvider } from "../src/llm.js";
+import { OllamaProvider } from "../src/ollama-provider.js";
 import { extractAnthropicText } from "../src/anthropic-provider.js";
 import { extractChatCompletionText } from "../src/openai-compat-provider.js";
 import { extractGeminiText } from "../src/gemini-provider.js";
