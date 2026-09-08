@@ -44,12 +44,18 @@ already tracked, so a report describing one is not a new finding:
   providers do have a real system-prompt channel and already neutralize
   their own section delimiters.
 
-- **Filesystem authority is not confined by transport.** `mnemo_import_story`
-  and `mnemo_export_story` accept caller-supplied paths, and the HTTP
-  transport currently exposes the same tool surface as stdio. This is
-  documented in [the README](README.md#http-trust-boundary) and analysed in
-  [the NemoClaw assessment](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md#1-constrain-filesystem-authority-by-transport).
-  **Do not expose the HTTP transport to an untrusted host.**
+- **Filesystem authority is confined by transport for the two path-bearing
+  tools, but exposure control still matters.** `mnemo_import_story` and
+  `mnemo_export_story` accept caller-supplied paths; both flatly refuse them
+  over the HTTP transport (`assertFilesystemPathAllowed()` in
+  `src/tools/helpers.ts`) while stdio, a local-operator capability, keeps
+  full access. Any future path-bearing tool must wire the same guard --
+  see [the README](README.md#http-trust-boundary) and
+  [the NemoClaw assessment](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md#1-constrain-filesystem-authority-by-transport)
+  for the full boundary this guard does and does not cover.
+  **Still do not expose the HTTP transport to an untrusted host** --
+  the guard closes filesystem paths specifically, not the rest of the tool
+  surface.
 - **Host/Origin allowlisting and bearer auth are the HTTP defences.** They
   govern who may connect; they do not make caller-selected server-side paths
   safe. See `MCP_ALLOWED_HOSTS` and `MCP_AUTH_TOKEN` in
