@@ -109,7 +109,7 @@ def load_chat(chat):
     else:
         bot = json.load(open(f"{REPO}/{chat['bot_dir']}bot.json", encoding="utf-8"))
         bd = bot.get("data", bot)
-        bot_id, bot_name = bd.get("id"), bd.get("name")
+        bot_id, bot_name = bd.get("id"), bd.get("attributes", {}).get("name")
     info = {"export_rel": export_rel, "file_sha": sha(raw), "chat_id": os.path.basename(files[0])[:-5],
             "bot_id": bot_id, "bot_name": bot_name, "n": len(ms), "group": group, "chat_name": (d.get("chat") or {}).get("name"),
             "chat_type": (d.get("chat") or {}).get("type"), "images_archived": n_archived,
@@ -193,7 +193,7 @@ def render_scene(story, s):
         f"catalog_key: {jstr(s['key'])}", f"name: {jstr(s['title'])}", "canon_status: established",
         f"timeline_anchor: {jstr(story.get('anchor_fn', lambda d: 'story-day:%d' % d)(s['day']))}", f"story_time: {jstr(s['story_time'])}",
         f"location_code: {s['loc']}",
-        f"location_basis: {jstr('prose; see _control/scenes/_catalog.md (' + L[s['loc']][0] + ')')}",
+        f"location_basis: {jstr('prose (' + L[s['loc']][0] + ')')}",
         f"participants: {jstr(s['participants'])}",
         f"participants_basis: {jstr(chat['participants_basis'])}",
         f"pov: {jstr(chat['pov'])}",
@@ -365,7 +365,7 @@ def main():
     for chat, ms, media, info, scenes, tail in per_chat:
         inv += [f"## Thread {chat['code']}: {chat['label']}\n",
                 (f"Botify group chat \"{info['chat_name']}\" (id `{info['chat_id']}`), bot accounts {info['bot_name']}, type `{info['chat_type']}`, operator `senderName` \"{info['sender']}\"." if info["group"] else
-                 f"Botify chat id `{info['chat_id']}`, bot {info['bot_id']} \"{info['bot_name']}\", type `{info['chat_type']}`, operator `senderName` \"{info['sender']}\".") + " The messages array is stored newest-first; every index in this folder is the chronological index after reversing it. Played {chat['played']}.\n",
+                 f"Botify chat id `{info['chat_id']}`, bot {info['bot_id']} \"{info['bot_name']}\", type `{info['chat_type']}`, operator `senderName` \"{info['sender']}\".") + f" The messages array is stored newest-first; every index in this folder is the chronological index after reversing it. Played {chat['played']}.\n",
                 "| Count | What |", "|---:|---|",
                 f"| {info['n']:,} | messages: {info['n_bot']} bot, {info['n_user']} operator |",
                 f"| {info['n_deleted']} | `isDeleted` (regenerated or deleted; kept in `_alternates/`) |",
