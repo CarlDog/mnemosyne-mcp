@@ -2,19 +2,14 @@
 // (docs/POSITION_TRACKING_DESIGN.md, ratified 2026-09-07). Thin marker-level
 // tools -- no application-layer use case, matching registerStoryTools'
 // shape -- since the real logic (merge semantics, elapsed-hours arithmetic,
-// the atomic invariant) already lives in stories.ts, pure and unit-tested.
+// the atomic invariant) already lives in position.ts, pure and unit-tested.
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
 import { getEntityByMemoryId } from "../entities.js";
-import {
-  applyPositionUpdate,
-  currentStoryDatetime,
-  findStory,
-  resolveStoryId,
-  type PositionState,
-} from "../stories.js";
+import { findStory, resolveStoryId, type PositionState } from "../stories.js";
+import { applyPositionUpdate, currentStoryDatetime } from "../position.js";
 import { asText, withLogging } from "./helpers.js";
 
 async function requireStory(oc: OcClient, storyId: string) {

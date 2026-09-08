@@ -4,12 +4,12 @@
 // write path is exercised via the tool tests instead.
 
 import { describe, it, expect } from "vitest";
+import { type PositionState } from "../src/stories.js";
 import {
   currentStoryDatetime,
   mergePositionUpdate,
   resolveElapsedHours,
-  type PositionState,
-} from "../src/stories.js";
+} from "../src/position.js";
 
 const FRESH: PositionState = {
   epochDate: "2026-10-01T00:00:00.000Z",

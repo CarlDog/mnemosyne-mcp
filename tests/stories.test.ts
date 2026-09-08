@@ -21,9 +21,9 @@ import {
   resolveStoryId,
   setKindroidTarget,
   setNarratorProfile,
-  setPosition,
   STORY_MARKER_TAGS,
 } from "../src/stories.js";
+import { setPosition } from "../src/position.js";
 import { isolateDataDirs, teardownStory, testStoryName } from "./helpers.js";
 
 describe("combineKindroidTarget (pure)", () => {
