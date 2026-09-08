@@ -14,13 +14,22 @@ into eight named phase functions
 top-to-bottom sequence of calls to these. The one deliberately-preserved
 piece: the try/catch relabeling a position-write-then-failure as
 `retry_safe:false` stays wrapping the `gatherAndPlan()` call rather than
-living inside a phase function, flagged with a `TODO` as its own open
-shape question for later. Surfaced and closed a real pre-existing test
-gap in the process: no test exercised this exact relabeling path. Four
-new unit tests added against a hand-built `ContinuationPort` mock (no OC
-needed), each mutation-tested (broke the logic, confirmed the test
-failed, restored). Full verification clean; suite at 621 passed (was
-617), zero regression. Full record in Known Gaps below.
+living inside a phase function. Surfaced and closed a real pre-existing
+test gap in the process: no test exercised this exact relabeling path.
+Four new unit tests added against a hand-built `ContinuationPort` mock
+(no OC needed), each mutation-tested (broke the logic, confirmed the
+test failed, restored). Full verification clean; suite at 621 passed
+(was 617), zero regression.
+
+**The try/catch's own shape was revisited and closed the same day
+(2026-09-08)**, not left as a deferred question: the two structural
+alternatives (a named wrapper, or a guard function returned from
+`applyPositionIfRequested`) were rejected because neither actually stops
+a future phase inserted in this span from skipping the relabel -- both
+still rely on the same call-site discipline the plain try/catch does, so
+restructuring would relocate the risk rather than reduce it. The
+call-site comment was sharpened instead, naming the concrete obligation
+for whoever adds a phase there next. Full record in Known Gaps below.
 
 **Phase-end audit run at the non-flagship arc's close (2026-09-08).**
 With the whole non-flagship reconciliation arc closed and promotion
@@ -5108,9 +5117,17 @@ consider only when real use exposes the corresponding pressure:
   deliberately-preserved piece: the try/catch wrapping `gatherAndPlan()`
   that relabels a `RunOutcomeError` `retry_safe:false` when a position
   write already landed before the failure -- left exactly where it was,
-  wrapping the call rather than living inside any phase function, with a
-  `TODO` in the code marking it as its own still-open shape question
-  (tracked, not fixed, this pass).
+  wrapping the call rather than living inside any phase function.
+  **Revisited and closed by decision the same day, not deferred**: a
+  named wrapper or a guard function returned from
+  `applyPositionIfRequested` (the two alternatives considered) neither
+  one actually prevents a future phase inserted in this span from
+  skipping the relabel -- both still depend on the same call-site
+  discipline the current comment does, so restructuring wouldn't reduce
+  the real risk, only relocate it. The comment at the call site was
+  sharpened instead: it now names the concrete obligation (extend
+  `tests/continue-scene-phases.test.ts`) for whoever adds a phase there
+  next. No further follow-up queued.
 
   This surfaced and closed a real, pre-existing test gap: no test
   exercised this exact relabeling path (`tests/continue-position.test.ts`'s
