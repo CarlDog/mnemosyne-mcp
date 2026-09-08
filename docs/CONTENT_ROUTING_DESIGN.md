@@ -1,6 +1,9 @@
 # Content Routing Design
 
-**Status: proposed 2026-08-26, not yet ratified.** This document exists to
+**Status: proposed 2026-08-26, refreshed 2026-09-08, not yet ratified.**
+The 2026-09-08 refresh corrected two claims this doc made that a later
+refactor overtook: the call site and the schema number below now match
+current code, not the 2026-08-26 snapshot. This document exists to
 close a real gap: [Living Canon Standard](LIVING_CANON_STANDARD.md) §10
 ("Routing boundary") already requires that "text and image generation must
 be routed independently to explicitly configured SFW or NSFW-capable models
@@ -97,14 +100,22 @@ anti-pattern `docs/V2_RETROSPECTIVE.md` already flags: *"Storing
 structured data as JSON-embedded-in-prose... Mnemosyne should treat
 structured data as structured."* mnemosyne already has a structured,
 versioned, per-story metadata record for exactly this class of fact — the
-story marker memory (`src/stories.ts`), currently at `Schema: 3` and
-already carrying one optional operational field (`Kindroid-Target`) added
-the same way. A rating declaration is the same shape of fact and belongs
-in the same place.
+story marker memory (`src/stories.ts`). **Updated 2026-09-08**: the
+marker has moved twice since this design was proposed (schema 3 →
+`Narrator-Profile` at schema 4 → `position` fields at schema 5,
+`STORY_MARKER_SCHEMA = 5` in code today), each addition following the
+same optional-line, `undefined`-when-unset pattern this design already
+proposed for `Content-Rating`. Three real precedents now, not one — a
+stronger case for the same shape, not a weaker one.
 
 **Fail closed, at generation time, with one call site.** The check has to
-live where `generator.generate()` is actually called —
-[`src/tools/continue.ts:189`](../src/tools/continue.ts) — not behind an
+live where `generator.generate()` is actually called. **Updated
+2026-09-08**: the 2026-09-08 `continueScene()` phase extraction moved
+that call from `src/tools/continue.ts` into
+[`dispatchGenerate()` in `src/application/continue-scene.ts`](../src/application/continue-scene.ts)
+— still exactly one call site, just a different file than this design
+originally named. The gate belongs at the top of `dispatchGenerate()`,
+before `port.generate()` is invoked, not behind an
 optional interface a future call site might or might not resolve. If the
 story's declared rating exceeds the configured provider's declared
 capability, the tool throws before spending an LLM call, with an error
@@ -134,16 +145,19 @@ transparently."*
 
 ## Concrete shape (Phase 1)
 
-### 1. Story marker: `Schema: 4`, new optional `Content-Rating` line
+### 1. Story marker: `Schema: 6`, new optional `Content-Rating` line
 
-Mirrors the existing `Kindroid-Target` precedent exactly — optional,
-appended only when set, older markers (schema 1-3) still parse via the
-same legacy-fallback pattern `parseMarker` already uses.
+**Updated 2026-09-08** (was `Schema: 4` in the original 2026-08-26
+proposal; code has since moved to schema 5 for position tracking).
+Mirrors the `Kindroid-Target` / `Narrator-Profile` / position-fields
+precedents exactly — optional, appended only when set, older markers
+(schema 1-5) still parse via the same legacy-fallback pattern
+`parseMarker` already uses.
 
 ```
 [Mnemosyne Story] Chaos Saga
 Created: 2026-05-12T02:59:43Z
-Schema: 4
+Schema: 6
 Kindroid-Target: ai:abc123
 Content-Rating: mature
 ```
@@ -162,8 +176,15 @@ Content-Rating: mature
 
 Content capability is an operational fact about how a provider is
 *configured* (which model is loaded, which Kindroid kin is targeted), not
-something derivable from the provider's name. Add a `contentCapability:
-"sfw" | "mature"` field to each provider's config, following the existing
+something derivable from the provider's name. **Checked 2026-09-08**:
+`GeneratorCapabilities` (`src/capabilities.ts`, GENERATOR_CAPABILITIES_DESIGN,
+shipped 2026-08-28) has no content-rating field and no overlap with this
+proposal — it's an auto-derived/instance-keyed table of model *mechanics*
+(context window, temperature range, structured-output support), whereas
+`contentCapability` here is an operator *declaration* nothing can
+introspect. Deliberately kept separate rather than folded into that
+table for that reason. Add a `contentCapability: "sfw" | "mature"` field
+to each provider's config, following the existing
 per-provider-literal-env-var convention in `src/index.ts` (so the
 `.env.example` schema-drift test keeps seeing every reference):
 
