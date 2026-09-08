@@ -17,7 +17,7 @@ import {
 } from "../prompt.js";
 import { readStoryBinding, saveSceneEntity } from "./story-binding.js";
 import { validateContentWithUsage } from "../validator.js";
-import { applyPositionUpdate } from "../stories.js";
+import { applyPositionUpdate } from "../position.js";
 
 function admissionModeFromEnv(): AdmissionMode {
   const raw = (process.env.MNEMO_CONTEXT_ADMISSION ?? "").trim().toLowerCase();

@@ -8,7 +8,8 @@
 
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { OcClient } from "../src/oc-client.js";
-import { createStory, findStory, setPosition } from "../src/stories.js";
+import { createStory, findStory } from "../src/stories.js";
+import { setPosition } from "../src/position.js";
 import { saveEntity } from "../src/entities.js";
 import { continueScene } from "./helpers/application.js";
 import { makeRunContext } from "../src/run-context.js";

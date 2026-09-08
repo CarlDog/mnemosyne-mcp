@@ -161,7 +161,7 @@ export async function continueScene(
   // fact about the story regardless of whether a beat describing it gets
   // written (mirrors mnemo_session_break's break-then-save precedent: the
   // first mutation stands even if a later step fails). The atomic
-  // invariant enforced inside mergePositionUpdate (stories.ts, via
+  // invariant enforced inside mergePositionUpdate (position.ts, via
   // applyPosition) doubles as the not-yet-initialized refusal these
   // convenience params need for free: none of advance/setDate/moveTo can
   // supply epoch_date/epoch_location, so calling any of them against an

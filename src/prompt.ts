@@ -34,7 +34,8 @@ import {
   type EntityType,
   type RecalledEntity,
 } from "./entities.js";
-import { findStory, currentStoryDatetime } from "./stories.js";
+import { findStory } from "./stories.js";
+import { currentStoryDatetime } from "./position.js";
 import type {
   ContextBundle,
   PositionContext,
