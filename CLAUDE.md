@@ -24,9 +24,22 @@ ledger didn't read the scenes" -- and lives in
 [docs/CANON_RULINGS.md](docs/CANON_RULINGS.md), the register for any ruling that
 binds more than one story; each story's `drafts/_control/DECISIONS.md` cites it
 rather than restating it. `_control` is manifest-excluded, so recording a ruling
-never rehashes an overlay. Seat 10 (substitution: the operator's name is in 105
-of the 174 draft scene files) is the next ruling and **nothing promotes until it
-is answered**. Otherwise nothing is in
+never rehashes an overlay. **Seat 10 (substitution) is also ratified**
+(2026-09-04, same day, Ruling 2 in `docs/CANON_RULINGS.md`): "Substitute the
+canon name before promotion, never at promotion." Three stories are moot
+(Brass & Nerve, Midnight, Noctis Veil's GC/MT threads — Ruling 1 already keeps
+their scenes source-era); Shadowflame and the Black Ledger are mechanically
+actionable now (canon name already in hand, bundle with each story's other
+pending Ruling-1 corrections since both rehash the same overlay); **the
+Adjustment Protocol is blocked on one name** — its lead scientist (ER + AN
+threads, 42 of 43 scene files) is played under the operator's own name and
+canon holds no role for it, so there is nothing to substitute in, and the name
+must not be Renshaw (a separate, already-played character in the same story).
+Inventing that name is explicitly the operator's call, not a drafting pass's.
+Two things remain open and unrelated to either ruling: the recording-marker
+format for a revised/substituted claim (parked — write corrected prose now,
+invent no marker form), and the Noctis Veil's SL/KM threads (10 scenes), which
+carry no tier decide at all under either ruling. Otherwise nothing is in
 flight. The data architecture migration
 (`docs/DATA_ARCHITECTURE_PROPOSAL.md`, ratified; `docs/DATA_LAYOUT.md` now
 normative) completed all six phases on 2026-09-02: `data/archive/` is the one
