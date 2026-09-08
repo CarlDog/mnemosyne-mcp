@@ -189,11 +189,31 @@ shipped 2026-08-29, route-field-through-results genuinely still open (no
 RETRIEVAL_CONTROLS_DESIGN slice 3's settled-fixtures benchmark needs
 operator-labeled expected-entity fixtures before `MNEMO_QUERY_ENRICHMENT`
 can get a real win/no-win verdict (see the OpenClaw table's retrieval-
-controls row). 4a: generate a labeling worksheet from the existing corpus
-— candidate labels to correct, not a blank page — to lower the labeling
-burden. 4b: operator reviews/corrects the candidates — genuinely their
-call, not something to automate. 4c: run the benchmark, record the
-verdict in the design doc, decide the flag's state accordingly.
+controls row).
+
+- **4a done, 2026-09-08**:
+  [ENRICHMENT_BENCHMARK_FIXTURES.md](ENRICHMENT_BENCHMARK_FIXTURES.md) —
+  14 candidate fixtures across the five settled stories (battlechasers,
+  brass-and-nerve, chaos-saga, midnight-is-a-suggestion,
+  miskatonic-archives-the-blackwood-case), grounded in real character/
+  scene content read fresh from each story's `data/` tree (gitignored),
+  not fabricated. 4 vague/enrichment-exercising, 4 short-but-rich
+  negatives (the "Aria dies" shape the design's own revision note
+  requires), 4 explicit controls, 2 recall-only baselines for
+  `midnight-is-a-suggestion` (which has zero played scenes anywhere, so
+  no enrichment fixture is possible there yet). Three fixtures carry an
+  explicit judgment-call flag where this session could not confidently
+  resolve the expected labels alone (most notably `BC-1`: whether a
+  dead-since-1888 lore thread the current investigation is actively
+  pursuing counts as "unwanted persistence" or legitimate recall — the
+  design's two metrics don't cleanly separate that case).
+- **4b next, operator-owned**: review/correct the candidate labels in
+  that doc — genuinely a narrative-judgment call, not something to
+  automate.
+- **4c after that**: build the (not-yet-existing) benchmark script, run
+  it against the corrected fixtures, record the verdict in
+  RETRIEVAL_CONTROLS_DESIGN.md, decide `MNEMO_QUERY_ENRICHMENT`'s
+  default accordingly.
 
 The ~60 explicit non-adoptions across the four docs are not restated here;
 each doc's own "Explicit non-adoptions" table remains authoritative for what
