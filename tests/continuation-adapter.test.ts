@@ -18,6 +18,7 @@ import { createContinuationAdapter } from "../src/adapters/continuation.js";
 
 const throwingProvider: LlmProvider = {
   name: "stub",
+  contentCapability: "sfw",
   generate: () => {
     throw new Error("stub provider: generate() must not be called");
   },

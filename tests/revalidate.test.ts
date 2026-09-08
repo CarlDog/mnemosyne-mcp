@@ -34,6 +34,7 @@ suite("v0.1.3 step 4 — mnemo_revalidate_scenes (real OC + real Ollama)", () =>
     validator = new OllamaProvider({
       url: OLLAMA_URL,
       defaultModel: OLLAMA_MODEL!,
+      contentCapability: "sfw",
     });
 
     // Compound rule with multiple constraints -- same fixture shape as

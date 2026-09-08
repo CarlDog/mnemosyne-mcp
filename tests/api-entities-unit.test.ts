@@ -82,6 +82,7 @@ function makeRecordingOc(): RecordingOc {
 
 const stubProvider: LlmProvider = {
   name: "stub",
+  contentCapability: "sfw",
   generate: () => {
     throw new Error("stub provider: generate() must not be called");
   },

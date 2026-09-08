@@ -49,11 +49,13 @@ function stubOc(): { oc: OcClient; savedTags: string[][] } {
 
 const generator = (name: string): LlmProvider => ({
   name,
+  contentCapability: "sfw",
   generate: async () => ({ text: "A beat." }),
 });
 
 const neverValidator: LlmProvider = {
   name: "stub-validator",
+  contentCapability: "sfw",
   generate: async () => {
     throw new Error("validator must not run");
   },

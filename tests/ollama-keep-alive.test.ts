@@ -32,6 +32,7 @@ async function captureRequestBody(keepAlive?: string): Promise<Captured> {
   const provider = new OllamaProvider({
     url: "http://stub:11434",
     defaultModel: "test-model",
+    contentCapability: "sfw",
     ...(keepAlive === undefined ? {} : { keepAlive }),
   });
   await provider.generate({ systemPrompt: "sys", userMessage: "usr" });
@@ -99,5 +100,16 @@ describe("the Ollama request body", () => {
     // any more than keep_alive may drift downward.
     expect(body).not.toHaveProperty("num_ctx");
     expect(body).not.toHaveProperty("temperature");
+  });
+});
+
+describe("contentCapability getter (pure)", () => {
+  it("exposes exactly the value the config was constructed with", () => {
+    const provider = new OllamaProvider({
+      url: "http://stub:11434",
+      defaultModel: "test-model",
+      contentCapability: "nsfw",
+    });
+    expect(provider.contentCapability).toBe("nsfw");
   });
 });

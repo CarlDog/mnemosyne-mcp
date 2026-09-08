@@ -41,12 +41,14 @@ function fakeOc(behavior: () => Promise<void>): OcClient & { calls: number } {
 
 const readyProvider = (name: string): LlmProvider => ({
   name,
+  contentCapability: "sfw",
   generate: async () => ({ text: "x" }),
   checkReady: async () => {},
 });
 
 const cloudProvider: LlmProvider = {
   name: "anthropic",
+  contentCapability: "sfw",
   generate: async () => ({ text: "x" }),
   // no checkReady -- a real probe would be billable
 };

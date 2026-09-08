@@ -61,6 +61,7 @@ function localOnlyProvider(model = "local-model"): OllamaProvider {
     url: "http://127.0.0.1:1",
     defaultModel: model,
     requireLocal: true,
+    contentCapability: "sfw",
   });
 }
 
@@ -149,6 +150,7 @@ describe("requireLocal enforcement", () => {
     const provider = new OllamaProvider({
       url: "http://127.0.0.1:1",
       defaultModel: "any-model:cloud",
+      contentCapability: "sfw",
     });
     const beat = await provider.generate(genOpts);
     expect(beat.text).toBe("ok");

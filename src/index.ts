@@ -51,6 +51,7 @@ import {
   SCENE_CONTEXT_STRATEGY,
   generatorConfig,
   ocUrl,
+  ollamaContentCapability,
   ollamaGeneratorModel,
   ollamaNumCtx,
   ollamaValidatorModel,
@@ -95,6 +96,7 @@ if (generatorConfig.provider === "kindroid") {
     defaultTarget: generatorConfig.defaultTarget,
     groupMaxTurns: generatorConfig.groupMaxTurns,
     userName: MNEMO_USER_NAME,
+    contentCapability: generatorConfig.contentCapability,
   });
   log.info("startup", "kindroid generator configured", {
     url: generatorConfig.rawUrl,
@@ -116,6 +118,7 @@ if (generatorConfig.provider === "kindroid") {
   generator = new BotifyProvider(botifyClient, {
     defaultChatId: generatorConfig.chatId,
     userName: MNEMO_USER_NAME,
+    contentCapability: generatorConfig.contentCapability,
   });
   log.info("startup", "botify generator configured", {
     url: generatorConfig.rawUrl,
@@ -127,6 +130,7 @@ if (generatorConfig.provider === "kindroid") {
   generator = new AnthropicProvider({
     apiKey: generatorConfig.apiKey,
     defaultModel: generatorConfig.model,
+    contentCapability: generatorConfig.contentCapability,
   });
   log.info("startup", "anthropic generator configured", {
     generator_model: generatorConfig.model,
@@ -135,6 +139,7 @@ if (generatorConfig.provider === "kindroid") {
   generator = new GeminiProvider({
     apiKey: generatorConfig.apiKey,
     defaultModel: generatorConfig.model,
+    contentCapability: generatorConfig.contentCapability,
   });
   log.info("startup", "gemini generator configured", {
     generator_model: generatorConfig.model,
@@ -148,6 +153,7 @@ if (generatorConfig.provider === "kindroid") {
     baseUrl: generatorConfig.baseUrl,
     apiKey: generatorConfig.apiKey,
     defaultModel: generatorConfig.model,
+    contentCapability: generatorConfig.contentCapability,
   });
   log.info("startup", `${generatorConfig.provider} generator configured`, {
     base_url: generatorConfig.baseUrl,
@@ -160,6 +166,7 @@ if (generatorConfig.provider === "kindroid") {
     maxContextWindow: ollamaNumCtx,
     keepAlive: OLLAMA_KEEP_ALIVE_CLEAN,
     timeoutMs: ollamaTimeoutMs,
+    contentCapability: generatorConfig.contentCapability,
   });
   log.info("startup", "ollama generator configured", {
     url: OLLAMA_URL,
@@ -180,6 +187,9 @@ const validator = new OllamaProvider({
   // tags, preflights the exact model via /api/show, and re-checks the
   // final response's route fields (docs/OLLAMA_ADOPTION_ASSESSMENT.md §2).
   requireLocal: true,
+  // Meaningless here -- the content-routing gate only checks the
+  // GENERATOR's capability -- but required to satisfy LlmProvider.
+  contentCapability: ollamaContentCapability,
 });
 const validateStory = createStoryValidationAdapter(oc, validator);
 const revalidateScenes = createSceneRevalidationAdapter(oc, validator);

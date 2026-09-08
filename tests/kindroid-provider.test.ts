@@ -418,7 +418,10 @@ describe("KindroidProviderConfig.userName plumbing (stubbed client)", () => {
         return Promise.resolve("ok");
       },
     } as unknown as KindroidClient;
-    const provider = new KindroidProvider(client, { defaultTarget: AI });
+    const provider = new KindroidProvider(client, {
+      defaultTarget: AI,
+      contentCapability: "sfw",
+    });
     await provider.generate({ systemPrompt: "", userMessage: "go" });
     expect(seenMessage).toBe(`${HEADER}\n\ngo`);
   });
@@ -434,11 +437,23 @@ describe("KindroidProviderConfig.userName plumbing (stubbed client)", () => {
     const provider = new KindroidProvider(client, {
       defaultTarget: AI,
       userName: "Jamie",
+      contentCapability: "sfw",
     });
     await provider.generate({ systemPrompt: "", userMessage: "go" });
     expect(seenMessage).toBe(
       "[Mnemosyne — automated scene direction, not Jamie typing]\n\ngo",
     );
+  });
+});
+
+describe("contentCapability getter (pure, stubbed client)", () => {
+  it("exposes exactly the value the config was constructed with", () => {
+    const client = {} as unknown as KindroidClient;
+    const provider = new KindroidProvider(client, {
+      defaultTarget: { type: "ai", id: "kin-1" },
+      contentCapability: "nsfw",
+    });
+    expect(provider.contentCapability).toBe("nsfw");
   });
 });
 
@@ -487,6 +502,7 @@ describe("group max turns (stubbed client)", () => {
       provider: new KindroidProvider(client, {
         defaultTarget: GROUP,
         groupMaxTurns: configTurns,
+        contentCapability: "sfw",
       }),
       seen: () => seen,
     };
@@ -563,7 +579,10 @@ describe("group allowUser and beat telemetry (stubbed client)", () => {
       },
     } as unknown as KindroidClient;
     return {
-      provider: new KindroidProvider(client, { defaultTarget: GROUP }),
+      provider: new KindroidProvider(client, {
+        defaultTarget: GROUP,
+        contentCapability: "sfw",
+      }),
       seen: () => seen,
     };
   }
@@ -650,7 +669,10 @@ describe("group allowUser and beat telemetry (stubbed client)", () => {
     const client = {
       sendMessage: () => Promise.resolve("a single reply"),
     } as unknown as KindroidClient;
-    const provider = new KindroidProvider(client, { defaultTarget: AI });
+    const provider = new KindroidProvider(client, {
+      defaultTarget: AI,
+      contentCapability: "sfw",
+    });
     const beat = await provider.generate({
       systemPrompt: "",
       userMessage: "go",
@@ -678,6 +700,7 @@ suite("Phase 6 — KindroidProvider (real kindroid-mcp)", () => {
     );
     provider = new KindroidProvider(client, {
       defaultTarget: { type: "ai", id: KINDROID_STORYTELLING_KIN! },
+      contentCapability: "sfw",
     });
   });
 

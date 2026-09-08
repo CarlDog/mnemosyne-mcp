@@ -33,6 +33,7 @@ import type {
   LlmProvider,
   ModelUsage,
 } from "./llm.js";
+import type { ContentRating } from "./stories.js";
 
 const ANTHROPIC_BASE_URL = "https://api.anthropic.com";
 const ANTHROPIC_VERSION = "2023-06-01";
@@ -41,6 +42,10 @@ const DEFAULT_MAX_TOKENS = 2048;
 export interface AnthropicConfig {
   apiKey: string;
   defaultModel: string;
+  /** Always "sfw" -- no operator override. Anthropic's own upstream
+   * content policy enforces this regardless of what mnemosyne declares
+   * (docs/CONTENT_ROUTING_DESIGN.md, ratified 2026-09-08). */
+  contentCapability: ContentRating;
 }
 
 /** Pure request-body assembly -- unit-testable without a network. */
@@ -123,6 +128,10 @@ export function extractAnthropicText(data: unknown): GeneratedBeat {
 
 export class AnthropicProvider implements LlmProvider {
   readonly name = "anthropic";
+
+  get contentCapability(): ContentRating {
+    return this.config.contentCapability;
+  }
 
   constructor(private readonly config: AnthropicConfig) {}
 
