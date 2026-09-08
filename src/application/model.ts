@@ -105,6 +105,11 @@ export interface ContextBundle {
   /** Absent when the story has no position tracking on, or the context is
    * validation-only. See PositionContext. */
   position?: PositionContext;
+  /** The story's declared content-generation requirement
+   * (docs/CONTENT_ROUTING_DESIGN.md, ratified 2026-09-08), resolved by the
+   * same story-marker fetch as `position` -- zero extra cost. Absent when
+   * undeclared, or the context is validation-only. */
+  content_rating?: ContentRating;
 }
 
 export interface GatherContextOptions {

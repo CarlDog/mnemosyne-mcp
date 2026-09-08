@@ -5,6 +5,7 @@
 // only provide transport-level input parsing and logging.
 
 import type {
+  ContentRating,
   KindroidTarget,
   Mode,
   PositionContext,
@@ -112,6 +113,11 @@ export interface ContinueSceneResult {
   /** Warn-don't-break: options the selected provider ignores or that sit
    * outside a known range (capabilityWarnings). Never fatal. */
   capability_warnings?: string[];
+  /** False when the story has no declared content_rating
+   * (docs/CONTENT_ROUTING_DESIGN.md, ratified 2026-09-08) -- never blocks
+   * on its own, just visible. Omitted (not `true`) when declared, since
+   * there's nothing noteworthy to report once the gate has an opinion. */
+  content_rating_declared?: false;
   /** The context admission manifest (CONTEXT_PLAN_DESIGN): verdict,
    * budget, section sizes, dropped-entry ids + reasons -- never bodies.
    * companion_selection lists the memory ids a companion provider's
@@ -201,16 +207,9 @@ export async function continueScene(
     gathered = await gatherAndPlan(port, storyId, opts, mode, run);
   } catch (err) {
     if (positionApplied && err instanceof RunOutcomeError) {
-      throw new RunOutcomeError(
-        err.outcome,
-        `${err.message} -- NOTE: this call's advance/set_date/move_to ` +
-          "already applied to the story's position before this failure " +
-          "and was NOT rolled back (mirrors mnemo_session_break's " +
-          "break-then-save precedent). Retrying this exact call will " +
-          "apply the position change again -- check mnemo_position_get " +
-          "before deciding whether to retry.",
-        { retrySafe: false },
-      );
+      throw new RunOutcomeError(err.outcome, positionAppliedNote(err.message), {
+        retrySafe: false,
+      });
     }
     throw err;
   }
@@ -229,6 +228,8 @@ export async function continueScene(
   const { beat, generateMs } = await dispatchGenerate(
     port,
     opts,
+    context.content_rating,
+    positionApplied,
     systemPrompt,
     renderedContext,
     kindroidTarget,
@@ -243,6 +244,7 @@ export async function continueScene(
   const common: CommonResponseFields = {
     runId: run.runId,
     capability_warnings,
+    contentRatingDeclared: context.content_rating !== undefined,
     contextPlan,
     position: context.position,
     mode,
@@ -300,6 +302,9 @@ export async function continueScene(
   return {
     run_id: run.runId,
     ...(capability_warnings.length > 0 && { capability_warnings }),
+    ...(context.content_rating === undefined && {
+      content_rating_declared: false,
+    }),
     context_plan: contextPlan,
     ...(context.position && { position: context.position }),
     beat_name: beatName,
@@ -509,24 +514,64 @@ async function gatherAndPlan(
   };
 }
 
+/** Wraps a pre-dispatch failure's message/retry-safety when a position
+ * write already landed this call (docs/POSITION_TRACKING_DESIGN.md
+ * refinement 5) -- shared by continueScene's gatherAndPlan catch and
+ * dispatchGenerate's content-routing gate below, the two throw sites in
+ * the position-write's "still nominally pre-dispatch" span. Extracted
+ * rather than duplicated per the 2026-09-08 decision to keep this a plain
+ * try/catch (+ its own relabel) instead of restructuring the phase
+ * boundary -- see continueScene's comment above the try/catch. */
+function positionAppliedNote(message: string): string {
+  return (
+    `${message} -- NOTE: this call's advance/set_date/move_to already ` +
+    "applied to the story's position before this failure and was NOT " +
+    "rolled back (mirrors mnemo_session_break's break-then-save " +
+    "precedent). Retrying this exact call will apply the position " +
+    "change again -- check mnemo_position_get before deciding whether " +
+    "to retry."
+  );
+}
+
 interface DispatchGenerateResult {
   beat: ContinuationBeat;
   generateMs: number;
 }
 
-/** Dispatch generation and record estimator calibration. Mutates
- * contextPlan.companion_selection in place when the beat reports one
- * (same as the pre-split inline code -- the manifest object is shared with
- * the caller, not copied). */
+/** The content-routing gate (docs/CONTENT_ROUTING_DESIGN.md, ratified
+ * 2026-09-08), then dispatch generation and record estimator calibration.
+ * Mutates contextPlan.companion_selection in place when the beat reports
+ * one (same as the pre-split inline code -- the manifest object is shared
+ * with the caller, not copied).
+ *
+ * The gate sits here, before port.generate() is invoked, rather than
+ * earlier in continueScene -- it needs context.content_rating, which
+ * gatherAndPlan resolves at zero extra cost (piggybacking on the same
+ * story-marker fetch position already needed), so checking any earlier
+ * would mean a dedicated OC round trip on every single call. */
 async function dispatchGenerate(
   port: ContinuationPort,
   opts: ContinueSceneOptions,
+  contentRating: ContentRating | undefined,
+  positionApplied: boolean,
   systemPrompt: string,
   renderedContext: ReturnType<ContinuationPort["renderAdmittedContext"]>,
   kindroidTarget: KindroidTarget | undefined,
   planResult: ReturnType<typeof planContext>,
   contextPlan: ContextPlanManifest & { companion_selection?: string[] },
 ): Promise<DispatchGenerateResult> {
+  if (contentRating === "nsfw" && port.contentCapability === "sfw") {
+    const detail =
+      "This story requires an nsfw content rating, but the configured " +
+      `generator (${port.generatorName}) is only sfw-capable. Either ` +
+      "deploy with an nsfw-capable provider, or set this story's content " +
+      'rating explicitly via mnemo_story_use if "nsfw" was set in error.';
+    throw new RunOutcomeError(
+      "rejected_before_dispatch",
+      positionApplied ? positionAppliedNote(detail) : detail,
+      positionApplied ? { retrySafe: false } : undefined,
+    );
+  }
   const generateStart = Date.now();
   const beat = await port.generate({
     systemPrompt,
@@ -560,6 +605,10 @@ async function dispatchGenerate(
 interface CommonResponseFields {
   runId: string;
   capability_warnings: string[];
+  /** True when the story declared a content rating -- see
+   * ContinueSceneResult.content_rating_declared for the response shape
+   * this drives (surfaced only when false). */
+  contentRatingDeclared: boolean;
   contextPlan: ContextPlanManifest & { companion_selection?: string[] };
   position: PositionContext | undefined;
   mode: Mode;
@@ -579,6 +628,7 @@ function buildGroupYieldResponse(
     ...(common.capability_warnings.length > 0 && {
       capability_warnings: common.capability_warnings,
     }),
+    ...(!common.contentRatingDeclared && { content_rating_declared: false }),
     context_plan: common.contextPlan,
     ...(common.position && { position: common.position }),
     yielded_to_user: true,
@@ -612,6 +662,7 @@ function buildIncompleteResponse(
     ...(common.capability_warnings.length > 0 && {
       capability_warnings: common.capability_warnings,
     }),
+    ...(!common.contentRatingDeclared && { content_rating_declared: false }),
     context_plan: common.contextPlan,
     ...(common.position && { position: common.position }),
     incomplete: true,

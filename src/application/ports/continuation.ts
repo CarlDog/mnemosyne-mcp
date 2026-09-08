@@ -1,5 +1,6 @@
 import type {
   AdmissionMode,
+  ContentRating,
   ContextBundle,
   GatherContextOptions,
   GenerateBeatOptions,
@@ -49,6 +50,10 @@ export interface ContinuePositionUpdate {
 
 export interface ContinuationPort {
   readonly generatorName: string;
+  /** The configured generator's declared content-generation capability
+   * (docs/CONTENT_ROUTING_DESIGN.md, ratified 2026-09-08) -- mirrors
+   * generatorName, sourced from the same LlmProvider. */
+  readonly contentCapability: ContentRating;
   readonly admissionMode: AdmissionMode;
   readonly defaultMaxTokens: number;
   readonly contextMarginTokens: number;

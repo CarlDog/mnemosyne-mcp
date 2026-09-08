@@ -1,21 +1,22 @@
 # Content Routing Design
 
-**Status: proposed 2026-08-26, refreshed and ratified 2026-09-08.** The
-2026-09-08 refresh corrected two claims this doc made that a later
-refactor overtook (the call site and the schema number below now match
-current code, not the 2026-08-26 snapshot) before the operator ratified
-it; the "Ratified decisions" section near the end records the four calls
-that were open. Nothing is built yet — ratification unblocks
-implementation, it isn't implementation. This document exists to
+**Status: proposed 2026-08-26, refreshed and ratified 2026-09-08, all
+three slices shipped the same day.** The 2026-09-08 refresh corrected two
+claims this doc made that a later refactor overtook (the call site and
+the schema number below now match current code, not the 2026-08-26
+snapshot) before the operator ratified it; the "Ratified decisions"
+section near the end records the four calls that were open, and
+"Implementation record" near the end records what shipped and the two
+refinements decided along the way. This document exists to
 close a real gap: [Living Canon Standard](LIVING_CANON_STANDARD.md) §10
 ("Routing boundary") already requires that "text and image generation must
 be routed independently to explicitly configured SFW or NSFW-capable models
-before generation begins," but no such mechanism exists in the codebase
-today — confirmed by grepping `src/` for SFW/NSFW routing logic and finding
-zero matches. The Standard is currently describing infrastructure that
-doesn't exist. This design proposes what would close that gap. Nothing here
-is built; the "Decisions needed from the operator" section at the end lists
-what has to be settled before it is.
+before generation begins" -- which, before this design shipped, no
+mechanism in the codebase actually did (confirmed 2026-08-26 by grepping
+`src/` for SFW/NSFW routing logic and finding zero matches; the Standard
+was describing infrastructure that didn't exist yet). This design
+proposed, and as of 2026-09-08 implements, what closes that gap -- see
+"Implementation record" near the end for what shipped.
 
 ## Background — two prior attempts, one built and unused
 
@@ -323,3 +324,34 @@ Overall disposition: **ratified as refined** (not revised further, not
 rejected). Phase 1 implementation proceeds in slices per the "Concrete
 shape" section above, each its own commit with tests, tracked in
 [RESEARCH_DECISION_QUEUE.md](RESEARCH_DECISION_QUEUE.md)'s Phase 3b.
+
+## Implementation record
+
+All three slices shipped 2026-09-08, closing this design. Two
+implementation refinements beyond the pseudocode above, both decided
+during slice 3 rather than pre-specified:
+
+- **The refusal message names the provider, not the story.** §3's
+  pseudocode included `story.name`; the shipped message omits any story
+  identifier -- the caller already knows which story they called
+  `mnemo_continue` against (it's their own request), so threading a name
+  or id through `dispatchGenerate()` just to restate it back added a
+  parameter without adding information.
+- **The position-write relabeling postscript (docs/POSITION_TRACKING_DESIGN.md
+  refinement 5) is a shared helper (`positionAppliedNote()`), not
+  duplicated.** The gate is a second pre-dispatch throw site in the same
+  "still nominally pre-dispatch" span `continueScene()`'s own comment
+  anticipated ("if a new phase function ever goes in this span, it must
+  sit inside this try/catch, or get its own relabel") -- it took the
+  "own relabel" branch rather than being folded into the existing
+  `gatherAndPlan()` try/catch, to avoid touching that already-reviewed
+  boundary. Both throw sites now call the same helper rather than
+  repeating the postscript text.
+
+Mutation-tested against real OC and hand-built `ContinuationPort` mocks:
+the gate condition itself (both directions -- disabling it entirely, and
+separately breaking the "undeclared never blocks" rule specifically),
+and the position-relabeling branch. `tests/gather-context-position.test.ts`
+confirms `content_rating` resolves from a real story marker at the same
+zero-extra-cost fetch `position` already uses, and survives an unrelated
+marker rewrite.
