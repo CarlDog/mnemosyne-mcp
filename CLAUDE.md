@@ -66,9 +66,17 @@ recurring tier and a sixth (Halloway) added at core tier where none existed,
 `rules.md`/`style.md` raised to the floor, and `overlay.json` resealed (92
 entries, verified clean). Full record in that story's `drafts/_control/PASS.md`
 ("Re-seal 2026-09-08") and `LCS_SCORECARD.md`'s before/after regrade — every
-dimension reaches 2 except reference families (0, deliberately deferred). Two
-thing remains open: the recording-marker format for a revised/substituted
-claim (parked — write corrected prose now, invent no marker form). **The
+dimension reaches 2 except reference families (0, deliberately deferred).
+One thing remains open for this story: reference families. The
+recording-marker question itself is **closed (2026-09-08)** — see
+`docs/CANON_RULINGS.md` Ruling 1, item 1: revision markers (`(rN: revised
+from ... -- ...)`) turned out to already be a de facto fleet standard, four
+stories having independently converged on the same shape; a new
+retirement-marker convention (`(retired-premise: ...)`) was ratified and
+applied to the 7 canon entities across the-noctis-veil and brass-and-nerve
+where a played thread was examined and canon deliberately won. Ruling 2's
+separate, narrower SF-6 question (whether a *substitution* needs its own
+`PASS.md` record format beyond what already exists) remains parked. **The
 Noctis Veil's SL/KM threads are also now ruled (2026-09-08)**: both
 classified retired-premise play — canon governs, the same as GC and MT,
 since neither touches the Noctis/relic premise and canon's existing

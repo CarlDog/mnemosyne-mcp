@@ -2,6 +2,36 @@
 
 **Last updated:** 2026-09-08.
 
+**Fleet-wide name-collision renames and the recording-marker ruling closed
+(2026-09-08).** Seven cross-story name collisions the 2026-09-02 gap audits
+found but left unresolved were adjudicated and executed: Charisma Vale ->
+Charisma Weir (Adjustment Protocol), Sister Lucia Navarro -> Vega, Sister
+Margaret Hale -> Fenwick, and Sister Beatrice Quill -> Mallory (all Noctis
+Veil), Silas -> Corwin and Tomas -> Emeric (Midnight), Bess Marrow -> Farrow
+(Brass & Nerve) -- Thorne (3-way, all core/pinned), the Jäger family
+(deliberate cross-story signature), and Midnight's Aurora (the operator's
+own deliberate pick) were each ruled to stay as-is instead. Executed via
+four parallel Workflow agents, one per story, each grep-scoping its own
+story, editing only `drafts/` overlay content (never `canon/` directly
+where that would desync a tracked baseline hash), rehashing every touched
+path, and self-verifying; independently re-run afterward by the main
+session, not just trusted. Zero old-name leakage found outside
+deliberately-preserved historical `_control/` docs. `docs/CANON_RULINGS.md`
+Ruling 1's last open item, "the recording requirement" (whether a
+deliberate retirement needs an in-file marker), also closed the same day:
+turned out to bundle two questions. Revision markers (`(rN: revised from
+... -- ...)`) needed no new ruling -- four reconciliation passes this
+session had already converged on the identical shape independently.
+Retirement markers (a played thread examined and canon deliberately kept)
+were genuinely unaddressed; a new `(retired-premise: ...)` marker was
+ratified and applied to the 7 canon entities across the-noctis-veil and
+brass-and-nerve where this applies (Midnight needed none -- zero scene
+files, nothing to retire). Both stories re-verified clean afterward.
+Nothing git-tracked changed except `docs/CANON_RULINGS.md` -- every entity
+edit lives under gitignored `data/`. Full record: a new pinned OC memory
+for each (fleet-name-collision-renames, recording-marker-ratified) plus
+matching auto-memory files.
+
 **Non-flagship pass closeout: small cleanup pass over the 2026-09-02 gap
 audits' reported-but-unfixed findings (2026-09-08).** With the six-story
 reconciliation arc (see the entry below) closed, four remaining findings

@@ -67,11 +67,35 @@ together or not at all.
 Three things remain open, and none of them may be assumed from the sentence
 above.
 
-1. **The recording requirement.** The proposal that accompanied this test also
-   asked that a deliberate retirement be recorded as revised canon with an
-   in-file marker rather than left silent. That is a separate obligation about
-   how a retirement is *documented*, not about which record wins, and it was not
-   addressed. Work that depends on the marker stays parked.
+1. **The recording requirement — closed 2026-09-08.** The proposal that
+   accompanied this test also asked that a deliberate retirement be recorded
+   as revised canon with an in-file marker rather than left silent. That
+   turned out to bundle two distinct questions, resolved separately.
+
+   **Revision markers** (canon changed to match something played) needed no
+   ruling at all: four independent reconciliation passes this session
+   (Adjustment Protocol, Shadowflame, the Black Ledger, Brass & Nerve)
+   converged on the same inline shape without anyone standardizing it --
+   `(r<pass>: <what changed> -- <why>)`, placed at the specific changed
+   claim, e.g. `(r16: renamed from Seraphine Vale -- a fleet name-collision
+   ruling, not a story event...)`. Ratified as the standing convention by
+   virtue of independent convergence -- use it for any future revision.
+
+   **Retirement markers** (canon governs, nothing changed, but a played
+   thread was examined and deliberately rejected) were genuinely
+   unaddressed: nothing in any retrieval-facing file recorded that a
+   conflicting play had ever been looked at. A reader of, say, Sister Lucia
+   Vega's profile had no way to know a played thread existed and was ruled
+   against. Ratified 2026-09-08, one marker per affected canon entity
+   (not per claim, since nothing changed claim-by-claim):
+   `(retired-premise: a played thread exists and was examined against this
+   record -- canon governs under Ruling 1's informed-retirement test; see
+   _control/SOURCE_PROVENANCE.md)`, placed once near the top of the body.
+   Applied to the canon entities each story's own `SOURCE_PROVENANCE.md`/
+   `GAP_AUDIT.md` already cites as contradicted by or examined against the
+   retired play -- not invented fresh. Midnight needed none: it has zero
+   scene files, so there is nothing to have retired. Full application
+   record in each affected story's `PASS.md`.
 2. **Substitution — sheet seat 10.** The operator's given or surname appears in
    105 of the 174 draft scene files. Three independent sources say no scene
    leaves `drafts/` before that ruling. **Nothing promotes.** Seat 09 unblocks
@@ -91,19 +115,22 @@ above.
    `the-noctis-veil/drafts/_control/SOURCE_PROVENANCE.md`'s "Revision-3"
    section and `PASS.md`'s "Re-seal 2026-09-08" entry.
 
-### Interim control while the recording requirement is open
+### Interim control while the recording requirement was open (historical — closed 2026-09-08)
 
-Until the marker obligation above is ruled on: **write the corrected prose now,
-and do not invent a marker form.** A missing marker is cheaply enumerable later
-from this register and each story's `PASS.md`; a marker form invented in one
-story and propagated through six is silent drift that nothing will surface.
+This section documents why the marker question needed a ruling rather than
+per-pass judgment; the ruling itself now lives in item 1 above. While it was
+open: **write the corrected prose now, and do not invent a marker form.** A
+missing marker is cheaply enumerable later from this register and each
+story's `PASS.md`; a marker form invented in one story and propagated
+through six is silent drift that nothing will surface.
 
-This is not hypothetical. Deriving the ruling's consequences immediately produced
-two stories assuming it in opposite directions inside a single pass — one writing
-`(r3: ...)` markers at each changed claim, the other explicitly withholding them
-and saying so — and both had a live in-tree marker form to point at. Two stories
-with a form diverged, which is exactly why the rule has to be stated rather than
-left to each pass's judgement.
+This was not hypothetical. Deriving the ruling's consequences immediately
+produced two stories assuming it in opposite directions inside a single pass
+— one writing `(r3: ...)` markers at each changed claim, the other explicitly
+withholding them and saying so — and both had a live in-tree marker form to
+point at. Two stories with a form diverged, which is exactly why the rule
+had to be stated rather than left to each pass's judgement — and exactly the
+divergence item 1's revision-marker ratification closes.
 
 ### Consequence for sequencing
 
