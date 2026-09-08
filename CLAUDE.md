@@ -76,7 +76,13 @@ retirement-marker convention (`(retired-premise: ...)`) was ratified and
 applied to the 7 canon entities across the-noctis-veil and brass-and-nerve
 where a played thread was examined and canon deliberately won. Ruling 2's
 separate, narrower SF-6 question (whether a *substitution* needs its own
-`PASS.md` record format beyond what already exists) remains parked. **The
+`PASS.md` record format beyond what already exists) is **also closed
+(2026-09-08)**: going forward, a Ruling-2 substitution records both its
+pre- and post-edit SHA-256 in `PASS.md` (a hash proves the change without
+re-quoting the operator's real name inline, unlike a revision marker);
+substitutions already completed keep their existing prose documentation,
+not backfilled with a hash. All six non-flagship stories' `DECISIONS.md`
+updated to match. **The
 Noctis Veil's SL/KM threads are also now ruled (2026-09-08)**: both
 classified retired-premise play — canon governs, the same as GC and MT,
 since neither touches the Noctis/relic premise and canon's existing

@@ -2,6 +2,27 @@
 
 **Last updated:** 2026-09-08.
 
+**Ruling 2's SF-6 departure-from-verbatim question closed (2026-09-08).**
+The last open fleet-wide item -- whether a Ruling-2 substitution (scrubbing
+the operator's real name from `drafts/`) needs its own `PASS.md` record
+format -- got a different answer than the recording-marker question closed
+earlier the same day, because quoting the old value inline (the revision-
+marker approach) is off the table here: that would re-expose the exact
+name the substitution exists to remove. Ratified, **going forward only**:
+record both the pre- and post-edit SHA-256 of a substituted file in
+`PASS.md`, alongside the existing prose. **Not backfilled** for
+substitutions already completed this session (Adjustment Protocol's
+Renshaw fix, the Black Ledger's Jager -> Veyr work, Shadowflame's r16
+renames including `SF-6` itself, the 2026-09-08 fleet-wide collision
+renames) -- each already has thorough prose documentation, and the true
+original still exists untouched in `data/archive/` if anyone ever needs to
+verify by hand. `docs/CANON_RULINGS.md` Ruling 2 item 2 carries the
+ratification; all six non-flagship stories' `DECISIONS.md` updated to
+match (their stale "still open" listings, several dating back to the
+2026-09-04 ratification, were also cleaned up in the process). All six
+re-verified clean afterward (`_control/` edits are manifest-excluded, so
+no rehash was needed).
+
 **Fleet-wide name-collision renames and the recording-marker ruling closed
 (2026-09-08).** Seven cross-story name collisions the 2026-09-02 gap audits
 found but left unresolved were adjudicated and executed: Charisma Vale ->

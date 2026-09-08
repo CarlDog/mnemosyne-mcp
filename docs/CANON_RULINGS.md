@@ -192,12 +192,33 @@ and seal once.
    the substituted name must **not** be Renshaw, because the AN thread already
    plays a Renshaw beside the scientist — and states that inventing a name is
    the operator's call. Nothing in that story moves until a name is supplied.
-2. **The departure-from-verbatim record.** `SF-6` asks that a substitution be
-   recorded in `PASS.md` as a departure from verbatim with the original hash
-   kept. That is a recording convention, structurally identical to Ruling 1's
-   open marker obligation, and it is parked the same way: **make the
-   substitution, do not invent a record format.** Two independently invented
-   conventions across six stories is the drift both parks exist to prevent.
+2. **The departure-from-verbatim record — closed 2026-09-08.** `SF-6` asked
+   that a substitution be recorded in `PASS.md` as a departure from verbatim
+   with the original hash kept. This needed a different answer than Ruling
+   1's revision markers, which are safe to satisfy by quoting the old value
+   inline (`(rN: renamed from Seraphine Vale -- ...)`) — a substitution under
+   this ruling exists specifically to scrub the operator's real name out of
+   `drafts/`, so quoting it inline in a marker would undo the entire point.
+   A hash proves a substitution happened without re-exposing what it
+   replaced.
+
+   Ratified, **going forward only**: before editing a file for a Ruling-2
+   substitution, compute its pre-edit SHA-256 (whole body, the same
+   convention `source_content_sha256` already uses) and record both the
+   pre- and post-substitution hashes in `PASS.md`'s entry, alongside the
+   existing prose (file, message number, what changed). One extra hash
+   computed before the edit, using the same manual pattern every rehash in
+   this repo already uses.
+
+   **Not backfilled retroactively** for substitutions already completed
+   (Adjustment Protocol's Renshaw fix, the Black Ledger's Jager -> Veyr
+   work, Shadowflame's r16 renames including `SF-6` itself, the 2026-09-08
+   fleet-wide collision renames): each already carries thorough prose
+   documentation (exact file, exact message number, exact before/after
+   text) in its own `PASS.md`. Reconstructing hashes for content already
+   fully described in prose has no real payoff, and the true original
+   still exists untouched in `data/archive/` if anyone ever needs to
+   verify by hand.
 3. **The archive is not in scope, and never was.** `data/archive/` staying
    verbatim is governed by [DATA_LAYOUT.md](DATA_LAYOUT.md)'s archive-as-master-of-originals
    rule, whose only writer is `scripts/intake.py`. This ruling concerns
