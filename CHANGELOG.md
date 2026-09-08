@@ -243,6 +243,34 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 
 ### Fixed
 
+- `scripts/scene-extraction/extract_scenes.py` (2026-09-08): three tooling
+  defects the 2026-09-02 gap audits reported. `location_basis` no longer
+  embeds a `_control/scenes/_catalog.md` path (a control-only path inside
+  a potentially-promotable entity field) -- reads `prose (<location
+  description>)` instead. The source-inventory doc's `Played
+  {chat['played']}.` line was a plain (non-f) string appended after an
+  f-string ternary, so the substitution never happened; now an f-string.
+  `source_bot`'s bot name always read `None` for every private-chat
+  thread -- `bot.json`'s real name field lives at `data.attributes.name`,
+  not `data.name` the code read -- systemic across every story cut with
+  this engine (Black Ledger, Adjustment Protocol, Wonderland all
+  affected). All three verified against real `bot.json` fixtures and the
+  real f-string shape, not just read. Per the engine's own standing rule,
+  already-cut scene files are not retroactively patched -- only the next
+  cut benefits.
+- BattleChasers and Chaos Saga (2026-09-08): each was missing
+  `_control/README.md` (BattleChasers also missing
+  `_control/SOURCE_PROVENANCE.md`), reported by the 2026-09-02 gap audits.
+  Written from real facts already on record in each story's own
+  `PASS.md`/`sources/README.md`, not invented; `_control/` is manifest-
+  excluded so no overlay rehash was needed, and both stories'
+  `verify-draft-overlay.mjs` re-run clean (152 and 330 merged entities).
+  The audits' third finding, `canon/characters/lilith.md`'s `name:` field
+  holding a full sentence, turned out to already be fixed in the pending
+  draft overlay (`drafts/characters/lilith.md`); a direct canon edit was
+  attempted, then reverted before it could desync the overlay's recorded
+  baseline hash for that path once the mismatch was noticed -- confirmed
+  clean by rehashing after the revert.
 - Injection-provenance gate, `meta-instruction-reference` pattern
   (2026-09-08): required the plural "instructions" rather than
   "instructions?". Singular "your instruction" is common, benign narrative

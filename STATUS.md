@@ -2,6 +2,35 @@
 
 **Last updated:** 2026-09-08.
 
+**Non-flagship pass closeout: small cleanup pass over the 2026-09-02 gap
+audits' reported-but-unfixed findings (2026-09-08).** With the six-story
+reconciliation arc (see the entry below) closed, four remaining findings
+from that audit were cleaned up. (1) BattleChasers and Chaos Saga each
+gained the missing `SOURCE_PROVENANCE.md`/`_control/README.md` control
+docs, written from real facts already on record in each story's own
+`PASS.md`/`sources/README.md` -- not invented. (2) The reported
+`canon/characters/lilith.md` `name:`-field bug turned out to already be
+fixed in the pending draft overlay; a canon edit was attempted, then
+reverted on catching that it would have desynced the overlay's recorded
+`baseline_sha256` for that path (confirmed by rehashing after the
+revert: matches exactly) -- the honest fix is "already queued, awaits
+promotion," not a canon edit. (3) `scripts/scene-extraction/extract_scenes.py`'s
+three tooling defects (a `_control/` path leaking into every scene's
+`location_basis`, an unrendered `{chat['played']}` from a missing
+f-string prefix, and `source_bot`'s name always reading `None` because
+`bot.json`'s real name field lives at `data.attributes.name`, not
+`data.name` -- systemic across every private-chat thread cut with this
+engine: Black Ledger, Adjustment Protocol, and Wonderland all affected)
+are fixed in the engine and verified against real `bot.json` fixtures,
+not just read. Per the engine's own standing rule, already-cut scene
+files are not retroactively patched -- only the next cut benefits.
+`verify-draft-overlay.mjs` re-run clean for both BattleChasers (152
+merged entities) and Chaos Saga (330 merged entities) after the new
+control docs landed. (4) Cross-story name collisions were deliberately
+left for a separate pass, on operator instruction. CLAUDE.md's
+`scripts/scene-extraction/` entry and STATUS.md's original
+2026-09-02 gap-audit summary each carry a matching correction.
+
 **The Noctis Veil: SL/KM tiering ruling closed, and the injection-scanner
 gap it surfaced fixed rather than left "accepted" (2026-09-08).** Two
 threads that carried no tier decide at all under Ruling 1 (Sister Lucia,
@@ -683,6 +712,18 @@ the Midnight audit's "present in all four" rows, now corrected; BattleChasers'
 field. Tooling defects reported: the extraction engine writes `_control/`
 paths into every scene's `location_basis` and left an unrendered
 `{chat['played']}` and `source_bot … None` in the Black Ledger inventory.
+**FIXED 2026-09-08** (all three, in the engine, not retroactively in
+already-cut scene files): see CLAUDE.md's `scripts/scene-extraction/`
+entry for the root causes (a control-path leak, a missing f-string
+prefix, and `bot.json`'s name actually living at `data.attributes.name`
+rather than `data.name`) and verification. The BattleChasers/Chaos Saga
+missing-doc gaps and the `lilith.md` `name:` field are also resolved:
+`SOURCE_PROVENANCE.md`/`README.md` written for both stories from real
+provenance facts (their `PASS.md`/`sources/README.md` records), and the
+`lilith.md` field turned out to already be fixed in the pending draft
+overlay (`drafts/characters/lilith.md`) -- only active canon, awaiting
+that overlay's eventual promotion, still carries the old value, so no
+canon edit was made or needed.
 Cross-story name collisions were swept from every canon and drafts tree (Vale
 in five stories; Thorne on three core characters; the Jäger family; Hale,
 Voss, Bell, Quill, Navarro, Crane, Brindle, Marrow, Briar, Evelyn) and listed

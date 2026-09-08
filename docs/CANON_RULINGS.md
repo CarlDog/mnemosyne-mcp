@@ -76,12 +76,20 @@ above.
    105 of the 174 draft scene files. Three independent sources say no scene
    leaves `drafts/` before that ruling. **Nothing promotes.** Seat 09 unblocks
    canon-side reconciliation, not promotion.
-3. **The Noctis Veil's SL and KM threads.** Its four extracted threads are
-   GC (16 scenes), MT (24), SL (4) and KM (6). `NV-1` rules on GC and `NV-2` on
-   MT; SL and KM — ten scenes — carry no tier decide at all, while `NV-4`
-   prescribes a per-thread flag across all fifty. This ruling does not reach
-   them, and letting `NV-4`'s flag resolve them by default would classify ten
-   played scenes that nobody ruled on.
+3. **The Noctis Veil's SL and KM threads — closed 2026-09-08.** Its four
+   extracted threads are GC (16 scenes), MT (24), SL (4) and KM (6). `NV-1`
+   rules on GC and `NV-2` on MT; SL and KM — ten scenes — carried no tier
+   decide at all, so this ruling did not originally reach them. Ratified
+   2026-09-08: same classification as GC/MT, canon governs. Neither thread
+   touches the Noctis/relic premise, and canon's existing character records
+   for both women (a celibate protective mentor; a devout woman explicitly
+   unaware Noctis exists) actively contradict the played content — the same
+   informed-retirement pattern this ruling already found in MT. `NV-4`'s
+   per-thread flag now applies to all fifty scenes across all four threads
+   (GC and MT had been classified since 2026-09-04 but were never actually
+   flagged until this same pass closed that execution gap too). Full record:
+   `the-noctis-veil/drafts/_control/SOURCE_PROVENANCE.md`'s "Revision-3"
+   section and `PASS.md`'s "Re-seal 2026-09-08" entry.
 
 ### Interim control while the recording requirement is open
 
@@ -138,7 +146,7 @@ so it is never substituted. That leaves three of the six stories untouched.
 |---|---|
 | Brass & Nerve | **Moot.** `BN-1(a)` is absorbed by Ruling 1: the twelve scenes are source-era, stay out of every ledger, and never promote. |
 | Midnight Is a Suggestion | **Moot.** Zero scene files. |
-| The Noctis Veil | **Moot for GC and MT** — `NV-1(a)` and `NV-2` make both threads retired-premise play. SL and KM remain unruled (Ruling 1, open item 3). |
+| The Noctis Veil | **Moot for all four threads.** `NV-1(a)` and `NV-2` make GC and MT retired-premise play; Ruling 1's open item 3 (closed 2026-09-08) makes SL and KM the same. No thread in this story promotes, so substitution never applies. |
 | Shadowflame | **Actionable.** Two lines in two named scene files; the canon name exists. |
 | Star Wars: The Black Ledger | **Actionable.** The played role's source name was retconned to a canon name, so a counterpart exists; two further slips are the bot's own use of the operator's platform name and first name. |
 | The Adjustment Protocol | **Blocked on one name.** See below. |

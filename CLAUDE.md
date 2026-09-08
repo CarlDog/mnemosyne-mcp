@@ -452,11 +452,24 @@ STATUS.md's dated entries.
   `add`s with the draft banner) plus their `_control/scenes/` docs, driven by
   a per-story `cuts_<story>.py` config; `build_sources.py` rebuilds every
   story's read-only `sources/` view; `earlier/` holds do-not-rerun one-offs.
-  Known defects (found by the 2026-09-02 gap audits, unfixed): the engine
-  writes a `_control/scenes/_catalog.md` path into every scene's
-  `location_basis` (a control path inside an entity), and one run left an
-  unrendered `{chat['played']}` and a `source_bot … None` in an inventory.
-  Fix in the engine before the next cut, not by hand in the scene files.
+  Three defects found by the 2026-09-02 gap audits were fixed in the engine
+  2026-09-08 (not retroactively in already-cut scene files -- per this
+  note's own standing rule, fix in the engine before the next cut, not by
+  hand in existing output): `location_basis` no longer embeds a
+  `_control/scenes/_catalog.md` path (a control-only path inside a
+  potentially-promotable entity field) -- it now reads just `prose
+  (<location description>)`; the source-inventory doc's `Played
+  {chat['played']}.` line is now an f-string and actually interpolates;
+  and `source_bot`'s bot name (previously always `None` for every
+  private-chat thread across every story cut with this engine -- Black
+  Ledger, Adjustment Protocol, Wonderland all affected) now reads
+  `bot.json`'s real `data.attributes.name` path instead of the
+  nonexistent `data.name`. Verified against real `bot.json` fixtures and
+  the real `{chat['played']}` shape, not just read. Already-cut scene
+  files (Black Ledger, Adjustment Protocol, Wonderland, Shadowflame,
+  Chaos Saga, Noctis Veil, BattleChasers) still carry the old
+  `location_basis`/`source_bot` values -- correct only for the next cut,
+  not retroactive.
 - `docs/ARCHITECTURE.md` — locked architectural decisions. Read this
   first to understand project shape, state model, validation strategy,
   provider strategy, and build sequence.
