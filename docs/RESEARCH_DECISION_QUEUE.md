@@ -167,9 +167,23 @@ shipped 2026-08-29, route-field-through-results genuinely still open (no
   override -- was verified by executing the real module with real env
   vars via a throwaway probe script, not just read: all 7 provider/
   override combinations resolved correctly, and an invalid value failed
-  startup with the expected actionable error. **Slice 3 next**: the gate
-  in `dispatchGenerate()`. Unblocks "Ollama generator local-by-default"
-  (Ollama-table row above).
+  startup with the expected actionable error. **Slice 3 done, 2026-09-08**
+  (`04691a3`), closing the design: the gate in `dispatchGenerate()`,
+  `content_rating` wired through `ContextBundle`/`ContinuationPort` at
+  zero extra OC round trips (piggybacks on the fetch `position` already
+  needed), mutation-tested both directions (gate disabled entirely; the
+  "undeclared never blocks" rule broken specifically), real-OC-verified
+  that `content_rating` resolves from an actual story marker. Two
+  implementation refinements recorded in the design doc's "Implementation
+  record": the refusal message names the provider, not the story; the
+  position-write relabeling postscript is a shared helper, not duplicated
+  across the two pre-dispatch throw sites now in that span.
+
+  **Phase 3 fully closed.** Design-wise this unblocks "Ollama generator
+  local-by-default" (Ollama-table row above) -- the content-routing
+  machinery it would lean on now exists -- but that item is still a
+  separate, unscoped piece of work; shipping this design doesn't itself
+  complete it.
 
 **Phase 4 — query-enrichment fixture labeling (operator-owned).**
 RETRIEVAL_CONTROLS_DESIGN slice 3's settled-fixtures benchmark needs
