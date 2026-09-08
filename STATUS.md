@@ -2,6 +2,26 @@
 
 **Last updated:** 2026-09-08.
 
+**`continueScene()`'s phase extraction, deferred by the phase-end audit,
+done the same day as a planned follow-up (2026-09-08).** The design
+(which phase becomes which named function, exact inputs/outputs) was
+discussed and agreed before any code changed -- the two-part treatment
+the audit itself calls for, rather than a rushed mechanical pass. Split
+into eight named phase functions
+(`applyPositionIfRequested`/`gatherAndPlan`/`dispatchGenerate`/
+`buildGroupYieldResponse`/`buildIncompleteResponse`/`saveBeat`/
+`validateBeat`/`retagIfValidated`); `continueScene()` itself is now a
+top-to-bottom sequence of calls to these. The one deliberately-preserved
+piece: the try/catch relabeling a position-write-then-failure as
+`retry_safe:false` stays wrapping the `gatherAndPlan()` call rather than
+living inside a phase function, flagged with a `TODO` as its own open
+shape question for later. Surfaced and closed a real pre-existing test
+gap in the process: no test exercised this exact relabeling path. Four
+new unit tests added against a hand-built `ContinuationPort` mock (no OC
+needed), each mutation-tested (broke the logic, confirmed the test
+failed, restored). Full verification clean; suite at 621 passed (was
+617), zero regression. Full record in Known Gaps below.
+
 **Phase-end audit run at the non-flagship arc's close (2026-09-08).**
 With the whole non-flagship reconciliation arc closed and promotion
 declined, this was a genuine phase boundary -- ran the standing
@@ -5076,19 +5096,33 @@ consider only when real use exposes the corresponding pressure:
 
 ## Known Gaps
 
-- **`continueScene()`'s ~390-line body would benefit from named phase
-  extraction** (found in the 2026-09-08 phase-end audit's refactor scan,
-  deliberately not fixed). The function itself is correct and well-
-  commented, not a defect -- but it's dense orchestration with a lot of
-  state threaded across phases (gather, context-plan, generate, save,
-  validate) and a subtle, deliberately-scoped try/catch (RunOutcomeError
-  relabeling when a position write already landed before a later
-  failure). Extraction requires real design decisions about what
-  threads through each new boundary as parameters vs. return values --
-  not pure code motion like the stories.ts/position.ts and
-  llm.ts/ollama-provider.ts splits done the same day. Queue as its own
-  planned stage, with a focused review pass, rather than a mechanical
-  audit fix.
+- ~~**`continueScene()`'s ~390-line body would benefit from named phase
+  extraction.**~~ **Closed 2026-09-08**, same day, as a deliberately
+  planned follow-up stage rather than a rushed mechanical fix -- the
+  extraction design (which phase becomes which named function, exact
+  inputs/outputs) was discussed and agreed before any code changed.
+  Split into `applyPositionIfRequested`, `gatherAndPlan`,
+  `dispatchGenerate`, `buildGroupYieldResponse`, `buildIncompleteResponse`,
+  `saveBeat`, `validateBeat`, `retagIfValidated` -- `continueScene()`
+  itself is now a top-to-bottom sequence of calls to these. The one
+  deliberately-preserved piece: the try/catch wrapping `gatherAndPlan()`
+  that relabels a `RunOutcomeError` `retry_safe:false` when a position
+  write already landed before the failure -- left exactly where it was,
+  wrapping the call rather than living inside any phase function, with a
+  `TODO` in the code marking it as its own still-open shape question
+  (tracked, not fixed, this pass).
+
+  This surfaced and closed a real, pre-existing test gap: no test
+  exercised this exact relabeling path (`tests/continue-position.test.ts`'s
+  closest case goes through a *later*, unwrapped phase). Four new unit
+  tests added (`tests/continue-scene-phases.test.ts`) against a fully
+  hand-built `ContinuationPort` mock -- no OC needed, so they run
+  everywhere `OC_URL` isn't set. Each mutation-tested: the `retrySafe`
+  value and the `positionApplied` guard were each briefly broken in turn,
+  confirmed the corresponding test failed with the expected symptom, then
+  restored. Full verification: typecheck/lint/format clean; suite green
+  at 621 passed (up from 617 -- the four new tests), 91 env-gated
+  skipped, zero regression.
 - **~85 exported `src/` interfaces/types used only within their
   declaring file** (same audit, same day, deliberately not fixed). Not
   itemized by the audit -- a human/agent sweep would need to enumerate
