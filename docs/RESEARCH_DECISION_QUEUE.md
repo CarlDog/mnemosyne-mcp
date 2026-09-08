@@ -144,11 +144,21 @@ shipped 2026-08-29, route-field-through-results genuinely still open (no
   the originally proposed `sfw`/`mature`); `content_rating` stays optional
   on new story creation; no escape hatch for cloud providers, final. Full
   record in the design doc's "Ratified decisions" section.
-- 3b. **Next up.** Implement in slices, same pattern as the four designs
-  above, each slice its own commit + tests: (1) marker schema 6 +
-  `contentRating` field + `mnemo_story_use` param, (2) per-provider
-  `contentCapability` + env vars, (3) the gate in `dispatchGenerate()`.
-  Unblocks "Ollama generator local-by-default" (Ollama-table row above).
+- 3b. Implementing in slices, same pattern as the four designs above,
+  each slice its own commit + tests. **Slice 1 done, 2026-09-08**
+  (`265955d`): marker schema 6, `content_rating` field
+  (`src/stories.ts`/`src/application/model.ts`), `setContentRating`,
+  `mnemo_story_use`'s `content_rating` param, `toStorySummary`. The
+  round-trip-preservation property was mutation-tested against real OC
+  at all three rewrite call sites (`setKindroidTarget`/
+  `setNarratorProfile`/`applyPositionUpdate`) -- one mutation
+  (`applyPositionUpdate`) initially survived because the test asserted
+  only the in-memory return value, which stays correct via object-spread
+  even when the persisted write drops the field; fixed to re-fetch via
+  `findStory` before any later write could mask it. **Slice 2 next**:
+  per-provider `contentCapability` + env vars. **Slice 3 after that**:
+  the gate in `dispatchGenerate()`. Unblocks "Ollama generator
+  local-by-default" (Ollama-table row above).
 
 **Phase 4 — query-enrichment fixture labeling (operator-owned).**
 RETRIEVAL_CONTROLS_DESIGN slice 3's settled-fixtures benchmark needs
