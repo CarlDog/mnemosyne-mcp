@@ -31,6 +31,7 @@ import type {
   LlmProvider,
   ModelUsage,
 } from "./llm.js";
+import type { ContentRating } from "./stories.js";
 
 export interface OpenAICompatConfig {
   /** Provider name surfaced in logs/tool responses ("openai",
@@ -41,6 +42,14 @@ export interface OpenAICompatConfig {
   baseUrl: string;
   apiKey: string;
   defaultModel: string;
+  /** This provider's declared content-generation capability
+   * (docs/CONTENT_ROUTING_DESIGN.md, ratified 2026-09-08). This class
+   * serves both openai (always "sfw", no operator override -- its own
+   * upstream content policy enforces it) and atlascloud (operator-
+   * overridable via ATLASCLOUD_CONTENT_CAPABILITY) -- the disposition
+   * differs per name, but this field just carries whatever
+   * generator-config.ts already resolved for the caller's `name`. */
+  contentCapability: ContentRating;
 }
 
 /** Pure request-body assembly -- unit-testable without a network.
@@ -131,6 +140,10 @@ export function extractChatCompletionText(
 
 export class OpenAICompatProvider implements LlmProvider {
   readonly name: string;
+
+  get contentCapability(): ContentRating {
+    return this.config.contentCapability;
+  }
 
   constructor(private readonly config: OpenAICompatConfig) {
     this.name = config.name;

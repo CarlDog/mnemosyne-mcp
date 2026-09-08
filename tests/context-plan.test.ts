@@ -274,10 +274,12 @@ const smallWindowProvider = () =>
     url: "http://127.0.0.1:1",
     defaultModel: "m",
     maxContextWindow: 1024,
+    contentCapability: "sfw",
   });
 
 const neverValidator: LlmProvider = {
   name: "stub-validator",
+  contentCapability: "sfw",
   generate: async () => {
     throw new Error("validator must not run");
   },
@@ -427,6 +429,7 @@ describe("continueScene admission enforcement", () => {
     void state;
     const companion: LlmProvider = {
       name: "botify",
+      contentCapability: "sfw",
       generate: async () => ({
         text: "A beat.",
         context_selection: ["scene-1", "char-2"],
@@ -493,6 +496,7 @@ describe("warmup (slice 2)", () => {
       url: "http://127.0.0.1:1",
       defaultModel: "m",
       keepAlive: "0",
+      contentCapability: "sfw",
     }).warmup();
     expect(fetchSpy).not.toHaveBeenCalled();
   });

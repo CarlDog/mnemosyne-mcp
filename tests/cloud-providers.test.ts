@@ -26,10 +26,65 @@ import {
   GeminiProvider,
 } from "../src/gemini-provider.js";
 import { extractBotReply } from "../src/botify-client.js";
+import { BotifyProvider } from "../src/botify-provider.js";
 import { buildCompanionMessage } from "../src/companion-message.js";
 import { buildKindroidMessage } from "../src/kindroid-provider.js";
+import type { BotifyClient } from "../src/botify-client.js";
 import type { LlmGenerateOptions } from "../src/llm.js";
 import type { ContextBundle } from "../src/prompt.js";
+
+describe("contentCapability getter (pure)", () => {
+  // Each provider exposes exactly the value its config was constructed
+  // with (docs/CONTENT_ROUTING_DESIGN.md, ratified 2026-09-08) -- a thin
+  // pass-through, but LlmProvider.contentCapability is a required field
+  // every generate()-dispatching code path can now rely on, so a getter
+  // that silently returned the wrong value would be a real regression.
+  it("anthropic", () => {
+    const p = new AnthropicProvider({
+      apiKey: "k",
+      defaultModel: "m",
+      contentCapability: "sfw",
+    });
+    expect(p.contentCapability).toBe("sfw");
+  });
+
+  it("gemini", () => {
+    const p = new GeminiProvider({
+      apiKey: "k",
+      defaultModel: "m",
+      contentCapability: "sfw",
+    });
+    expect(p.contentCapability).toBe("sfw");
+  });
+
+  it("openai-compat serves both openai (sfw-only) and atlascloud (overridable) with whatever the caller resolved", () => {
+    const openai = new OpenAICompatProvider({
+      name: "openai",
+      baseUrl: "https://api.openai.com/v1",
+      apiKey: "k",
+      defaultModel: "m",
+      contentCapability: "sfw",
+    });
+    expect(openai.contentCapability).toBe("sfw");
+
+    const atlas = new OpenAICompatProvider({
+      name: "atlascloud",
+      baseUrl: "https://api.atlascloud.ai/v1",
+      apiKey: "k",
+      defaultModel: "m",
+      contentCapability: "nsfw",
+    });
+    expect(atlas.contentCapability).toBe("nsfw");
+  });
+
+  it("botify", () => {
+    const p = new BotifyProvider({} as BotifyClient, {
+      defaultChatId: "chat-1",
+      contentCapability: "nsfw",
+    });
+    expect(p.contentCapability).toBe("nsfw");
+  });
+});
 
 const OPTS: LlmGenerateOptions = {
   systemPrompt: "You are the narrator.",
@@ -320,6 +375,7 @@ anthropicSuite("AnthropicProvider (live)", () => {
     const provider = new AnthropicProvider({
       apiKey: process.env.ANTHROPIC_API_KEY!,
       defaultModel: process.env.ANTHROPIC_MODEL!,
+      contentCapability: "sfw",
     });
     const { text } = await provider.generate(LIVE_OPTS);
     expect(text.length).toBeGreaterThan(0);
@@ -337,6 +393,7 @@ openaiSuite("OpenAICompatProvider (live, openai)", () => {
       baseUrl: process.env.OPENAI_BASE_URL || "https://api.openai.com/v1",
       apiKey: process.env.OPENAI_API_KEY!,
       defaultModel: process.env.OPENAI_MODEL!,
+      contentCapability: "sfw",
     });
     const { text } = await provider.generate(LIVE_OPTS);
     expect(text.length).toBeGreaterThan(0);
@@ -352,6 +409,7 @@ geminiSuite("GeminiProvider (live)", () => {
     const provider = new GeminiProvider({
       apiKey: process.env.GEMINI_API_KEY!,
       defaultModel: process.env.GEMINI_MODEL!,
+      contentCapability: "sfw",
     });
     const { text } = await provider.generate(LIVE_OPTS);
     expect(text.length).toBeGreaterThan(0);
@@ -372,6 +430,7 @@ botifySuite("BotifyProvider (live)", () => {
     );
     const provider = new BotifyProvider(client, {
       defaultChatId: process.env.BOTIFY_STORYTELLING_CHAT!,
+      contentCapability: "sfw",
     });
     try {
       const { text } = await provider.generate({
@@ -398,6 +457,7 @@ atlasSuite("OpenAICompatProvider (live, atlascloud)", () => {
         process.env.ATLASCLOUD_BASE_URL || "https://api.atlascloud.ai/v1",
       apiKey: process.env.ATLASCLOUD_API_KEY!,
       defaultModel: process.env.ATLASCLOUD_MODEL!,
+      contentCapability: "sfw",
     });
     const { text } = await provider.generate(LIVE_OPTS);
     expect(text.length).toBeGreaterThan(0);

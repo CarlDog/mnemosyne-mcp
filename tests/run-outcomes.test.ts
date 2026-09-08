@@ -63,11 +63,13 @@ function recordingOc(opts?: { saveError?: string }): {
 
 const stubGenerator = (generate: LlmProvider["generate"]): LlmProvider => ({
   name: "stub-generator",
+  contentCapability: "sfw",
   generate,
 });
 
 const neverValidator: LlmProvider = {
   name: "stub-validator",
+  contentCapability: "sfw",
   generate: async () => {
     throw new Error("validator must not run in these tests");
   },

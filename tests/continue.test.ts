@@ -29,6 +29,7 @@ suite("Phase C-1 — continue (real OC + real Ollama)", () => {
     generator = new OllamaProvider({
       url: OLLAMA_URL,
       defaultModel: OLLAMA_MODEL!,
+      contentCapability: "sfw",
     });
     // Same model as the generator, matching this repo's test convention
     // (see validate-tool.test.ts) of reusing OLLAMA_GENERATOR_MODEL for
@@ -36,6 +37,7 @@ suite("Phase C-1 — continue (real OC + real Ollama)", () => {
     validator = new OllamaProvider({
       url: OLLAMA_URL,
       defaultModel: OLLAMA_MODEL!,
+      contentCapability: "sfw",
     });
 
     // Seed minimal context so the prompt has something to ground in.

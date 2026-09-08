@@ -23,7 +23,7 @@
 // file, not ollama-provider.ts, is those consumers' actual dependency.
 
 import type { ContextBundle } from "./prompt.js";
-import type { KindroidTarget } from "./stories.js";
+import type { ContentRating, KindroidTarget } from "./stories.js";
 export {
   classifyOllamaHttpError,
   computeNumCtx,
@@ -239,6 +239,13 @@ export function supportsStructuredOutput(
 
 export interface LlmProvider {
   readonly name: string;
+  /** This provider's declared content-generation capability
+   * (docs/CONTENT_ROUTING_DESIGN.md, ratified 2026-09-08). Checked against
+   * a story's declared content_rating at the one real dispatchGenerate()
+   * call site -- an operator declaration nothing can introspect, not a
+   * mechanic derivable from the provider (that's GeneratorCapabilities'
+   * job, a deliberately separate table -- see the design doc's §2 note). */
+  readonly contentCapability: ContentRating;
   generate(opts: LlmGenerateOptions): Promise<GeneratedBeat>;
   /** Optional provider warmup hook. Implemented for Ollama so we can force
    * a model load at startup and reduce first-call cold-start latency.

@@ -23,7 +23,11 @@ import {
   MIN_GROUP_MAX_TURNS,
 } from "./kindroid-provider.js";
 import { DEFAULT_USER_NAME } from "./companion-message.js";
-import type { KindroidTarget } from "./stories.js";
+import {
+  VALID_CONTENT_RATINGS,
+  type ContentRating,
+  type KindroidTarget,
+} from "./stories.js";
 import {
   DEFAULT_SCENE_CONTEXT_STRATEGY,
   SCENE_CONTEXT_STRATEGIES,
@@ -82,6 +86,20 @@ export const GENERATOR_PROVIDER = parseEnvEnum(
 export const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
 export const OLLAMA_KEEP_ALIVE =
   process.env.OLLAMA_KEEP_ALIVE || DEFAULT_KEEP_ALIVE;
+
+// Read unconditionally, like OLLAMA_URL above: both the ollama-generator
+// branch below AND the always-on validator instance (index.ts) construct
+// an OllamaProvider, and LlmProvider now requires contentCapability on
+// every instance regardless of role (docs/CONTENT_ROUTING_DESIGN.md,
+// ratified 2026-09-08). Meaningless on the validator instance -- the
+// content-routing gate only checks the GENERATOR's capability -- but both
+// constructions need a value to satisfy the interface.
+export const ollamaContentCapability = parseEnvEnum(
+  "OLLAMA_CONTENT_CAPABILITY",
+  process.env.OLLAMA_CONTENT_CAPABILITY,
+  VALID_CONTENT_RATINGS,
+  "sfw" as ContentRating,
+);
 
 // Operator display name for the companion-chat providers' outgoing-message
 // provenance header (e.g. "[Mnemosyne -- automated scene direction, not
@@ -188,8 +206,15 @@ export type GeneratorConfig =
       defaultTarget: KindroidTarget;
       groupMaxTurns?: number;
       timeoutMs?: number;
+      contentCapability: ContentRating;
     }
-  | { provider: "botify"; url: URL; rawUrl: string; chatId: string }
+  | {
+      provider: "botify";
+      url: URL;
+      rawUrl: string;
+      chatId: string;
+      contentCapability: ContentRating;
+    }
   | {
       provider: CloudProviderName;
       apiKey: string;
@@ -197,8 +222,13 @@ export type GeneratorConfig =
       /** Only meaningful for the OpenAI-compatible pair (openai /
        * atlascloud); anthropic and gemini have fixed hosts. */
       baseUrl: string;
+      /** "sfw" always for anthropic/openai/gemini (no operator override --
+       * their own upstream content policy enforces it); operator-
+       * overridable via ATLASCLOUD_CONTENT_CAPABILITY for atlascloud
+       * (docs/CONTENT_ROUTING_DESIGN.md, ratified 2026-09-08). */
+      contentCapability: ContentRating;
     }
-  | { provider: "ollama"; model: string };
+  | { provider: "ollama"; model: string; contentCapability: ContentRating };
 
 export let generatorConfig: GeneratorConfig;
 export let ollamaValidatorModel: string;
@@ -300,6 +330,13 @@ if (GENERATOR_PROVIDER === "kindroid") {
     process.exit(1);
   }
 
+  const kindroidContentCapability = parseEnvEnum(
+    "KINDROID_CONTENT_CAPABILITY",
+    process.env.KINDROID_CONTENT_CAPABILITY,
+    VALID_CONTENT_RATINGS,
+    "sfw" as ContentRating,
+  );
+
   generatorConfig = {
     provider: "kindroid",
     url: kindroidUrl,
@@ -307,6 +344,7 @@ if (GENERATOR_PROVIDER === "kindroid") {
     defaultTarget,
     groupMaxTurns,
     timeoutMs: kindroidTimeoutMs,
+    contentCapability: kindroidContentCapability,
   };
 } else if (GENERATOR_PROVIDER === "botify") {
   const BOTIFY_MCP_URL = process.env.BOTIFY_MCP_URL;
@@ -339,11 +377,19 @@ if (GENERATOR_PROVIDER === "kindroid") {
     process.exit(1);
   }
 
+  const botifyContentCapability = parseEnvEnum(
+    "BOTIFY_CONTENT_CAPABILITY",
+    process.env.BOTIFY_CONTENT_CAPABILITY,
+    VALID_CONTENT_RATINGS,
+    "sfw" as ContentRating,
+  );
+
   generatorConfig = {
     provider: "botify",
     url: botifyUrl,
     rawUrl: BOTIFY_MCP_URL,
     chatId: BOTIFY_STORYTELLING_CHAT,
+    contentCapability: botifyContentCapability,
   };
 } else if (GENERATOR_PROVIDER !== "ollama") {
   // The four direct-API cloud providers share one validation shape: an
@@ -359,6 +405,13 @@ if (GENERATOR_PROVIDER === "kindroid") {
   let baseUrl = "";
   let keyVar = "";
   let modelVar = "";
+  // "sfw" for anthropic/openai/gemini always -- no env var read for any of
+  // the three, deliberately: their own upstream content policy enforces
+  // this regardless of what mnemosyne declares, and an override would just
+  // be a lie caught by a 400 later, after already spending the call
+  // (docs/CONTENT_ROUTING_DESIGN.md, ratified 2026-09-08, decision 4).
+  // Only atlascloud reads ATLASCLOUD_CONTENT_CAPABILITY.
+  let contentCapability: ContentRating = "sfw";
   switch (GENERATOR_PROVIDER) {
     case "anthropic":
       apiKey = process.env.ANTHROPIC_API_KEY;
@@ -386,6 +439,12 @@ if (GENERATOR_PROVIDER === "kindroid") {
         process.env.ATLASCLOUD_BASE_URL || "https://api.atlascloud.ai/v1";
       keyVar = "ATLASCLOUD_API_KEY";
       modelVar = "ATLASCLOUD_MODEL";
+      contentCapability = parseEnvEnum(
+        "ATLASCLOUD_CONTENT_CAPABILITY",
+        process.env.ATLASCLOUD_CONTENT_CAPABILITY,
+        VALID_CONTENT_RATINGS,
+        "sfw" as ContentRating,
+      );
       break;
   }
   if (!apiKey) {
@@ -421,6 +480,7 @@ if (GENERATOR_PROVIDER === "kindroid") {
     apiKey,
     model,
     baseUrl,
+    contentCapability,
   };
 } else {
   const OLLAMA_GENERATOR_MODEL = process.env.OLLAMA_GENERATOR_MODEL;
@@ -435,7 +495,11 @@ if (GENERATOR_PROVIDER === "kindroid") {
     process.env.OLLAMA_VALIDATOR_MODEL || OLLAMA_GENERATOR_MODEL;
 
   ollamaGeneratorModel = OLLAMA_GENERATOR_MODEL;
-  generatorConfig = { provider: "ollama", model: OLLAMA_GENERATOR_MODEL };
+  generatorConfig = {
+    provider: "ollama",
+    model: OLLAMA_GENERATOR_MODEL,
+    contentCapability: ollamaContentCapability,
+  };
 }
 
 // The validator is architecturally local ("local and free" -- ARCHITECTURE

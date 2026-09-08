@@ -27,12 +27,17 @@ import type {
   LlmProvider,
   ModelUsage,
 } from "./llm.js";
+import type { ContentRating } from "./stories.js";
 
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com";
 
 export interface GeminiConfig {
   apiKey: string;
   defaultModel: string;
+  /** Always "sfw" -- no operator override. Gemini's own upstream content
+   * policy enforces this regardless of what mnemosyne declares
+   * (docs/CONTENT_ROUTING_DESIGN.md, ratified 2026-09-08). */
+  contentCapability: ContentRating;
 }
 
 /** Pure request-body assembly -- unit-testable without a network.
@@ -132,6 +137,10 @@ export function extractGeminiText(data: unknown): GeneratedBeat {
 
 export class GeminiProvider implements LlmProvider {
   readonly name = "gemini";
+
+  get contentCapability(): ContentRating {
+    return this.config.contentCapability;
+  }
 
   constructor(private readonly config: GeminiConfig) {}
 

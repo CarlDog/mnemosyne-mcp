@@ -25,6 +25,7 @@ suite("v0.1.2 — mnemo_validate (standalone validation)", () => {
     validator = new OllamaProvider({
       url: OLLAMA_URL,
       defaultModel: OLLAMA_MODEL!,
+      contentCapability: "sfw",
     });
 
     // Compound rule with multiple constraints — the v0.1.1 dogfood case.

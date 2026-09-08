@@ -45,11 +45,13 @@ describe("instance-keyed resolution", () => {
       url: "http://127.0.0.1:1",
       defaultModel: "gen-model",
       maxContextWindow: 32_768,
+      contentCapability: "sfw",
     });
     const validator = new OllamaProvider({
       url: "http://127.0.0.1:1",
       defaultModel: "val-model",
       maxContextWindow: 8_192,
+      contentCapability: "sfw",
     });
     const [g, v] = await Promise.all([
       resolveCapabilities(generator),
@@ -65,6 +67,7 @@ describe("instance-keyed resolution", () => {
       url: "http://127.0.0.1:1",
       defaultModel: "m",
       maxContextWindow: 32_768,
+      contentCapability: "sfw",
     });
     expect((await resolveCapabilities(p)).context_window).toBe(16_384);
 
@@ -75,6 +78,7 @@ describe("instance-keyed resolution", () => {
       url: "http://127.0.0.1:1",
       defaultModel: "other",
       maxContextWindow: 32_768,
+      contentCapability: "sfw",
     });
     expect((await resolveCapabilities(q)).context_window).toBe("unknown");
   });
@@ -82,6 +86,7 @@ describe("instance-keyed resolution", () => {
 
 const stubProvider = (name: string): LlmProvider => ({
   name,
+  contentCapability: "sfw",
   generate: async () => ({ text: "x" }),
 });
 
@@ -112,6 +117,7 @@ describe("unknown is unknown", () => {
     const ollama = new OllamaProvider({
       url: "http://127.0.0.1:1",
       defaultModel: "m2",
+      contentCapability: "sfw",
     });
     expect((await resolveCapabilities(ollama)).structured_output).toBe(true);
     expect(

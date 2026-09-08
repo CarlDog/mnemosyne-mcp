@@ -34,7 +34,7 @@ import { RunOutcomeError } from "./run-outcome.js";
 import { selectCompanionMemoryIds } from "./companion-message.js";
 import type { GeneratedBeat, LlmGenerateOptions, LlmProvider } from "./llm.js";
 import type { ContextBundle } from "./prompt.js";
-import type { KindroidTarget } from "./stories.js";
+import type { ContentRating, KindroidTarget } from "./stories.js";
 
 export interface KindroidProviderConfig {
   /** The dedicated storytelling target (a single AI or a group chat) used
@@ -46,6 +46,9 @@ export interface KindroidProviderConfig {
   /** Operator display name for the outgoing-message provenance header
    * (MNEMO_USER_NAME). Falls back to DEFAULT_USER_NAME when unset. */
   userName?: string;
+  /** This provider's declared content-generation capability
+   * (KINDROID_CONTENT_CAPABILITY, default sfw). */
+  contentCapability: ContentRating;
 }
 
 // Matches kindroid-mcp's own kindroid_advance_group default -- a "beat"
@@ -157,6 +160,10 @@ export function formatGroupReplies(replies: KindroidGroupReply[]): string {
 
 export class KindroidProvider implements LlmProvider {
   readonly name = "kindroid";
+
+  get contentCapability(): ContentRating {
+    return this.config.contentCapability;
+  }
 
   constructor(
     private readonly client: KindroidClient,

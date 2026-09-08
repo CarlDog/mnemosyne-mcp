@@ -37,7 +37,11 @@ const emptyContext: ContextBundle = {
 };
 
 function stubReturning(text: string): LlmProvider {
-  return { name: "stub-validator", generate: async () => ({ text }) };
+  return {
+    name: "stub-validator",
+    contentCapability: "sfw",
+    generate: async () => ({ text }),
+  };
 }
 
 const validIssue = {
@@ -154,6 +158,7 @@ describe("structured-output path", () => {
       ) => Promise<GeneratedBeat>;
     } = {
       name: "stub-structured",
+      contentCapability: "sfw",
       generate: async () => {
         throw new Error(
           "plain generate must not be used when structured is available",
@@ -187,6 +192,7 @@ describe("structured-output path", () => {
       const provider = new OllamaProvider({
         url: "http://127.0.0.1:1",
         defaultModel: "test-model",
+        contentCapability: "sfw",
       });
       await provider.generateStructured(
         { systemPrompt: "s", userMessage: "u" },

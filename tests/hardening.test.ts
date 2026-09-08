@@ -131,6 +131,7 @@ describe("Ollama timeout classification", () => {
         url: "http://127.0.0.1:1",
         defaultModel: "m",
         timeoutMs: 50,
+        contentCapability: "sfw",
       });
       // Pre-seed the show cache so no /api/show fetch races the hang.
       (

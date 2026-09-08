@@ -54,6 +54,7 @@ suite("Phase C-2 — validation (real OC + real Ollama)", () => {
     validator = new OllamaProvider({
       url: OLLAMA_URL,
       defaultModel: OLLAMA_MODEL!,
+      contentCapability: "sfw",
     });
 
     await saveEntity(oc, storyId, {

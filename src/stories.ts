@@ -94,7 +94,7 @@ export type KindroidTargetType = "ai" | "group";
  * provider's declared contentCapability at generation time; unset means "no
  * declared requirement," not "sfw". */
 export type ContentRating = "sfw" | "nsfw";
-const VALID_CONTENT_RATINGS: readonly ContentRating[] = ["sfw", "nsfw"];
+export const VALID_CONTENT_RATINGS: readonly ContentRating[] = ["sfw", "nsfw"];
 
 export interface KindroidTarget {
   type: KindroidTargetType;

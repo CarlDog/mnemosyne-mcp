@@ -51,6 +51,7 @@ const suite = OC_URL ? describe : describe.skip;
 // sufficient and keeps this suite gated on OC_URL alone.
 const stubProvider: LlmProvider = {
   name: "stub",
+  contentCapability: "sfw",
   generate: () => {
     throw new Error("stub provider: generate() must not be called");
   },
@@ -460,6 +461,7 @@ suite(
       const kindroidProvider = new KindroidProvider(fakeKindroidClient, {
         defaultTarget: { type: "ai", id: "fake-kin" },
         userName: "Test",
+        contentCapability: "sfw",
       });
 
       const app = express();

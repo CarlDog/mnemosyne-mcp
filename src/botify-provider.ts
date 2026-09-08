@@ -22,6 +22,7 @@ import {
 } from "./companion-message.js";
 import type { BotifyClient } from "./botify-client.js";
 import type { GeneratedBeat, LlmGenerateOptions, LlmProvider } from "./llm.js";
+import type { ContentRating } from "./stories.js";
 
 export interface BotifyProviderConfig {
   /** The dedicated storytelling chat (a Botify chat UUID -- an existing
@@ -30,10 +31,17 @@ export interface BotifyProviderConfig {
   /** Operator display name for the outgoing-message provenance header
    * (MNEMO_USER_NAME). Falls back to DEFAULT_USER_NAME when unset. */
   userName?: string;
+  /** This provider's declared content-generation capability
+   * (BOTIFY_CONTENT_CAPABILITY, default sfw). */
+  contentCapability: ContentRating;
 }
 
 export class BotifyProvider implements LlmProvider {
   readonly name = "botify";
+
+  get contentCapability(): ContentRating {
+    return this.config.contentCapability;
+  }
 
   constructor(
     private readonly client: BotifyClient,

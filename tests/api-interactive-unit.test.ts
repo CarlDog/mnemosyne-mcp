@@ -78,6 +78,7 @@ function makeRecordingOc(): RecordingOc {
 
 const stubValidator: LlmProvider = {
   name: "stub-validator",
+  contentCapability: "sfw",
   generate: async () => ({
     text: JSON.stringify({ issues: [], summary: "clean" }),
   }),
@@ -85,6 +86,7 @@ const stubValidator: LlmProvider = {
 
 const stubGenerator: LlmProvider = {
   name: "stub-generator",
+  contentCapability: "sfw",
   generate: async () => ({ text: "A generated beat." }),
 };
 

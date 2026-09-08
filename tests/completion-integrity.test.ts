@@ -32,6 +32,7 @@ function provider(): OllamaProvider {
   return new OllamaProvider({
     url: "http://127.0.0.1:1",
     defaultModel: "test-model",
+    contentCapability: "sfw",
   });
 }
 
@@ -122,6 +123,7 @@ function makeRecordingOc(): { oc: OcClient; saveCalls: number } {
 
 const throwingValidator: LlmProvider = {
   name: "throwing-validator",
+  contentCapability: "sfw",
   generate: async () => {
     throw new Error("validator must not run for an incomplete beat");
   },
@@ -132,6 +134,7 @@ describe("continueScene with an incomplete beat", () => {
     const recording = makeRecordingOc();
     const incompleteGenerator: LlmProvider = {
       name: "stub-generator",
+      contentCapability: "sfw",
       generate: async () => ({
         text: "An expensive but truncated bea",
         complete: false,
@@ -164,6 +167,7 @@ describe("continueScene with an incomplete beat", () => {
     const recording = makeRecordingOc();
     const completeGenerator: LlmProvider = {
       name: "stub-generator",
+      contentCapability: "sfw",
       generate: async () => ({ text: "A finished beat.", complete: true }),
     };
     const result = await continueScene(
@@ -188,6 +192,7 @@ describe("validateContent with an incomplete validator response", () => {
   it("throws instead of classifying possibly-truncated JSON", async () => {
     const truncatedValidator: LlmProvider = {
       name: "stub-validator",
+      contentCapability: "sfw",
       generate: async () => ({
         // Even VALID JSON is rejected when the provider says it was cut
         // off -- an empty issues array from a truncated pass must never

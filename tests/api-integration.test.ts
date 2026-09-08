@@ -32,6 +32,7 @@ suite("/api routes (real OC)", () => {
   let baseUrl: string;
   const stubValidator: LlmProvider = {
     name: "stub-validator",
+    contentCapability: "sfw",
     generate: async () => ({
       text: JSON.stringify({
         issues: [
@@ -48,6 +49,7 @@ suite("/api routes (real OC)", () => {
   };
   const stubGenerator: LlmProvider = {
     name: "stub-generator",
+    contentCapability: "sfw",
     generate: async () => ({
       text: "The lantern flares as the rain briefly eases, and a shadowed figure nods toward the dock.",
     }),

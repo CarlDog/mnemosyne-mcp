@@ -50,6 +50,7 @@ describe("ollama usage", () => {
     const beat = await new OllamaProvider({
       url: "http://127.0.0.1:1",
       defaultModel: "m",
+      contentCapability: "sfw",
     }).generate({ systemPrompt: "s", userMessage: "u" });
     expect(beat.usage).toEqual({
       provider: "ollama",
@@ -77,6 +78,7 @@ describe("ollama usage", () => {
     const beat = await new OllamaProvider({
       url: "http://127.0.0.1:1",
       defaultModel: "m",
+      contentCapability: "sfw",
     }).generate({ systemPrompt: "s", userMessage: "u" });
     expect(beat.usage?.output_tokens).toBe(40);
     expect(beat.usage).not.toHaveProperty("input_tokens");
@@ -180,6 +182,7 @@ function stubOc(): OcClient {
 
 const usageGenerator: LlmProvider = {
   name: "stub-generator",
+  contentCapability: "sfw",
   generate: async () => ({
     text: "A beat.",
     usage: { provider: "stub-generator", source: "reported", input_tokens: 9 },
@@ -188,6 +191,7 @@ const usageGenerator: LlmProvider = {
 
 const usageValidator: LlmProvider = {
   name: "stub-validator",
+  contentCapability: "sfw",
   generate: async () => ({
     text: JSON.stringify({ issues: [], summary: "clean" }),
     usage: { provider: "stub-validator", source: "reported", output_tokens: 3 },
@@ -221,6 +225,7 @@ describe("continuation response usage envelope", () => {
   it("an incomplete (length-cut) beat still reports its generator usage", async () => {
     const truncated: LlmProvider = {
       name: "stub-generator",
+      contentCapability: "sfw",
       generate: async () => ({
         text: "cut mid-sen",
         complete: false,
@@ -251,6 +256,7 @@ describe("continuation response usage envelope", () => {
   it("omits the envelope entirely when nothing reported usage", async () => {
     const bare: LlmProvider = {
       name: "bare",
+      contentCapability: "sfw",
       generate: async () => ({ text: "A beat." }),
     };
     const result = await continueScene(stubOc(), bare, bare, STORY_ID, {

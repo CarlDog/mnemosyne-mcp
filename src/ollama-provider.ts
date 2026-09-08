@@ -27,6 +27,7 @@ import {
   type LlmProvider,
   type ModelUsage,
 } from "./llm.js";
+import type { ContentRating } from "./stories.js";
 
 export interface OllamaConfig {
   url: string;
@@ -51,6 +52,13 @@ export interface OllamaConfig {
    * Set for the validator instance -- its requests carry the story's full
    * canon and the pass is documented as local and free. */
   requireLocal?: boolean;
+  /** This provider's declared content-generation capability
+   * (OLLAMA_CONTENT_CAPABILITY, default sfw;
+   * docs/CONTENT_ROUTING_DESIGN.md, ratified 2026-09-08). Meaningless on
+   * the validator instance (the gate only checks the GENERATOR's
+   * capability) but required to satisfy LlmProvider either way -- both
+   * OllamaProvider instances in index.ts pass the same resolved value. */
+  contentCapability: ContentRating;
 }
 
 interface OllamaChatResponse {
@@ -87,6 +95,10 @@ interface OllamaShowInfo {
 
 export class OllamaProvider implements LlmProvider {
   readonly name = "ollama";
+
+  get contentCapability(): ContentRating {
+    return this.config.contentCapability;
+  }
 
   /** Per-model /api/show locality verdicts (requireLocal only). Caches the
    * promise so concurrent first calls share one probe; a rejected probe is
