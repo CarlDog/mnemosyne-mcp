@@ -12,6 +12,7 @@ import {
   combineKindroidTarget,
   NARRATOR_PROFILE_PATTERN,
   setNarratorProfile,
+  setContentRating,
   createStory,
   findStory,
   setKindroidTarget,
@@ -92,6 +93,13 @@ export function registerStoryTools(
           .describe(
             "Name the narrator persona this story is written with (1-64 chars of letters, digits, . _ -), e.g. the kin's persona label. A provenance label only: mnemo_continue echoes it and tags each saved scene narrator:<label> when the story's Kindroid binding is used. Pass null to clear. Omit to leave unchanged.",
           ),
+        content_rating: z
+          .enum(["sfw", "nsfw"])
+          .nullable()
+          .optional()
+          .describe(
+            "Declare this story's content-generation requirement. Checked against the configured generator's declared content capability at generation time -- an nsfw-rated story on an sfw-only provider refuses before spending an LLM call. Unset means no declared requirement (never blocking on its own, only a warning field on the response) -- there is no deadline that turns unset into an error later. Pass null to clear a previously-set rating. Omit to leave unchanged.",
+          ),
       },
     },
     withLogging(
@@ -102,10 +110,13 @@ export function registerStoryTools(
         kindroid_kin?: string | null;
         kindroid_group_id?: string | null;
         narrator_profile?: string | null;
+        content_rating?: "sfw" | "nsfw" | null;
       }) => {
         const { name_or_id, create_if_missing } = args;
         const profileChangeRequested = args.narrator_profile !== undefined;
         const requestedProfile = args.narrator_profile ?? undefined;
+        const ratingChangeRequested = args.content_rating !== undefined;
+        const requestedRating = args.content_rating ?? undefined;
 
         // Throws on a genuine kindroid_kin + kindroid_group_id conflict.
         const requestedTarget = combineKindroidTarget(
@@ -132,6 +143,7 @@ export function registerStoryTools(
             name_or_id,
             requestedTarget,
             requestedProfile,
+            requestedRating,
           );
         } else {
           if (targetChangeRequested) {
@@ -139,6 +151,9 @@ export function registerStoryTools(
           }
           if (profileChangeRequested) {
             story = await setNarratorProfile(oc, story, requestedProfile);
+          }
+          if (ratingChangeRequested) {
+            story = await setContentRating(oc, story, requestedRating);
           }
         }
         await setCurrentStoryId(story.id);

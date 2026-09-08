@@ -2,9 +2,11 @@
 // pinned marker memory of the form:
 //   [Mnemosyne Story] <name>
 //   Created: <iso-datetime>
-//   Schema: 5
+//   Schema: 6
 //   Kindroid-Target: ai:<id>        (optional; or "group:<id>")
 //   Narrator-Profile: <label>       (optional; schema 4, 2026-09-03)
+//   Content-Rating: sfw|nsfw        (optional; schema 6, 2026-09-08 --
+//                                    docs/CONTENT_ROUTING_DESIGN.md)
 //   Epoch-Date: <iso-datetime>      (optional; schema 5, 2026-09-07 --
 //                                    position tracking's on/off switch)
 //   Epoch-Location: <memory_id>
@@ -14,18 +16,28 @@
 //   Current-Spot: <free text>       (optional)
 // with tags ["mnemosyne", "story-marker"]. Schema-1 markers (no kin line at
 // all), schema-2 markers (legacy "Kindroid-Kin: <id>" line, always an AI
-// target), schema-3 markers (no narrator line), and schema-4 markers (no
-// position block) all still parse fine -- unknown lines are ignored and
-// known ones are found by prefix. Every write path bumps the Schema line to
-// the current constant regardless of whether position tracking is used, so
-// a schema-5 marker with no Epoch-* lines must parse identically in meaning
-// to a schema-4 marker -- see docs/POSITION_TRACKING_DESIGN.md's
-// "Refinements added at implementation time" §1.
+// target), schema-3 markers (no narrator line), schema-4 markers (no
+// position block), and schema-5 markers (no content-rating line) all still
+// parse fine -- unknown lines are ignored and known ones are found by
+// prefix. Every write path bumps the Schema line to the current constant
+// regardless of whether position tracking or content rating is used, so a
+// schema-6 marker with no Content-Rating/Epoch-* lines must parse
+// identically in meaning to a schema-5 marker -- see
+// docs/POSITION_TRACKING_DESIGN.md's "Refinements added at implementation
+// time" §1 (the precedent this follows).
 //
 // The narrator profile is a LABEL naming which narrator kin persona a story
 // is written with (docs/KINDROID_NARRATOR_DESIGN.md S2): it rides the
 // marker so provenance survives, is echoed by mnemo_continue, and tags each
 // saved scene as `narrator:<label>`. It is not a copy of the persona.
+//
+// Content-Rating (docs/CONTENT_ROUTING_DESIGN.md, ratified 2026-09-08) is
+// the story's declared content-generation requirement, checked against
+// each configured provider's declared contentCapability at the one real
+// generate() call site (dispatchGenerate() in continue-scene.ts). Unset
+// means "no declared requirement," not "sfw" -- it never blocks generation
+// on its own, only surfaces a warning field. There is deliberately no
+// migration deadline that turns unset into an error later.
 //
 // Position tracking (docs/POSITION_TRACKING_DESIGN.md, ratified 2026-09-07)
 // is opt-in per story, exactly like the Kindroid target and narrator
@@ -61,12 +73,13 @@ export { assertNarratorProfile, NARRATOR_PROFILE_PATTERN, narratorTag };
 
 export const STORY_MARKER_TAGS = ["mnemosyne", "story-marker"];
 const STORY_MARKER_QUERY = "Mnemosyne Story";
-const STORY_MARKER_SCHEMA = 5;
+const STORY_MARKER_SCHEMA = 6;
 const MAX_STORIES_PER_LIST = 1000;
 const KINDROID_TARGET_PREFIX = "Kindroid-Target: ";
 // Schema 2, read-only compat: a bare kin line always meant an AI target.
 const LEGACY_KINDROID_KIN_PREFIX = "Kindroid-Kin: ";
 const NARRATOR_PROFILE_PREFIX = "Narrator-Profile: ";
+const CONTENT_RATING_PREFIX = "Content-Rating: ";
 const EPOCH_DATE_PREFIX = "Epoch-Date: ";
 const EPOCH_LOCATION_PREFIX = "Epoch-Location: ";
 const EPOCH_SPOT_PREFIX = "Epoch-Spot: ";
@@ -75,6 +88,13 @@ const CURRENT_LOCATION_PREFIX = "Current-Location: ";
 const CURRENT_SPOT_PREFIX = "Current-Spot: ";
 
 export type KindroidTargetType = "ai" | "group";
+
+/** A story's declared content-generation requirement
+ * (docs/CONTENT_ROUTING_DESIGN.md, ratified 2026-09-08). Checked against a
+ * provider's declared contentCapability at generation time; unset means "no
+ * declared requirement," not "sfw". */
+export type ContentRating = "sfw" | "nsfw";
+const VALID_CONTENT_RATINGS: readonly ContentRating[] = ["sfw", "nsfw"];
 
 export interface KindroidTarget {
   type: KindroidTargetType;
@@ -109,6 +129,9 @@ export interface MnemoStory {
   /** The narrator persona label this story is written with, if set. See
    * setNarratorProfile(). */
   narrator_profile?: string;
+  /** This story's declared content-generation requirement, if set. See
+   * setContentRating(). */
+  content_rating?: ContentRating;
   /** This story's in-story clock/place, if position tracking has been
    * started. See setPosition(). */
   position?: PositionState;
@@ -122,6 +145,7 @@ export function buildMarkerContent(
   kindroidTarget?: KindroidTarget,
   narratorProfile?: string,
   position?: PositionState,
+  contentRating?: ContentRating,
 ): string {
   const lines = [
     `[Mnemosyne Story] ${name}`,
@@ -135,6 +159,9 @@ export function buildMarkerContent(
   }
   if (narratorProfile) {
     lines.push(`${NARRATOR_PROFILE_PREFIX}${narratorProfile}`);
+  }
+  if (contentRating) {
+    lines.push(`${CONTENT_RATING_PREFIX}${contentRating}`);
   }
   if (position) {
     lines.push(`${EPOCH_DATE_PREFIX}${position.epochDate}`);
@@ -165,6 +192,7 @@ export interface ParsedMarker {
   created: string;
   kindroidTarget?: KindroidTarget;
   narratorProfile?: string;
+  contentRating?: ContentRating;
   position?: PositionState;
 }
 
@@ -255,6 +283,11 @@ export function parseMarkerContent(content: string): ParsedMarker | null {
       ? narratorRaw
       : undefined;
 
+  // A malformed value in a hand-edited marker is ignored rather than fatal,
+  // matching the narrator-profile pattern above.
+  const ratingRaw = lineValue(lines, CONTENT_RATING_PREFIX);
+  const contentRating = VALID_CONTENT_RATINGS.find((r) => r === ratingRaw);
+
   const position = parsePositionState(lines);
 
   return {
@@ -262,6 +295,7 @@ export function parseMarkerContent(content: string): ParsedMarker | null {
     created: createdMatch[1],
     ...(kindroidTarget && { kindroidTarget }),
     ...(narratorProfile && { narratorProfile }),
+    ...(contentRating && { contentRating }),
     ...(position && { position }),
   };
 }
@@ -278,6 +312,7 @@ function markerToStory(marker: OcMemory): MnemoStory | null {
     ...(parsed.narratorProfile && {
       narrator_profile: parsed.narratorProfile,
     }),
+    ...(parsed.contentRating && { content_rating: parsed.contentRating }),
     ...(parsed.position && { position: parsed.position }),
   };
 }
@@ -376,6 +411,7 @@ export async function createStory(
   name: string,
   kindroidTarget?: KindroidTarget,
   narratorProfile?: string,
+  contentRating?: ContentRating,
 ): Promise<MnemoStory> {
   if (narratorProfile !== undefined) assertNarratorProfile(narratorProfile);
   const project = await oc.projectCreate(name);
@@ -386,6 +422,8 @@ export async function createStory(
       createdAt,
       kindroidTarget,
       narratorProfile,
+      undefined,
+      contentRating,
     ),
     projectId: project.id,
     tags: STORY_MARKER_TAGS,
@@ -398,6 +436,7 @@ export async function createStory(
     marker_memory_id: marker.id,
     ...(kindroidTarget && { kindroid_target: kindroidTarget }),
     ...(narratorProfile && { narrator_profile: narratorProfile }),
+    ...(contentRating && { content_rating: contentRating }),
   };
 }
 
@@ -420,6 +459,7 @@ export async function setKindroidTarget(
     kindroidTarget,
     story.narrator_profile,
     story.position,
+    story.content_rating,
   );
   await oc.memoryUpdate({ memoryId: story.marker_memory_id, content });
   return { ...story, kindroid_target: kindroidTarget };
@@ -442,11 +482,37 @@ export async function setNarratorProfile(
     story.kindroid_target,
     label,
     story.position,
+    story.content_rating,
   );
   await oc.memoryUpdate({ memoryId: story.marker_memory_id, content });
   const { narrator_profile: _dropped, ...rest } = story;
   void _dropped;
   return label === undefined ? rest : { ...rest, narrator_profile: label };
+}
+
+/**
+ * Declares (or clears, when rating is undefined) this story's content-
+ * generation requirement, rewriting the marker in place the same way
+ * setKindroidTarget/setNarratorProfile do; every other field is preserved
+ * verbatim (docs/CONTENT_ROUTING_DESIGN.md, ratified 2026-09-08).
+ */
+export async function setContentRating(
+  oc: OcClient,
+  story: MnemoStory,
+  rating: ContentRating | undefined,
+): Promise<MnemoStory> {
+  const content = buildMarkerContent(
+    story.name,
+    story.created_at,
+    story.kindroid_target,
+    story.narrator_profile,
+    story.position,
+    rating,
+  );
+  await oc.memoryUpdate({ memoryId: story.marker_memory_id, content });
+  const { content_rating: _dropped, ...rest } = story;
+  void _dropped;
+  return rating === undefined ? rest : { ...rest, content_rating: rating };
 }
 
 // Position tracking's merge/arithmetic/validate-then-apply logic

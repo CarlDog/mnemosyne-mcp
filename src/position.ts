@@ -209,6 +209,7 @@ export async function setPosition(
     story.kindroid_target,
     story.narrator_profile,
     position,
+    story.content_rating,
   );
   await oc.memoryUpdate({ memoryId: story.marker_memory_id, content });
   return { ...story, position };

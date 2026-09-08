@@ -20,6 +20,7 @@ export function toStorySummary(story: MnemoStory): StorySummary {
     ...(story.narrator_profile && {
       narrator_profile: story.narrator_profile,
     }),
+    ...(story.content_rating && { content_rating: story.content_rating }),
   };
 }
 
