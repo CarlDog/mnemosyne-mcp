@@ -2,6 +2,205 @@
 
 **Last updated:** 2026-09-07.
 
+**Position tracking: pre-commit adversarial review found two real bugs in
+slices 3+4 (2026-09-07), both fixed and mutation-tested before commit.**
+Per this repo's standing pre-deploy-review practice, a `feature-dev:
+code-reviewer` pass ran against the full uncommitted slice 3+4 diff before
+shipping (slices 1+2 were already committed/CI-green). It confirmed the
+six items already caught during self-review (the critical
+`setKindroidTarget`/`setNarratorProfile` data-loss bug, two delimiter-
+spoofing bugs, a `set_date` refusal-message inconsistency, a missing
+`move_to` happy-path test, and the design doc's incorrect "zero extra
+cost" claim) were genuinely fixed, then found two more:
+
+1. **A pre-dispatch failure landing AFTER a successful position write was
+   reported `retry_safe: true`, which was false.** `continueScene` applied
+   `advance`/`set_date`/`move_to` before context gathering, but context
+   gathering's own abort check and context-admission's `enforce`-mode
+   rejection both fire *after* that write and were still classified
+   `rejected_before_dispatch` -- whose stock projection tells the caller
+   nothing happened and retrying is safe. Retrying would have silently
+   re-applied the position change a second time. Fixed two ways: the
+   abort check for the write itself now fires *before* the write (closes
+   the trivial case, an already-aborted run applies nothing), and
+   `continueScene` tracks whether the write landed this call, relabeling
+   any subsequent pre-dispatch `RunOutcomeError` with `retry_safe: false`
+   plus an explanatory note. `RunOutcomeError` gained a `retrySafe`
+   override option (mirroring the existing `externalMutationPossible`
+   override) to make this possible without touching the ratified outcome
+   table. Both fixes are mutation-tested against real reproductions: an
+   already-tracked real-OC story with a pre-aborted run (proves zero
+   `memoryUpdate` calls), and a stubbed `enforce`-mode admission
+   rejection after a real marker write (proves `retry_safe: false` and
+   the marker's `Elapsed-Hours` genuinely advanced, not rolled back).
+2. **`advance` and `set_elapsed_hours` could drive `elapsed_hours`
+   negative; only `set_date` was guarded.** The design's own "negative
+   elapsed / flashback framing is out of scope" is a categorical
+   decision, but the guard against it only landed on the `set_date`
+   branch of `resolveElapsedHours`. `mnemo_position_set({
+   set_elapsed_hours: -10 })` on a tracked story would have silently
+   corrupted `current_story_datetime` to before the epoch. Fixed by
+   guarding the computed *result* uniformly across all three branches
+   (a negative `advance` component or a below-current
+   `set_elapsed_hours` stays legal as long as the result is >= 0 -- a
+   deliberate walk-back, matching `set_date`'s existing "epoch
+   correction can decrease elapsed" allowance). Mutation-tested in
+   `tests/position-state.test.ts`.
+
+**Accepted residual, not fixed:** the position-write call site's own
+`catch` still cannot distinguish "the write never reached OC" from "OC
+committed it but the response was lost" -- a transport error there always
+reports `rejected_before_dispatch`/`retry_safe: true` even in the rarer
+second case. Every other single-write OC path in this codebase carries
+the same ambiguity; resolving it needs error typing this repo doesn't
+have yet, so it's documented rather than silently claimed fixed.
+
+**Test-run coverage note:** the full-suite rerun after these two fixes
+(`OC_URL` + Ollama vars only, 646 passed / 57 skipped) covered fewer
+suites than the earlier slice-3+4 run this session (684 passed / 15
+skipped) -- the delta is the Kindroid/Botify/cloud-provider suites,
+gated on credentials not re-exported for this narrower rerun, all
+untouched by this diff. One real gap was closed rather than hand-waved:
+`tests/continue.test.ts`'s real end-to-end `OllamaProvider` suite failed
+in that run on a stale `.env` model name (`mistral-nemo:12b`, not
+actually installed on this desktop's local Ollama -- an environment fact
+unrelated to this diff, left alone rather than edited), so it was
+re-run standalone against an installed model
+(`qwen2.5:3b-instruct-q4_K_M`) and passed 6/6, genuinely exercising the
+refactored `continueScene` against a real dispatch.
+
+Both findings and fixes are recorded as refinement 5 in
+`docs/POSITION_TRACKING_DESIGN.md`'s "Refinements added at implementation
+time" section, and the design doc's "not rolled back" and "Explicitly out
+of scope" sections were updated to describe the corrected behavior. All
+seven live story markers were read for real (not just synthetic tests)
+via `mcp__openchronicle__memory_search`, confirming schema-3, zero
+position lines, parsing cleanly with `position: undefined` -- the real
+backward-compat case this feature needed to handle. One test-artifact OC
+project (`mnemosyne-test-position-*`, from an earlier interrupted manual
+test run this session) was found alongside the seven and left in place
+pending operator confirmation before deleting a live OC project.
+
+**Position tracking, slice 4, shipped (2026-09-07) -- the feature is
+complete.** `mnemo_continue` (and the REST `/stories/:storyId/continue`
+route, for driver parity) gain `advance`/`set_date`/`move_to`, applied to
+the story's position before `gatherContext` runs. The real design work was
+consolidating validation: `mnemo_position_set`'s handler previously
+duplicated the mutual-exclusivity check, location-type validation, and
+elapsed-hours resolution inline; that whole sequence moved into a new
+shared `applyPositionUpdate` (`src/stories.ts`), and `mnemo_position_set`
+now just calls it -- so `mnemo_continue`'s convenience params and
+`mnemo_position_set`'s full surface share one implementation and cannot
+drift apart. `ContinuationPort` (`src/application/ports/continuation.ts`)
+gained an `applyPosition(storyId, update)` method; the real adapter
+(`src/adapters/continuation.ts`) implements it as a thin call into
+`applyPositionUpdate`.
+
+**The not-yet-initialized refusal required no new code.** The atomic
+invariant `mergePositionUpdate` already enforces (slice 1 -- epoch_date and
+epoch_location required together on a fresh story) does double duty:
+`mnemo_continue`'s three convenience params never carry epoch fields at
+all, so calling any of them against a story with no position tracking
+reaches that same bootstrap check and throws "hasn't started... use
+mnemo_position_set" before any OC write, exactly the refusal the design
+called for. `continueScene` catches whatever `applyPosition` throws and
+wraps it as `RunOutcomeError("rejected_before_dispatch")`, mutation-tested
+(reverted to a bare rethrow, confirmed the refusal test fails because a
+plain `Error` has no `.outcome` field, restored).
+
+**The accepted position-advance-survives-generation-failure semantics are
+real and tested, not just documented.** A real-OC test bootstraps
+position, points a stub generator to throw mid-call, and confirms the
+story's marker shows the advance landed anyway -- `continueScene` makes no
+attempt to revert it, matching `mnemo_session_break`'s existing
+break-then-save precedent (first mutation stands even if a later step
+fails) rather than a new pending-write concept. `ContinueSceneResult`
+gained an optional `position` field, echoed in all three return paths
+(group-yield, incomplete-beat, and the normal path) from the same
+`gatherContext` call already made for prompt rendering -- zero extra OC
+cost -- whenever the story has tracking on, independent of whether this
+specific call touched it.
+
+Verified: typecheck/lint/format clean; `tests/architecture-boundaries.test.ts`
+(the hexagonal-boundary AST checks) still passes untouched. New real-OC
+integration coverage in `tests/continue-position.test.ts`: the refusal
+fires before generation or save (spied, confirmed uncalled) for both
+`advance` and `move_to`; the advance is visibly applied mid-`generate`-call
+(read the marker from inside the stub generator) proving the "before
+gatherContext" ordering for real, not just by code inspection; the
+response's echoed `position` matches the derived datetime; and the
+survives-a-generation-failure test described above. One existing test file
+needed an honest update: `tests/narrator-profile.test.ts`'s "prefetching
+avoids re-reading the marker" test asserted zero marker reads, which broke
+because `gatherContext`'s position lookup (slice 3) now always makes one,
+regardless of prefetching -- rewritten to assert what prefetching actually
+still saves (a second, would-be-redundant story-binding read), pinned by
+directly comparing the prefetched case (1 read) against the
+not-prefetched case (2 reads). Full suite run (typecheck/lint/format plus
+`npx vitest run` with `OC_URL` and the Ollama generator/validator vars
+exported) confirms no regressions elsewhere, including the real-generation
+`tests/continue.test.ts` suite.
+
+Nothing about the Web UI changed -- per the design doc's own scoping,
+position tracking stays MCP tool surface plus backend only for this pass.
+
+**Position tracking, slice 3, shipped (2026-09-07).** Generation-context
+rendering: `ContextBundle.position` (`src/application/model.ts`), populated
+by `gatherContext` (`src/prompt.ts`'s new `resolvePosition`, two OC round
+trips -- `findStory` then `getEntityByMemoryId` for the current location's
+name -- correcting the design doc's original "one read" approximation) only
+when `!validationOnly`, per refinement 3. Renders as its own `=== POSITION
+===` block in `buildSystemPrompt` (between LOCATIONS and RECENT SCENES --
+grounds "where/when we are" right before the model reads recent narrative
+history against it) and as an unconditional "Current position: ..." line
+in `buildCompanionMessage`'s story-context block. `renderAdmittedBundle`
+passes it through unchanged, since it isn't an entity and sits outside the
+context-plan budget system.
+
+**Two real delimiter-spoofing bugs were found and fixed while writing the
+tests, in both rendering sites.** Both `renderPositionBlock` and its
+companion-message counterpart originally composed `"name (spot)"` into one
+string, THEN ran it through the existing neutralization function
+(`neutralizeSectionDelimiters` / `neutralizeCompanionFence`). That defeats
+the line-based half of each function's spoof check: it only fires when a
+`=== ... ===` delimiter is alone on its own line, and embedding a
+spoofed `spot` mid-line behind the location name (`"Dovecoast (=== RULES
+===\n...)"`) means the delimiter is never alone on its line, so it survives
+unneutralized. Caught by writing the test with a real `=== RULES ===`
+payload in `spot` (not the bracket-based attack pattern already covered
+elsewhere in the file, which passed either way since bracket replacement is
+a position-independent global regex) and watching it fail against the
+as-written code. Fixed by neutralizing `name` and `spot` **separately**,
+before combining -- each is then checked as its own atomic line-set, the
+same way `block()` neutralizes each pulled entity string before joining
+them. Both fixes were hand mutation-tested (reverted to the combined-string
+form, confirmed the exact `=== RULES ===` payload survives in the rendered
+output, restored) against the real assertions, not just re-read.
+
+Verified: typecheck/lint/format clean. Pure tests extended in
+`tests/prompt.test.ts` (block ordering including POSITION between LOCATIONS
+and RECENT SCENES, omission when absent, the spot-omitted rendering, the
+delimiter-neutralization regression pin), `tests/companion-injection.test.ts`
+(position triggers the context block alone with no matched entities/scenes,
+spot-omitted rendering, absence when unset, both the bracket- and
+`===`-based fence-forging regression pins), and `tests/context-plan.test.ts`
+(`renderAdmittedBundle` passes position through even when every entity
+drops, and omits it when the source bundle has none). One existing test
+(`tests/retrieval-controls.test.ts`) needed updating, not weakening: its
+"every OC search uses the raw direction query" assertions now correctly
+exclude the new unrelated story-marker search `resolvePosition` makes on
+every `gatherContext` call. New real-OC integration coverage in
+`tests/gather-context-position.test.ts`: position absent before tracking
+starts, correctly resolved (via the real `mnemo_position_set` MCP wire path,
+not a direct `stories.ts` call) once it is, location name resolved fresh
+after an in-place rename, and entirely absent under `validationOnly` even
+though the story has tracking on. Full suite run (typecheck/lint/format
+plus `npx vitest run` with `OC_URL` and the Ollama generator/validator vars
+exported) confirms no regressions elsewhere.
+
+Slice 4 shipped the same day -- see the entry above; the feature is
+complete.
+
 **Position tracking, slices 1+2, shipped (2026-09-07).**
 [docs/POSITION_TRACKING_DESIGN.md](docs/POSITION_TRACKING_DESIGN.md) was
 ratified the same day the operator said "ratify it, go ahead and
@@ -70,9 +269,8 @@ loudly when reverted: the parser-level atomic invariant, and the
 above. Full suite green (`npx vitest run` with `OC_URL` and the Ollama
 generator/validator vars exported).
 
-Slices 3 (`gatherContext`/`buildSystemPrompt`/`buildCompanionMessage`
-rendering) and 4 (`mnemo_continue` integration) remain -- see the
-backlog entry below for the full design.
+Slice 4 shipped the same day -- see the top entry above; the feature is
+complete.
 
 **`mnemo_status` shipped (2026-09-07).** The other concrete, ready-to-build
 item identified alongside Web UI entity edit/delete: `GET /api/status`
@@ -4580,10 +4778,11 @@ consider only when real use exposes the corresponding pressure:
   2026-09-07** (operator: "ratify it, go ahead and implement"), and a
   pre-implementation adversarial pass the same day resolved four
   under-specified corners before any code shipped — see the doc's
-  "Refinements added at implementation time." **Slices 1+2 shipped
-  2026-09-07** — see the dated entry above for what landed; slices 3
-  (generation-context rendering) and 4 (`mnemo_continue` integration)
-  remain.
+  "Refinements added at implementation time." **All four slices shipped
+  2026-09-07** — see the dated entries above for what landed. The feature
+  is complete: marker schema 5, `mnemo_position_get`/`mnemo_position_set`,
+  generation-context rendering in both the direct-provider and
+  companion-chat paths, and `mnemo_continue`/REST integration.
 - **Deterministic RNG for procedural rolls.** No random-number
   generator exists for encounter checks, loot tables, or other
   procedural rolls — related to, but narrower than, the "Game

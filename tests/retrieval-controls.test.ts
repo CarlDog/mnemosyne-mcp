@@ -263,6 +263,15 @@ The rain kept falling on the docks.`,
   return state;
 }
 
+// gatherContext's position resolution (resolvePosition -> findStory) makes
+// its own unrelated memorySearch (tagged story-marker, querying "Mnemosyne
+// Story") on every call now, regardless of the direction -- filter it out
+// before asserting every OTHER search used the expected direction/reference
+// query. It always resolves to [] against this fake (no story-marker fixture
+// configured), so position ends up absent, same as before this filter existed.
+const isEntitySearch = (s: { tags?: string[] }) =>
+  !s.tags?.includes("story-marker");
+
 describe("gatherContext enrichment wiring", () => {
   it("flag off (default): no compact scan, raw query everywhere (query-ranked)", async () => {
     const state = enrichmentOc();
@@ -270,7 +279,9 @@ describe("gatherContext enrichment wiring", () => {
       sceneStrategy: "query-ranked",
     });
     expect(state.listCalls).toBe(0);
-    expect(state.searches.every((s) => s.query === "go on")).toBe(true);
+    expect(
+      state.searches.filter(isEntitySearch).every((s) => s.query === "go on"),
+    ).toBe(true);
   });
 
   it("flag on + vague: reference queries are enriched from the newest NON-errors scene; rules stay raw", async () => {
@@ -296,8 +307,10 @@ describe("gatherContext enrichment wiring", () => {
     await gatherContext(state.oc, STORY_ID, "Aria Voss dies", {
       sceneStrategy: "query-ranked",
     });
-    expect(state.searches.every((s) => s.query === "Aria Voss dies")).toBe(
-      true,
-    );
+    expect(
+      state.searches
+        .filter(isEntitySearch)
+        .every((s) => s.query === "Aria Voss dies"),
+    ).toBe(true);
   });
 });

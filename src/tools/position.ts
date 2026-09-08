@@ -9,11 +9,10 @@ import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
 import { getEntityByMemoryId } from "../entities.js";
 import {
+  applyPositionUpdate,
   currentStoryDatetime,
   findStory,
-  resolveElapsedHours,
   resolveStoryId,
-  setPosition,
   type PositionState,
 } from "../stories.js";
 import { asText, withLogging } from "./helpers.js";
@@ -77,31 +76,6 @@ async function toPositionReport(
     current_story_datetime: currentStoryDatetime(position),
     current_location,
   };
-}
-
-/** Validates a caller-supplied memory_id actually resolves to a
- * type:location entity in this story -- cheap, since resolving it for the
- * name is required either way, and it turns a silent mismatch (pointing
- * position at a character by mistake) into a clear error. */
-async function resolveLocationId(
-  oc: OcClient,
-  storyId: string,
-  memoryId: string | undefined,
-  field: string,
-): Promise<string | undefined> {
-  if (memoryId === undefined) return undefined;
-  const entity = await getEntityByMemoryId(oc, storyId, memoryId);
-  if (!entity) {
-    throw new Error(
-      `${field} "${memoryId}" doesn't resolve to an entity in this story.`,
-    );
-  }
-  if (entity.type !== "location") {
-    throw new Error(
-      `${field} "${memoryId}" resolves to a ${entity.type} entity, not a location.`,
-    );
-  }
-  return memoryId;
 }
 
 const ADVANCE_SCHEMA = z
@@ -221,55 +195,19 @@ export function registerPositionTool(server: McpServer, oc: OcClient): void {
     },
     withLogging("mnemo_position_set", async (args: PositionSetArgs) => {
       const storyId = await resolveStoryId(oc, args.story);
-      const story = await requireStory(oc, storyId);
-
-      const exclusive = [
-        args.advance,
-        args.set_elapsed_hours,
-        args.set_date,
-      ].filter((v) => v !== undefined).length;
-      if (exclusive > 1) {
-        throw new Error(
-          "Pass at most one of advance / set_elapsed_hours / set_date -- they all resolve the same elapsed_hours value.",
-        );
-      }
-
-      const epochLocationId = await resolveLocationId(
-        oc,
-        storyId,
-        args.epoch_location,
-        "epoch_location",
-      );
-      const currentLocationId = await resolveLocationId(
-        oc,
-        storyId,
-        args.current_location,
-        "current_location",
-      );
-
-      const effectiveEpochDate = args.epoch_date ?? story.position?.epochDate;
-      const elapsedHours =
-        args.advance !== undefined ||
-        args.set_elapsed_hours !== undefined ||
-        args.set_date !== undefined
-          ? resolveElapsedHours(
-              story.position?.elapsedHours,
-              effectiveEpochDate,
-              args.advance,
-              args.set_elapsed_hours,
-              args.set_date,
-            )
-          : undefined;
-
-      // mergePositionUpdate is the sole write-time enforcement of the
-      // atomic invariant (epoch_date + epoch_location together on a
-      // fresh story) -- it throws before setPosition issues any OC call.
-      const updated = await setPosition(oc, story, {
+      // applyPositionUpdate does its own findStory (mutual-exclusivity
+      // check, location-type validation, the atomic-invariant write-time
+      // enforcement via mergePositionUpdate) -- shared with mnemo_continue's
+      // advance/set_date/move_to convenience params, so both surfaces can't
+      // drift.
+      const updated = await applyPositionUpdate(oc, storyId, {
         epochDate: args.epoch_date,
-        epochLocationId,
+        epochLocation: args.epoch_location,
         epochSpot: args.epoch_spot,
-        elapsedHours,
-        currentLocationId,
+        advance: args.advance,
+        setElapsedHours: args.set_elapsed_hours,
+        setDate: args.set_date,
+        currentLocation: args.current_location,
         currentSpot: args.current_spot,
       });
 

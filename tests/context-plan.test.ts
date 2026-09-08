@@ -19,6 +19,7 @@ import { planContext, type ContextEntry } from "../src/context-plan.js";
 import { renderAdmittedBundle, type ContextBundle } from "../src/prompt.js";
 import { continueScene } from "./helpers/application.js";
 import { OllamaProvider, type LlmProvider } from "../src/llm.js";
+import { buildMarkerContent, STORY_MARKER_TAGS } from "../src/stories.js";
 import type { OcClient, OcMemory } from "../src/oc-client.js";
 
 const STORY_ID = "11111111-2222-4333-8444-555555555555";
@@ -149,6 +150,42 @@ describe("plan-driven rendering", () => {
     expect(rendered.characters).toEqual(["Keep\nkept body"]);
     expect(JSON.stringify(rendered)).not.toContain("dropped body");
   });
+
+  it("position passes through unchanged -- it has no memory_id and isn't part of the admission set", () => {
+    const position = {
+      current_story_datetime: "2026-10-04T06:00:00.000Z",
+      current_location: { name: "Dovecoast" },
+    };
+    const bundle: ContextBundle = {
+      rules: [],
+      style: [],
+      characters: ["Keep\nkept body"],
+      locations: [],
+      scenes: [],
+      lore: [],
+      worldbuilding: [],
+      entries: [entry({ memory_id: "keep", name: "Keep", chars: 14 })],
+      position,
+    };
+    // Empty admission set -- the character entry drops, position must not.
+    const rendered = renderAdmittedBundle(bundle, new Set());
+    expect(rendered.characters).toEqual([]);
+    expect(rendered.position).toEqual(position);
+  });
+
+  it("omits position from the rendered bundle when the source bundle has none", () => {
+    const bundle: ContextBundle = {
+      rules: [],
+      style: [],
+      characters: [],
+      locations: [],
+      scenes: [],
+      lore: [],
+      worldbuilding: [],
+      entries: [],
+    };
+    expect(renderAdmittedBundle(bundle, new Set()).position).toBeUndefined();
+  });
 });
 
 // --- continueScene integration with a real OllamaProvider ------------------
@@ -257,6 +294,93 @@ describe("continueScene admission enforcement", () => {
       }),
     ).rejects.toMatchObject({ outcome: "rejected_before_dispatch" });
     expect(state.chatCalls).toBe(0);
+  });
+
+  // Regression pin (advisor-flagged 2026-09-08): the position write for
+  // mnemo_continue's advance/set_date/move_to landed BEFORE context
+  // gathering. If admission then enforce-rejects, the thrown
+  // rejected_before_dispatch's stock retry_safe:true would falsely tell
+  // the caller nothing happened -- retrying would silently re-apply the
+  // advance a second time. continueScene must relabel retry_safe:false
+  // and say so in the message when this happens, and the write must
+  // genuinely NOT be rolled back (mirrors the accepted post-dispatch
+  // "not rolled back" semantics, extended to this pre-dispatch case).
+  it("enforce: a position write that lands before an admission rejection is NOT reported retry-safe", async () => {
+    process.env.MNEMO_CONTEXT_ADMISSION = "enforce";
+    const state = stubOllamaFetch();
+    const porchId = "porch-1";
+    const marker: OcMemory = {
+      id: "marker-1",
+      content: buildMarkerContent(
+        "Position Admission Test",
+        "2026-09-01T00:00:00.000Z",
+        undefined,
+        undefined,
+        {
+          epochDate: "2026-10-01T00:00:00.000Z",
+          epochLocationId: porchId,
+          elapsedHours: 0,
+          currentLocationId: porchId,
+        },
+      ),
+      project_id: STORY_ID,
+      tags: STORY_MARKER_TAGS,
+      pinned: true,
+      created_at: "2026-09-01T00:00:00.000Z",
+    };
+    const porch: OcMemory = {
+      id: porchId,
+      content: "[Location] The Porch\n\nA weathered porch.",
+      project_id: STORY_ID,
+      tags: ["mnemosyne", "story", "location"],
+      pinned: false,
+      created_at: "2026-09-01T00:00:00.000Z",
+    };
+    let updateCalls = 0;
+    const oc = {
+      memorySearch: async (opts: { tags?: string[] }) => {
+        if (opts.tags?.includes("story-marker")) return [marker];
+        if (opts.tags?.includes("rule")) {
+          return [
+            {
+              id: "rule-big",
+              content: `[Rule] Big\n\n${BIG_RULE_BODY}`,
+              project_id: STORY_ID,
+              tags: ["mnemosyne", "story", "rule"],
+              pinned: true,
+              created_at: "2026-01-01T00:00:00Z",
+            } satisfies OcMemory,
+          ];
+        }
+        return [];
+      },
+      memoryList: async () => [],
+      memoryGet: async (id: string) =>
+        id === porchId ? porch : id === marker.id ? marker : undefined,
+      memoryUpdate: async (args: { memoryId: string; content: string }) => {
+        updateCalls += 1;
+        if (args.memoryId === marker.id) marker.content = args.content;
+      },
+    } as unknown as OcClient;
+
+    await expect(
+      continueScene(oc, smallWindowProvider(), neverValidator, STORY_ID, {
+        direction: "go on",
+        sceneStrategy: "query-ranked",
+        reinvokeHint: "call again",
+        advance: { days: 3 },
+      }),
+    ).rejects.toMatchObject({
+      outcome: "rejected_before_dispatch",
+      retry_safe: false,
+      message: expect.stringMatching(/NOTE:.*already applied/),
+    });
+    expect(state.chatCalls).toBe(0);
+    // The write genuinely landed -- one memoryUpdate call, and the marker's
+    // stored content now carries the advanced elapsed_hours -- proving this
+    // isn't rolled back just because retry_safe was corrected to false.
+    expect(updateCalls).toBe(1);
+    expect(marker.content).toContain("Elapsed-Hours: 72");
   });
 
   it("warn (default): the same plan dispatches, with the verdict in the manifest", async () => {

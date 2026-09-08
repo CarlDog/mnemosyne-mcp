@@ -81,13 +81,20 @@ export class RunOutcomeError extends Error {
        * knows better (e.g. a DIRECT provider's dispatch-unknown cannot
        * have mutated a conversation). */
       externalMutationPossible?: boolean;
+      /** Override the table's stock retry_safe for a producer that knows
+       * a LOCAL mutation happened before this otherwise-pre-dispatch
+       * failure (e.g. mnemo_continue's position write landed, then context
+       * admission rejected before generation) -- retrying the identical
+       * call would silently re-apply that mutation, so "safe to retry" is
+       * false even though no provider was ever dispatched. */
+      retrySafe?: boolean;
     },
   ) {
     super(message, opts?.cause !== undefined ? { cause: opts.cause } : {});
     this.name = "RunOutcomeError";
     this.outcome = outcome;
     const p = PROJECTIONS[outcome];
-    this.retry_safe = p.retry_safe;
+    this.retry_safe = opts?.retrySafe ?? p.retry_safe;
     this.dispatch_attempted = p.dispatch_attempted;
     this.provider_charge_possible = p.provider_charge_possible;
     this.external_conversation_mutation_possible =

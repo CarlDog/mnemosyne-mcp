@@ -7,6 +7,7 @@
 import type {
   KindroidTarget,
   Mode,
+  PositionContext,
   SceneContextStrategy,
   ValidationReport,
 } from "./model.js";
@@ -23,6 +24,7 @@ import type {
   ContinuationBeat,
   ContinuationPort,
   ContinuationUsage,
+  ContinuePositionUpdate,
 } from "./ports/continuation.js";
 import { classifyVerdict } from "./validation-policy.js";
 
@@ -53,6 +55,15 @@ export interface ContinueSceneOptions {
    * e.g. "call mnemo_continue again" vs "call /stories/<id>/continue
    * again". */
   reinvokeHint: string;
+  /** Position tracking convenience params (docs/POSITION_TRACKING_DESIGN.md
+   * slice 4), applied before context gathering. advance and setDate are
+   * mutually exclusive; moveTo is independent (the location axis). None of
+   * these can bootstrap tracking -- calling any of them against a story
+   * with no position tracking on is a pre-dispatch refusal naming
+   * mnemo_position_set. */
+  advance?: ContinuePositionUpdate["advance"];
+  setDate?: string;
+  moveTo?: ContinuePositionUpdate["moveTo"];
 }
 
 export interface ContinueSceneResult {
@@ -91,6 +102,11 @@ export interface ContinueSceneResult {
     lore: number;
     worldbuilding: number;
   };
+  /** The story's position after this call (docs/POSITION_TRACKING_DESIGN.md),
+   * echoed whenever the story has tracking on -- regardless of whether THIS
+   * call touched it, since gatherContext already resolves it at zero extra
+   * cost. Absent when the story never opted in. */
+  position?: PositionContext;
   validation?: ValidationReport;
   validation_error?: string;
   /** Warn-don't-break: options the selected provider ignores or that sit
@@ -133,100 +149,175 @@ export async function continueScene(
 ): Promise<ContinueSceneResult> {
   const mode = opts.mode ?? DEFAULT_MODE;
 
-  // Phase-boundary abort checks (RUN_OUTCOMES_DESIGN, ratified): before
-  // gather and before the generate dispatch -- NEVER after generation has
-  // been dispatched, so a disconnected caller's beat still completes and
-  // saves (the tokens are spent; the scene is recoverable afterwards).
-  assertNotAborted(run, "context gathering");
+  // Checked BEFORE the position write below, not just before context
+  // gathering: a run that's already aborted (or disconnected) when this
+  // call begins must not silently apply advance/set_date/move_to at all.
+  assertNotAborted(run, "the position update");
 
-  const gatherStart = Date.now();
-  const context = await port.gatherContext(storyId, opts.direction, {
-    sceneStrategy: opts.sceneStrategy,
-    sceneFallbackStrategy: opts.sceneFallbackStrategy,
-    signal: run.signal,
-  });
-  const gatherMs = Date.now() - gatherStart;
-
-  // Context admission (CONTEXT_PLAN_DESIGN, ratified). The budget is the
-  // Ollama effective window when the generator can supply one (cached
-  // /api/show); cloud windows are all-unknown by ratified decision, so
-  // those plans instrument without dropping.
-  let inputBudget: number | undefined;
-  const window = await port.effectiveContextWindow(opts.model);
-  if (typeof window === "number") inputBudget = window;
-  const emptyBundle = {
-    rules: [],
-    style: [],
-    characters: [],
-    locations: [],
-    scenes: [],
-    lore: [],
-    worldbuilding: [],
-  };
-  const planResult = planContext(context.entries ?? [], {
-    provider: port.generatorName,
-    model: opts.model,
-    inputBudget,
-    outputReserve: opts.maxTokens ?? port.defaultMaxTokens,
-    estFixedTokens: estimateTokens(
-      port.buildSystemPrompt(mode, emptyBundle).length,
-    ),
-    directionChars: opts.direction.length,
-    marginTokens: port.contextMarginTokens,
-  });
-  const contextPlan: ContextPlanManifest & { companion_selection?: string[] } =
-    toManifest(planResult.plan, planResult.entries);
-  if (planResult.plan.verdict === "rejected") {
-    const detail =
-      "protected rules/style plus the direction alone exceed the " +
-      `effective context window (${inputBudget} tokens, model-aware). ` +
-      "Nothing droppable would make this fit -- trim rules/style, raise " +
-      "OLLAMA_NUM_CTX (within the model's trained context), or use a " +
-      "larger-context model.";
-    if (port.admissionMode === "enforce") {
-      throw new RunOutcomeError("rejected_before_dispatch", detail);
+  // Position update (docs/POSITION_TRACKING_DESIGN.md refinement 4),
+  // applied BEFORE context gathering so the beat is generated already
+  // knowing the new date/place. A successful update is NOT rolled back if
+  // generation subsequently fails -- the operator's explicit directive is a
+  // fact about the story regardless of whether a beat describing it gets
+  // written (mirrors mnemo_session_break's break-then-save precedent: the
+  // first mutation stands even if a later step fails). The atomic
+  // invariant enforced inside mergePositionUpdate (stories.ts, via
+  // applyPosition) doubles as the not-yet-initialized refusal these
+  // convenience params need for free: none of advance/setDate/moveTo can
+  // supply epoch_date/epoch_location, so calling any of them against an
+  // untracked story throws "hasn't started... use mnemo_position_set"
+  // before anything is dispatched.
+  let positionApplied = false;
+  if (opts.advance || opts.setDate !== undefined || opts.moveTo) {
+    try {
+      await port.applyPosition(storyId, {
+        advance: opts.advance,
+        setDate: opts.setDate,
+        moveTo: opts.moveTo,
+      });
+      positionApplied = true;
+    } catch (err) {
+      // Accepted residual (docs/POSITION_TRACKING_DESIGN.md refinement 5):
+      // this catch cannot distinguish "the write never reached OC" from
+      // "OC committed it but the response was lost" -- a transport error
+      // here always reports rejected_before_dispatch/retry_safe:true even
+      // in the second, rarer case. Every other single-write OC path in
+      // this codebase carries the same ambiguity; resolving it needs error
+      // typing this repo doesn't have yet, so it's documented rather than
+      // silently claimed fixed.
+      throw new RunOutcomeError(
+        "rejected_before_dispatch",
+        (err as Error).message,
+      );
     }
-    port.warn("continueScene", "context plan rejected (warn mode)", {
-      run_id: run.runId,
-      input_budget: inputBudget,
+  }
+
+  // Everything below, through the generate dispatch, is still nominally
+  // "pre-dispatch" -- but if the position write above just landed,
+  // rejected_before_dispatch's stock retry_safe:true is now a lie: the
+  // identical call re-run would re-apply advance/set_date/move_to a
+  // second time. Catch and relabel rather than change each individual
+  // throw site (context gathering's own abort check, context-admission
+  // rejection, the generate-dispatch abort check), so a future phase
+  // boundary added in this span inherits the same honesty for free.
+  let context: Awaited<ReturnType<ContinuationPort["gatherContext"]>>;
+  let contextPlan: ContextPlanManifest & { companion_selection?: string[] };
+  let renderedContext: ReturnType<ContinuationPort["renderAdmittedContext"]>;
+  let systemPrompt: string;
+  let kindroidTarget: KindroidTarget | undefined;
+  let narratorProfile: string | undefined;
+  let capability_warnings: string[];
+  let gatherMs: number;
+  let planResult: ReturnType<typeof planContext>;
+  try {
+    // Phase-boundary abort checks (RUN_OUTCOMES_DESIGN, ratified): before
+    // gather and before the generate dispatch -- NEVER after generation has
+    // been dispatched, so a disconnected caller's beat still completes and
+    // saves (the tokens are spent; the scene is recoverable afterwards).
+    assertNotAborted(run, "context gathering");
+
+    const gatherStart = Date.now();
+    context = await port.gatherContext(storyId, opts.direction, {
+      sceneStrategy: opts.sceneStrategy,
+      sceneFallbackStrategy: opts.sceneFallbackStrategy,
+      signal: run.signal,
     });
+    gatherMs = Date.now() - gatherStart;
+
+    // Context admission (CONTEXT_PLAN_DESIGN, ratified). The budget is the
+    // Ollama effective window when the generator can supply one (cached
+    // /api/show); cloud windows are all-unknown by ratified decision, so
+    // those plans instrument without dropping.
+    let inputBudget: number | undefined;
+    const window = await port.effectiveContextWindow(opts.model);
+    if (typeof window === "number") inputBudget = window;
+    const emptyBundle = {
+      rules: [],
+      style: [],
+      characters: [],
+      locations: [],
+      scenes: [],
+      lore: [],
+      worldbuilding: [],
+    };
+    planResult = planContext(context.entries ?? [], {
+      provider: port.generatorName,
+      model: opts.model,
+      inputBudget,
+      outputReserve: opts.maxTokens ?? port.defaultMaxTokens,
+      estFixedTokens: estimateTokens(
+        port.buildSystemPrompt(mode, emptyBundle).length,
+      ),
+      directionChars: opts.direction.length,
+      marginTokens: port.contextMarginTokens,
+    });
+    contextPlan = toManifest(planResult.plan, planResult.entries);
+    if (planResult.plan.verdict === "rejected") {
+      const detail =
+        "protected rules/style plus the direction alone exceed the " +
+        `effective context window (${inputBudget} tokens, model-aware). ` +
+        "Nothing droppable would make this fit -- trim rules/style, raise " +
+        "OLLAMA_NUM_CTX (within the model's trained context), or use a " +
+        "larger-context model.";
+      if (port.admissionMode === "enforce") {
+        throw new RunOutcomeError("rejected_before_dispatch", detail);
+      }
+      port.warn("continueScene", "context plan rejected (warn mode)", {
+        run_id: run.runId,
+        input_budget: inputBudget,
+      });
+    }
+
+    // Plan-driven rendering: the prompt contains exactly the admitted set,
+    // so the manifest can never describe a payload the model didn't see.
+    const admittedIds = new Set(planResult.admitted.map((e) => e.memory_id));
+    renderedContext = port.renderAdmittedContext(context, admittedIds);
+    systemPrompt = port.buildSystemPrompt(mode, renderedContext);
+
+    // Only fetch the story marker (an extra OC round trip) when it could
+    // actually matter: no explicit override, a story-bound target is
+    // meaningless to any generator but Kindroid, and the caller didn't
+    // already fetch it.
+    let storyTarget = opts.storyKindroidTarget;
+    narratorProfile = opts.storyNarratorProfile;
+    if (
+      !opts.storyKindroidTargetPrefetched &&
+      opts.explicitKindroidTarget === undefined &&
+      port.generatorName === "kindroid"
+    ) {
+      const binding = await port.storyBinding(storyId);
+      storyTarget = binding.kindroidTarget;
+      narratorProfile = binding.narratorProfile;
+    }
+    kindroidTarget =
+      opts.explicitKindroidTarget ??
+      (port.generatorName === "kindroid" ? storyTarget : undefined);
+
+    // Warn-don't-break (GENERATOR_CAPABILITIES_DESIGN, ratified): options
+    // the provider ignores produce a response warning, never an error --
+    // legacy callers keep working.
+    capability_warnings = port.capabilityWarnings({
+      temperature: opts.temperature,
+      maxTokens: opts.maxTokens,
+      model: opts.model,
+    });
+
+    assertNotAborted(run, "the generate dispatch");
+  } catch (err) {
+    if (positionApplied && err instanceof RunOutcomeError) {
+      throw new RunOutcomeError(
+        err.outcome,
+        `${err.message} -- NOTE: this call's advance/set_date/move_to ` +
+          "already applied to the story's position before this failure " +
+          "and was NOT rolled back (mirrors mnemo_session_break's " +
+          "break-then-save precedent). Retrying this exact call will " +
+          "apply the position change again -- check mnemo_position_get " +
+          "before deciding whether to retry.",
+        { retrySafe: false },
+      );
+    }
+    throw err;
   }
-
-  // Plan-driven rendering: the prompt contains exactly the admitted set,
-  // so the manifest can never describe a payload the model didn't see.
-  const admittedIds = new Set(planResult.admitted.map((e) => e.memory_id));
-  const renderedContext = port.renderAdmittedContext(context, admittedIds);
-  const systemPrompt = port.buildSystemPrompt(mode, renderedContext);
-
-  // Only fetch the story marker (an extra OC round trip) when it could
-  // actually matter: no explicit override, a story-bound target is
-  // meaningless to any generator but Kindroid, and the caller didn't
-  // already fetch it.
-  let storyTarget = opts.storyKindroidTarget;
-  let narratorProfile = opts.storyNarratorProfile;
-  if (
-    !opts.storyKindroidTargetPrefetched &&
-    opts.explicitKindroidTarget === undefined &&
-    port.generatorName === "kindroid"
-  ) {
-    const binding = await port.storyBinding(storyId);
-    storyTarget = binding.kindroidTarget;
-    narratorProfile = binding.narratorProfile;
-  }
-  const kindroidTarget =
-    opts.explicitKindroidTarget ??
-    (port.generatorName === "kindroid" ? storyTarget : undefined);
-
-  // Warn-don't-break (GENERATOR_CAPABILITIES_DESIGN, ratified): options
-  // the provider ignores produce a response warning, never an error --
-  // legacy callers keep working.
-  const capability_warnings = port.capabilityWarnings({
-    temperature: opts.temperature,
-    maxTokens: opts.maxTokens,
-    model: opts.model,
-  });
-
-  assertNotAborted(run, "the generate dispatch");
 
   const generateStart = Date.now();
   const beat = await port.generate({
@@ -268,6 +359,7 @@ export async function continueScene(
       run_id: run.runId,
       ...(capability_warnings.length > 0 && { capability_warnings }),
       context_plan: contextPlan,
+      ...(context.position && { position: context.position }),
       yielded_to_user: true,
       beat_text: "",
       saved: false,
@@ -299,6 +391,7 @@ export async function continueScene(
       run_id: run.runId,
       ...(capability_warnings.length > 0 && { capability_warnings }),
       context_plan: contextPlan,
+      ...(context.position && { position: context.position }),
       incomplete: true,
       saved: false,
       beat_text: beatText,
@@ -404,6 +497,7 @@ export async function continueScene(
     run_id: run.runId,
     ...(capability_warnings.length > 0 && { capability_warnings }),
     context_plan: contextPlan,
+    ...(context.position && { position: context.position }),
     beat_name: beatName,
     beat_text: beatText,
     ...(memoryId !== undefined && { memory_id: memoryId }),

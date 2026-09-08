@@ -37,6 +37,16 @@ export interface StoryBinding {
   narratorProfile?: string;
 }
 
+/** mnemo_continue's position convenience params
+ * (docs/POSITION_TRACKING_DESIGN.md slice 4) -- a narrower shape than
+ * mnemo_position_set's own, since mnemo_continue cannot bootstrap tracking
+ * (no epoch_date/epoch_location here) and has no set_elapsed_hours. */
+export interface ContinuePositionUpdate {
+  advance?: { hours?: number; days?: number; weeks?: number };
+  setDate?: string;
+  moveTo?: { location: string; spot?: string };
+}
+
 export interface ContinuationPort {
   readonly generatorName: string;
   readonly admissionMode: AdmissionMode;
@@ -61,6 +71,13 @@ export interface ContinuationPort {
   /** The story marker's provider binding: its Kindroid target and narrator
    * label, read together so one marker lookup serves both. */
   storyBinding(storyId: string): Promise<StoryBinding>;
+  /** Applies mnemo_continue's advance/set_date/move_to convenience params
+   * (docs/POSITION_TRACKING_DESIGN.md slice 4) to the story's position
+   * before generation. Throws (uninitialized tracking, invalid location,
+   * mutually-exclusive params) before anything is dispatched -- see
+   * continueScene's call site for how that's classified. Not called at all
+   * when none of the three params is given. */
+  applyPosition(storyId: string, update: ContinuePositionUpdate): Promise<void>;
   generate(options: GenerateBeatOptions): Promise<GeneratedBeat>;
   saveScene(
     storyId: string,

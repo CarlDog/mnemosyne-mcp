@@ -6,10 +6,14 @@
 //   3. STYLE — style guide entities
 //   4. CHARACTERS — character entities
 //   5. LOCATIONS — location entities
-//   6. RECENT SCENES — scene entities (strict recency ordering with
+//   6. POSITION — the story's current in-story datetime/place, if position
+//      tracking is on (docs/POSITION_TRACKING_DESIGN.md); declarative
+//      state, not a constraint, so it sits with the reference blocks, not
+//      with RULES/STYLE. Absent entirely for a story that never opts in.
+//   7. RECENT SCENES — scene entities (strict recency ordering with
 //      validation:clean preference and untagged fallback)
-//   7. LORE — lore entities
-//   8. WORLDBUILDING — worldbuilding entities
+//   8. LORE — lore entities
+//   9. WORLDBUILDING — worldbuilding entities
 //
 // Reference: docs/V2_RETROSPECTIVE.md §2.3. The v2 storytelling plugin
 // arrived at this order empirically through Phase 3's conversation mode
@@ -26,11 +30,14 @@ import { nameMentioned } from "./companion-message.js";
 import {
   recall,
   memoryToRecalled,
+  getEntityByMemoryId,
   type EntityType,
   type RecalledEntity,
 } from "./entities.js";
+import { findStory, currentStoryDatetime } from "./stories.js";
 import type {
   ContextBundle,
+  PositionContext,
   SceneContextStrategy,
 } from "./application/model.js";
 export type {
@@ -376,6 +383,38 @@ async function maybeEnrichReferenceQuery(
   return buildEnrichedQuery(direction, parsed.name, parsed.body);
 }
 
+/**
+ * Resolves the rendering-ready position projection for a story, or
+ * undefined when the story has no position tracking on. Two OC round
+ * trips (findStory, then getEntityByMemoryId for the current location's
+ * display name) -- deliberately not signal-threaded through findStory/
+ * getEntityByMemoryId themselves (that would ripple into every other
+ * caller of those two widely-shared functions); the existing checkAborted()
+ * calls immediately before and after this in gatherContext already bound
+ * how long an abort can be delayed by it. Called only when
+ * !options.validationOnly -- see GatherContextOptions.validationOnly.
+ */
+async function resolvePosition(
+  oc: OcClient,
+  storyId: string,
+): Promise<PositionContext | undefined> {
+  const story = await findStory(oc, storyId);
+  if (!story?.position) return undefined;
+  const location = await getEntityByMemoryId(
+    oc,
+    storyId,
+    story.position.currentLocationId,
+  );
+  return {
+    current_story_datetime: currentStoryDatetime(story.position),
+    current_location: {
+      name:
+        location?.name ?? "(unknown -- this location entity no longer exists)",
+      ...(story.position.currentSpot && { spot: story.position.currentSpot }),
+    },
+  };
+}
+
 export interface GatherContextOptions {
   /** RECENT SCENES retrieval strategy. Default DEFAULT_SCENE_CONTEXT_STRATEGY. */
   sceneStrategy?: SceneContextStrategy;
@@ -391,7 +430,11 @@ export interface GatherContextOptions {
    * worldbuilding), so validation callers skip those pulls entirely --
    * under the recency-first default the scene pull is the single most
    * expensive OC fetch in the bundle, and revalidateScenes gathers once
-   * per scene. The skipped fields come back as []. */
+   * per scene. The skipped fields come back as []. Position is skipped for
+   * the same reason (docs/POSITION_TRACKING_DESIGN.md refinement 3): a
+   * validator checks existing prose against rules/style, it doesn't need
+   * "how long has it been," and revalidateScenes's per-scene gather loop
+   * is exactly the rate-limit-sensitive path this scoping protects. */
   validationOnly?: boolean;
 }
 
@@ -504,6 +547,10 @@ export async function gatherContext(
     ...lore.map((e) => toContextEntry(e, "reference")),
     ...worldbuilding.map((e) => toContextEntry(e, "reference")),
   );
+  // Generation-only (never validationOnly, handled by the early return
+  // above) -- see resolvePosition's doc comment for the two-round-trip cost
+  // and why it isn't signal-threaded.
+  const position = await resolvePosition(oc, storyId);
   return {
     rules: rules.map(flattenEntity),
     style: style.map(flattenEntity),
@@ -513,5 +560,6 @@ export async function gatherContext(
     lore: lore.map(flattenEntity),
     worldbuilding: worldbuilding.map(flattenEntity),
     entries,
+    ...(position && { position }),
   };
 }

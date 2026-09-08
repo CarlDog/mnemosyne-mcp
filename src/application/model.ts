@@ -75,6 +75,16 @@ export interface ContextEntry {
   reason: string;
 }
 
+/** The rendering-ready projection of a story's position (stories.ts's
+ * PositionState), populated by gatherContext -- generation contexts only,
+ * see GatherContextOptions.validationOnly. Deliberately narrower than
+ * PositionState: epoch bookkeeping isn't narratively relevant, only the
+ * derived current datetime/place is. */
+export interface PositionContext {
+  current_story_datetime: string;
+  current_location: { name: string; spot?: string };
+}
+
 export interface ContextBundle {
   rules: string[];
   style: string[];
@@ -84,6 +94,9 @@ export interface ContextBundle {
   lore: string[];
   worldbuilding: string[];
   entries?: ContextEntry[];
+  /** Absent when the story has no position tracking on, or the context is
+   * validation-only. See PositionContext. */
+  position?: PositionContext;
 }
 
 export interface GatherContextOptions {

@@ -247,10 +247,11 @@ export const INERT_NOTICE =
  * unconditional provenance header (this is an automated note, not the
  * operator typing), then a story-context block when the direction
  * name-mentions a character/lore/worldbuilding entity, when the story has
- * locations, or when there are recent scenes, then the raw direction, then
- * optionally a group note (see CompanionMessageOptions). Recent scenes and
- * locations are always included (both capped upstream by gatherContext) --
- * the remaining reference entities are keyphrase-gated so an unrelated
+ * locations, when there are recent scenes, or when the story has position
+ * tracking on, then the raw direction, then optionally a group note (see
+ * CompanionMessageOptions). Recent scenes, locations, and position are
+ * always included when present (docs/POSITION_TRACKING_DESIGN.md) -- the
+ * remaining reference entities are keyphrase-gated so an unrelated
  * direction doesn't drag in the whole cast list every call. Pure function
  * (no I/O) so it's unit-testable without a live client.
  */
@@ -271,7 +272,9 @@ export function buildCompanionMessage(
       )
     : [];
   const scenes = context ? parseFlattened(context.scenes) : [];
-  const hasContextBlock = matched.length > 0 || scenes.length > 0;
+  const position = context?.position;
+  const hasContextBlock =
+    matched.length > 0 || scenes.length > 0 || position !== undefined;
   // Characters specifically (not locations/lore/worldbuilding) -- the only
   // reference type that makes sense to address as "talk to each other" in
   // a group note. A second, narrower pass over the same matching logic
@@ -296,13 +299,28 @@ export function buildCompanionMessage(
         ? `[Story context -- background knowledge, not something to quote verbatim.${INERT_NOTICE}:`
         : "[Story context -- background knowledge, not something to quote verbatim:",
     ];
+    if (position) {
+      // Neutralize name and spot SEPARATELY, before combining into "name
+      // (spot)" -- a fence-forging spot only reaches column 0 of its own
+      // line (where the line-based part of neutralizeCompanionFence
+      // requires it) if checked on its own, not after being embedded
+      // mid-line alongside the location name.
+      const name = neutralizeCompanionFence(position.current_location.name);
+      const spot = position.current_location.spot
+        ? neutralizeCompanionFence(position.current_location.spot)
+        : undefined;
+      const place = spot ? `${name} (${spot})` : name;
+      lines.push(
+        `Current position: ${position.current_story_datetime} at ${place}.`,
+      );
+    }
     for (const entry of matched) {
       lines.push(
         `- ${neutralizeCompanionFence(entry.name)}: ${neutralizeCompanionFence(entry.body)}`,
       );
     }
     if (scenes.length > 0) {
-      if (matched.length > 0) lines.push("");
+      if (matched.length > 0 || position) lines.push("");
       lines.push("Recent scenes:");
       for (const scene of scenes) {
         lines.push(`- ${neutralizeCompanionFence(scene.body || scene.name)}`);
