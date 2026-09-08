@@ -5145,8 +5145,9 @@ consider only when real use exposes the corresponding pressure:
   itemized by the audit -- a human/agent sweep would need to enumerate
   them fresh across the whole tree, with real risk of missing an
   indirect usage and silently breaking something. Low severity
-  (cosmetic export-boundary cleanup), so queue for a dedicated pass
-  rather than rush now.
+  (cosmetic export-boundary cleanup). **Trigger set 2026-09-08: the
+  next phase-end audit**, not before -- re-derive the count fresh at
+  that point rather than trusting this one.
 - ~~**HTTP import/export paths exceed the remote story-operation boundary.**~~
   **Closed 2026-08-28** (`a12e992`): caller-supplied `out_path`/`file_path`
   are refused over the HTTP transport (flat rejection, stdio unchanged) — see
