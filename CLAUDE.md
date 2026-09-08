@@ -104,9 +104,11 @@ Written down but **not ratified** — design input, not specification:
 [WEBUI_NOTES.md](docs/WEBUI_NOTES.md),
 [CONTENT_ROUTING_DESIGN.md](docs/CONTENT_ROUTING_DESIGN.md),
 [COMPANION_PROFILE_DESIGN.md](docs/COMPANION_PROFILE_DESIGN.md),
-[POSITION_TRACKING_DESIGN.md](docs/POSITION_TRACKING_DESIGN.md),
 [HOOK_VAULT.md](docs/HOOK_VAULT.md), and the four external-system adoption
 assessments listed under "Layout" below.
+[POSITION_TRACKING_DESIGN.md](docs/POSITION_TRACKING_DESIGN.md) is
+**ratified and fully implemented** (2026-09-07, all four slices) — see
+STATUS.md's dated entries.
 
 ## Stack
 
@@ -184,7 +186,12 @@ assessments listed under "Layout" below.
 - `src/stories.ts` — story marker logic, plus `resolveStoryId(oc,
   explicit?)`: the per-call `story` override every story-touching tool
   accepts, falling back to the active-story pointer (pure file I/O, no
-  OC call) when omitted.
+  OC call) when omitted. Also owns position tracking's marker fields
+  (schema 5, `docs/POSITION_TRACKING_DESIGN.md`): `mergePositionUpdate`/
+  `resolveElapsedHours`/`currentStoryDatetime` (pure) and `setPosition`/
+  `applyPositionUpdate` (OC-backed) — the latter the single shared
+  validate-then-apply chokepoint both `mnemo_position_set` and
+  `mnemo_continue`'s `advance`/`set_date`/`move_to` call through.
 - `src/entities.ts` — entity CRUD + recall, plus `listAllEntities()` (a
   complete, unranked enumeration — no cap, unlike `recall()`) and
   `filterListedEntities()` (pure: optional type filter + default body
@@ -224,7 +231,10 @@ assessments listed under "Layout" below.
 - `src/companion-message.ts` — the shared keyphrase-gated context
   builder both companion-chat providers (Kindroid, Botify) fold story
   entities through. Extracted so the word-boundary matching and the
-  scene/location-inclusion rules can't drift between consumers.
+  scene/location-inclusion rules can't drift between consumers. Position
+  (`docs/POSITION_TRACKING_DESIGN.md`), when the story has tracking on,
+  joins scenes/locations as unconditional rather than keyphrase-gated,
+  as a "Current position: ..." line.
 - `src/botify-client.ts` / `src/botify-provider.ts` — Botify generator
   (MCP client to botify-mcp, same shape as the Kindroid pair; target is
   a chat UUID via `BOTIFY_STORYTELLING_CHAT`).
@@ -242,6 +252,14 @@ assessments listed under "Layout" below.
   carries the caller's abort signal (consulted at phase boundaries only —
   a dispatched generation always completes and saves), `RunOutcomeError`
   carries the retry-safety projection and ratified HTTP status map.
+  `retry_safe` is table-derived by default but overridable per instance
+  (constructor `opts.retrySafe`, mirroring the existing
+  `externalMutationPossible` override) — added 2026-09-07 so a caller that
+  knows a LOCAL mutation happened before an otherwise-pre-dispatch failure
+  (position tracking's `advance`/`set_date`/`move_to`, see
+  `docs/POSITION_TRACKING_DESIGN.md` refinement 5) can correct the stock
+  projection instead of it silently telling a retrying caller nothing
+  happened.
 - `src/context-plan.ts` — pure deterministic context admission
   (CONTEXT_PLAN_DESIGN, ratified): `planContext` drop tiers (protected
   rules/style never drop; untagged scenes → clean scenes → references,
@@ -408,6 +426,20 @@ assessments listed under "Layout" below.
   operator-labeled benchmark records a win. Each document records the concrete
   types, chosen semantics, slice order, and acceptance tests, and cites its
   assessment for rationale rather than restating it.
+- `docs/POSITION_TRACKING_DESIGN.md` — a story's optional in-story
+  clock/place: ratified 2026-09-07, implemented the same day across all
+  four slices (marker schema 5, `mnemo_position_get`/`mnemo_position_set`,
+  generation-context rendering in both the direct-provider and
+  companion-chat paths, `mnemo_continue`/REST `advance`/`set_date`/
+  `move_to` integration). Records the ratified decisions plus five
+  refinements from two adversarial passes -- four from a pre-implementation
+  pass before any code shipped (the parser-level atomic invariant, the
+  `set_date`-predates-epoch refusal, validation-context gating, and the
+  accepted position-advance-survives-generation-failure semantics), and a
+  fifth from a pre-commit review of the finished diff (a pre-dispatch
+  failure landing after a successful position write was wrongly reported
+  retry-safe; `advance`/`set_elapsed_hours` could drive elapsed_hours
+  negative where `set_date` alone was guarded).
 - `docs/RESEARCH_DECISION_QUEUE.md` — the enumerated decision queue from the
   2026-08-28 research triage: every recommendation-table row of the four
   adoption assessments with its disposition (shipped / rejected at triage /

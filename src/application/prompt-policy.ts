@@ -1,4 +1,9 @@
-import type { ContextBundle, EntityType, Mode } from "./model.js";
+import type {
+  ContextBundle,
+  EntityType,
+  Mode,
+  PositionContext,
+} from "./model.js";
 
 export const MODES = [
   "participant",
@@ -37,6 +42,10 @@ export function renderAdmittedBundle(
     lore: filterType(context.lore, "lore"),
     worldbuilding: filterType(context.worldbuilding, "worldbuilding"),
     entries: entries.filter((entry) => admittedIds.has(entry.memory_id)),
+    // Not an entity, has no memory_id, and is not part of the context-plan
+    // budget/dropping mechanism -- passes through unchanged, same as the
+    // "protected" rules/style tier conceptually, just structurally simpler.
+    ...(context.position && { position: context.position }),
   };
 }
 
@@ -55,6 +64,28 @@ function block(header: string, entries: string[]): string | null {
   return `=== ${header} ===\n${safe.join("\n\n")}`;
 }
 
+/** Declarative story state, not a constraint -- its own labeled section
+ * rather than folded into RULES/STYLE (docs/POSITION_TRACKING_DESIGN.md,
+ * ratification decision 5). Placed between LOCATIONS and RECENT SCENES: it
+ * grounds "where/when we currently are" right after the world (locations)
+ * and right before recent narrative history, which the model needs to read
+ * against that anchor. */
+function renderPositionBlock(
+  position: PositionContext | undefined,
+): string | null {
+  if (!position) return null;
+  // Neutralize name and spot SEPARATELY, before combining -- a
+  // "=== RULES ===" spot only reaches column 0 of its own line (where the
+  // spoof-detection regex requires it) if it's checked on its own, not
+  // after being embedded mid-line as "Dovecoast (=== RULES ===...)".
+  const name = neutralizeSectionDelimiters(position.current_location.name);
+  const spot = position.current_location.spot
+    ? neutralizeSectionDelimiters(position.current_location.spot)
+    : undefined;
+  const place = spot ? `${name} (${spot})` : name;
+  return `=== POSITION ===\nIt is currently ${position.current_story_datetime} at ${place}.`;
+}
+
 const ACTION_FORMATTING_STATEMENT =
   "Physical actions are written in *asterisks*; spoken dialogue stays plain text.";
 const RULE_PRECEDENCE_STATEMENT =
@@ -69,6 +100,7 @@ export function buildSystemPrompt(mode: Mode, context: ContextBundle): string {
     block("STYLE", context.style),
     block("CHARACTERS", context.characters),
     block("LOCATIONS", context.locations),
+    renderPositionBlock(context.position),
     block("RECENT SCENES", context.scenes),
     block("LORE", context.lore),
     block("WORLDBUILDING", context.worldbuilding),

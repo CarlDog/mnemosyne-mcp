@@ -2,13 +2,16 @@
 
 **Status:** **Ratified 2026-09-07** (operator: "ratify it, go ahead and
 implement") with the five decisions below the original ratification
-questions, plus four refinements an adversarial pre-implementation pass
-surfaced the same day (see "Refinements added at implementation time"):
-the parser-level atomic-invariant requirement, the `set_date`-predates-epoch
-refusal (resolving a contradiction in the original draft), the
-validation-context gating rule, and the accepted position-advance-before-
-generation-failure semantics. [STATUS.md](../STATUS.md) remains the source
-of current priority.
+questions, plus five refinements two adversarial passes surfaced the same
+day (see "Refinements added at implementation time"): the parser-level
+atomic-invariant requirement, the `set_date`-predates-epoch refusal
+(resolving a contradiction in the original draft), the validation-context
+gating rule, the accepted position-advance-before-generation-failure
+semantics, and — from a pre-commit review of the finished slice 3+4 diff —
+extending that same not-rolled-back accounting to a PRE-dispatch failure
+that fires after the write, plus a negative-elapsed-hours gap the first
+pass's `set_date` refusal didn't close for `advance`/`set_elapsed_hours`.
+[STATUS.md](../STATUS.md) remains the source of current priority.
 
 ## Problem
 
@@ -196,6 +199,14 @@ boundary already used for Kindroid target binding — a convenience param
 buried in a generation call must not be the thing that silently turns a
 feature on for the first time.
 
+`mnemo_continue`'s response echoes the resulting `position` (the same
+`{ current_story_datetime, current_location }` shape `mnemo_position_get`
+returns) whenever the story is tracked — whether or not this call passed
+`advance`/`set_date`/`move_to` — mirroring how it already echoes
+`narrator_profile`. This costs nothing beyond the marker read
+`gatherContext` already makes; it's a response-shape addition, not a new
+read.
+
 **If the marker write succeeds but generation subsequently fails** (a
 provider timeout, `provider_dispatch_unknown`, `completed_but_readback_
 failed`, or any other post-dispatch failure), **the position advance is
@@ -213,6 +224,24 @@ the scene truly didn't happen. The alternative (deferring the write until
 a successful save, rendering a *prospective* position into context without
 committing it) was considered and rejected as unwarranted complexity for a
 case with a cheap manual fix.
+
+**The same "not rolled back" fact also applies to a PRE-dispatch failure
+that happens after the write** — found by adversarial review, fixed the
+same day: context gathering can itself abort, and context-admission can
+reject in `enforce` mode, both *after* the position write and *before*
+`port.generate` is ever called. Naively, both of those are classified
+`rejected_before_dispatch`, whose stock projection is `retry_safe: true` —
+which would be a lie once the write has landed, since re-running the
+identical call re-applies `advance`/`set_date`/`move_to` a second time.
+`continueScene` tracks whether the write succeeded this call and, if any
+`RunOutcomeError` fires afterward before dispatch, re-throws it with
+`retry_safe: false` and a message noting the position already applied and
+was not rolled back — the same recovery (`mnemo_position_get` to check,
+`mnemo_position_set` to correct) as the post-dispatch case above. The
+abort check for the write itself (`assertNotAborted(run, "the position
+update")`) also moved to fire *before* the write, so a run that's already
+aborted when `continueScene` is entered refuses cleanly with no mutation
+at all — that case needed no retry-safety correction, only reordering.
 
 ### Rendering into generation context
 
@@ -238,7 +267,12 @@ it was never given scene context to begin with:
   by `gatherContext` reading the story marker directly (a different read
   path than the existing entity-type `recall()` calls; position isn't an
   entity). Absent entirely when the story has no epoch set, so a story that
-  never opts in sees zero behavior change and zero extra cost.
+  never opts in sees zero *behavior* change — but not zero cost: as-built,
+  `resolvePosition` reads the marker (via `findStory`) on every
+  non-validation `gatherContext` call regardless of whether the story is
+  tracked, because that read is the only way to know it isn't. The "zero
+  extra cost" language from the original sketch didn't survive contact with
+  the code; the corrected cost accounting is below.
 - `buildSystemPrompt` (direct providers) renders it as its own labeled
   section, structurally separate from rules/style (it's declarative story
   state, not a constraint) — exact placement TBD at implementation, but
@@ -246,11 +280,19 @@ it was never given scene context to begin with:
 - `buildCompanionMessage` (Kindroid/Botify, `src/companion-message.ts`)
   folds it into the `ALWAYS_INCLUDED_TYPES` treatment scenes/locations
   already get — present in every message when set, never keyphrase-gated.
-- Cost: one additional light `getEntityByMemoryId` read per `mnemo_continue`
-  call (to resolve `current_location`'s display name), only when the story
-  has position tracking on. `gatherContext` already does seven sequential
-  OC reads per call (STATUS.md's Known Gaps already flags this as a real
-  rate-limit pressure point) — this adds one more, bounded, not per-entity.
+- **Cost, as built:** one story-marker read (`findStory`) on *every*
+  non-validation `gatherContext` call, tracked or not — that's the price of
+  `resolvePosition` being the thing that discovers whether a story opted in.
+  A tracked story pays one further light `getEntityByMemoryId` read to
+  resolve `current_location`'s display name; an untracked story pays only
+  the marker read. `gatherContext` already does several sequential OC reads
+  per call (STATUS.md's Known Gaps already flags this as a real
+  rate-limit pressure point) — this adds one unconditionally and a second
+  only when tracked, neither per-entity. A cheap available optimization,
+  not built: the REST route already holds `story.position` from its own
+  `requireStory` call and could hand it to `gatherContext` the way
+  `storyKindroidTargetPrefetched` avoids a redundant marker read for the
+  Kindroid-binding lookup — left as a follow-up, not a blocker.
 
 ## Explicitly out of scope (decisions, not omissions)
 
@@ -268,11 +310,17 @@ it was never given scene context to begin with:
   position tracking.
 - **Negative elapsed / flashback framing.** Position tracking here is "where
   the ongoing narrative currently stands," not a flashback-authoring tool.
-  A `set_date` that would produce negative elapsed (predating the epoch) is
-  refused outright (see "Granularity" above) — the one place this gets an
-  explicit forbid, because leaving it unvalidated would silently corrupt
-  `current_story_datetime`. Flashback framing as a *feature* remains parked,
-  not decided.
+  Any of `set_date`/`advance`/`set_elapsed_hours` that would land
+  elapsed_hours below zero (predating the epoch) is refused outright (see
+  "Granularity" above) — the *result* is guarded uniformly across all
+  three, not just `set_date`; leaving `advance`/`set_elapsed_hours`
+  unvalidated (an implementation gap found by adversarial review the same
+  day, fixed before commit) would have silently corrupted
+  `current_story_datetime` via those two paths while `set_date` alone
+  stayed safe. A negative `advance` component or a below-current
+  `set_elapsed_hours` is still legal on its own — e.g. `advance: { days:
+  -1 }` to walk back an over-advance — as long as the result stays >= 0.
+  Flashback framing as a *feature* remains parked, not decided.
 - **Multiple concurrent positions per story** (parallel timelines/threads).
   All five live stories are single-timeline; no evidence of a need.
 - **Web UI display.** MCP tool surface + backend only, per the operator's
@@ -307,8 +355,10 @@ it was never given scene context to begin with:
   before the call.
 - A story with position tracking on renders it into both the direct-provider
   system prompt and the Kindroid/Botify companion message, unconditionally
-  (not keyphrase-gated); a story without it renders neither, with no extra
-  OC read attempted.
+  (not keyphrase-gated); a story without it renders neither. Both cases pay
+  the one marker read `resolvePosition` always makes to find out which case
+  it's in (see the corrected cost accounting above) — only the *second*,
+  location-resolving read is conditional on being tracked.
 - Location `name` resolves fresh from the entity on every read — renaming a
   `type:location` entity is reflected in the very next `mnemo_position_get`
   without needing to re-set position.
@@ -359,9 +409,10 @@ it was never given scene context to begin with:
 
 A scoped pre-implementation adversarial pass (2026-09-07, before any code
 was written) found the original ratified draft under-specified in four
-places. Each is folded into the sections above; listed here as the record
-of what changed and why, per this repo's own practice of citing rationale
-rather than re-deriving it later:
+places; a second pass (same day, after slices 3+4 were written but before
+commit) found a fifth. Each is folded into the sections above; listed here
+as the record of what changed and why, per this repo's own practice of
+citing rationale rather than re-deriving it later:
 
 1. **The atomic-block invariant must be enforced in the parser, not only at
    write time.** Every write path goes through `setPosition`, but a
@@ -388,3 +439,23 @@ rather than re-deriving it later:
    subsequently fails.** Matches `mnemo_session_break`'s existing
    break-then-save precedent rather than introducing a new
    pending-position-until-save concept.
+5. **Found by a pre-commit adversarial review of the finished diff, not the
+   pre-implementation pass:** (a) the not-rolled-back accounting above
+   didn't cover a PRE-dispatch failure firing *after* the write (context
+   gathering's own abort, or context-admission's `enforce`-mode rejection)
+   — `rejected_before_dispatch`'s stock `retry_safe: true` was a lie in
+   that specific window, fixed by tracking whether the write landed this
+   call and relabeling `retry_safe: false` with an explanatory note when it
+   did (see "Rendering into generation context" above); and (b) refinement
+   2's `set_date`-predates-epoch refusal didn't extend to `advance`/
+   `set_elapsed_hours`, which could silently drive elapsed_hours negative
+   with no guard at all — fixed by guarding the computed *result* uniformly
+   across all three branches (see "Explicitly out of scope" above). Both
+   are mutation-tested: reverting either fix reproduces the exact failure
+   the fix closes. **Accepted residual, not fixed:** the position-write
+   call site's own `catch` still cannot distinguish "the write never
+   reached OC" from "OC committed it but the response was lost" — a
+   transport error there always reports `rejected_before_dispatch`/
+   `retry_safe: true` even in the rarer second case. Every other
+   single-write OC path in this codebase carries the same ambiguity;
+   resolving it needs error typing this repo doesn't have yet.

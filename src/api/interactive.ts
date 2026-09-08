@@ -66,6 +66,20 @@ const continueSchema = z.object({
     .optional(),
   allow_user: z.boolean().optional(),
   validate: z.boolean().optional(),
+  advance: z
+    .object({
+      hours: z.number().optional(),
+      days: z.number().optional(),
+      weeks: z.number().optional(),
+    })
+    .optional(),
+  set_date: z.string().min(1).optional(),
+  move_to: z
+    .object({
+      location: z.string().min(1),
+      spot: z.string().optional(),
+    })
+    .optional(),
 });
 
 function requestErrorBody(
@@ -162,6 +176,9 @@ export function registerInteractiveRoutes(
           groupMaxTurns: body.group_max_turns,
           allowUser: body.allow_user,
           validate: body.validate,
+          advance: body.advance,
+          setDate: body.set_date,
+          moveTo: body.move_to,
           reinvokeHint: `call /stories/${story.id}/continue again`,
         },
         run,

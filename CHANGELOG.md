@@ -7,6 +7,64 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 
 ### Added
 
+- Position tracking: a pre-commit adversarial review of the finished
+  slice 3+4 diff (`feature-dev:code-reviewer`, per the repo's standing
+  pre-deploy-review practice) found and fixed two real bugs before
+  shipping. (1) A pre-dispatch failure firing AFTER a successful
+  `advance`/`set_date`/`move_to` write (context gathering's own abort, or
+  `enforce`-mode context-admission rejection) was reported
+  `retry_safe: true`, falsely implying nothing happened; `RunOutcomeError`
+  gained a `retrySafe` override, `continueScene` now tracks whether the
+  write landed and relabels any such error `retry_safe: false` with an
+  explanatory note, and the abort check for the write itself now fires
+  BEFORE the write rather than after. (2) `advance`/`set_elapsed_hours`
+  could silently drive `elapsed_hours` negative (predating the epoch)
+  while `set_date` alone was guarded against it; `resolveElapsedHours`
+  now guards the computed result uniformly across all three branches. Both
+  mutation-tested against real reproductions.
+
+- Position tracking, slice 4 (`mnemo_continue` integration, closing the
+  feature): `advance`/`set_date`/`move_to` params on both `mnemo_continue`
+  and the REST `/stories/:storyId/continue` route, applied to the story's
+  position before context gathering via a new `ContinuationPort.applyPosition`
+  method (`src/application/ports/continuation.ts`), backed by a new shared
+  `applyPositionUpdate` (`src/stories.ts`) that `mnemo_position_set` was
+  refactored to use too, so the two surfaces can't drift. The atomic
+  invariant already enforced in `mergePositionUpdate` (slice 1) doubles as
+  the not-yet-initialized refusal these convenience params need for free:
+  none of `advance`/`set_date`/`move_to` can supply `epoch_date`/
+  `epoch_location`, so calling any of them against an untracked story
+  throws before anything is dispatched, naming `mnemo_position_set`.
+  `continueScene` wraps that throw as `RunOutcomeError("rejected_before_dispatch")`.
+  A successful position update is NOT rolled back if generation
+  subsequently fails (mirrors `mnemo_session_break`'s break-then-save
+  precedent), mutation-tested against real OC: the advance survives a
+  stub generator throwing. `ContinueSceneResult` gains an optional
+  `position` field, echoed from the same `gatherContext` call already made
+  for rendering -- zero extra cost -- whenever the story has tracking on,
+  regardless of whether this specific call touched it.
+
+- Position tracking, slice 3 (generation-context rendering): `ContextBundle`
+  gains an optional `position` field (`src/application/model.ts`), populated
+  by `gatherContext` only for generation calls (`!validationOnly` --
+  validators check prose against rules/style, not "how long has it been,"
+  and this keeps `mnemo_revalidate_scenes`'s per-scene gather loop at zero
+  extra cost). Renders as its own `=== POSITION ===` block between LOCATIONS
+  and RECENT SCENES in `buildSystemPrompt`, and as an unconditional
+  "Current position: ..." line in `buildCompanionMessage`'s story-context
+  block (joining locations/scenes in `ALWAYS_INCLUDED_TYPES` territory,
+  though it isn't itself an entity). `renderAdmittedBundle` passes it
+  through unchanged -- it has no `memory_id` and sits outside the
+  context-plan budget/dropping mechanism. Two real delimiter-spoofing bugs
+  were found and fixed while writing the tests, in both rendering sites:
+  neutralizing `"name (spot)"` as one combined string missed a `spot`
+  carrying `=== RULES ===`, because the line-based spoof check only fires
+  when the delimiter is alone on its own line, and embedding it mid-line
+  behind the location name defeated that. Fixed by neutralizing `name` and
+  `spot` separately before combining; both fixes are mutation-tested
+  (reverted to the combined-string form, confirmed the new tests fail with
+  the real spoofed content surviving unneutralized, restored).
+
 - Position tracking, slices 1+2 (docs/POSITION_TRACKING_DESIGN.md, ratified
   2026-09-07): a story's optional in-story clock/place. The marker
   (`src/stories.ts`) bumps to schema 5, gaining an atomic `Epoch-Date`/

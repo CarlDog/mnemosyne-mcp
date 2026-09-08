@@ -215,6 +215,33 @@ describe("resolveElapsedHours (pure)", () => {
     ).toBe(2);
   });
 
+  // Regression pin (advisor-flagged 2026-09-08): set_date already refused a
+  // result before the epoch; advance and set_elapsed_hours did not, letting
+  // e.g. set_elapsed_hours: -10 silently corrupt current_story_datetime to
+  // before the epoch -- the exact outcome the design doc frames as a
+  // categorical exclusion, not a set_date-specific one.
+  it("a negative advance that would land elapsed_hours below zero throws", () => {
+    expect(() =>
+      resolveElapsedHours(5, EPOCH, { hours: -10 }, undefined, undefined),
+    ).toThrow(/before the story's epoch/i);
+  });
+
+  it("a negative set_elapsed_hours throws", () => {
+    expect(() =>
+      resolveElapsedHours(5, EPOCH, undefined, -10, undefined),
+    ).toThrow(/before the story's epoch/i);
+  });
+
+  it("a negative advance that keeps the result >= 0 is legal -- a deliberate walk-back", () => {
+    expect(
+      resolveElapsedHours(10, EPOCH, { hours: -4 }, undefined, undefined),
+    ).toBe(6);
+  });
+
+  it("set_elapsed_hours: 0 (exactly at the epoch) is legal", () => {
+    expect(resolveElapsedHours(10, EPOCH, undefined, 0, undefined)).toBe(0);
+  });
+
   it("set_date with no epoch to compute against throws a clear error", () => {
     expect(() =>
       resolveElapsedHours(undefined, undefined, undefined, undefined, EPOCH),

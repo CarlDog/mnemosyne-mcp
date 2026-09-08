@@ -95,8 +95,16 @@ describe("narrator profile on continue (S2)", () => {
     expect(sceneTags?.some((t) => t.startsWith("narrator:"))).toBe(false);
   });
 
-  it("uses a prefetched label without re-reading the marker", async () => {
-    const { oc, savedTags } = stubOc();
+  // gatherContext's own position resolution (docs/POSITION_TRACKING_DESIGN.md)
+  // makes an unrelated story-marker read on every continueScene call now,
+  // regardless of Kindroid-target prefetching -- so "0 reads" is no longer
+  // the right assertion. What prefetching still saves is the SEPARATE
+  // story-binding read continueScene itself would otherwise make: this test
+  // pins that saving directly, by comparing prefetched vs. not.
+  function countingOc(oc: OcClient): {
+    counting: OcClient;
+    reads: () => number;
+  } {
     let markerReads = 0;
     const counting = {
       ...(oc as unknown as Record<string, unknown>),
@@ -105,6 +113,12 @@ describe("narrator profile on continue (S2)", () => {
         return [];
       },
     } as unknown as OcClient;
+    return { counting, reads: () => markerReads };
+  }
+
+  it("uses a prefetched label with exactly one marker read (position's, not a redundant story-binding one)", async () => {
+    const { oc, savedTags } = stubOc();
+    const { counting, reads } = countingOc(oc);
     const result = await continueScene(
       counting,
       generator("kindroid"),
@@ -117,10 +131,27 @@ describe("narrator profile on continue (S2)", () => {
         storyKindroidTargetPrefetched: true,
       },
     );
-    expect(markerReads).toBe(0);
+    expect(reads()).toBe(1);
     expect(result.narrator_profile).toBe("prefetched-label");
     expect(savedTags.find((t) => t.includes("scene"))).toContain(
       "narrator:prefetched-label",
     );
+  });
+
+  it("without prefetching, makes a second marker read for the story binding -- proving prefetching saves exactly one", async () => {
+    const { oc } = stubOc();
+    const { counting, reads } = countingOc(oc);
+    await continueScene(
+      counting,
+      generator("kindroid"),
+      neverValidator,
+      STORY_ID,
+      {
+        ...OPTS,
+        // No storyKindroidTarget/storyKindroidTargetPrefetched -- continueScene
+        // must fetch the binding itself.
+      },
+    );
+    expect(reads()).toBe(2);
   });
 });

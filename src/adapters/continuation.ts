@@ -17,6 +17,7 @@ import {
 } from "../prompt.js";
 import { readStoryBinding, saveSceneEntity } from "./story-binding.js";
 import { validateContentWithUsage } from "../validator.js";
+import { applyPositionUpdate } from "../stories.js";
 
 function admissionModeFromEnv(): AdmissionMode {
   const raw = (process.env.MNEMO_CONTEXT_ADMISSION ?? "").trim().toLowerCase();
@@ -67,6 +68,14 @@ export function createContinuationAdapter(
     capabilityWarnings: (options) =>
       capabilityWarnings(generator.name, options),
     storyBinding: (storyId) => readStoryBinding(oc, storyId),
+    applyPosition: async (storyId, update) => {
+      await applyPositionUpdate(oc, storyId, {
+        advance: update.advance,
+        setDate: update.setDate,
+        currentLocation: update.moveTo?.location,
+        currentSpot: update.moveTo?.spot,
+      });
+    },
     generate: (options) => generator.generate(options),
     // skipInjectionScan: true, unconditionally -- this is the ONE call
     // site that saves a generated beat, and a beat is the narrator's own

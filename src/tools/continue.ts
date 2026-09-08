@@ -45,7 +45,7 @@ export function registerContinueTool(
     {
       title: "Continue the Story",
       description:
-        "Generate the next beat of the active story. Pulls context from OpenChronicle (rules, style, characters, locations, recent scenes, lore, worldbuilding) using v2's load-bearing block ordering, calls the generator LLM, and auto-saves the result as a scene entity. Default mode is 'director' (LLM performs all characters and narrates). With validate=true, runs an LLM second pass against rules / style / characters / locations and returns a verdict alongside the beat. The beat is saved regardless of validation outcome.",
+        "Generate the next beat of the active story. Pulls context from OpenChronicle (rules, style, characters, locations, recent scenes, lore, worldbuilding) using v2's load-bearing block ordering, calls the generator LLM, and auto-saves the result as a scene entity. Default mode is 'director' (LLM performs all characters and narrates). With validate=true, runs an LLM second pass against rules / style / characters / locations and returns a verdict alongside the beat. The beat is saved regardless of validation outcome. If the story has position tracking on (docs/POSITION_TRACKING_DESIGN.md), the current in-story date/place is included in context automatically, and advance/set_date/move_to let this call move it before generating.",
       inputSchema: {
         direction: z
           .string()
@@ -138,6 +138,35 @@ export function registerContinueTool(
           .describe(
             "Run an LLM validation pass after generation. Returns a verdict (issues + summary) alongside the beat. The beat is always saved first; validation results are advisory.",
           ),
+        advance: z
+          .object({
+            hours: z.number().optional(),
+            days: z.number().optional(),
+            weeks: z.number().optional(),
+          })
+          .optional()
+          .describe(
+            "Position tracking (docs/POSITION_TRACKING_DESIGN.md): advance elapsed time by this amount before generating, e.g. { days: 3 } for 'three days later'. Applied before context is gathered, so the beat is generated already knowing the new date. Mutually exclusive with set_date. Refused (nothing changed, nothing generated) if this story hasn't started position tracking yet -- use mnemo_position_set first.",
+          ),
+        set_date: z
+          .string()
+          .min(1)
+          .optional()
+          .describe(
+            "Position tracking: jump straight to this ISO 8601 datetime before generating, instead of advancing by an amount. Refused if it would predate the story's epoch. Mutually exclusive with advance; same not-yet-tracking refusal as advance.",
+          ),
+        move_to: z
+          .object({
+            location: z
+              .string()
+              .min(1)
+              .describe("memory_id of a type:location entity."),
+            spot: z.string().optional(),
+          })
+          .optional()
+          .describe(
+            "Position tracking: move the story's current place before generating, without touching elapsed time. Independent of advance/set_date -- combine freely. Same not-yet-tracking refusal.",
+          ),
         story: z
           .string()
           .min(1)
@@ -163,6 +192,9 @@ export function registerContinueTool(
           group_max_turns?: number;
           allow_user?: boolean;
           validate?: boolean;
+          advance?: { hours?: number; days?: number; weeks?: number };
+          set_date?: string;
+          move_to?: { location: string; spot?: string };
           story?: string;
         },
         extra,
@@ -201,6 +233,9 @@ export function registerContinueTool(
             groupMaxTurns: args.group_max_turns,
             allowUser: args.allow_user,
             validate: args.validate,
+            advance: args.advance,
+            setDate: args.set_date,
+            moveTo: args.move_to,
             reinvokeHint: "call mnemo_continue again",
           },
           run,
