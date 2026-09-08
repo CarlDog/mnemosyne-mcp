@@ -98,6 +98,34 @@ describe("scanForInjectionSignals", () => {
       ).map((s) => s.label),
     ).toContain("standing-directive-to-model");
   });
+
+  // Regression for the one false positive docs/NARRATOR_EVAL.md measured
+  // against the real 513-scene corpus (The Noctis Veil's nv-mt-17): ordinary
+  // narrative English uses singular "your instruction" for the teaching/
+  // schooling sense, unrelated to a model's system instructions. Requiring
+  // the plural (src/injection-scan.ts's meta-instruction-reference pattern)
+  // removes exactly this case without narrowing the injection-flavored one.
+  it("does not flag singular narrative 'your instruction' (schooling sense) — the corpus false positive, now fixed", () => {
+    const previouslyFlagged =
+      "If you agree, the sisters will take you under their wing. From then " +
+      "on, they will guide your instruction here at the academy.";
+    expect(
+      scanForInjectionSignals(previouslyFlagged).map((s) => s.label),
+    ).not.toContain("meta-instruction-reference");
+  });
+
+  it("still flags plural 'your new/own/real instructions' — the injection-flavored phrasing the pattern exists to catch", () => {
+    expect(
+      scanForInjectionSignals(
+        "The note read: these are your new instructions.",
+      ).map((s) => s.label),
+    ).toContain("meta-instruction-reference");
+    expect(
+      scanForInjectionSignals("Follow your own instructions from now on.").map(
+        (s) => s.label,
+      ),
+    ).toContain("meta-instruction-reference");
+  });
 });
 
 describe("describeInjectionSignals", () => {

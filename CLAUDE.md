@@ -67,11 +67,29 @@ recurring tier and a sixth (Halloway) added at core tier where none existed,
 entries, verified clean). Full record in that story's `drafts/_control/PASS.md`
 ("Re-seal 2026-09-08") and `LCS_SCORECARD.md`'s before/after regrade — every
 dimension reaches 2 except reference families (0, deliberately deferred). Two
-things remain open and unrelated to either ruling: the recording-marker
-format for a revised/substituted claim (parked — write corrected prose now,
-invent no marker form), and the Noctis Veil's SL/KM threads (10 scenes), which
-carry no tier decide at all under either ruling. Otherwise nothing is in
-flight. The data architecture migration
+thing remains open: the recording-marker format for a revised/substituted
+claim (parked — write corrected prose now, invent no marker form). **The
+Noctis Veil's SL/KM threads are also now ruled (2026-09-08)**: both
+classified retired-premise play — canon governs, the same as GC and MT,
+since neither touches the Noctis/relic premise and canon's existing
+character records for both women contradict the played content. The
+per-thread source-era flag is now applied to all fifty scenes across all
+four threads (GC and MT had been classified since 2026-09-04 but never
+actually flagged). Full record in
+`the-noctis-veil/drafts/_control/PASS.md`'s "Re-seal 2026-09-08" entry.
+That reseal also surfaced a real regression: a 2026-09-07 security commit
+(`bb521e9`, `src/injection-scan.ts`) had tightened the instruction-shaped-
+text scanner, and one pre-existing scene's narrative dialogue about
+joining a religious order ("...guide your instruction here...") tripped
+it, where it had passed clean as recently as 2026-09-02. Fixed the same
+day on operator instruction: `meta-instruction-reference` now requires
+the plural "instructions" (the injection-flavored phrasing), since
+singular "your instruction" is ordinary teaching/schooling-sense English
+and was the scanner's one measured false positive
+(`docs/NARRATOR_EVAL.md`). Two regression tests added, mutation-tested;
+full suite/typecheck/lint/format clean; `verify-draft-overlay.mjs
+the-noctis-veil` re-run end to end passes clean again (89 merged
+entities, writes=0). Otherwise nothing is in flight. The data architecture migration
 (`docs/DATA_ARCHITECTURE_PROPOSAL.md`, ratified; `docs/DATA_LAYOUT.md` now
 normative) completed all six phases on 2026-09-02: `data/archive/` is the one
 master of originals (written only by `scripts/intake.py`), every story has

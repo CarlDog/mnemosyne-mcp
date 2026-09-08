@@ -1,6 +1,44 @@
 # Status
 
-**Last updated:** 2026-09-07.
+**Last updated:** 2026-09-08.
+
+**The Noctis Veil: SL/KM tiering ruling closed, and the injection-scanner
+gap it surfaced fixed rather than left "accepted" (2026-09-08).** Two
+threads that carried no tier decide at all under Ruling 1 (Sister Lucia,
+4 scenes; Kaitlyn MacDonald, 6 scenes) are now ruled retired-premise play
+("canon governs"), matching GC and MT -- neither touches the Noctis/relic
+premise, and canon's existing character files for both women actively
+contradict what the played scenes show, the same informed-retirement
+pattern already found in MT. Execution also closed a real gap: GC and MT
+had been *classified* since 2026-09-04 but never actually *flagged* --
+all fifty scenes across all four threads now carry
+`RETIRED_PREMISE_CANON_GOVERNS_R3` in `review_flags`.
+`SOURCE_PROVENANCE.md` gained a full "Revision-3" citation record;
+`DECISIONS.md` updated; manifest rehashed.
+
+Re-running the full `verify-draft-overlay.mjs the-noctis-veil` merged-tree
+preflight as part of that re-seal surfaced a real regression: it failed
+on one pre-existing scene (`nv-mt-17-fyq`, "...they will guide **your
+instruction** here at the academy...") that a security-hardening commit
+one day earlier (`bb521e9`, 2026-09-07 -- see the entry below) had turned
+from an *accepted* false positive (measured 0.2%, 1/513 scenes,
+documented in `docs/NARRATOR_EVAL.md`) into a hard preflight failure. The
+operator's instruction was explicit: fix it, don't just re-document it as
+a known gap. Root cause: `meta-instruction-reference`'s regex matched
+singular "instruction" too, and ordinary narrative English uses the
+singular for the benign teaching/schooling sense, while the
+injection-flavored usage is reliably plural ("your new instructions").
+`src/injection-scan.ts` now requires the plural; two regression tests
+were added to `tests/injection-scan.test.ts` (one pinning the fixed case,
+one pinning that plural injection phrasing still flags), and the fix was
+mutation-tested (reverted, confirmed the new test fails with the expected
+symptom, restored). Full verification: `npm test` (617 passed, 91
+env-gated skipped), `npm run typecheck`, `npm run lint`, and `npm run
+format:check` all clean; `verify-draft-overlay.mjs the-noctis-veil`
+re-run end to end now passes clean again (89 merged entities, writes=0),
+matching the pre-regression 2026-09-02 state. `docs/NARRATOR_EVAL.md`
+carries a matching "FIXED 2026-09-08" correction rather than a silent
+rewrite of the earlier "accepted false positive" claim.
 
 **Position tracking: pre-commit adversarial review found two real bugs in
 slices 3+4 (2026-09-07), both fixed and mutation-tested before commit.**

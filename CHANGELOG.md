@@ -137,8 +137,10 @@ this file was introduced remains in [STATUS.md](STATUS.md).
   version's premise that `mnemo_import_story` was the only place staged
   content became live; see the Fixed entries below and STATUS.md's
   2026-09-07 entry for the full record. Measured against all 513 staged
-  `drafts/scenes/**` files: a 0.2% flag rate (1 file), an accepted false
-  positive.
+  `drafts/scenes/**` files: a 0.2% flag rate (1 file) -- initially accepted
+  as a false positive, then actually fixed on 2026-09-08 (see the Fixed
+  entry below) once it turned out to block a real merged-tree import
+  preflight, not just flag a file.
 
 - Narrator evaluation (`docs/NARRATOR_EVAL.md`, `scripts/narrator-eval/`): a
   synthetic corpus of twelve cases across the rubric's six rows, deterministic
@@ -241,6 +243,18 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 
 ### Fixed
 
+- Injection-provenance gate, `meta-instruction-reference` pattern
+  (2026-09-08): required the plural "instructions" rather than
+  "instructions?". Singular "your instruction" is common, benign narrative
+  English for the teaching/schooling sense ("guide your instruction here
+  at the academy") -- the scanner's one measured false positive
+  (`docs/NARRATOR_EVAL.md`, 0.2%/513 scenes) -- while the injection-flavored
+  usage is reliably plural ("your new instructions"). Surfaced not as a
+  cosmetic flag but as a hard `verify-draft-overlay.mjs` merged-tree import
+  preflight failure on a real story (The Noctis Veil), which is what made
+  it worth fixing rather than continuing to accept. Two regression tests
+  added; the fix was mutation-tested (reverted, confirmed the new test
+  fails, restored).
 - Injection-provenance gate, `mnemo_import_story`'s `planImport`: the
   flagged-content early return skipped the batch's duplicate-key
   bookkeeping, so a duplicate sibling of a flagged record was misreported

@@ -536,6 +536,20 @@ scope, not assumed: the real scanner against all 513 already-staged
 positive ("they will guide **your instruction** here"), which is what made
 widening the gate look cheap rather than risky.
 
+**FIXED 2026-09-08.** The Noctis Veil's own SL/KM tiering ruling re-ran the
+full `verify-draft-overlay.mjs` merged-tree preflight and found this
+"accepted" false positive actually blocked the check outright (it fails
+the whole import preflight, not just a per-file flag) -- worth fixing
+rather than continuing to accept. Root cause: `meta-instruction-reference`
+matched singular "instruction" too, and ordinary narrative English uses
+the singular for the teaching/schooling sense ("guide your instruction
+here at the academy"), distinct from the reliably-plural injection sense
+("your new instructions"). `src/injection-scan.ts`'s regex now requires
+the plural; `tests/injection-scan.test.ts` pins both the fixed case and
+that the plural injection phrasing still flags. Verified end to end:
+`verify-draft-overlay.mjs the-noctis-veil` passes clean again (89 merged
+entities, writes=0), matching the pre-regression 2026-09-02 state.
+
 The fix moved the scan into `src/entities.ts`'s `saveEntity()` -- the true
 chokepoint under every entity write (`mnemo_save_entity`,
 `mnemo_import_story`'s writes, `mnemo_session_break`'s greeting-as-scene,
