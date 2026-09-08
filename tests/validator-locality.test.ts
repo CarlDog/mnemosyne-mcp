@@ -14,7 +14,7 @@
 //      /api/show call at all.
 
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { OllamaProvider } from "../src/llm.js";
+import { OllamaProvider } from "../src/ollama-provider.js";
 
 const realFetch = globalThis.fetch;
 afterEach(() => {

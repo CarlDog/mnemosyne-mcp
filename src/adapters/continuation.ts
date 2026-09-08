@@ -3,11 +3,8 @@ import type { AdmissionMode } from "../context-plan.js";
 import { capabilityWarnings } from "../capabilities.js";
 import { retagValidation } from "../entities.js";
 import type { LlmProvider } from "../llm.js";
-import {
-  DEFAULT_MAX_TOKENS,
-  NUM_CTX_MARGIN_TOKENS,
-  OllamaProvider,
-} from "../llm.js";
+import { DEFAULT_MAX_TOKENS, NUM_CTX_MARGIN_TOKENS } from "../llm.js";
+import { OllamaProvider } from "../ollama-provider.js";
 import { log } from "../log.js";
 import type { OcClient } from "../oc-client.js";
 import {

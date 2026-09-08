@@ -17,7 +17,8 @@ import {
   resolveCapabilities,
   capabilityWarnings,
 } from "../src/capabilities.js";
-import { OllamaProvider, type LlmProvider } from "../src/llm.js";
+import type { LlmProvider } from "../src/llm.js";
+import { OllamaProvider } from "../src/ollama-provider.js";
 import { continueScene, testUseCases } from "./helpers/application.js";
 import { createApiRouter } from "../src/api/index.js";
 import type { OcClient, OcMemory } from "../src/oc-client.js";

@@ -10,11 +10,8 @@
 //   - `"keep_alive":"-1"` -> HTTP 400, `"keep_alive":-1` -> HTTP 200 (2026-08-28)
 
 import { describe, it, expect, vi, afterEach } from "vitest";
-import {
-  DEFAULT_KEEP_ALIVE,
-  OllamaProvider,
-  normalizeKeepAlive,
-} from "../src/llm.js";
+import { DEFAULT_KEEP_ALIVE, normalizeKeepAlive } from "../src/llm.js";
+import { OllamaProvider } from "../src/ollama-provider.js";
 
 type Captured = Record<string, unknown>;
 
