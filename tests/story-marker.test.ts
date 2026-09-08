@@ -26,7 +26,7 @@ describe("story marker content (pure)", () => {
     expect(content.split("\n")).toEqual([
       "[Mnemosyne Story] Halvard",
       `Created: ${CREATED}`,
-      "Schema: 5",
+      "Schema: 6",
       "Kindroid-Target: ai:kin-1",
       "Narrator-Profile: storyteller-v1",
     ]);
@@ -108,6 +108,89 @@ describe("story marker content (pure)", () => {
   });
 });
 
+describe("story marker content rating (pure)", () => {
+  it("round-trips a content rating alongside target and narrator profile", () => {
+    const content = buildMarkerContent(
+      "Halvard",
+      CREATED,
+      { type: "ai", id: "kin-1" },
+      "storyteller-v1",
+      undefined,
+      "nsfw",
+    );
+    expect(content.split("\n")).toEqual([
+      "[Mnemosyne Story] Halvard",
+      `Created: ${CREATED}`,
+      "Schema: 6",
+      "Kindroid-Target: ai:kin-1",
+      "Narrator-Profile: storyteller-v1",
+      "Content-Rating: nsfw",
+    ]);
+    expect(parseMarkerContent(content)).toEqual({
+      name: "Halvard",
+      created: CREATED,
+      kindroidTarget: { type: "ai", id: "kin-1" },
+      narratorProfile: "storyteller-v1",
+      contentRating: "nsfw",
+    });
+  });
+
+  it("omits the Content-Rating line when unset, and parses its absence as undefined", () => {
+    const content = buildMarkerContent("Halvard", CREATED, {
+      type: "group",
+      id: "g-1",
+    });
+    expect(content).not.toContain("Content-Rating");
+    expect(parseMarkerContent(content)?.contentRating).toBeUndefined();
+  });
+
+  it("ignores a malformed content rating rather than failing the story", () => {
+    const content = [
+      "[Mnemosyne Story] Odd",
+      `Created: ${CREATED}`,
+      "Schema: 6",
+      "Content-Rating: extremely-mature",
+    ].join("\n");
+    const parsed = parseMarkerContent(content);
+    expect(parsed?.name).toBe("Odd");
+    expect(parsed?.contentRating).toBeUndefined();
+  });
+
+  it("a schema-6 marker with no Content-Rating line parses identically in meaning to a schema-5 marker", () => {
+    const content = buildMarkerContent(
+      "Halvard",
+      CREATED,
+      { type: "ai", id: "kin-1" },
+      "storyteller-v1",
+    );
+    expect(content).not.toContain("Content-Rating");
+    const parsed = parseMarkerContent(content);
+    expect(parsed?.contentRating).toBeUndefined();
+    const schema5 = [
+      "[Mnemosyne Story] Halvard",
+      `Created: ${CREATED}`,
+      "Schema: 5",
+      "Kindroid-Target: ai:kin-1",
+      "Narrator-Profile: storyteller-v1",
+    ].join("\n");
+    expect(parseMarkerContent(schema5)).toEqual(parsed);
+  });
+
+  it("accepts both sfw and nsfw as valid values", () => {
+    for (const rating of ["sfw", "nsfw"] as const) {
+      const content = buildMarkerContent(
+        "Halvard",
+        CREATED,
+        undefined,
+        undefined,
+        undefined,
+        rating,
+      );
+      expect(parseMarkerContent(content)?.contentRating).toBe(rating);
+    }
+  });
+});
+
 describe("story marker position block (pure)", () => {
   const POSITION = {
     epochDate: "2026-10-01T00:00:00.000Z",
@@ -129,7 +212,7 @@ describe("story marker position block (pure)", () => {
     expect(content.split("\n")).toEqual([
       "[Mnemosyne Story] Halvard",
       `Created: ${CREATED}`,
-      "Schema: 5",
+      "Schema: 6",
       "Kindroid-Target: ai:kin-1",
       "Narrator-Profile: storyteller-v1",
       "Epoch-Date: 2026-10-01T00:00:00.000Z",

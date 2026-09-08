@@ -19,6 +19,7 @@ import {
   findStoryByName,
   listStories,
   resolveStoryId,
+  setContentRating,
   setKindroidTarget,
   setNarratorProfile,
   STORY_MARKER_TAGS,
@@ -233,10 +234,64 @@ suite("Phase A — story management (real OC)", () => {
     expect((await findStory(oc, storyId!))?.kindroid_target).toBeUndefined();
   });
 
+  it("binds, and clears, a content rating via setContentRating, surviving unrelated marker rewrites (real OC)", async () => {
+    const ratingStoryName = testStoryName("content-rating");
+    const story = await createStory(oc, ratingStoryName);
+    expect(story.content_rating).toBeUndefined();
+
+    const rated = await setContentRating(oc, story, "nsfw");
+    expect(rated.content_rating).toBe("nsfw");
+    expect(rated.name).toBe(story.name);
+    expect(rated.created_at).toBe(story.created_at);
+    expect((await findStory(oc, story.id))?.content_rating).toBe("nsfw");
+
+    // Regression pin, mirroring the position block's own precedent below:
+    // setKindroidTarget/setNarratorProfile rewrite the WHOLE marker and
+    // must carry content_rating through unchanged, not silently wipe it.
+    const retargeted = await setKindroidTarget(oc, rated, {
+      type: "ai",
+      id: "rating-kin",
+    });
+    expect(retargeted.content_rating).toBe("nsfw");
+    expect((await findStory(oc, story.id))?.content_rating).toBe("nsfw");
+
+    const relabeled = await setNarratorProfile(
+      oc,
+      retargeted,
+      "storyteller-v1",
+    );
+    expect(relabeled.content_rating).toBe("nsfw");
+    expect((await findStory(oc, story.id))?.content_rating).toBe("nsfw");
+
+    const cleared = await setContentRating(oc, relabeled, undefined);
+    expect(cleared.content_rating).toBeUndefined();
+    expect((await findStory(oc, story.id))?.content_rating).toBeUndefined();
+    // Clearing content_rating must not disturb the target/profile it
+    // survived alongside.
+    expect(cleared.kindroid_target).toEqual({
+      type: "ai",
+      id: "rating-kin",
+    });
+    expect(cleared.narrator_profile).toBe("storyteller-v1");
+
+    await oc.projectDelete(story.id);
+  });
+
   it("setPosition bootstraps, partial-updates, and survives an unrelated marker rewrite (real OC)", async () => {
     const posStoryName = testStoryName("position");
-    const story = await createStory(oc, posStoryName);
+    // content_rating set at creation -- exercises applyPositionUpdate's own
+    // buildMarkerContent call (the fourth write path, alongside
+    // setKindroidTarget/setNarratorProfile/setContentRating) preserving a
+    // field it never touches, not just the ones tested above.
+    const story = await createStory(
+      oc,
+      posStoryName,
+      undefined,
+      undefined,
+      "sfw",
+    );
     expect(story.position).toBeUndefined();
+    expect(story.content_rating).toBe("sfw");
 
     const bootstrapped = await setPosition(oc, story, {
       epochDate: "2026-10-01T00:00:00Z",
@@ -251,9 +306,18 @@ suite("Phase A — story management (real OC)", () => {
       currentLocationId: "loc-epoch-1",
       currentSpot: "the porch",
     });
-    expect((await findStory(oc, story.id))?.position).toEqual(
-      bootstrapped.position,
-    );
+    // Re-fetch from OC rather than trusting bootstrapped.content_rating --
+    // applyPositionUpdate's return is `{ ...story, position }`, so the
+    // in-memory value stays "sfw" from the object spread even if
+    // buildMarkerContent's actual persisted write dropped it. Only a fresh
+    // findStory (re-parsing what was really written) can catch that, and
+    // it must happen HERE, before any later setKindroidTarget/
+    // setNarratorProfile call gets a chance to silently re-persist the
+    // correct value from its own (still-correct in-memory) story param and
+    // mask a real bug in this specific call site.
+    const persistedAfterBootstrap = await findStory(oc, story.id);
+    expect(persistedAfterBootstrap?.content_rating).toBe("sfw");
+    expect(persistedAfterBootstrap?.position).toEqual(bootstrapped.position);
 
     // Partial: only elapsed_hours changes -- location/spot untouched.
     const advanced = await setPosition(oc, bootstrapped, {
@@ -289,6 +353,8 @@ suite("Phase A — story management (real OC)", () => {
     );
     expect(relabeled.position).toEqual(moved.position);
     expect((await findStory(oc, story.id))?.position).toEqual(moved.position);
+    expect(relabeled.content_rating).toBe("sfw");
+    expect((await findStory(oc, story.id))?.content_rating).toBe("sfw");
 
     await oc.projectDelete(story.id);
   });

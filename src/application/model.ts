@@ -34,6 +34,12 @@ export interface ListAllEntitiesResult {
 
 export type KindroidTargetType = "ai" | "group";
 
+/** A story's declared content-generation requirement, or a provider's
+ * declared capability (docs/CONTENT_ROUTING_DESIGN.md, ratified
+ * 2026-09-08). Shared between MnemoStory/StorySummary and (slice 2/3) the
+ * generator port's capability descriptor. */
+export type ContentRating = "sfw" | "nsfw";
+
 export interface KindroidTarget {
   type: KindroidTargetType;
   id: string;
@@ -46,6 +52,7 @@ export interface MnemoStory {
   marker_memory_id: string;
   kindroid_target?: KindroidTarget;
   narrator_profile?: string;
+  content_rating?: ContentRating;
 }
 
 export interface StorySummary {
@@ -55,6 +62,7 @@ export interface StorySummary {
   kindroid_kin?: string;
   kindroid_group_id?: string;
   narrator_profile?: string;
+  content_rating?: ContentRating;
 }
 
 export type Mode = "participant" | "director" | "audience";
