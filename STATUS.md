@@ -2,6 +2,19 @@
 
 **Last updated:** 2026-09-08.
 
+**Promotion set aside indefinitely (2026-09-08) — operator decision, not a
+blocker.** With the three reconciled overlays (Adjustment Protocol,
+Shadowflame, Star Wars: The Black Ledger) all mechanically ready --
+`node scripts/promote-overlay.mjs <slug> --revision <label> --all`
+(no `--apply`) plans 100% of each overlay's operations cleanly (92/92,
+111/111, 62/62) -- the operator considered actually running a promotion
+and chose not to: "I just don't feel ready to promote anything. Set it
+aside indefinitely." This is not a technical or process blocker; nothing
+needs fixing or re-verifying before promotion could happen. **Do not
+propose or push toward promotion in a future session unless the operator
+raises it first.** All three overlays remain exactly as verified, awaiting
+no further work.
+
 **Ruling 2's SF-6 departure-from-verbatim question closed (2026-09-08).**
 The last open fleet-wide item -- whether a Ruling-2 substitution (scrubbing
 the operator's real name from `drafts/`) needs its own `PASS.md` record
