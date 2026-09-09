@@ -1,6 +1,16 @@
 # Status
 
-**Last updated:** 2026-09-08.
+**Last updated:** 2026-09-09.
+
+**FreeToken comparative research recorded (2026-09-09 UTC).**
+[The assessment](docs/FREETOKEN_ADOPTION_ASSESSMENT.md) and
+[research decision queue](docs/RESEARCH_DECISION_QUEUE.md) record an
+explicit local-generation candidate, capability/context/completion and
+service-quality gates, and a later exact-prefix experiment. Research is
+complete; recommendations remain unratified and unscheduled. The native
+Ollama validator and existing content-routing policy remain in place.
+Canon promotion remains deliberately deferred. Documentation only; no
+runtime change, pilot, story write, companion message, or deployment.
 
 **Content routing shipped end-to-end (2026-09-08), closing
 docs/CONTENT_ROUTING_DESIGN.md.** Living Canon Standard §10's routing

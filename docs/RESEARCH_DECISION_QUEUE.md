@@ -1,7 +1,7 @@
 # External-System Research Decision Queue
 
 **Status:** Reconciliation artifact, created 2026-08-28, last revised
-2026-09-08. The four adoption assessments (Ollama, OpenClaw, Open WebUI,
+2026-09-09. The original four adoption assessments (Ollama, OpenClaw, Open WebUI,
 NemoClaw) were read end-to-end and triaged on 2026-08-28 (see
 [STATUS.md](../STATUS.md)'s Done log); that entry claims "a decision queue
 of 20 live proposals" without enumerating it. This document is that
@@ -9,6 +9,12 @@ enumeration: every row of the four docs' recommendation tables, with its
 current disposition. **Nothing here is ratified.** An "open candidate"
 becomes work only by explicit operator decision, and the 2026-08-28 pause
 ("next direction deliberately unset, shaped by live use") stands.
+
+A fifth assessment, [FreeToken](FREETOKEN_ADOPTION_ASSESSMENT.md), was
+recorded 2026-09-09 UTC as a later research addendum. Its recommendation
+table is reconciled below; the original program closure and existing
+ratifications are preserved. Its candidates remain unratified and
+unscheduled.
 
 Dispositions:
 
@@ -97,6 +103,26 @@ now says so.
 | Medium | OC retrieval controls (mode/phrase/compact/pinnedLimit) + vague-direction enrichment | **Ratified 2026-08-28; slices 1–2 shipped same day** — [RETRIEVAL_CONTROLS_DESIGN.md](RETRIEVAL_CONTROLS_DESIGN.md): `mode`/`phrase`/`pinnedLimit` pass-through with the captured per-mode relevance object on a search-specific schema, and phrase-first overwrite lookup (live-exercised against real OC). Slice 3's flag-off enrichment shipped same day (ratified heuristic incl. the entity-name condition, ≤120-char tail, list-path scene selection immune to the embedding-lag issue, `MNEMO_QUERY_ENRICHMENT` default off); the settled-fixtures benchmark run — which needs operator-labeled expected-entity fixtures — remains, and the flag stays OFF until its win is recorded |
 | Later | Provenance-bound current-state proposals | Parked — prototype-only per the doc; needs an OC compare-and-set contract for any apply path |
 | High | Operational safety: prose out of default logs, admission/shutdown ownership, OC retry classification, atomic config writes | **Partially shipped 2026-08-28** — the logging half landed: tool logs record lengths/counts instead of story text (prose fields always, long strings and arrays generally), full args require the `MNEMO_LOG_CONTENT=true` opt-in; `tests/tool-logging-privacy.test.ts`. Fully shipped as of 2026-08-29: logging (2026-08-28), lifecycle/retry/config (RUN_OUTCOMES_DESIGN slice 3), and final-sink recursive redaction (with the hardening batch) |
+
+## FreeToken ([FREETOKEN_ADOPTION_ASSESSMENT.md](FREETOKEN_ADOPTION_ASSESSMENT.md))
+
+Recorded 2026-09-09 UTC. This is a research addendum, not a new scheduled
+phase or authorization to run a model pilot. The following rows enumerate
+the assessment's complete recommendation register.
+
+| Doc ID | Item | Disposition |
+| --- | --- | --- |
+| MN-FT-01 | Explicit local OpenAI-compatible generator | **Open candidate** — new provider identity/configuration only if selected; reuse existing ports and suitable HTTP logic |
+| MN-FT-02 | Truthful model/content/capability, timeout, and context contracts | **Parked on MN-FT-01 selection** — prerequisite to a pilot; retain existing content routing, ContextPlan, completion integrity, and cloud-provider policies |
+| MN-FT-03 | Bounded narrative and service-quality benchmark | **Parked on explicit pilot approval** — fixed noncanonical fixtures, quality, latency/resources, cancellation, queueing, and failure gates before adoption |
+| MN-FT-04 | Stable-prefix prompt-layout experiment | **Parked on MN-FT-03 baseline** — exact-token reuse only; changing canon/scene context remains fresh |
+| MN-FT-05 | FreeToken replaces the native Ollama validator | **Rejected for the initial candidate** — native API/schema-constrained contract is absent at the reviewed snapshot; retain the current validator |
+| MN-FT-06 | Rebuild ContextPlan, telemetry, run outcomes, or provider ports | **Corroboration only** — mechanisms already exist; no duplicate feature or revival of the rejected run registry |
+| MN-FT-07 | Canon promotion, live writes/messages, or semantic answer reuse | **Rejected from this work** — canon promotion remains deliberately deferred; evaluation has no canonical-write or companion-send authority |
+
+No new runtime verification or adoption is claimed by these rows. See the
+assessment for pinned source evidence, upstream blockers, acceptance proofs,
+and full explicit non-adoptions.
 
 ## Ranked next-up, if and when the pause ends
 
@@ -218,6 +244,6 @@ controls row).
   RETRIEVAL_CONTROLS_DESIGN.md, decide `MNEMO_QUERY_ENRICHMENT`'s
   default accordingly.
 
-The ~60 explicit non-adoptions across the four docs are not restated here;
+The ~60 explicit non-adoptions across the original four docs are not restated here;
 each doc's own "Explicit non-adoptions" table remains authoritative for what
 was rejected and why.
