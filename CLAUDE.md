@@ -52,7 +52,9 @@ gained its first overlay. See STATUS.md's top entry for the itemized record.
 The hexagonal architecture refactor and phase-end audit remediation are
 complete and locally verified; the Living Canon overlay pass is also closed at
 its operator-approval boundary; no draft was promoted or imported. The
-external-system research program also remains closed. Its one pending operator
+original external-system research program also remains closed; the later
+FreeToken research addendum is recorded in STATUS.md with no implementation
+scheduled. The earlier program's one pending operator
 ask is labeling the enrichment-benchmark fixtures (`MNEMO_QUERY_ENRICHMENT`
 stays off until a recorded win). Read [STATUS.md](STATUS.md) first; the standing
 context below still applies.
@@ -101,7 +103,7 @@ explicitly directed.
 Written down but **not ratified** — design input, not specification:
 [WEBUI_NOTES.md](docs/WEBUI_NOTES.md),
 [COMPANION_PROFILE_DESIGN.md](docs/COMPANION_PROFILE_DESIGN.md),
-[HOOK_VAULT.md](docs/HOOK_VAULT.md), and the four external-system adoption
+[HOOK_VAULT.md](docs/HOOK_VAULT.md), and the five external-system adoption
 assessments listed under "Layout" below.
 [POSITION_TRACKING_DESIGN.md](docs/POSITION_TRACKING_DESIGN.md) is
 **ratified and fully implemented** (2026-09-07, all four slices) — see
@@ -432,6 +434,10 @@ dated entry.
   NemoClaw's authority, MCP-contract, readiness, and endpoint patterns against
   Mnemosyne's demonstrated boundaries. It is not ratified architecture or an
   implementation commitment.
+- `docs/FREETOKEN_ADOPTION_ASSESSMENT.md` — research-only comparison of
+  an explicit local OpenAI-compatible generator, truthful capabilities and
+  identity, bounded service/quality gates, and exact-prefix reuse. Native
+  Ollama validation stays; recommendations remain unratified and unscheduled.
 - `docs/RUN_OUTCOMES_DESIGN.md`, `docs/CONTEXT_PLAN_DESIGN.md`,
   `docs/GENERATOR_CAPABILITIES_DESIGN.md`, `docs/RETRIEVAL_CONTROLS_DESIGN.md`
   — the four designs written 2026-08-28, adversarially reviewed, ratified after

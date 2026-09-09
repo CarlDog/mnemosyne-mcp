@@ -54,6 +54,9 @@ live-verification status per provider. Related docs:
 - [docs/NEMOCLAW_ADOPTION_ASSESSMENT.md](docs/NEMOCLAW_ADOPTION_ASSESSMENT.md)
   — pinned NemoClaw security, readiness, and MCP-boundary comparison;
   research recommendations only, not ratified architecture
+- [docs/FREETOKEN_ADOPTION_ASSESSMENT.md](docs/FREETOKEN_ADOPTION_ASSESSMENT.md)
+  — pinned local-generation comparison, service-contract findings, and
+  benchmark gates; research only, with the native Ollama validator retained
 - [docs/ATLAS_CAPABILITY_BENCHMARK.md](docs/ATLAS_CAPABILITY_BENCHMARK.md) —
   bounded, evidence-only Atlas Cloud route evaluation protocol, with dated
   results per run:
