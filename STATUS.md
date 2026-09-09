@@ -4970,6 +4970,32 @@ This section preserves the original post-v0 candidates and labels the items
 that have since shipped. The remaining entries are unratified follow-ups to
 consider only when real use exposes the corresponding pressure:
 
+- **Personality extractor / response validator for kins and bots**
+  (operator development note, 2026-09-08 — proposed, not started or
+  scheduled; work item `CarlDog/mnemosyne-mcp#personality-extractor-validator`).
+  Build a reusable way to check whether Kindroid/Botify LLM responses fit
+  the intended character's personality and written voice. Extract a
+  reviewable personality/voice profile from character definitions and
+  approved example dialogue, and extract observed traits from responses
+  for comparison. Keep the intended profile separate from observed output
+  so a drifting response cannot redefine its own baseline. Assess traits,
+  motivations, emotional reactions, vocabulary, cadence, and dialogue
+  habits in scene context; return specific mismatches with quoted evidence
+  and an uncertain result when there is too little evidence.
+  Likely needs an assisting LLM for extraction and judgment. First research
+  step: identify and benchmark suitable models against a small,
+  human-labeled set of in-character, out-of-character, and ambiguous
+  kin/bot replies; assess agreement with human judgments, false alarms,
+  structured-output reliability, latency, cost, and content/privacy fit.
+  Evaluate local Ollama candidates first in line with the current validator
+  boundary; model/provider selection remains open for this proposal.
+  Explore integration with the existing standalone `mnemo_validate` and
+  post-generation validation flow, reusing the identity separation in
+  [docs/COMPANION_PROFILE_DESIGN.md](docs/COMPANION_PROFILE_DESIGN.md) and
+  evaluation lessons in [docs/NARRATOR_EVAL.md](docs/NARRATOR_EVAL.md).
+  Findings should support human review; no automatic profile rewrite or
+  response regeneration. Exact component placement and workflow need a
+  later design pass.
 - ~~**`stages` timing field in `mnemo_continue`.**~~ **Shipped.** Responses
   include `gather_ms`, `generate_ms`, `save_ms`, and `validate_ms`; the Web UI
   displays them.
