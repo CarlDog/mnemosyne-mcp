@@ -313,27 +313,12 @@ Two standing operator instructions that outlive any sprint:
   against a narrator that writes pronoun subjects. Reports go under
   gitignored `data/`. Read "What it does not measure" before quoting a
   number.
-- `scripts/scene-extraction/` — `extract_scenes.py`, the shared engine that
-  cuts a story's Botify chat exports into per-scene draft files (overlay
-  `add`s with the draft banner) plus their `_control/scenes/` docs, driven by
-  a per-story `cuts_<story>.py` config; `build_sources.py` rebuilds every
-  story's read-only `sources/` view; `earlier/` holds do-not-rerun one-offs.
-  Three defects found by the 2026-09-02 gap audits were fixed in the engine
-  2026-09-08 (not retroactively in already-cut scene files -- per this
-  note's own standing rule, fix in the engine before the next cut, not by
-  hand in existing output): `location_basis` no longer embeds a
-  `_control/scenes/_catalog.md` path (a control-only path inside a
-  potentially-promotable entity field) -- it now reads just `prose
-  (<location description>)`; the source-inventory doc's `Played
-  {chat['played']}.` line is now an f-string and actually interpolates;
-  and `source_bot`'s bot name (previously always `None` for every
-  private-chat thread cut with this engine) now reads `bot.json`'s real
-  `data.attributes.name` path instead of the nonexistent `data.name`. Verified
-  against real `bot.json` fixtures and the real `{chat['played']}` shape, not
-  just read. Scene files cut before that fix still carry the old
-  `location_basis`/`source_bot` values -- the fix is correct only for the next
-  cut, not retroactive. Which stories are affected is recorded in the operator's
-  local `data/` tree, not here.
+- `data/scene-extraction/` (gitignored, not in this repository) — the Botify chat
+  scene-cutting engine, its per-story cut tables, and the one-off extraction scripts.
+  Moved out of `scripts/` on 2026-09-12: it is story tooling rather than application
+  tooling, and its per-story configs carried private material. If a genericised engine is
+  ever wanted back in the repository, it must read every per-story table from `data/` at
+  runtime and carry no story names, character names, content flags or role provenance.
 - `docs/ARCHITECTURE.md` — locked architectural decisions. Read this
   first to understand project shape, state model, validation strategy,
   provider strategy, and build sequence.

@@ -155,7 +155,7 @@ describe("plan-driven rendering", () => {
   it("position passes through unchanged -- it has no memory_id and isn't part of the admission set", () => {
     const position = {
       current_story_datetime: "2026-10-04T06:00:00.000Z",
-      current_location: { name: "Dovecoast" },
+      current_location: { name: "Testvale" },
     };
     const bundle: ContextBundle = {
       rules: [],

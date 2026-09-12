@@ -182,7 +182,7 @@ describe("entities — recall pin-float boundary (pure)", () => {
               id: "nyx",
               content:
                 "[Character] Character 103\n\nOwner of The Circuit Shrine tattoo parlor and nightclub.",
-              project_id: "story-03",
+              project_id: "example-saga",
               tags: ["mnemosyne", "story", "character"],
               pinned: false,
               created_at: "2026-08-23T02:34:41Z",
@@ -192,7 +192,7 @@ describe("entities — recall pin-float boundary (pure)", () => {
             {
               id: "rule-1",
               content: "[Rule] Presence Rule\n\nRe-anchor every scene.",
-              project_id: "story-03",
+              project_id: "example-saga",
               tags: ["mnemosyne", "story", "rule"],
               pinned: true,
               created_at: "2026-08-23T02:34:44Z",
@@ -200,7 +200,7 @@ describe("entities — recall pin-float boundary (pure)", () => {
             {
               id: "rule-2",
               content: "[Rule] POV Rule\n\nClose on the tone-holder.",
-              project_id: "story-03",
+              project_id: "example-saga",
               tags: ["mnemosyne", "story", "rule"],
               pinned: true,
               created_at: "2026-08-23T02:34:45Z",
@@ -209,7 +209,7 @@ describe("entities — recall pin-float boundary (pure)", () => {
     );
     const oc = { memorySearch } as unknown as OcClient;
 
-    const result = await recall(oc, "story-03", {
+    const result = await recall(oc, "example-saga", {
       query: "who runs the tattoo parlor nightclub",
       limit: 2,
     });
@@ -218,7 +218,7 @@ describe("entities — recall pin-float boundary (pure)", () => {
     expect(memorySearch).toHaveBeenCalledWith(
       expect.objectContaining({
         query: "who runs the tattoo parlor nightclub",
-        projectId: "story-03",
+        projectId: "example-saga",
         topK: 2,
         pinnedLimit: 0,
       }),

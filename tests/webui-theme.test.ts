@@ -51,6 +51,18 @@ describe("web UI themes", () => {
     expect(readStoredTheme(storage)).toBe("white-garden");
   });
 
+  it("migrates a stored legacy theme id instead of reverting to the default", () => {
+    const root = themeRoot();
+    const storage = memoryStorage("blackwood");
+
+    // A preference saved before the id was renamed must survive the rename.
+    expect(readStoredTheme(storage)).toBe("collodion");
+    expect(applyTheme("blackwood", root)).toBe("collodion");
+    expect(root.dataset.theme).toBe("collodion");
+    expect(root.style?.colorScheme).toBe("dark");
+    expect(isThemeId("blackwood")).toBe(false);
+  });
+
   it("falls back to Archivist for missing, unknown, or malicious values", () => {
     const root = themeRoot();
 
@@ -76,9 +88,9 @@ describe("web UI themes", () => {
 
     expect(readStoredTheme(unavailableStorage)).toBe(DEFAULT_THEME_ID);
     expect(
-      selectTheme("blackwood", { root, storage: unavailableStorage }),
-    ).toBe("blackwood");
-    expect(root.dataset.theme).toBe("blackwood");
+      selectTheme("collodion", { root, storage: unavailableStorage }),
+    ).toBe("collodion");
+    expect(root.dataset.theme).toBe("collodion");
   });
 
   it("keeps the pre-paint bootstrap whitelist and storage key in sync", () => {

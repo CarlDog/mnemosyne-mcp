@@ -6,7 +6,7 @@
 // Seeds scenes directly via saveEntity (skips mnemo_continue / the
 // generator entirely -- this tool only reads and retags existing scenes,
 // so there's no need to burn generator calls to produce fixture content).
-// Mirrors the Dovecoast smoke-test fixture pattern documented in
+// Mirrors the Testvale smoke-test fixture pattern documented in
 // STATUS.md: a seeded "third-person past tense" rule, one scene that
 // complies with it, and one that clearly violates it (present-tense
 // prose).

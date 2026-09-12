@@ -100,7 +100,7 @@ describe("scanForInjectionSignals", () => {
   });
 
   // Regression for the one false positive docs/NARRATOR_EVAL.md measured
-  // against the real 513-scene corpus (Story 12's nv-mt-17): ordinary
+  // against the real 513-scene corpus (a real story's scene corpus): ordinary
   // narrative English uses singular "your instruction" for the teaching/
   // schooling sense, unrelated to a model's system instructions. Requiring
   // the plural (src/injection-scan.ts's meta-instruction-reference pattern)

@@ -25,7 +25,7 @@ import { setupTestStory, teardownStory } from "./helpers.js";
 
 const STORY: MnemoStory = {
   id: "11111111-2222-3333-4444-555555555555",
-  name: "Dovecoast",
+  name: "Testvale",
   created_at: "2026-05-12T00:00:00.000Z",
   marker_memory_id: "marker-1",
 };
@@ -62,7 +62,7 @@ describe("buildExportDocument (pure)", () => {
     ]);
     expect(doc.exported_at).toBe("2026-08-21T12:00:00.000Z");
     expect(doc.story).toEqual({
-      name: "Dovecoast",
+      name: "Testvale",
       created_at: "2026-05-12T00:00:00.000Z",
     });
     expect(doc.entities).toEqual([
@@ -120,8 +120,8 @@ describe("buildExportDocument (pure)", () => {
 describe("defaultExportFilename (pure)", () => {
   it("slugs the story name and stamps a to-the-second UTC timestamp (colons stripped for Windows)", () => {
     expect(
-      defaultExportFilename("Kimmy's Night Shift", "2026-08-21T12:00:05.123Z"),
-    ).toBe("kimmy-s-night-shift-2026-08-21T120005.json");
+      defaultExportFilename("Tester's Night Shift", "2026-08-21T12:00:05.123Z"),
+    ).toBe("tester-s-night-shift-2026-08-21T120005.json");
   });
 
   it("falls back to the story id's prefix when the name slugs to nothing", () => {
@@ -149,13 +149,15 @@ describe("defaultExportPath (pure)", () => {
     const dataRoot = join(tmpdir(), "mnemo-default-path");
     process.env.MNEMO_DATA_DIR = dataRoot;
     try {
-      expect(defaultExportPath("Story 03", "2026-08-21T12:00:05.123Z")).toBe(
+      expect(
+        defaultExportPath("Example Saga", "2026-08-21T12:00:05.123Z"),
+      ).toBe(
         join(
           dataRoot,
           "stories",
-          "story-03",
+          "example-saga",
           "exports",
-          "story-03-2026-08-21T120005.json",
+          "example-saga-2026-08-21T120005.json",
         ),
       );
     } finally {
@@ -171,10 +173,10 @@ describe("buildStoryIndex (pure)", () => {
       mnemosyne_story: 1,
       story: {
         id: STORY.id,
-        name: "Dovecoast",
+        name: "Testvale",
         created_at: STORY.created_at,
       },
-      slug: "dovecoast",
+      slug: "testvale",
       updated_at: "2026-08-23T05:00:00.000Z",
     });
   });
@@ -182,10 +184,10 @@ describe("buildStoryIndex (pure)", () => {
 
 describe("storySlug (pure)", () => {
   it("names the per-story exports subfolder identically to the filename slug", () => {
-    expect(storySlug("Story 03")).toBe("story-03");
-    expect(storySlug("Kimmy's Night Shift")).toBe("kimmy-s-night-shift");
-    expect(storySlug("The Miskatonic Archives: The Blackwood Case")).toBe(
-      "story-06",
+    expect(storySlug("Example Saga")).toBe("example-saga");
+    expect(storySlug("Tester's Night Shift")).toBe("tester-s-night-shift");
+    expect(storySlug("The Example Archives: The Sample Case")).toBe(
+      "example-archives-the-sample-case",
     );
     expect(storySlug("Story 10")).toBe(
       "story-10",

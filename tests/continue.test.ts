@@ -48,7 +48,7 @@ suite("Phase C-1 — continue (real OC + real Ollama)", () => {
     });
     await saveEntity(oc, storyId, {
       type: "location",
-      name: "The Dovecoast Tavern",
+      name: "The Testvale Tavern",
       body: "A fog-choked harbor inn; salt-warped tables, low ceilings, smell of pipe smoke.",
     });
     await saveEntity(oc, storyId, {
@@ -89,7 +89,7 @@ suite("Phase C-1 — continue (real OC + real Ollama)", () => {
     expect(prompt).toContain("=== CHARACTERS ===");
     expect(prompt).toContain("Aria Voss");
     expect(prompt).toContain("=== LOCATIONS ===");
-    expect(prompt).toContain("The Dovecoast Tavern");
+    expect(prompt).toContain("The Testvale Tavern");
     expect(prompt).toContain("=== RULES ===");
   });
 
@@ -99,13 +99,13 @@ suite("Phase C-1 — continue (real OC + real Ollama)", () => {
       const ctx = await gatherContext(
         oc,
         storyId,
-        "Aria walks into the Dovecoast Tavern looking for a man named Holt.",
+        "Aria walks into the Testvale Tavern looking for a man named Holt.",
       );
       const systemPrompt = buildSystemPrompt("director", ctx);
       const { text: beatText } = await generator.generate({
         systemPrompt,
         userMessage:
-          "Aria walks into the Dovecoast Tavern looking for a man named Holt.",
+          "Aria walks into the Testvale Tavern looking for a man named Holt.",
         maxTokens: 256, // keep test fast
       });
       expect(beatText.length).toBeGreaterThan(20);

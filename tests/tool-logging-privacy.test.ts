@@ -40,14 +40,14 @@ describe("sanitizeToolArgsForLog", () => {
       sanitizeToolArgsForLog({
         type: "character",
         name: "Aria Voss",
-        story: "story-03",
+        story: "example-saga",
         max_tokens: 2048,
         validate: true,
       }),
     ).toEqual({
       type: "character",
       name: "Aria Voss",
-      story: "story-03",
+      story: "example-saga",
       max_tokens: 2048,
       validate: true,
     });

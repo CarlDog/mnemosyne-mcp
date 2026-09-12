@@ -19,9 +19,9 @@ export const THEMES = [
     swatches: ["#f7f6f0", "#744d70", "#2f6f8d"],
   },
   {
-    id: "blackwood",
-    name: "Blackwood Glass Plate",
-    shortName: "Blackwood",
+    id: "collodion",
+    name: "Collodion Plate",
+    shortName: "Collodion",
     description: "Darkroom evidence chrome around a pale photographic plate.",
     colorScheme: "dark",
     swatches: ["#0e161a", "#d7dcd6", "#d97078"],
@@ -43,6 +43,14 @@ export interface ThemeRoot {
 
 const THEME_IDS = new Set<string>(THEMES.map((theme) => theme.id));
 
+/**
+ * Ids that shipped previously, mapped to their current equivalent, so a stored
+ * preference survives a rename instead of silently reverting to the default.
+ */
+const LEGACY_THEME_IDS: Readonly<Record<string, ThemeId>> = {
+  blackwood: "collodion",
+};
+
 function browserStorage(): ThemeStorage | undefined {
   if (typeof window === "undefined") return undefined;
   try {
@@ -61,7 +69,12 @@ export function isThemeId(value: unknown): value is ThemeId {
 }
 
 export function resolveThemeId(value: unknown): ThemeId {
-  return isThemeId(value) ? value : DEFAULT_THEME_ID;
+  if (isThemeId(value)) return value;
+  if (typeof value === "string") {
+    const migrated = LEGACY_THEME_IDS[value];
+    if (migrated) return migrated;
+  }
+  return DEFAULT_THEME_ID;
 }
 
 export function getThemeDefinition(themeId: ThemeId): ThemeDefinition {

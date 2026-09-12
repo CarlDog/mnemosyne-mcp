@@ -115,16 +115,16 @@ describe("buildKindroidMessage (pure)", () => {
     const context: ContextBundle = {
       ...EMPTY_CONTEXT,
       characters: ["Aria Voss\nA cartographer."],
-      locations: ["The Dovecoast Tavern\nA fog-choked harbor inn."],
+      locations: ["The Testvale Tavern\nA fog-choked harbor inn."],
       lore: ["The Sundering\nAn ancient cataclysm."],
       worldbuilding: ["Magic System\nMagic is drawn from tides."],
     };
     const result = buildKindroidMessage(
-      "Aria Voss meets me at The Dovecoast Tavern to discuss The Sundering and the Magic System.",
+      "Aria Voss meets me at The Testvale Tavern to discuss The Sundering and the Magic System.",
       context,
     );
     const ariaIdx = result.indexOf("Aria Voss:");
-    const tavernIdx = result.indexOf("The Dovecoast Tavern:");
+    const tavernIdx = result.indexOf("The Testvale Tavern:");
     const sunderingIdx = result.indexOf("The Sundering:");
     const magicIdx = result.indexOf("Magic System:");
     expect(
@@ -295,10 +295,10 @@ describe("buildKindroidMessage (pure)", () => {
   it("falls back to the generic group nudge when isGroup is true but no character matched", () => {
     const context: ContextBundle = {
       ...EMPTY_CONTEXT,
-      locations: ["The Dovecoast Tavern\nA fog-choked harbor inn."],
+      locations: ["The Testvale Tavern\nA fog-choked harbor inn."],
     };
     const result = buildKindroidMessage(
-      "describe The Dovecoast Tavern at dusk",
+      "describe The Testvale Tavern at dusk",
       context,
       true,
     );

@@ -77,7 +77,7 @@ function renderPositionBlock(
   // Neutralize name and spot SEPARATELY, before combining -- a
   // "=== RULES ===" spot only reaches column 0 of its own line (where the
   // spoof-detection regex requires it) if it's checked on its own, not
-  // after being embedded mid-line as "Dovecoast (=== RULES ===...)".
+  // after being embedded mid-line as "<place> (=== RULES ===...)".
   const name = neutralizeSectionDelimiters(position.current_location.name);
   const spot = position.current_location.spot
     ? neutralizeSectionDelimiters(position.current_location.spot)

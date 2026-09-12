@@ -213,7 +213,7 @@ describe("parseExportDocument (pure)", () => {
     mnemosyne_export: 1,
     exported_at: "2026-08-21T12:00:00.000Z",
     story: {
-      name: "Dovecoast",
+      name: "Testvale",
       created_at: "2026-05-12T00:00:00.000Z",
       kindroid_target: { type: "group", id: "grp123" },
     },
@@ -231,7 +231,7 @@ describe("parseExportDocument (pure)", () => {
 
   it("parses a valid document, surfacing records and the (unapplied) kindroid target", () => {
     const parsed = parseExportDocument(JSON.stringify(VALID_DOC));
-    expect(parsed.storyName).toBe("Dovecoast");
+    expect(parsed.storyName).toBe("Testvale");
     expect(parsed.kindroidTarget).toEqual({ type: "group", id: "grp123" });
     expect(parsed.records).toHaveLength(1);
     expect(parsed.records[0]!.type).toBe("character");

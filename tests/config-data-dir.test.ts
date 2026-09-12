@@ -29,15 +29,15 @@ async function writeConfigFile(dir: string, storyId: string): Promise<void> {
 
 describe("data dir resolution", () => {
   it("storyDataDir lives under MNEMO_DATA_DIR when set, organized by storyline", () => {
-    expect(storyDataDir("story-03")).toBe(
-      join(dirs.data, "stories", "story-03"),
+    expect(storyDataDir("example-saga")).toBe(
+      join(dirs.data, "stories", "example-saga"),
     );
   });
 
   it("empty-string MNEMO_DATA_DIR is treated as unset (repo-local default)", () => {
     process.env.MNEMO_DATA_DIR = "";
-    expect(storyDataDir("story-03")).toBe(
-      join(REPO_ROOT, "data", "stories", "story-03"),
+    expect(storyDataDir("example-saga")).toBe(
+      join(REPO_ROOT, "data", "stories", "example-saga"),
     );
   });
 });

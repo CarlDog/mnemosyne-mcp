@@ -142,8 +142,8 @@
   background-image: none;
 }
 
-/* Blackwood Glass Plate — photographic evidence in darkroom chrome. */
-:root[data-theme="blackwood"] {
+/* Collodion Plate — photographic evidence in darkroom chrome. */
+:root[data-theme="collodion"] {
   --ground: #0e161a;
   --ground-deep: #090f12;
   --surface: #1c292e;
@@ -249,8 +249,8 @@
   color-scheme: dark;
 }
 
-:root[data-theme="blackwood"] .manuscript-leaf,
-:root[data-theme="blackwood"] .manuscript-empty {
+:root[data-theme="collodion"] .manuscript-leaf,
+:root[data-theme="collodion"] .manuscript-empty {
   background:
     linear-gradient(var(--manuscript-audience), var(--manuscript-audience)) left
       0.72rem top 0.72rem / 1rem 1px no-repeat,
@@ -275,7 +275,7 @@
     var(--shadow-leaf);
 }
 
-:root[data-theme="blackwood"] .manuscript-leaf--generated::before {
+:root[data-theme="collodion"] .manuscript-leaf--generated::before {
   content: "";
   position: absolute;
   z-index: 2;
@@ -289,8 +289,8 @@
   box-shadow: 0 0 0 3px rgba(217, 112, 120, 0.15);
 }
 
-:root[data-theme="blackwood"] .leaf-meta,
-:root[data-theme="blackwood"] .manuscript-status {
+:root[data-theme="collodion"] .leaf-meta,
+:root[data-theme="collodion"] .manuscript-status {
   letter-spacing: 0.055em;
   text-transform: uppercase;
 }

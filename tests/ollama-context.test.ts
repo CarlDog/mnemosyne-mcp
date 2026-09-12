@@ -1,7 +1,7 @@
 // computeNumCtx: the auto-sizing that keeps a fully-imported story's
 // ~16k-token prompt from silently truncating at Ollama's ~4k default —
 // the live failure mode is confident word salad, observed on the first
-// mnemo_continue against Story 03 (2026-08-22).
+// mnemo_continue against Example Saga (2026-08-22).
 
 import { describe, it, expect } from "vitest";
 import { computeNumCtx } from "../src/llm.js";
@@ -14,7 +14,7 @@ describe("computeNumCtx (pure)", () => {
   });
 
   it("sizes up to fit a large prompt plus the generation budget", () => {
-    // The real Story 03 case: ~60k chars ≈ ~17.2k tokens estimated.
+    // The real Example Saga case: ~60k chars ≈ ~17.2k tokens estimated.
     const plan = computeNumCtx(60_007, 2048);
     expect(plan.estPromptTokens).toBe(Math.ceil(60_007 / 3.5));
     expect(plan.numCtx).toBeGreaterThan(plan.estPromptTokens + 2048);
