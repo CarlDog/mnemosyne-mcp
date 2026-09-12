@@ -21,6 +21,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "audit:content": "node scripts/audit-tracked-content.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },

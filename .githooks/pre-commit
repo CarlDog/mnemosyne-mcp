@@ -145,7 +145,15 @@ FOUND=0
 while IFS= read -r file; do
   [ -z "$file" ] && continue
   for pattern in "${PII_PATTERNS[@]}"; do
-    matches=$(git show ":$file" 2>/dev/null | grep -nE "$pattern" || true)
+    # -i: case-insensitive. A name or hostname embedded in a SCREAMING_SNAKE
+    # constant does not match its configured mixed-case form otherwise, because
+    # the configured value is compared literally. That is not hypothetical: on
+    # 2026-09-04 this hook's own guard
+    # was added in the same commit that redacted a real name, and 32 uppercase
+    # occurrences across 8 files passed it and sat in the tree until 2026-09-12.
+    # Home paths and email domains are case-insensitive in practice too, so this
+    # is strictly safer for every pattern.
+    matches=$(git show ":$file" 2>/dev/null | grep -niE "$pattern" || true)
     if [ -n "$matches" ]; then
       if [ "$FOUND" -eq 0 ]; then
         echo "" >&2
