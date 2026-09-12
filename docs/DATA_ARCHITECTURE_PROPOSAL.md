@@ -40,19 +40,18 @@ pair: 1.21 GB where 199 of the 215 images in `art/` have a byte-identical
 file under `references/` (approval was done by copy; one hash has two
 reference copies); 75 MB inside `references/` where 20 superseded copies
 are byte-identical to the current file of the same entity, plus one genuine
-cross-entity share (Blackwood's `reaper` overview serves a location and an
+cross-entity share (one story's overview image serves a location and an
 object plate); 62 MB of Botify media and 29 MB of share captures copied into
 `sources/` this morning. The 46 MB duplicated between Botify bots' own
 archives is excluded: those are originals as received.
 
 **Active canon in five stories has never been verified on its own.** 149
-canon files in story-01, Story 03, Blackwood, story-08, and
-story-14 carry bare `- references/...` pointers, the form the verifier's
-pointer check rejects. Every one of the 149 is an overlay target (141
-`replace`, 8 `remove`), so the merged tree the verifier checks never
-contains a bare pointer. The verifier does run the structural validator on
-the active baseline alone; what has never run on `canon/` alone is the
-pointer check and the import preflight.
+canon files across those five stories carry bare `- references/...`
+pointers, the form the verifier's pointer check rejects. Every one of the
+149 is an overlay target (141 `replace`, 8 `remove`), so the merged tree
+the verifier checks never contains a bare pointer. The verifier does run
+the structural validator on the active baseline alone; what has never run
+on `canon/` alone is the pointer check and the import preflight.
 The organizational cause is the same throughout: folders were added as
 needs arose, several hold the same kind of thing, and nothing says which
 copy is the master or which tree is the one being verified.
@@ -162,13 +161,13 @@ from the backup set by a tool named in §4.8.
 - **What moves in:** the OneDrive ChatGPT folders (copied once; OneDrive
   stops being a master), the raw `companion-logs/` pulls with their
   normalization spec, and any operator document not already held as a
-  reference with a sidecar (goal 2's first exception: the Jenna and Riley
-  photos already are, as `references/.../source.jpg`). `archive/operator/`
+  reference with a sidecar (goal 2's first exception: two operator photos
+  already are, as `references/.../source.jpg`). `archive/operator/`
   is a source family like the others (the source is the operator); it is
   subdivided by story because that is the only structure such documents
   arrive with. `botify-exports/` becomes `archive/botify/` **per
   decision 1**.
-- **`exports/raw-chatgpt-shares/` (Story 03, story-01) is decision
+- **`exports/raw-chatgpt-shares/` (present in two stories) is decision
   9.** About 90 draft files cite it inside hashed frontmatter, but both
   stories are re-sealed in phase 0 anyway, so the marginal cost of moving
   it to `archive/chatgpt-shares/` is a 90-file repoint folded into a
@@ -206,7 +205,7 @@ from the backup set by a tool named in §4.8.
   evidence produced for this overlay.
 - **Promotion is defined as what the promotion tool does, and that tool
   does not exist yet.** Until it does, `_control/` is never moved:
-  overlays are living (story-08 r15, story-14 r10) and their PASS logs
+  overlays are living (two of them at r15 and r10) and their PASS logs
   span revisions. The target rule, implemented with the tool: on promotion
   of a revision, the tool copies the promoted files into `canon/`, removes
   them from the overlay, and writes the revision's evidence to
@@ -264,7 +263,7 @@ from the backup set by a tool named in §4.8.
   control record, doc, or status entry cites an `art/` path, so the delete
   breaks no citation and there is no provenance to carry across.
 - The 20 within-entity superseded duplicates collapse to one file with the
-  superseded sidecar recording the surviving file's hash. The `reaper`
+  superseded sidecar recording the surviving file's hash. The one
   cross-entity pair stays as two files (one-entity-one-folder is the
   stronger rule); both sidecars record `same_bytes_as`.
 - `scripts/verify-references.mjs` (phase 4) checks hash links both ways
@@ -294,7 +293,7 @@ from the backup set by a tool named in §4.8.
 | `exports/`, `story.json`, `config.json` | primary (server) | the server, from OC | yes |
 | `sources/` | derived, read-only (primary-by-copy until decision 2) | `scripts/scene-extraction/build_sources.py` | until decision 2 |
 | `drafts/_control/scenes/` (threads cut by the engine on 2026-09-02) | derived evidence | `scripts/scene-extraction/extract_scenes.py` | with `drafts/` |
-| `drafts/_control/scenes/` (Chaos raw-archive index and alternates; Blackwood, story-08, Brass & Nerve docs), `_control/source-documents/` | **primary with provenance**: produced by the do-not-rerun `earlier/` scripts and the share cutters; nothing rebuilds them | nothing | with `drafts/` |
+| `drafts/_control/scenes/` (one story's raw-archive index and alternates; three other stories' docs), `_control/source-documents/` | **primary with provenance**: produced by the do-not-rerun `earlier/` scripts and the share cutters; nothing rebuilds them | nothing | with `drafts/` |
 | `companion-logs/` | derived | the companion normalizer, from `archive/companion/` and its `normalization.json` | no |
 | `workspace/` | retained per its README; otherwise disposable | nothing | retained folders only |
 
@@ -315,7 +314,7 @@ gitignored, so each story's `history/` gets a dated record of the phase.
 Any phase that rewrites files cited by hashed frontmatter or overlay
 baselines includes the rehash and PASS paragraph in the same step (§4.3).
 Phases 0 and 1 are executed back to back so each overlay is re-sealed
-once for both; Story 03's phase 2 and 3 edits are folded into that same
+once for both; one story's phase 2 and 3 edits are folded into that same
 re-seal by ordering its file moves first.
 
 0. **Verifier flag, then canon pointer normalization.** Add `--canon-only`
@@ -336,18 +335,19 @@ re-seal by ordering its file moves first.
    the repo-side citations (`docs/`, `STATUS.md`, `CLAUDE.md`, the memory
    files, `scripts/scene-extraction/`) in the same commit. Retarget
    `build_sources.py` and the extraction configs.
-2. **Story roots and records.** Create `history/` per story; move the
-   Black Ledger root records, Story 03's validation record, Blackwood's
-   storyline index, idea bank, and prequel seeds; delete the mis-rooted
-   story-08 folder and Trigun's empty folders; archive the 29
-   hand-named exports with four one-line canon frontmatter edits in Chaos
-   Saga (an overlay-target change, so rehash and re-seal per §4.3).
+2. **Story roots and records.** Create `history/` per story; move one
+   story's root records, another's validation record, a third's
+   storyline index, idea bank, and prequel seeds; delete one story's
+   mis-rooted folder and another's empty folders; archive the 29
+   hand-named exports with four one-line canon frontmatter edits in one
+   story (an overlay-target change, so rehash and re-seal per §4.3).
    **Tooling touched:** `verify-provenance.mjs` selects its default input
-   from the newest JSON in `exports/` root, so run it for Story 03 and
-   Blackwood before and after and confirm its coverage did not drop;
-   if it did, give it an explicit `--export` in the docs that call it.
-3. **Canon-side docs.** story-01 templates to `canon/_templates/`;
-   Story 03's draft-scene inventory and recovery manifest to
+   from the newest JSON in `exports/` root, so run it for the two stories
+   whose `exports/` root changes before and after and confirm its coverage
+   did not drop; if it did, give it an explicit `--export` in the docs that
+   call it.
+3. **Canon-side docs.** One story's templates to `canon/_templates/`;
+   another story's draft-scene inventory and recovery manifest to
    `drafts/_control/scenes/` with the catalog's location registry staying
    canon-side; the one draft scene that cites a canon doc repointed
    (rehash that overlay). Move the ChatGPT-share cutters from
@@ -355,7 +355,7 @@ re-seal by ordering its file moves first.
    do-not-rerun like the rest.
 4. **Visual dedup.** Hash-match `art/` against `references/`; keep the
    reference image, delete the art copy, cross-link sidecars by hash;
-   collapse the 20 within-entity duplicates; declare the `reaper` pair;
+   collapse the 20 within-entity duplicates; declare the cross-entity pair;
    write `verify-references.mjs`. About 1.28 GB reclaimed. Before any
    delete, the 199 art copies are staged aside in
    `workspace/<date>-art-dedup/` and kept until `verify-references.mjs`
@@ -415,7 +415,7 @@ coherent, not ready to ratify. Folded into revision 2 as noted.
    exist. → §4.3.
 5. Visual dedup facts were unchecked. Checked: 199 of 215 art images have a
    byte-identical reference; the 75 MB inside `references/` is 20
-   within-entity groups plus the `reaper` pair; `verify-provenance.mjs`
+   within-entity groups plus the cross-entity pair; `verify-provenance.mjs`
    reads export JSON; path cross-links go stale. → §4.6.
 6. `scratch/` as disposable contradicted "save the scratchpad". →
    `workspace/`, decision 3.
@@ -429,7 +429,7 @@ coherent, not ready to ratify. Folded into revision 2 as noted.
 
 Refuted by inspection: `scaffold-story.mjs` writes no templates; the
 compiler skips `README.md` and `_`-prefixed Markdown and names `_minor.md`
-as an exception; the Chaos overlay has no `replace` on the three canon
+as an exception; the affected overlay has no `replace` on the three canon
 scenes.
 
 ### 7.2 Review of revision 2 (2026-09-02)
@@ -444,7 +444,7 @@ as noted.
 2. No tool verified canon alone; the verifier checks the merged tree. →
    §4.2 `--canon-only`, phase 0 prerequisite.
 3. The share-capture move was back, un-grandfathered, and would have added
-   story-01 as a ninth overlay to re-seal. → §4.1 grandfathered.
+   a ninth overlay to re-seal. → §4.1 grandfathered.
 4. Phase 2 touches `verify-provenance.mjs`, which selects the newest JSON
    in `exports/` root. → phase 2 check.
 5. Overlay count is ten, not eleven. → §5.

@@ -50,8 +50,8 @@ class ParsedEntity:
 
 **Memory content format** (all entities used `[Type] Name\nProject: ...\n\n<body>` so the human-readable header is parseable later):
 
-- `[Character] Character 084\nRole: Primary | Status: Active\nProject: <name>\n\n<body>`
-- `[Location] Dovecoast\nProject: <name>\n\n<body>`
+- `[Character] <name>\nRole: Primary | Status: Active\nProject: <name>\n\n<body>`
+- `[Location] <name>\nProject: <name>\n\n<body>`
 - `[Scene] <prompt[:80]>\nMode: director | Canon: True\n\n<scene_text>`
 - `[Bookmark] <label>\nType: user | Chapter: <ch> | Position: <n>\nScene: <id>`
 - `[Character Stats] <name>\n\n{"strength": 14, ...}\n\nProgression:\n- strength: 10 -> 14 (training)`

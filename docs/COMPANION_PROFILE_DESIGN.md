@@ -28,7 +28,7 @@ Mnemosyne currently has three related but different things:
    persona, memory, voice, and conversation state. Mnemosyne sends selected
    story context through the only shared channel available: visible message
    text in [`companion-message.ts`](../src/companion-message.ts).
-3. A few legacy `DISTILLED ESSENCE` blocks in Story 03 character files. They
+3. A few legacy `DISTILLED ESSENCE` blocks in one story's character files. They
    resemble deployment payloads but mix stable personality, relationship state,
    visual detail, and transient plot context without a schema or reliable
    heading boundary.
@@ -39,8 +39,8 @@ For example:
 - Pronouns exist, but gender identity does not; one must not be inferred from
   the other.
 - Joining `Relationships` and `Current Status` exceeds Kindroid's current
-  1,000-character Key Memories editor limit for every filled story-01 core
-  character reviewed.
+  1,000-character Key Memories editor limit for every filled core character
+  reviewed in one story.
 - Joining all short quotes exceeds Kindroid's current 750-character Example
   Message limit for some characters.
 - An unheaded appearance/canon block beneath one legacy persona heading makes a
@@ -550,8 +550,8 @@ known backups where feasible; the audit retains only a content-free tombstone.
 
 ## 12. Legacy migration
 
-The eight Story 03 `DISTILLED ESSENCE` blocks are migration inputs, not a
-schema to perpetuate.
+The eight `DISTILLED ESSENCE` blocks in one story's character files are
+migration inputs, not a schema to perpetuate.
 
 For each block:
 

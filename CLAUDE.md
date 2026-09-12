@@ -9,111 +9,34 @@ into this file, MEMORY.md, or Serena memories — reference STATUS.md.
 
 ## Current Sprint
 
-Status lives in [STATUS.md](STATUS.md) — read it first. This section names
-only what is in flight; it must never restate STATUS.md's Done log. (When
-the two disagree, STATUS.md is newer.)
+Status lives in [STATUS.md](STATUS.md) — read it first. This section names only what
+is in flight; it must never restate STATUS.md's Done log. (When the two disagree,
+STATUS.md is newer.)
 
-**Nothing is currently in flight.** The non-flagship story-development pass
-(gap audits for all six non-flagship stories, two fleet-wide canon rulings
-in [docs/CANON_RULINGS.md](docs/CANON_RULINGS.md), full 13-Decide
-reconciliation for Adjustment Protocol/story-08/the Black Ledger, the
-Character 125's SL/KM tiering ruling, a cleanup pass, cross-story
-name-collision renames, and a promotion-readiness check) is fully closed —
-see [STATUS.md](STATUS.md)'s dated entries for the complete, itemized
-record; this section intentionally does not restate it. One narrow item
-stays open: Story 10's reference-family dimension
-(deliberately deferred). **Promotion is set aside indefinitely on operator
-instruction** (2026-09-08, STATUS.md's top entry) — mechanically ready for
-all three reconciled overlays, but do not propose or push toward it unless
-the operator raises it first. The data architecture migration
-(`docs/DATA_ARCHITECTURE_PROPOSAL.md`, ratified; `docs/DATA_LAYOUT.md` now
-normative) completed all six phases on 2026-09-02: `data/archive/` is the one
-master of originals (written only by `scripts/intake.py`), every story has
-`history/` and a read-only `sources/` view, active canon verifies alone
-(`verify-draft-overlay.mjs --canon-only`), and approved art exists in one
-place (`scripts/verify-references.mjs`). The promotion tool
-(`scripts/promote-overlay.mjs`) landed 2026-09-02, closing the last migration
-open item; no overlay has been promoted with it. The recovered scene extractions are
-parked for review in the draft overlays, not in canon: on 2026-09-02 the operator
-moved Story 03's 256 raw-archive scene files and The Blackwood Case's 50
-Botify-transcript scene files from `canon/scenes/` into each story's
-`drafts/scenes/` as overlay `add` operations (draft banner after the
-frontmatter; indexes, catalogs, and `_alternates/` under
-`drafts/_control/scenes/`). Story 03's three export-established scenes stay in
-`canon/scenes/`; The Blackwood Case has no `canon/scenes/` folder. story-08's
-59 scenes (cut the same day from the Dark Queen Lilith Botify chat) were written
-straight to `drafts/scenes/`, as were story-01' nine Chapter One scenes (cut
-the same day from the operator's two ChatGPT shares; earlier drafts and pasted
-config documents sit under `drafts/_control/scenes/`). On the same day the remaining Botify-sourced stories were cut the same way, each chat as its own thread, never blended: Brass & Nerve (12), Star Wars: The Black Ledger (10; a scenes-only overlay was bootstrapped; its verifier first failed on the canon pointer format and passes since the same-day normalisation of 31 canon files, 64 merged), Story 10 (43 across four threads), Story 12 (50 across four threads), story-14 (23), and one Story 03 group-chat scene (`CS-GC-01-WHP`, unplaced; inclusion is an operator call). Group-chat bodies carry per-message speaker labels, a recorded departure from bare verbatim prose. Roles played under the operator's own name with no canon counterpart keep those files in `drafts/` until the open substitution ruling. Any future scene extraction goes to `drafts/scenes/`. Both overlays were rehashed and
-re-sealed; nothing was promoted. The 2026-09-01 draft review pass is
-closed: six overlays were corrected, rehashed, and re-sealed; both Miskatonic
-prequel scaffolds were built out with their first choices ratified; story-14
-gained its first overlay. See STATUS.md's top entry for the itemized record.
-The hexagonal architecture refactor and phase-end audit remediation are
-complete and locally verified; the Living Canon overlay pass is also closed at
-its operator-approval boundary; no draft was promoted or imported. The
-original external-system research program also remains closed; the later
-FreeToken research addendum is recorded in STATUS.md with no implementation
-scheduled. The earlier program's one pending operator
-ask is labeling the enrichment-benchmark fixtures (`MNEMO_QUERY_ENRICHMENT`
-stays off until a recorded win). Read [STATUS.md](STATUS.md) first; the standing
-context below still applies.
+**Nothing application-side is currently in flight.**
 
-`canon/` is the permanent human-editable source
-for a story's narrative content ([docs/DATA_LAYOUT.md](docs/DATA_LAYOUT.md));
-OC stays canonical for *live* story state. Five stories are consolidated onto
-it; Star Wars: The Black Ledger is not, and is structurally unlike the others
-(ongoing, already partly live via Botify, no ChatGPT-project origin).
+**Storyline state is deliberately not summarised here.** Per standing operator rule
+(2026-09-12), committed paths carry application material only: no storylines, drafts,
+characters, premises or story discussion, because this repository may be made public
+and its private narrative content must not travel with it. Story state, cross-story
+rulings, the hook register and deferred storyline research all live in the operator's
+local, gitignored `data/` tree:
 
-**Nine review-gated Living Canon overlays are complete on disk (eight from
-2026-08-30, story-14 r10 added 2026-09-01 at 35 operations → 77 entities; 58 → 100 since the scene extraction):**
-story-01 (71 operations → 143 entities; 80 → 152 since the scene
-extraction), Brass & Nerve (20 → 43; 32 → 55 since the scene extraction; 49 → 76 since the
-2026-09-02 r3 synthesis pass), Chaos
-Saga (60 → 73; 317 → 330 since the 2026-09-02 scene move and the group-chat scene), The Miskatonic Archives: The
-Blackwood Case (formerly GhostHunters; 60 → 105; 110 → 155 since the scene move), Story 04 (41 → 70),
-story-08 (40 → 74; 99 → 133 since the scene extraction; **111 since the 2026-09-08 reconciliation** -- see STATUS.md), Story 10 (19 → 41; 62 → 84 since the scene extraction; **92 since the 2026-09-08 reconciliation**), and Story 12 (13 → 39; 63 → 89 since the scene extraction, unchanged by the SL/KM tiering ruling -- see STATUS.md). Each retains PASS/control evidence and passed the zero-write import
-preflight. At that checkpoint none was promoted or imported, active canon
-remained hash-stable, and promotion still required explicit operator approval.
-The 2026-09-01 title-only rename refreshed the affected canon wording and
-manifest hashes without promoting an overlay or importing canon. The Miskatonic
-Archives also has a control-only historical-storyline seed bank linked to
-Dovecoast, plus separate draft-only packages for The Black-Salt Compact and The
-Last Eastbound Run; neither package has canon/ or story.json. Both were built
-out at the core level on 2026-09-01 (named cast, named places, plot spine);
-each package's `_control/DECISIONS.md` marks which choices the operator has
-ratified (Black-Salt: October 1719 and the Kettle inlet; Eastbound: the
-earlier-run fork, October 1881) and which remain pending.
+- `data/stories/<slug>/` — per-story canon, drafts, history and sources.
+- `data/cross-story/` — rulings that bind more than one story, the non-canon hook
+  register, and deferred storyline research.
 
-`story-13` (55 entities) remains tracked in
-[STORYLINE_RESEARCH_BACKLOG.md](docs/STORYLINE_RESEARCH_BACKLOG.md); do not build
-on or scaffold over it without asking.
+To orient on story state, read those trees directly. **`data/` is gitignored, so
+`git status` stays clean while story trees you have not read sit on disk** — verify
+counts with `node scripts/validate-canon.mjs <slug>`, which exits 0 only for a tree
+that exists, is readable, and holds at least one entity.
 
-**Read `data/stories/` before trusting any story inventory.** `data/` is
-gitignored, so `git status` stays clean while story trees you have not read
-sit on disk — including draft scaffolds that no ratified doc covers. Verify
-counts with `node scripts/validate-canon.mjs <slug>`, which exits 0 only for
-a tree that exists, is readable, and holds at least one entity — so a sweep
-over every slug is trustworthy as an integrity check.
+Two standing operator instructions that outlive any sprint:
 
-**Nothing in any story's `canon/` has been imported to live OC.** Per
-standing operator instruction, nothing is locked in as canon until
-explicitly directed.
-
-Written down but **not ratified** — design input, not specification:
-[WEBUI_NOTES.md](docs/WEBUI_NOTES.md),
-[COMPANION_PROFILE_DESIGN.md](docs/COMPANION_PROFILE_DESIGN.md),
-[HOOK_VAULT.md](docs/HOOK_VAULT.md), and the five external-system adoption
-assessments listed under "Layout" below.
-[POSITION_TRACKING_DESIGN.md](docs/POSITION_TRACKING_DESIGN.md) is
-**ratified and fully implemented** (2026-09-07, all four slices) — see
-STATUS.md's dated entries.
-[CONTENT_ROUTING_DESIGN.md](docs/CONTENT_ROUTING_DESIGN.md) is
-**ratified and fully implemented** (2026-09-08, all three slices) — a
-story's `mnemo_story_use`-declared `content_rating` (`sfw`/`nsfw`) is
-checked against the configured generator's declared capability before
-every generation, refusing before dispatch on a mismatch; see STATUS.md's
-dated entry.
+- **Nothing is locked in as canon until explicitly directed.** No story's `canon/` has
+  been imported to live OC.
+- **Promotion is set aside indefinitely** (2026-09-08). Do not propose or push toward
+  promoting an overlay unless the operator raises it first.
 
 ## Stack
 
@@ -404,15 +327,13 @@ dated entry.
   (<location description>)`; the source-inventory doc's `Played
   {chat['played']}.` line is now an f-string and actually interpolates;
   and `source_bot`'s bot name (previously always `None` for every
-  private-chat thread across every story cut with this engine -- Black
-  Ledger, Adjustment Protocol, story-14 all affected) now reads
-  `bot.json`'s real `data.attributes.name` path instead of the
-  nonexistent `data.name`. Verified against real `bot.json` fixtures and
-  the real `{chat['played']}` shape, not just read. Already-cut scene
-  files (Black Ledger, Adjustment Protocol, story-14, story-08,
-  Story 03, Character 125, story-01) still carry the old
-  `location_basis`/`source_bot` values -- correct only for the next cut,
-  not retroactive.
+  private-chat thread cut with this engine) now reads `bot.json`'s real
+  `data.attributes.name` path instead of the nonexistent `data.name`. Verified
+  against real `bot.json` fixtures and the real `{chat['played']}` shape, not
+  just read. Scene files cut before that fix still carry the old
+  `location_basis`/`source_bot` values -- the fix is correct only for the next
+  cut, not retroactive. Which stories are affected is recorded in the operator's
+  local `data/` tree, not here.
 - `docs/ARCHITECTURE.md` — locked architectural decisions. Read this
   first to understand project shape, state model, validation strategy,
   provider strategy, and build sequence.
@@ -478,13 +399,11 @@ dated entry.
   and the six reviewed design changes deliberately not built.
 - `docs/PROSE_PIPELINE.md` — the story-agnostic loop for writing and reviewing
   a chapter of prose (brief, draft, lint, two adversarial review rounds, line
-  pass, stop), written after Story 10 sample chapters.
-- `docs/HOOK_VAULT.md` — non-canon development register for promising story
-  and character seeds. Promotion requires an explicit creative decision and a
-  canon-first scaffold.
-- `docs/STORYLINE_RESEARCH_BACKLOG.md` — operator-selected deferred research
-  and follow-up work for concepts with a deliberate direction or existing
-  story foundation; raw salvage remains in the Hook Vault.
+  pass, stop), written after a storyline's sample chapters.
+- `data/cross-story/` (gitignored, not in this repository) — records that bind more
+  than one story: ratified cross-story authoring rulings, the non-canon register of
+  promising story and character seeds, and deferred storyline research. Moved out of
+  `docs/` on 2026-09-12 under the application-only rule.
 - `docs/DATA_LAYOUT.md` — the data-directory organization and naming
   standard (rewritten 2026-09-02 to the ratified data architecture:
   `archive/` as the one master of originals, `history/` per story,

@@ -11,18 +11,18 @@ The design was derived from a three-lane research pass (2026-08-21) plus an
 independent two-reviewer second-opinion pass (one blind derivation, one
 adversarial critique), all archived in the session record. Sources:
 
-The historical source list below retains GhostHunters where it identifies the
-project's name at the time. Its current storyline name is The Blackwood Case
-within The Miskatonic Archives; preserved source filenames and export
-identifiers remain provenance rather than current naming.
+The historical source list below retains each source project's folder name as
+it stood at the time. One of those storylines has since been renamed;
+preserved source filenames and export identifiers remain provenance rather
+than current naming.
 
 1. **The operator's original ChatGPT storytelling projects**
-   (`D:\OneDrive\Technology\ChatGPT\Projects` — Story 03, GhostHunters,
-   story-01, story-14). The source project named GhostHunters is now
-   The Blackwood Case within The Miskatonic Archives; the old name is retained
-   here as source provenance. One evolving idiom, not a fixed format: only
+   (`D:\OneDrive\Technology\ChatGPT\Projects` — four storyline projects; the
+   names are recorded in the operator's local `data/` tree). One of those
+   source projects has since been renamed; its old folder name is retained
+   there as source provenance. One evolving idiom, not a fixed format: only
    Project Instructions + Style Guide appear in all four; folder names
-   actively lie (story-01' "Profiles/Location" files are worldbuilding
+   actively lie (one project's "Profiles/Location" files are worldbuilding
    content); files are composites (every Project Instructions file mixes
    style + worldbuilding + character stubs + rules); there are misfiled
    strays and concatenated drafts. The most consistent operator-authored

@@ -9,12 +9,10 @@ reading this does the classifying, the human approves, and
 below is judgment guidance for the conversation, not code.
 
 The rules here were derived from the material this feature exists to
-import: the operator's four original ChatGPT storytelling projects
-(Story 03, The Miskatonic Archives: The Blackwood Case (then GhostHunters),
-story-01, story-14), cross-checked
-against OpenChronicle v1's template research and v2's import-pipeline
-post-mortem. Every "don't" below is a mistake one of those systems
-actually made.
+import: the operator's four original ChatGPT storytelling projects,
+cross-checked against OpenChronicle v1's template research and v2's
+import-pipeline post-mortem. Every "don't" below is a mistake one of
+those systems actually made.
 
 ## The workflow
 
@@ -38,15 +36,15 @@ actually made.
 
 The single most important rule. Observed in the real corpus:
 
-- story-01' `Profiles/Location` files ("Region Config – Aelreth"
-  etc.) are **worldbuilding**, not locations — each is a regional
+- One story's `Profiles/Location` files (each a "Region Config" for a
+  named region) are **worldbuilding**, not locations — each is a regional
   compendium with faction rosters, named NPC leadership, and
   cross-references, wearing a location folder label.
-- Story 03's top-level `Project Instructions` file is a **misfiled
-  stray** — it's actually an early The Blackwood Case draft from the source
-  project then called GhostHunters.
-- The Blackwood Case's source Project Instructions file, from the project then
-  called GhostHunters, is **two drafts concatenated** — a rewrite pasted in
+- Story A's top-level `Project Instructions` file is a **misfiled
+  stray** — it's actually an early draft of Story B, from Story B's own
+  source project under a since-changed title.
+- Story B's source Project Instructions file, from that project under its
+  earlier title, is **two drafts concatenated** — a rewrite pasted in
   without deleting the original.
   Import the newer version only.
 
@@ -127,8 +125,8 @@ legacy scenes shape future generation directly.
   material worth importing.
 - **No `[Type] Name` headers in content** — the storage layer adds
   those. `content` is the body only.
-- **Names**: use the thing's actual name ("Aria Voss", "The Dovecoast
-  Tavern"), never the source filename. No line breaks in names
+- **Names**: use the thing's actual name (the character's own name, the
+  tavern's own name), never the source filename. No line breaks in names
   (schema-enforced — a newline would make the entity permanently
   invisible).
 - **Same name, different types is fine** (`character` "Mercury" and

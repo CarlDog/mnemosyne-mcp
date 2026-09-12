@@ -271,20 +271,21 @@ of explanations are permitted and how scenes should feel.
 
 Examples from the current collection:
 
-- **story-01:** mythic adventure, regional breadth, dangerous wonder, and
+- **a mythic-adventure storyline:** regional breadth, dangerous wonder, and
   encounter momentum;
-- **The Miskatonic Archives: The Blackwood Case:** restrained investigative
-  horror, fair evidence, incomplete explanations, and unrelated hauntings;
-- **Story 03:** grounded contemporary realism with no magic; heightened
-  emotion must retain a physical or human cause;
-- **story-14:** surreal transformation with intimate, traceable causes and
+- **an investigative-horror storyline:** restraint, fair evidence, incomplete
+  explanations, and unrelated hauntings;
+- **a contemporary-realist storyline:** grounded realism with no magic;
+  heightened emotion must retain a physical or human cause;
+- **a surreal-transformation storyline:** intimate, traceable causes and
   lasting consequences—not arbitrary randomness;
-- **story-08:** gothic power, memory, desire, agency, and political danger
+- **a gothic storyline:** power, memory, desire, agency, and political danger
   with disciplined uncertainty;
-- **Star Wars: The Black Ledger:** post-Endor human-scale consequence — the
-  Force and wider mythology may exist but must not swallow the story's
-  criminal, intelligence, and military-remnant pressure, and its core crew
-  must not collapse into familiar franchise archetypes.
+- **a franchise-set storyline:** human-scale consequence inside an established
+  franchise universe — the setting's wider mythology and metaphysics may exist
+  but must not swallow the story's criminal, intelligence, and
+  military-remnant pressure, and its core crew must not collapse into familiar
+  franchise archetypes.
 
 Techniques may cross between stories. Facts, metaphysics, and implied
 crossovers may not cross without explicit canon.
@@ -461,12 +462,17 @@ fully captured only when both agree.
 
 When comparing stories, transfer **craft patterns**, not canon:
 
-- story-01 demonstrates scalable population and world breadth.
-- The Blackwood Case demonstrates mystery ecology and misdirection.
-- Story 03 demonstrates lived relationships, rooms, and mundane aftermath.
-- story-14 demonstrates stateful objects, locations, and transformation.
-- story-08 demonstrates truth tiers, agency guardrails, and canon promotion.
-- Star Wars: The Black Ledger demonstrates explicit anti-archetype guardrails —
+- The mythic-adventure storyline demonstrates scalable population and world
+  breadth.
+- The investigative-horror storyline demonstrates mystery ecology and
+  misdirection.
+- The contemporary-realist storyline demonstrates lived relationships, rooms,
+  and mundane aftermath.
+- The surreal-transformation storyline demonstrates stateful objects,
+  locations, and transformation.
+- The gothic storyline demonstrates truth tiers, agency guardrails, and canon
+  promotion.
+- The franchise-set storyline demonstrates explicit anti-archetype guardrails —
   naming exactly how each core character must not collapse into a familiar
   genre stock type, rather than only asserting that they are deep.
 

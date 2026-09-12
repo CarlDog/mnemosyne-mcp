@@ -223,17 +223,16 @@ controls row).
   and "Operator notes" columns to fill in directly; a `Story Context`
   sheet with each story's premise and real exited-entity quotes; a
   `How to Review` sheet with instructions). 14 candidate fixtures across
-  the five settled stories (story-01, story-02, story-03,
-  story-04, story-06),
-  grounded in real character/scene content read fresh from each story's
-  `data/` tree (gitignored), not fabricated. 4 vague/enrichment-exercising,
+  the five settled stories, grounded in real character/scene content read
+  fresh from each story's `data/` tree (gitignored), not fabricated.
+  4 vague/enrichment-exercising,
   4 short-but-rich negatives (the "Aria dies" shape the design's own
   revision note requires), 4 explicit controls, 2 recall-only baselines
-  for `story-04` (which has zero played scenes anywhere,
-  so no enrichment fixture is possible there yet). Three rows are
+  for the one settled story with zero played scenes anywhere (so no
+  enrichment fixture is possible there yet). Three rows are
   highlighted (Judgment call = YES) where this session could not
   confidently resolve the expected labels alone (most notably `BC-1`:
-  whether a dead-since-1888 lore thread the current investigation is
+  whether a long-dead lore thread a story's current investigation is
   actively pursuing counts as "unwanted persistence" or legitimate
   recall — the design's two metrics don't cleanly separate that case).
 - **4b next, operator-owned**: review/correct the candidate labels in

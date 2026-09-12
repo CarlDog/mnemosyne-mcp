@@ -132,8 +132,8 @@ transparently."*
 
 - **Detecting content after the fact.** If a cloud provider's own upstream
   policy refuses or sanitizes a request server-side (already observed
-  live: AtlasCloud's safety filter rejected two Thrawn full-body
-  generations during the Star Wars visual-reference pass), that error
+  live: AtlasCloud's safety filter rejected two full-body character
+  generations during one story's visual-reference pass), that error
   should propagate to the caller exactly as received — mnemosyne must not
   catch it and retry with softened wording, and must not catch it and
   silently return a truncated result. This is mostly already true (errors
@@ -159,7 +159,7 @@ precedents exactly — optional, appended only when set, older markers
 `parseMarker` already uses.
 
 ```
-[Mnemosyne Story] Story 03
+[Mnemosyne Story] Example Story
 Created: 2026-05-12T02:59:43Z
 Schema: 6
 Kindroid-Target: ai:abc123

@@ -24,7 +24,7 @@ this document is.
   fields that contain only placeholder values"; here, the host applies
   it while assembling the import call.)
 - **Required floors are minimal on purpose.** The source-project
-  research showed elaborate specs decay unfilled — story-01'
+  research showed elaborate specs decay unfilled — one project's
   directive mandated four log files that never existed. Each template
   below names the small set that must exist; everything else is
   optional expansion the story can grow into.
@@ -39,8 +39,8 @@ Settle these in conversation before any entity is written:
 - **Genre + one-line premise** — informs everything below; usually
   lands inside the style guide rather than as its own entity.
 - **POV + tense** — the single most load-bearing decision. Ship it as a
-  pinned `rule` entity (see §4), not buried in style prose: the
-  Dovecoast diagnostic proved a tense rule stated only softly gets
+  pinned `rule` entity (see §4), not buried in style prose: a
+  diagnostic run proved a tense rule stated only softly gets
   drowned out by example scenes.
 - **Kindroid/Botify binding** (optional) — a dedicated kin or group
   chat for the story, bound via `mnemo_story_use`'s

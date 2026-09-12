@@ -506,8 +506,8 @@ chat log or a shared export is untrusted input to this channel.
 **Where that stands today, measured rather than assumed.** The reachable
 surface is live OC and nothing else: `gatherContext` in `src/prompt.ts` pulls
 only from OC, and no code path in `src/` reads a story's `canon/` or `drafts/`
-tree at runtime. Live OC currently holds zero scene entities for story-08
-and for Star Wars: The Black Ledger, and three for Story 03 -- the
+tree at runtime. Live OC currently holds zero scene entities for two of the
+stories with staged extractions, and three for a third -- the
 export-established ones, generated in-house. Meanwhile 513 extracted scene
 files sit in nine stories' `drafts/scenes/`, every one of them third-party
 chat-log prose, and none of them has been imported.
@@ -536,7 +536,7 @@ scope, not assumed: the real scanner against all 513 already-staged
 positive ("they will guide **your instruction** here"), which is what made
 widening the gate look cheap rather than risky.
 
-**FIXED 2026-09-08.** Story 12's own SL/KM tiering ruling re-ran the
+**FIXED 2026-09-08.** A routine per-story canon ruling re-ran the
 full `verify-draft-overlay.mjs` merged-tree preflight and found this
 "accepted" false positive actually blocked the check outright (it fails
 the whole import preflight, not just a per-file flag) -- worth fixing
@@ -547,8 +547,8 @@ here at the academy"), distinct from the reliably-plural injection sense
 ("your new instructions"). `src/injection-scan.ts`'s regex now requires
 the plural; `tests/injection-scan.test.ts` pins both the fixed case and
 that the plural injection phrasing still flags. Verified end to end:
-`verify-draft-overlay.mjs story-12` passes clean again (89 merged
-entities, writes=0), matching the pre-regression 2026-09-02 state.
+`verify-draft-overlay.mjs <slug>` passes clean again for the affected story
+(89 merged entities, writes=0), matching the pre-regression 2026-09-02 state.
 
 The fix moved the scan into `src/entities.ts`'s `saveEntity()` -- the true
 chokepoint under every entity write (`mnemo_save_entity`,

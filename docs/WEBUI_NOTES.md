@@ -138,8 +138,8 @@ that makes stepping in real rather than cosmetic.
 Closest to a messaging app. The operator is a character, so **who they are
 must be explicit** — Kindroid's "Chatting as ___" affordance, which matters
 more for us than for them: the operator is a character in four of five
-stories under four different names (Character 114, Character 084, Karl von
-Jäger, and the operator's own real name). Persona is a first-class selection bound to the story,
+stories under four different names, one of them the operator's own real
+name. Persona is a first-class selection bound to the story,
 not an assumption. The composer is the primary control; everything else
 recedes.
 
@@ -156,7 +156,7 @@ see §3.
 
 ### audience
 
-We have already built this once. The Story 03 reader artifact *is* audience
+We have already built this once. The prototype reader artifact *is* audience
 mode: prose-forward, chapter headers, drop caps, no controls but "keep
 going." Audience mode should be that reader with a Continue button.
 
@@ -224,7 +224,7 @@ The plane with no equivalent in either reference app.
 - **Cast presence** — who is in *this* scene. Not who exists; who is here.
 - **Turn order, and when you interject.** Botify's group triad is the right
   shape for who speaks — auto-advance / random next / nominate a specific
-  character — and `advanceGroup` still has no way to say "Riley next." The
+  character — and `advanceGroup` still has no way to say "that one next." The
   deeper control, whether the floor ever comes back to *you*, **shipped
   2026-08-23** — `allowUser` is settable per call via `mnemo_continue`'s
   `allow_user`, and `AdvanceGroupResult.ended: "user_turn" | "max_turns"` is a
@@ -264,17 +264,16 @@ The plane with no equivalent in either reference app.
     prompt) independent of whichever mode is currently selected, rather than
     requiring the operator to have pre-flipped to participant before the loop
     happens to pause.
-- **Location** — set the scene from the story's own locations. story-01
-  has 28. story-08's style guide even encodes *which* spaces are for
+- **Location** — set the scene from the story's own locations. One story
+  has 28. Another's style guide even encodes *which* spaces are for
   performance and which are for truth — the UI can honor that.
 - **Pacing** — beat length; stay in the burn or cut.
 - **Open threads as one-click directions.** Ours alone, and the best idea in
-  this document. The canon already records its own unfired guns: story-01'
+  this document. The canon already records its own unfired guns: one story's
   "open threads, deliberately unfired"; the **Open Questions** entities in
-  story-14 and story-08; The Blackwood Case's unmatched mirror, unlocated
-  circle centre, and Gloria's never-found book. Surface them as direction
-  chips. No other tool can do this, because no other tool has a curated canon
-  to read them from.
+  two others; a mystery storyline's still-unmatched physical clues. Surface
+  them as direction chips. No other tool can do this, because no other tool
+  has a curated canon to read them from.
 
 ---
 
@@ -400,7 +399,7 @@ What makes ours different is that **we can generate in character.** The
 groundwork already exists:
 
 - `references/characters/<slug>/portrait.png` — identity-conditioning inputs, already
-  populated for Riley and Jenna
+  populated for two characters
 - `art/` with a mandatory JSON sidecar recording prompt, model, params,
   references used, cost, and subject — already ratified in DATA_LAYOUT.md,
   precisely because generation is unseeded and otherwise unreproducible
@@ -533,11 +532,10 @@ greeting, so it isn't even a silent fence.
 
 ### Eligibility is per story, and most stories say no
 
-Three of the five live stories are fantasy — story-01, story-14,
-story-08 — and an in-canon watch party drags real-world film titles into
-them. Only Story 03 and The Blackwood Case are contemporary enough for it to
-land. So canon-eligibility is a per-story opt-in defaulting to off; a story
-that opts out never shows the control at all.
+Three of the five live stories are fantasy, and an in-canon watch party drags
+real-world film titles into them. Only the two contemporary ones are settings
+where it lands. So canon-eligibility is a per-story opt-in defaulting to off;
+a story that opts out never shows the control at all.
 
 ### In the UI
 
@@ -564,7 +562,7 @@ Same tiering as media (§6): Off / Manual / Suggested / Auto.
 | Botify — contextual action chips | The blank-page problem | §3, driven by the canon's own open threads |
 | Botify — narration vs dialogue styled differently in one bubble, and (operator preference, 2026-08-23) split-level italics within a single reply — the *first* asterisk-action gets a spotlighted accent color, later ones in the same reply fall back to a quieter muted tone | Prose is a wall; every action beat competing equally for attention is still a wall | Render the asterisk convention our style guides already mandate, **and** carry the same two-tier hierarchy: the reply's first action beat gets the accent treatment, subsequent ones recede — confirmed as a real, named platform mechanism (`message__text_italic` / `message__text_magic-glow`) via DOM inspection, not a rendering coincidence (see STATUS.md's live Botify probe, 2026-08-23) |
 | Botify — left rail pairs icon + text label on every nav item | Icon-only navigation is mystery-meat until clicked once to learn it | Primary nav follows Botify's labeled-icon model, not Kindroid's icon-only top bar |
-| Ours — the Story 03 reader artifact | — | Not a finished audience mode — an example of how imported + generated content assembles into one reading surface with provenance intact; the concrete patterns worth carrying forward (serif pairing, cold-cut color shift, chapter-level provenance tags, cast cards) are itemized in §2's audience subsection |
+| Ours — the prototype reader artifact | — | Not a finished audience mode — an example of how imported + generated content assembles into one reading surface with provenance intact; the concrete patterns worth carrying forward (serif pairing, cold-cut color shift, chapter-level provenance tags, cast cards) are itemized in §2's audience subsection |
 
 ### Anti-patterns — deliberately not borrowing
 
@@ -595,7 +593,7 @@ naming explicitly as things to avoid, not just omit by silence:
   Readable at full attention in a screenshot, a real strain across the
   long-form reading audience mode is built toward. If audience mode carries
   over Kindroid's *chat-bubble* typography wholesale it inherits this; the
-  Story 03 reader artifact already avoids it (regular-weight serif body,
+  prototype reader artifact already avoids it (regular-weight serif body,
   `<em>` only for in-line emphasis) — carry that forward, not the chat
   bubble's.
 - **Botify — cost transparency is a pattern, not a system.** The inline chat
@@ -678,7 +676,7 @@ What makes it plausible rather than fantasy, and what to actually research:
   §6's spend ceilings, a graphic-novel run is a different order of commitment
   than illustrating a beat, and probably wants to be an explicit "render this
   chapter" action rather than anything automatic.
-- **Audience mode is the natural host** (§2). The Story 03 reader artifact
+- **Audience mode is the natural host** (§2). The prototype reader artifact
   already proved the reading surface; a comic page is that surface with a
   different renderer, which is an argument for building it as a *view* over
   existing beats rather than a fourth mode.
@@ -701,8 +699,8 @@ beat-linked pane geometry:
 | Theme | Intent | Signature |
 |---|---|---|
 | **Archivist's Light Table** | The existing warm night desk; amber indexing, cold audience marks, violet participant marks | Punched archive cards and a warm manuscript leaf |
-| **White Garden Courtesy** | story-14's shadowless porcelain order — deliberately severe rather than creamy, luxurious, or “wellness” minimal | Near-symmetrical pale rules interrupted by one bruise-purple petal/notch on the active destination |
-| **Blackwood Glass Plate** | The Blackwood Case's photographic evidence room — darkroom chrome around a pale case sheet, not a generic paranormal HUD | Static registration corners, a faint doubled plate edge, and one EMF-red registration dot on a generated beat |
+| **White Garden Courtesy** | A shadowless porcelain order — deliberately severe rather than creamy, luxurious, or “wellness” minimal | Near-symmetrical pale rules interrupted by one bruise-purple petal/notch on the active destination |
+| **Blackwood Glass Plate** | A photographic evidence room — darkroom chrome around a pale case sheet, not a generic paranormal HUD | Static registration corners, a faint doubled plate edge, and one EMF-red registration dot on a generated beat |
 
 All three reuse the self-hosted Fraunces, Literata, and Courier Prime faces.
 Blackwood makes the evidence/metadata role more prominent, while White Garden
@@ -1042,9 +1040,9 @@ chapter/scene navigation nearby, and open art, layout, lettering, provenance,
 or companion panes as needed. That is a direction to explore rather than a
 ratified layout.
 
-### Chaos House reference dossier — _Sunstone_
+### Graphic-novel reference dossier — _Sunstone_
 
-For Chaos House, the clearest visual, content, and layout calibration is
+For this mode, the clearest visual, content, and layout calibration is
 [_Sunstone_](https://imagecomics.com/comics/releases/sunstone-tp-new-edition-vol-1),
 written and illustrated by Stjepan Šejić. This dossier was researched against
 the publisher catalogue, creator interviews, and several close visual readings;
@@ -1115,7 +1113,7 @@ The tonal range is essential: erotic and sensual, but also awkward, nerdy,
 domestic, self-deprecating, slapstick, tender, and sometimes painful. In a
 [2025 creator interview](https://www.tcj.com/i-had-a-panic-attack-because-i-realized-i-was-making-a-romance-comic-stjepan-sejic-on-sunstone-and-beyond/),
 Šejić describes consciously choosing a lighthearted, humanizing romance over
-pure pornography and emphasizes the people behind kink. Chaos House should
+pure pornography and emphasizes the people behind kink. A story should
 borrow that humane tonal breadth, not reduce the reference to red-and-black
 fetish imagery or treat adult content as a substitute for character work.
 
@@ -1166,7 +1164,7 @@ space around a line can communicate hesitation, excitement, irritation, or
 retrospective distance. This is why dialogue and captions must be structured,
 editable text composed with the art—not pixels baked irreversibly into an image.
 
-The qualities to carry into an original Chaos House visual system are:
+The qualities to carry into an original per-story visual system are:
 
 - character-first cinematic staging in which micro-expression and gesture can
   carry a dialogue-heavy beat;
@@ -1187,13 +1185,13 @@ and painterly illustration can sometimes carry more attention than motion
 between panels. Those are useful constraints for Mnemosyne rather than defaults
 to inherit: budget captions, let acting and sequence show what they can, preserve
 clear action and reading order, define reviewable finish tiers, and keep each
-Chaos House character's age, build, face, posture, imperfections, and wardrobe
+story character's age, build, face, posture, imperfections, and wardrobe
 distinct.
 
 Do not copy Šejić's faces, anatomy, costumes, recurring red/black palette,
 specific compositions, decorative borders, brushwork, or lettering. Do not use
 published _Sunstone_ pages as generation inputs without appropriate rights.
-Chaos House needs its own color script, silhouettes, environments, visual
+Each story needs its own color script, silhouettes, environments, visual
 motifs, and lettering voice. The worthwhile reference is the relationship
 between story beat and visual decision.
 
@@ -1247,7 +1245,7 @@ using separately approved composition profiles.
 
 The research conclusion is concise: borrow _Sunstone_'s emotional pacing,
 character acting, elastic page grammar, and humane treatment of adult
-relationships. Do not borrow its copyrighted pages or collapse Chaos House
+relationships. Do not borrow its copyrighted pages or collapse a story
 into an imitation of its surface style.
 
 The prose manuscript, entities, and canon remain the source of truth. Rendered

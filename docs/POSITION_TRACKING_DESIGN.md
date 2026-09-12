@@ -26,10 +26,10 @@ three continuous spatial axes, since Mnemosyne's "space" is a discrete graph
 of named places, not free 3D space.
 
 A concrete check against live data changed the shape before this doc was
-written: Story 03's "Master Suite," "Garage," and "Backyard" — the exact
+written: one story's room-level sub-locations — the exact
 sub-locations the original sketch cited as the model for "two-level"
 location — are **not** separate `type:location` entities at all. They're
-prose sub-headings inside "Chaos House"'s own body text; no formal
+prose sub-headings inside their parent location's own body text; no formal
 parent/child relationship between locations exists anywhere in the current
 data. Formalizing that just to support this feature would be a much larger,
 unrequested change to the entity system. The design below treats "spot" as

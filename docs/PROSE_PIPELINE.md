@@ -2,7 +2,7 @@
 
 How a chapter of long-form prose gets written and reviewed in this repo so
 that the quality of a good pass is a property of the process and not of the
-day. Written 2026-09-02 after Story 10 sample chapters
+day. Written 2026-09-02 after the pipeline's first sample chapters
 (three chapters, two review rounds each, a line pass, done). Story-agnostic:
 the story-specific rules live with the story under
 `data/stories/<slug>/drafts/_control/`.
@@ -64,7 +64,7 @@ the overlay verifier ignores it.
 
 ## Foreign and archaic text the reader may not understand
 
-Researched 2026-09-02 after Story 12's Chapter 2 sample set a
+Researched 2026-09-02 after one story's Chapter 2 sample set a
 seventeenth-century Spanish document beside its English and the operator
 found that the Spanish did not carry. The codified practice, from the
 Chicago Manual of Style's fiction guidance and the working advice of
@@ -155,7 +155,7 @@ character in one sentence, explaining them from outside in the next. Our
 wondered* tell the reader what to conclude. Unpack each into the physical
 fact that would let the reader conclude it (show the warm combination lock
 and the lingering perfume, not "Adam knew Gwen liked him"). The lint warns
-past a budget; a thought verb kept is kept on purpose, and Sabine's "she had
+past a budget; a thought verb kept is kept on purpose, and a draft's "she had
 decided" is the model of one worth keeping. Corollary: a character alone
 starts thinking; keep people in rooms together.
 
@@ -166,7 +166,7 @@ mode the award catalogues is a passage that sounds like a different,
 embarrassed author. Defaults, each overridable by a house that says why:
 
 - No clinical anatomy unless the house has licensed the clinical register
-  (Brass & Nerve's clinic has; a bedroom has not). No slang euphemism either.
+  (a surgical clinic has; a bedroom has not). No slang euphemism either.
   Name the act in the head's own words; one figure per physical fact at most.
 - Desire is sexier than the act. Give the approach its room.
 - Senses beyond sound: smell, taste, temperature, texture. Fluids exist.

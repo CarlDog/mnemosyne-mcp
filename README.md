@@ -38,8 +38,6 @@ live-verification status per provider. Related docs:
   decisions and the reasoning behind them
 - [docs/DATA_LAYOUT.md](docs/DATA_LAYOUT.md) — canonical authoring layout,
   compile contract, and review-gated draft-overlay workflow
-- [docs/CANON_RULINGS.md](docs/CANON_RULINGS.md) — the register for
-  operator rulings that bind more than one story's canon authoring
 - [docs/LIVING_CANON_STANDARD.md](docs/LIVING_CANON_STANDARD.md) — ratified
   editorial minimum for complete, playable, provenance-backed story canon
 - [docs/OLLAMA_ADOPTION_ASSESSMENT.md](docs/OLLAMA_ADOPTION_ASSESSMENT.md)
@@ -64,11 +62,6 @@ live-verification status per provider. Related docs:
   check) and
   [2026-08-28](docs/ATLAS_CAPABILITY_RESULTS_2026-08-28.md) (first full
   catalog run through the CLI runner)
-- [docs/HOOK_VAULT.md](docs/HOOK_VAULT.md) — non-canon development register
-  for promising story and character seeds that are not ready for promotion
-- [docs/STORYLINE_RESEARCH_BACKLOG.md](docs/STORYLINE_RESEARCH_BACKLOG.md) —
-  operator-selected deferred research and follow-ups for directed or founded
-  story concepts
 - [docs/V2_RETROSPECTIVE.md](docs/V2_RETROSPECTIVE.md) — schemas, prompt
   templates, and lessons mined from the v2 OC storytelling plugin
   (preserved for informational value; not being ported)
@@ -211,9 +204,9 @@ The check compiles `data/stories/<story-slug>/canon/` in memory and performs
 zero writes. Pass `--dir <path>` for a staged canon-shaped tree. The `--out
 <file>` mode exclusively creates a checked `mnemosyne_export:1` artifact
 without importing it. See [docs/DATA_LAYOUT.md](docs/DATA_LAYOUT.md) for the
-authoring mapping and rejection rules and
-[docs/CANON_RULINGS.md](docs/CANON_RULINGS.md) for the fleet-wide rulings
-that bind more than one story. The overlay verifier checks the exact
+authoring mapping and rejection rules.
+Cross-story authoring rulings live outside the repository in the operator's
+local, gitignored `data/` tree. The overlay verifier checks the exact
 manifest, baseline/draft hashes, active/isolated/merged structures, and merged
 import preflight; it performs no promotion or import. `promote-overlay.mjs`
 is the only path from a verified `drafts/` overlay into active `canon/` —
