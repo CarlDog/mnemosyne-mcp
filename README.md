@@ -37,7 +37,8 @@ live-verification status per provider. Related docs:
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — locked architectural
   decisions and the reasoning behind them
 - [docs/DATA_LAYOUT.md](docs/DATA_LAYOUT.md) — canonical authoring layout,
-  compile contract, and review-gated draft-overlay workflow
+  compile contract, review-gated draft overlays and optional private art-library
+  workflow
 - [docs/LIVING_CANON_STANDARD.md](docs/LIVING_CANON_STANDARD.md) — ratified
   editorial minimum for complete, playable, provenance-backed story canon
 - [docs/OLLAMA_ADOPTION_ASSESSMENT.md](docs/OLLAMA_ADOPTION_ASSESSMENT.md)

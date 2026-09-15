@@ -12,6 +12,9 @@ export default [
       ".serena/**",
       "node_modules/**",
       "tmp/**",
+      // Private operator records and helpers are not application source.
+      // Their own validation runs separately from this repository's checks.
+      "data/**",
       // vendored git submodule (Atlas Cloud CLI) -- third-party CommonJS
       // code we don't lint. CI never sees it (checkout runs with
       // submodules: false), but a local `npm run lint` does.

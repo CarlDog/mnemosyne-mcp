@@ -24,7 +24,10 @@ local, gitignored `data/` tree:
 
 - `data/stories/<slug>/` — per-story canon, drafts, history and sources.
 - `data/cross-story/` — rulings that bind more than one story, the non-canon hook
-  register, and deferred storyline research.
+  register, deferred storyline research and reboot/session handoffs.
+- `data/stories/_art-library/README.md` — where installed, the private unified
+  cast/reference gallery and its launcher; live refresh and offline snapshots
+  are distinct. This helper is not part of the application deployment.
 
 To orient on story state, read those trees directly. **`data/` is gitignored, so
 `git status` stays clean while story trees you have not read sit on disk** — verify

@@ -15,6 +15,8 @@ export default defineConfig({
     // webui/ is its own npm package (React/Vite, browser target) with no
     // test dependencies installed at root -- exclude it so a future
     // webui/src/*.test.tsx is never picked up by root `npm test`.
-    exclude: ["webui/**", "node_modules/**"],
+    // Private operator helpers may use other test runners. Their presence
+    // must not change application test discovery in a local checkout.
+    exclude: ["webui/**", "node_modules/**", "data/**"],
   },
 });

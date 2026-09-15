@@ -17,7 +17,8 @@ master of every original, `canon/` verifiable on its own, `history/` for
 permanent records, `sources/` as a read-only pointing view, one copy of every
 approved image, and an explicit primary/derived classification. The
 organization and naming standard for everything under `<data dir>` (default `<repo>/data`, gitignored,
-`MNEMO_DATA_DIR` override — see `src/config.ts`). Guiding principles:
+`MNEMO_DATA_DIR` override — see `src/config.ts`). Updated 2026-09-14 for the private art library, session handoffs and reference
+selection rules. Guiding principles:
 
 1. **The entity model's `(type, name)` key maps deterministically onto
    the filesystem** — tooling can resolve an entity to its assets
@@ -30,7 +31,8 @@ organization and naming standard for everything under `<data dir>` (default `<re
    without help from `drafts/`.
 4. **Every byte we received is kept once, exactly as received.** `archive/` is
    the master of every original; everything else is canon, a proposal, or a
-   derived view a named script in `scripts/` rebuilds from the archive.
+   derived view a named tool rebuilds from the archive. Generic tools live in `scripts/`;
+   story-specific extraction tooling lives privately in `data/scene-extraction/`.
 5. **Every file says where it came from**: index rows with hashes for
    originals, frontmatter or sidecars naming the original and its hash for
    derived files, `source_*` fields for entities.
@@ -54,6 +56,8 @@ data/
 │   ├── operator/<story>/       documents handed over directly (nothing already held in references/)
 │   └── <family>/_index.jsonl   append-only, one row per file: path, sha256, bytes, received, indexed,
 │                               origin, stories (the one authority for which story an original serves), role
+├── cross-story/                PRIMARY — rulings, art standards, reference assignments, rebuild plans and handoffs
+├── stories/_art-library/       private local gallery helpers + primary selection records + derived snapshots
 ├── stories/<slug>/
 │   ├── story.json              server: identity card (see below)
 │   ├── canon/                  PRIMARY — active canon: entities + README + _-prefixed docs, nothing else
@@ -72,7 +76,7 @@ data/
 │   ├── sources/                DERIVED, READ-ONLY — pointing view of archive/: _manifest.json (pointers by
 │   │                           path + hash), per-entry splits, one transcript per Botify chat
 │   ├── references/             PRIMARY — approved visual INPUTS, one folder per entity, image + sidecar;
-│   │                           the ONLY copy of an approved image (see "References")
+│   │                           curated master images (see draft selection exception under "References")
 │   ├── art/                    PRIMARY (ledger) — generation sidecars + unapproved candidates + _logs/
 │   ├── exports/                server-written backups: <slug>-<stamp>.json only; archive/ holds the
 │   │                           retired hand-named editorial exports
@@ -84,7 +88,8 @@ data/
 `story.json` and `exports/`. A runtime mount needs those; `archive/` and
 `workspace/` are never mounted into a deployment.
 
-**Backup set** = `config.json`, `archive/`, and every story's `story.json`,
+**Backup set** = `config.json`, `archive/`, `cross-story/`, the primary files in
+`stories/_art-library/` and `scene-extraction/`, and every story's `story.json`,
 `canon/`, `drafts/`, `history/`, `references/`, `art/`, `exports/`, plus any
 `workspace/` folder its README marks retained. Everything else is rebuilt by
 the tool named in the primary/derived table at the end.
@@ -126,9 +131,42 @@ and is not duplicated in `history/`.
 ## Workspace — session working sets
 
 `workspace/` holds dated session folders and the migration snapshots
-(`snapshots/<label>.sha`). Nothing references it; its README names the folders
-retained on operator instruction (part of the backup set); everything else
-there is disposable.
+(`snapshots/<label>.sha`). Retained source-photo sets, generation manifests and
+review evidence may still be linked from current records. Preserve a folder
+while a current reference or provenance chain depends on it; its README records
+retention. A dated folder is not automatically disposable. Move durable current
+registries into `cross-story/` or the local art library while retaining history.
+
+## Cross-story records and session handoffs
+
+`cross-story/` holds private decisions, reference availability and assignments,
+art standards, reusable rebuild guidance and reboot/session handoffs. It is
+operator-owned primary data, not an entity source or an application dependency.
+Its README provides the current index. Per-story `_control/` files remain the
+authority for that draft's decisions and remaining work. A handoff points to
+those records and names the next bounded step without promoting unfinished work.
+
+## Optional local art library
+
+Where installed, `stories/_art-library/README.md` documents the private gallery
+helper and launcher. It is a local operator tool, not part of Mnemosyne's server
+or deployment. One gallery combines current cast and the facial-reference pool,
+including original Botify archive portraits. The old gallery entry points may
+forward to it; dated comparisons remain provenance history.
+
+The live view rereads selection manifests, current profiles, image sidecars and
+reference-assignment records on refresh. It exposes cast role, appearance,
+source, availability, model and native image dimensions; missing metadata stays
+unknown. New edits are not automatically approved. `gallery.html` also supports
+a dated `snapshot.js` fallback when the helper is stopped; that snapshot must be
+regenerated to include later changes. Follow the local README for restart and
+validation commands.
+
+Back up the helper's source, selection/approval records and curated source media
+alongside the underlying story/archive files. `catalog.json` and `snapshot.js`
+are derived views; PID files and server logs are not authorities. Restart the
+launcher after reboot instead of trusting a saved PID. Git does not back up any
+of these ignored private files.
 
 
 ## Draft-only story packages
@@ -141,12 +179,8 @@ runtime export, or live OpenChronicle story record. It is not an active story
 and must not be compiled or imported until an operator separately selects and
 develops it.
 
-The Miskatonic Archives historical prequels use this shape:
-
-- data/stories/story-05/drafts/
-- data/stories/story-07/drafts/
-
-Their source seed notes remain in The Blackwood Case's draft control folder.
+For example, `data/stories/<new-story-slug>/drafts/` may hold an undeployed
+story proposal. Its seed notes remain linked to their private source records.
 The package boundary is editorial, not a continuity assertion.
 
 ## Canon — the human-editable authoring surface
@@ -352,20 +386,21 @@ gate: the operator's decision to run the command is the approval.
 
 - **Folder = slugged entity name** (the same `storySlug()` transform applied
   to the entity's name). For example,
-  `references/characters/riley-quinn/portrait.png` resolves from
-  `(character, "Character 130")` deterministically. The type folder
+  `references/characters/example-character/portrait.png` resolves from
+  `(character, "Example Character")` deterministically. The type folder
   disambiguates a character, location, and object that share a name. The
   entity's own REFERENCE APPEARANCE pointer remains the authoritative join;
   the slug makes it derivable in both directions.
 - **One entity, one folder.** Characters, locations, and objects all use the
   same containment rule. Variants are filenames *inside* that folder rather
   than punctuation appended to the entity slug.
-- **Character variants:** `portrait` is a story-bearing environmental image,
-  usually framed waist-up to mid-thigh; `body` is a head-to-toe wardrobe and
-  silhouette plate; `face` is an unobscured identity close-up. These are
-  different compositions, not crops standing in for one another. Recurring
-  supporting characters may have only `portrait`; full three-view coverage is
-  reserved for characters whose reuse justifies it.
+- **Character variants:** each visually established character has three distinct
+  target assets. `face`/headshot shows face, head and shoulders with a readable
+  likeness; `body` is a front-facing standing full figure on a neutral background
+  showing build and outfit without unnecessary equipment; `portrait` may show
+  personality, poses, action or equipment. A body image or posed portrait never
+  substitutes for a dedicated headshot. Missing assets remain pending; undefined
+  appearances are not invented solely to complete a gallery.
 - **Location variants:** use `exterior`, `interior`, and meaningful room or
   zone names (`kitchen`, `stairwell`, `pool`, `cellar`) where applicable. Use
   `overview` only when the image genuinely represents the place as a whole.
@@ -395,6 +430,14 @@ gate: the operator's decision to run the command is the approval.
   folder is the stronger rule. `scripts/verify-references.mjs` checks all of
   this: every image has a sidecar, every `image_sha256` matches its file or
   the sidecar says why the file is gone, every hash link resolves.
+
+**Draft headshot selection exception.** A selected draft headshot may remain at
+its existing `art/` path with an explicit approved sidecar, profile pointer and
+`drafts/_control/headshot-selections.json` entry. Selection does not require a
+duplicate image or narrative promotion. The newest explicitly dated selection
+controls the gallery; older variants remain history. Its approved face guides
+later body and portrait consistency checks. Written profiles still control
+body measurements, biography and story facts.
 
 ### Reference composition and generation defaults
 
@@ -427,17 +470,23 @@ gate: the operator's decision to run the command is the approval.
   outpaint by adding background around the unchanged subject; never treat
   “recompose; do not crop” as permission to reshape the source to the new
   canvas.
-- `openai/gpt-image-2` uses **medium quality by default**. Medium is the
-  cost-conscious production baseline and has proved sufficient for reference
-  faces, clothing, environments, and object detail. High quality is an
-  exception for an approved hero image or a specific failed-detail rescue—not
-  an automatic upgrade.
+- **Atlas Cloud image work is capped at medium quality.** Set exposed quality
+  controls explicitly to medium or lower; resolution does not override the cap.
+  Record when a model has no quality selector rather than inventing a setting.
+- **Use the latest available model in the selected product line unless the
+  operator explicitly requests otherwise.** Check the current provider catalog
+  and input schema before a run; save the exact model ID. If the newest version
+  cannot perform the task, explain that limit before selecting an older version.
+- Upload permissions and task-specific model choices belong in private operator
+  records. Honor applicable standing authorization without repeatedly asking for
+  the same permission. Preserve original failures, prompts and source/output
+  lineage, inspect new candidates and do not rerun successful jobs.
 - Existing approved imagery takes precedence over reinvention. When an object,
   garment, or likeness already appears clearly in canon art, use that image as
   an edit/reference input and name it in the new sidecar.
-- Visual continuity follows controlling written canon first and approved images
-  second. A beautiful result that contradicts identity, age, role, era, or
-  story ontology is not canonical reference art.
+- The current approved headshot controls draft facial likeness. Written profiles
+  govern nonfacial attributes and story facts. Resolve conflicts explicitly; an
+  attractive image does not silently rewrite age, role, body or narrative canon.
 
 ### Flat-layout migration
 
@@ -456,17 +505,18 @@ all new tooling must emit foldered paths.
 - **Every image gets a JSON sidecar** with the same basename. This includes
   generated candidates, canonical references, curated/user-supplied sources,
   superseded references, and rejected generations. Rejection is provenance,
-  not a reason to discard the record. An approved candidate's image moves to
-  `references/` (see "One image, one place"); its sidecar stays here as the
-  ledger entry. Generation failure and pending-prediction logs go under
+  not a reason to discard the record. An approved reference normally moves to
+  `references/`; selected draft headshots may use the documented existing-path
+  exception. Its generation sidecar remains the ledger entry. Generation failure and pending-prediction logs go under
   `art/_logs/`, never under `references/`.
-  Generation on these platforms is unseeded and unreproducible; the
-  prompt is the only reproducibility handle and evaporates unless
-  captured at generation time. Sidecar fields:
+  Seed support depends on the provider and model. Capture the verbatim prompt,
+  model, settings, requested seed, and any returned seed evidence at generation
+  time. A seed can improve repeatability but does not guarantee identical images
+  or preserve character identity across changed prompts or models. Sidecar fields:
 
   ```json
   {
-    "subject": { "type": "character", "name": "Character 130" },
+    "subject": { "type": "character", "name": "Example Character" },
     "variant": "portrait",
     "asset_role": "generation_candidate",
     "review_status": "accepted",
@@ -482,10 +532,17 @@ all new tooling must emit foldered paths.
       "quality": "medium",
       "output_format": "png"
     },
-    "references": ["data/stories/story-03/references/characters/riley-quinn/source.jpg"],
+    "seed_provenance": {
+      "requested": null,
+      "request_mode": "omitted",
+      "returned_evidence": [],
+      "status": "unavailable",
+      "capture": "at-collection"
+    },
+    "references": ["data/stories/example-story/references/characters/example-character/source.jpg"],
     "cost_usd": 0.05,
     "created_at": "2026-08-23T05:12:00Z",
-    "story": "Story 03",
+    "story": "Example Story",
     "provenance_status": "complete"
   }
   ```
@@ -494,6 +551,25 @@ all new tooling must emit foldered paths.
   `asset_role` distinguishes `generation_candidate`, `canonical_reference`,
   `source_reference`, and `superseded_reference`. `review_status` records
   `accepted`, `rejected`, or `pending`; rejected sidecars should explain why.
+
+  For new requests, check the model's current seed schema. When supported,
+  choose an explicit integer within its accepted range and save it in the run
+  manifest's `params.seed` before submission. Reuse a saved seed when testing a
+  controlled variation; otherwise choose and record a fresh one. Do not send a
+  seed parameter to models that do not expose one. Preserve `0` as a valid seed;
+  `-1`, where documented, requests randomness and is not the resolved seed.
+
+  `seed_provenance.requested` records the submitted value or `null` when omitted.
+  `request_mode` distinguishes `explicit`, `omitted`, `random-sentinel`, and
+  `unrecognized`. `returned_evidence` preserves provider-reported seed fields or
+  lines with their response paths; it excludes echoed request parameters. Retain
+  the full responses in the run manifest. Evidence status is `requested-only`,
+  `response-evidence-recorded`, or `unavailable`; a response field alone does not
+  establish a per-image resolved seed. Preserve output indexes and any reported
+  seed arrays without assuming that a multi-output request uses seed + index.
+  Mark a later audit `capture: "retrospective-audit"`; never fill historical
+  omissions with newly chosen values. Unknown seeds do not invalidate otherwise
+  captured prompt, model, settings, and image-hash provenance.
 
   If a legacy image predates sidecar capture, add a retrospective sidecar with
   unknown fields set to `null`, `provenance_status: "legacy-incomplete"`, and a
@@ -567,7 +643,7 @@ external, one internal:
 
 Some sources let the operator's displayed name vary within one capture —
 Kindroid's per-chat/group persona toggle is the confirmed case (2026-08-31,
-Story 03): the operator's `display_name` on each message reflects whatever
+Example Story): the operator's `display_name` on each message reflects whatever
 persona was active in Kindroid *at send time*, not a fixed account name, and
 it can and did change mid-conversation (a deliberate rename, plus brief
 accidental activations while the operator was adding new personas to the
@@ -597,7 +673,7 @@ persona was in effect when, and losing it loses real information.
 ## Sources — read-only pointing view of the archive
 
 `sources/` is present in every story tree and is **derived**: rebuilt from
-scratch by `scripts/scene-extraction/build_sources.py`, never hand-edited
+scratch by `data/scene-extraction/build_sources.py`, never hand-edited
 (atomic edits happen in `canon/`, the only place an edit changes the story).
 It exists so every original a story derives from can be read and grepped in
 the tree in the organisation the operator's ChatGPT project folders had.
@@ -624,14 +700,14 @@ the tree in the organisation the operator's ChatGPT project folders had.
 
 Holds **only what is not derivable** from the filesystem or OC — chiefly
 the slug↔story join, since `storySlug()` is lossy (which OC project is
-`story-03`?). Deliberately NOT a file index: an enumeration would
+`example-story`?). Deliberately NOT a file index: an enumeration would
 drift the moment anyone adds a photo; `readdir` is the index.
 
 ```json
 {
   "mnemosyne_story": 1,
-  "story": { "id": "<OC project uuid>", "name": "Story 03", "created_at": "..." },
-  "slug": "story-03",
+  "story": { "id": "<OC project uuid>", "name": "Example Story", "created_at": "..." },
+  "slug": "example-story",
   "updated_at": "<last refresh>"
 }
 ```
@@ -647,9 +723,8 @@ this file wholesale.
 - **Slugs:** always `storySlug()` (`src/export.ts`) — lowercase
   `[a-z0-9-]`, id-prefix fallback. One definition names story folders,
   export filenames, and art subject slugs. In a setting-qualified display
-  title such as *The Miskatonic Archives: The Blackwood Case*, the setting's
-  leading **The** is display-only and drops from the slug
-  (`story-06`); internal articles remain.
+  title, the setting's leading **The** is display-only and drops from the
+  slug; internal articles remain.
 - **Timestamps:** UTC, ISO to the second, colons stripped for Windows
   (`2026-08-23T051200` or the shorter `T0512` prefix form for art, where
   the seq suffix already disambiguates).
@@ -676,10 +751,13 @@ this file wholesale.
 |---|---|---|---|
 | `archive/` | primary, written only by `scripts/intake.py` | nothing | yes |
 | `canon/`, `drafts/`, `history/` | primary | nothing | yes |
-| `references/`, `art/` | primary (unseeded generation) | nothing | yes |
+| `references/`, `art/` | primary (generated and supplied imagery) | nothing | yes |
 | `exports/`, `story.json`, `config.json` | primary (server) | the server, from OC | yes |
-| `sources/` | derived, read-only | `scripts/scene-extraction/build_sources.py` | no |
-| `drafts/_control/scenes/` (threads cut by `extract_scenes.py`) | derived evidence | `scripts/scene-extraction/extract_scenes.py` | with `drafts/` |
-| `drafts/_control/scenes/` (raw-archive and earlier-script docs), `_control/source-documents/` | primary with provenance (their producers are do-not-rerun records under `scripts/scene-extraction/earlier/`) | nothing | with `drafts/` |
+| `sources/` | derived, read-only | `data/scene-extraction/build_sources.py` | no |
+| `drafts/_control/scenes/` (threads cut by `extract_scenes.py`) | derived evidence | `data/scene-extraction/extract_scenes.py` | with `drafts/` |
+| `drafts/_control/scenes/` (raw-archive and earlier-script docs), `_control/source-documents/` | primary with provenance (their producers are do-not-rerun records under `data/scene-extraction/earlier/`) | nothing | with `drafts/` |
 | `companion-logs/` | derived | the companion normalizer, from `archive/companion/` and its `normalization.json` | no |
+| `cross-story/`, private extraction configs and handoffs | primary | nothing | yes |
+| `stories/_art-library/` source, approvals, roster and curated source media | primary, operator-owned | nothing | yes |
+| `stories/_art-library/catalog.json`, `snapshot.js` | derived snapshot | local `catalog.py` | optional; primary inputs required |
 | `workspace/` | retained per its README; otherwise disposable | nothing | retained folders only |

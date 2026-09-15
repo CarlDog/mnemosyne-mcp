@@ -5,6 +5,19 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 
 ## Unreleased
 
+### Fixed
+
+- Exclude private `data/` helpers from root lint and test discovery. Their
+  presence in a local checkout no longer produces application lint errors or
+  loads tests intended for a different runner; private validation stays separate.
+
+### Documentation
+
+- Document private session handoffs and the optional unified local art library,
+  including primary backup inputs, live metadata refresh, offline snapshots and
+  draft headshot selection. Reconcile character-art roles, model selection and
+  seed provenance guidance; keep narrative records out of published docs.
+
 ### Added
 
 - Position tracking: a pre-commit adversarial review of the finished

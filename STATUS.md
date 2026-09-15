@@ -1,6 +1,25 @@
 # Status
 
-**Last updated:** 2026-09-09.
+**Last updated:** 2026-09-14.
+
+**Documentation and local-data handoff (2026-09-14).** Public documentation now
+separates application procedures from private narrative records, describes the
+optional local art library and its live versus offline views, and records
+headshot/body/portrait roles, selection provenance and seed-capture limits.
+Unpublished narrative status notes were preserved under the gitignored
+`data/cross-story/handoffs/` tree. That tree holds session checkpoints and
+verification evidence; it is not part of the source push or a backup supplied by
+Git. Existing tracked-content privacy checks remain local checks against the
+clone's configured patterns. This documentation update does not deploy a service,
+promote narrative canon or import live story state.
+
+Root ESLint and Vitest now exclude private `data/` helpers. Local operator scripts
+and their separate test runners no longer alter the application check surface.
+
+Local verification: full server/web UI build, root and web UI lint, typecheck,
+format check and configured tracked-content audit passed. Application tests:
+639 passed; 95 environment-gated tests skipped. Hosted CI and deployment were
+not part of this verification.
 
 **FreeToken comparative research recorded (2026-09-09 UTC).**
 [The assessment](docs/FREETOKEN_ADOPTION_ASSESSMENT.md) and
