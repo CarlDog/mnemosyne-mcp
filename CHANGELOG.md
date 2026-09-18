@@ -7,6 +7,15 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 
 ### Fixed
 
+- Ollama provider: send a fixed top-level `think: false` on every generation
+  request (the structured validator path included; `format` handling is
+  untouched). A thinking-capable model (Qwen3.8, Gemma 4 and its fine-tunes)
+  otherwise reasons into a `message.thinking` field the provider never reads,
+  charged against `num_predict` -- live-verified on Ollama 0.34.2 to return an
+  empty beat once the budget was spent. `false` is accepted by non-thinking
+  models and `true` is an HTTP 400 on them, so the value is fixed rather than
+  defaulted or model-sniffed. Warmup's empty-messages load never consults the
+  field and is unchanged. Pinned by `tests/ollama-think.test.ts`.
 - Exclude private `data/` helpers from root lint and test discovery. Their
   presence in a local checkout no longer produces application lint errors or
   loads tests intended for a different runner; private validation stays separate.

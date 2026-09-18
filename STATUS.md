@@ -1,6 +1,37 @@
 # Status
 
-**Last updated:** 2026-09-14.
+**Last updated:** 2026-09-18.
+
+**Ollama thinking models no longer lose the beat (2026-09-18).**
+`OllamaProvider.generate()` now sends a fixed top-level `think: false` on
+every `/api/chat` generation request, the structured validator path
+included (`format` handling untouched). Found while assessing uncensored
+HuggingFace text models for the local NSFW generator: every current
+candidate (Qwen3.8 Heretic builds, TheDrummer Orion-26B-A4B and
+Artemis-31B, LatitudeGames Equinox-31B) is a thinking-capable family.
+Live-verified on Ollama 0.34.2 with mnemosyne's exact request shape and no
+`think` field: `qwen3.8:27b-q4_K_M` returned 900-1300 chars of reasoning in
+`message.thinking`, a field the provider never reads, and an EMPTY
+`message.content` in 2 of 2 probes (`num_predict` 200 and 400), which the
+provider surfaces as "Ollama returned no message content"; under the 2048
+default the reasoning silently eats part of the beat instead. `gemma4:e4b`
+routed 388 chars to `thinking` the same way. With `think: false` both
+returned normal content, `done_reason: "stop"`. `false` is HTTP 200 on
+non-thinking models too (mistral-nemo Celeste, llama3.1); `true` is HTTP
+400 `does not support thinking` on them, which is why the value is fixed
+rather than defaulted or model-sniffed. Warmup's empty-messages load never
+consults the field (`done_reason: "load"` with or without it) and is
+unchanged. The field has existed since Ollama 0.9.0; both deployed daemons
+(desktop and NAS) reported 0.34.2 at verification, so no capability gate.
+New `tests/ollama-think.test.ts` pins value, type and top-level placement
+on both paths; mutation-verified (field removed: 2 of 2 red; restored: 2 of
+2 green). Deliberately not built: an `OLLAMA_THINK` opt-in, because a
+thinking mode is useless until the provider reads `thinking` and budgets
+for it, which is its own design. Same session: the desktop's August
+long-context salad did NOT reproduce on 0.34.2/ROCm at a 13,355-token
+prompt (one model, one prompt; see the project memory), and the desktop's
+`.env` still declares no `OLLAMA_CONTENT_CAPABILITY`, so an nsfw-rated
+story would be refused before dispatch until that line is set.
 
 **Documentation and local-data handoff (2026-09-14).** Public documentation now
 separates application procedures from private narrative records, describes the

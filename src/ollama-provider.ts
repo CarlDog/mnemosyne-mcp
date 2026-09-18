@@ -62,7 +62,10 @@ export interface OllamaConfig {
 }
 
 interface OllamaChatResponse {
-  message?: { role?: string; content?: string };
+  /** `thinking` is where a thinking-capable model's reasoning lands when
+   * `think` is on; generate() pins `think: false`, so it is documented
+   * here only so nobody wonders why `content` alone is read. */
+  message?: { role?: string; content?: string; thinking?: string };
   error?: string;
   done?: boolean;
   /** Why generation stopped: "stop" (natural end), "length" (num_predict
@@ -335,6 +338,22 @@ export class OllamaProvider implements LlmProvider {
       // daemons (NAS 0.32.15, desktop 0.33.2) 2026-08-28.
       truncate: false,
       shift: false,
+      // Thinking is OFF, fixed, not defaulted. A thinking-capable model
+      // (Qwen3.8, Gemma 4 and its fine-tunes) otherwise reasons into a
+      // separate `message.thinking` field this provider never reads, and
+      // that reasoning is charged against num_predict: live-verified
+      // 2026-09-18 on 0.34.2, qwen3.8:27b with this exact body and no
+      // `think` returned 900-1300 chars of thinking and an EMPTY
+      // `message.content` once the budget was spent (gemma4 routed to
+      // `thinking` the same way); `"think": false` gave normal content
+      // with done_reason "stop". `false` is accepted (HTTP 200) by
+      // non-thinking models too (mistral-nemo, llama3.1), whereas `true`
+      // is HTTP 400 `"<model>" does not support thinking` on them -- so a
+      // default-on or model-sniffed value would break every non-thinking
+      // deployment, and an opt-in is left for a real thinking-budget
+      // design. The field has existed since Ollama 0.9.0; both deployed
+      // daemons (desktop, NAS) were 0.34.2 when this shipped.
+      think: false,
       options: {
         temperature: opts.temperature ?? DEFAULT_TEMPERATURE,
         num_predict: numPredict,
@@ -499,6 +518,10 @@ export class OllamaProvider implements LlmProvider {
       typeof effectiveWindow === "number"
         ? effectiveWindow
         : (this.config.maxContextWindow ?? DEFAULT_MAX_NUM_CTX);
+    // No `think` here, deliberately: an empty-messages load never
+    // generates, so the field is never consulted (verified 2026-09-18 --
+    // done_reason "load" with and without it, on thinking and
+    // non-thinking models alike). generate() is where it matters.
     const res = await fetch(new URL("/api/chat", this.config.url), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
