@@ -5105,6 +5105,26 @@ consider only when real use exposes the corresponding pressure:
   of the section 8 exclusions; its run/canon separation and its context
   partitions are named in the document as unbuilt dependencies, and its
   records live under `drafts/_control/play/`.
+- **Web UI casting directory** (operator development note, 2026-09-16 —
+  proposed, not started or scheduled). Add a permanent operator-facing catalog
+  of every used and unused image reference: headshots, body shots, and
+  portraits. Reuse and extend the private gallery site's catalog, presentation,
+  and refresh scripts rather than designing the inventory again. The helper
+  and its records stay in gitignored `data/`; the Web UI consumes those records
+  across the application boundary rather than porting the helper's code, whose
+  evidence files quote story material. The WebUI
+  should support explicit facial-reference casting and recasting, while keeping
+  assignment history, source/output lineage, selection status, and provenance
+  visible. Every celebrity, Botify, or other registry identity with a face must
+  have one dedicated, clear, high-quality, face-readable casting headshot (the
+  identities the operator's art standard marks as having no independent face
+  are exempt); original
+  source images remain traceability/fallback inputs until a generated or
+  curated casting headshot is explicitly operator-approved. The earlier
+  unassigned-pool headshot remediation is partial coverage only: design and
+  acceptance must begin from a complete used-and-unused registry inventory.
+  This note does not authorize implementation, schema changes, image generation,
+  scheduling, canon promotion, or deployment.
 - ~~**Botify provider**~~ / ~~**Anthropic provider**~~ — **shipped
   2026-08-21** along with OpenAI, Gemini, and Atlas Cloud; see the Done
   log. Seven generators now sit behind `GENERATOR_PROVIDER`; the
