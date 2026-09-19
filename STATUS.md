@@ -2,6 +2,36 @@
 
 **Last updated:** 2026-09-19.
 
+**Overlay verifier tests stage in their own temp root (2026-09-19).** The
+`verify-draft-overlay` suite asserted that a verifier run cleaned up after itself
+by snapshotting `os.tmpdir()` before and after and comparing the
+`mnemosyne-draft-overlay-*` entries. That directory is machine-global: every
+other checkout on this machine spawns the same verifier into it, so the
+assertion read a stranger's in-flight staging directory as this run's leak.
+Demonstrated rather than inferred -- a `vitest run` was live in the main
+checkout while this worktree ran nothing, and a staging directory appeared and
+vanished in the shared temp directory during that window.
+
+Each test now gets its own staging root, handed to the spawned verifier through
+the `TMPDIR`/`TMP`/`TEMP` that `os.tmpdir()` itself reads, so a snapshot can only
+see directories that test's own verifier created. Every verifier spawn in the file
+routes through the one `runVerifier` helper, including the two `--manifest` cases
+that previously spawned it directly, so none can miss the redirect. No script
+changed; the verifier already derives its temp base from `os.tmpdir()` on every
+run.
+
+A scoped root makes the snapshot empty on both sides, which would pass whether or
+not the redirect actually reached the verifier -- a check satisfied by finding
+nothing. The disposable validator therefore records the `--dir` it is handed, and
+the test asserts that path resolves inside the per-test root. Mutation-verified:
+dropping the redirect from `runVerifier` turns that test red (CAUGHT), and
+pointing the snapshot back at the machine-wide temp is MISSED by the suite alone
+but CAUGHT under a harness that churns foreign staging directories -- expected,
+since that mutant restores exactly the race, and a race needs a concurrent actor
+to show. Before and after: the unpatched file failed four staging assertions
+under that churn, in both directions; the patched file passes 23 of 23 with the
+same churn running. Every mutant restored the file byte-exactly.
+
 **Genre declaration standard complete: slice 3 shipped (2026-09-20).** Every
 story with a canon tree now declares its genres, and enforcement is on.
 
@@ -41,12 +71,15 @@ the gate IS on and copies the verifier verbatim, which pins the direction that
 matters. Three mutation checks (gate off, each fixture stops declaring), three
 caught, every file restored byte-exactly.
 
-One diagnostic note for whoever hits it next: a failing run of
-`verify-draft-overlay.test.ts` leaves staging directories in the system temp
-directory, and those leftovers make the NEXT run fail tests that are actually fine.
-The failure count oscillated between one and four across runs until temp was
-cleared, and every count but the clean one was noise. Clear `mnemosyne-*` from temp
-before trusting a red result in that file.
+One diagnostic note recorded here -- that stale `mnemosyne-*` directories in the
+system temp directory make the next run of `verify-draft-overlay.test.ts` fail
+tests that are fine, so clear them before trusting a red result -- no longer
+applies, and its cause was misread. A stale directory sits in both the before and
+after snapshots and fails nothing; what did fail was a *concurrent* verifier
+elsewhere on the machine, whose staging directory appeared or vanished between
+the two snapshots. That is what the oscillating one-to-four failure count was.
+The suite now stages in a per-test root and is immune to both; see the newest
+entry above.
 
 **Story-scope guards (2026-09-19).** OpenChronicle reads a missing
 `project_id` as EVERY project. Reproduced live the same day: a

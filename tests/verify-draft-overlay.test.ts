@@ -6,15 +6,16 @@ import {
   mkdtemp,
   readdir,
   readFile,
+  realpath,
   rm,
   symlink,
   unlink,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, relative } from "node:path";
+import { dirname, isAbsolute, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 const REPO_ROOT = fileURLToPath(new URL("../", import.meta.url));
 const STORIES_ROOT = join(REPO_ROOT, "data", "stories");
@@ -22,6 +23,17 @@ const VERIFIER = join(REPO_ROOT, "scripts", "verify-draft-overlay.mjs");
 const CANON_FRONTMATTER = join(REPO_ROOT, "scripts", "canon-frontmatter.mjs");
 const DRAFT_NOTICE = join(REPO_ROOT, "scripts", "draft-notice.mjs");
 const TEMP_PREFIX = "mnemosyne-draft-overlay-";
+// The verifier stages into os.tmpdir(), which is machine-global. Any other
+// vitest run on the same machine -- the main checkout, a sibling worktree --
+// spawns the same verifier, and its in-flight staging directories land in the
+// same directory as ours. Snapshotting os.tmpdir() to assert "this run cleaned
+// up after itself" therefore reads a stranger's directory as our own leak, in
+// whichever direction the race lands: a foreign directory present at the
+// before-snapshot and gone by the assertion, or absent then present. Both were
+// observed. Each test gets its own staging root instead, handed to the spawned
+// verifier through the environment os.tmpdir() itself reads, so a snapshot can
+// only ever see directories this test's own verifier created.
+let stagingRoot = "";
 const storyRoots: string[] = [];
 const links: string[] = [];
 
@@ -197,11 +209,13 @@ Three piers bracket a tidal basin.
 async function run(
   command: string,
   args: string[],
+  env?: NodeJS.ProcessEnv,
 ): Promise<{ code: number | null; stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       cwd: REPO_ROOT,
       stdio: ["ignore", "pipe", "pipe"],
+      env: env ? { ...process.env, ...env } : undefined,
     });
     let stdout = "";
     let stderr = "";
@@ -218,11 +232,19 @@ async function run(
   });
 }
 
+function stagingEnv(): NodeJS.ProcessEnv {
+  return { TMPDIR: stagingRoot, TMP: stagingRoot, TEMP: stagingRoot };
+}
+
+// Every verifier spawn goes through here so none can miss the staging
+// redirect: a direct `run(process.execPath, [VERIFIER, ...])` would stage in
+// the machine-wide temp again, invisibly.
 async function runVerifier(
   slug: string,
   verifier = VERIFIER,
+  flags: string[] = [],
 ): Promise<{ code: number | null; stdout: string; stderr: string }> {
-  return run(process.execPath, [verifier, slug]);
+  return run(process.execPath, [verifier, ...flags, slug], stagingEnv());
 }
 
 async function snapshot(root: string): Promise<Record<string, string>> {
@@ -245,17 +267,35 @@ async function snapshot(root: string): Promise<Record<string, string>> {
 }
 
 async function stagingDirectories(): Promise<string[]> {
-  return (await readdir(tmpdir()))
+  return (await readdir(stagingRoot))
     .filter((name) => name.startsWith(TEMP_PREFIX))
     .sort();
+}
+
+// A staging assertion over an empty root passes whether or not the verifier
+// ever staged there, so one test proves the redirect is live: the disposable
+// validator records the --dir it was handed, and that path must resolve
+// inside this test's staging root.
+function assertStagedInsideRoot(recorded: string[]): void {
+  const why = "the disposable validator recorded no --dir";
+  expect(recorded.length, why).toBeGreaterThan(0);
+  for (const directory of recorded) {
+    const rel = relative(stagingRoot, directory);
+    expect(
+      rel !== "" && !rel.startsWith("..") && !isAbsolute(rel),
+      `staged outside the per-test root ${stagingRoot}: ${directory}`,
+    ).toBe(true);
+  }
 }
 
 async function makeMutatingVerifierRepo(): Promise<{
   repo: string;
   verifier: string;
+  stageLog: string;
 }> {
   const repo = await mkdtemp(join(tmpdir(), "mnemo-mutating-verifier-"));
   storyRoots.push(repo);
+  const stageLog = join(repo, "staged-dirs.log");
   const verifier = join(repo, "scripts", "verify-draft-overlay.mjs");
   await mkdir(dirname(verifier), { recursive: true });
   await copyFile(VERIFIER, verifier);
@@ -288,6 +328,7 @@ async function firstMarkdown(directory) {
 const dirFlag = process.argv.indexOf("--dir");
 const root = dirFlag === -1 ? null : process.argv[dirFlag + 1];
 if (!root) throw new Error("test validator did not receive --dir");
+await appendFile(${JSON.stringify(stageLog)}, root + "\\n", "utf8");
 const file = await firstMarkdown(root);
 if (!file) throw new Error("test validator found no Markdown to mutate");
 await appendFile(file, "\\nMUTATED BY TEST VALIDATOR\\n", "utf8");
@@ -309,7 +350,14 @@ console.log("mutated disposable validator input");
     process.platform === "win32" ? "junction" : "dir",
   );
   links.push(modulesLink);
-  return { repo, verifier };
+  return { repo, verifier, stageLog };
+}
+
+async function recordedStageDirectories(stageLog: string): Promise<string[]> {
+  return (await readFile(stageLog, "utf8"))
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line !== "");
 }
 
 beforeAll(async () => {
@@ -317,6 +365,13 @@ beforeAll(async () => {
   const build = await run(process.execPath, [tsc]);
   expect(build.code, `${build.stdout}\n${build.stderr}`).toBe(0);
   await mkdir(STORIES_ROOT, { recursive: true });
+});
+
+beforeEach(async () => {
+  stagingRoot = await realpath(
+    await mkdtemp(join(tmpdir(), "mnemo-verify-stage-")),
+  );
+  storyRoots.push(stagingRoot);
 });
 
 afterEach(async () => {
@@ -364,7 +419,7 @@ describe("verify-draft-overlay black-box success paths", () => {
       expect(result.stdout).toContain("writes=0");
       expect(result.stdout).toContain("temporary staging directory removed");
       expect(await snapshot(fixture.root)).toEqual(storyBefore);
-      expect(await stagingDirectories()).toEqual(stagesBefore);
+      expect(await stagingDirectories(), result.stderr).toEqual(stagesBefore);
     });
   }
 });
@@ -403,11 +458,9 @@ describe("verify-draft-overlay promotion-support paths", () => {
     );
     const storyBefore = await snapshot(fixture.root);
 
-    const result = await run(process.execPath, [
-      VERIFIER,
+    const result = await runVerifier(fixture.slug, VERIFIER, [
       "--manifest",
       "_control/overlay.promotion.json",
-      fixture.slug,
     ]);
 
     expect(result.code, result.stderr).toBe(0);
@@ -422,11 +475,9 @@ describe("verify-draft-overlay promotion-support paths", () => {
 
   it("rejects a --manifest path outside _control", async () => {
     const fixture = await seedOverlay(1);
-    const result = await run(process.execPath, [
-      VERIFIER,
+    const result = await runVerifier(fixture.slug, VERIFIER, [
       "--manifest",
       "characters/overlay.json",
-      fixture.slug,
     ]);
     expect(result.code).toBe(1);
   });
@@ -563,11 +614,11 @@ name: Baseline Character
     expect(result.code).toBe(1);
     expect(result.stderr).toContain("expected the leading draft blockquote");
     expect(await snapshot(fixture.root)).toEqual(storyBefore);
-    expect(await stagingDirectories()).toEqual(stagesBefore);
+    expect(await stagingDirectories(), result.stderr).toEqual(stagesBefore);
   });
 
   it("contains a mutating validator inside disposable copies", async () => {
-    const { repo, verifier } = await makeMutatingVerifierRepo();
+    const { repo, verifier, stageLog } = await makeMutatingVerifierRepo();
     const slug = `mutating-validator-${randomBytes(4).toString("hex")}`;
     const root = join(repo, "data", "stories", slug);
     await mkdir(root, { recursive: true });
@@ -582,7 +633,8 @@ name: Baseline Character
     expect(result.stderr).toContain("isolated-copy integrity check failed");
     expect(result.stderr).toContain("staged-canon integrity check failed");
     expect(await snapshot(fixture.root)).toEqual(storyBefore);
-    expect(await stagingDirectories()).toEqual(stagesBefore);
+    assertStagedInsideRoot(await recordedStageDirectories(stageLog));
+    expect(await stagingDirectories(), result.stderr).toEqual(stagesBefore);
   });
 });
 
