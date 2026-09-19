@@ -32,6 +32,38 @@ to show. Before and after: the unpatched file failed four staging assertions
 under that churn, in both directions; the patched file passes 23 of 23 with the
 same churn running. Every mutant restored the file byte-exactly.
 
+**Overlay test fixtures stopped littering the real story tree (2026-09-20).**
+Noticed by the operator, who asked what `verify-overlay-66904-1e70eab6` was doing
+in a listing of declared stories. It was an orphaned test fixture: both overlay
+suites build fixtures inside `data/stories/` — they have to, since the verifier
+and the promotion tool resolve a story by slug under that root and a black-box
+test cannot point them anywhere else — and their `afterEach` does not run when a
+test times out or the process is killed. Several of slice 3's timed-out runs left
+debris. Slice 3 is also what made it visible: once fixtures seeded a
+`canon/_story.md`, an orphan began sorting in alongside real stories.
+
+Each suite now sweeps before it runs. The sweep is a recursive delete inside the
+operator's private data tree, so it is governed by two rules, both load-bearing
+and both pinned by tests: the name must match the generator's exact shape,
+process id and all, so neither a real slug nor a near miss can match; and the
+owning process must be gone, so a run happening right now in a sibling worktree
+is skipped rather than deleted out from under it. A recycled process id means an
+orphan survives another day, which is the harmless direction to be wrong in.
+
+One of the seven tests pins the WIRING rather than the helper, because without it
+the sweep could be removed from either suite and every other test would still
+pass — the inert-feature shape the genre runtime review caught twice. It reads
+both suite sources, asserts each read is non-empty before looking for the call,
+so a wrong path cannot satisfy it by finding nothing. Four mutation checks, four
+caught: liveness removed, shape loosened to a prefix, and each suite stopping
+sweeping. Verified live by planting two orphans with dead process ids and
+watching a suite run remove them.
+
+Related, and already fixed by another session the same afternoon: the machine-
+global half of the same problem, where the verifier staged into `os.tmpdir()` and
+a sibling run's staging directories were misread as this run's leak. Each
+verifier run now gets its own staging root.
+
 **Genre declaration standard complete: slice 3 shipped (2026-09-20).** Every
 story with a canon tree now declares its genres, and enforcement is on.
 

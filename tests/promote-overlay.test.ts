@@ -10,7 +10,9 @@ import {
 } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
+
+import { sweepStaleStoryFixtures } from "./helpers/story-fixtures.js";
 
 const REPO_ROOT = fileURLToPath(new URL("../", import.meta.url));
 const STORIES_ROOT = join(REPO_ROOT, "data", "stories");
@@ -162,6 +164,15 @@ async function backupDirs(slug: string): Promise<string[]> {
     n.includes(`-promotion-${slug}-`),
   );
 }
+
+// This suite's fixtures live in the REAL stories root, and afterEach cannot
+// run when the process is killed or a test times out. Sweep what earlier runs
+// abandoned so the debris self-heals instead of accumulating among the
+// operator's stories -- skipping anything whose owning process is still alive,
+// which is how a sibling worktree's in-flight run stays safe.
+beforeAll(async () => {
+  await sweepStaleStoryFixtures(STORIES_ROOT);
+});
 
 afterEach(async () => {
   for (const root of cleanups.splice(0)) {

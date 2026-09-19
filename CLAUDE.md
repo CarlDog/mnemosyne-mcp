@@ -275,7 +275,14 @@ Two standing operator instructions that outlive any sprint:
   revised term set cannot pass as the old shape. This file is the dictionary
   of record: no document keeps a prose copy of the term list.
 - `tests/` — vitest, real OC + real Ollama (env-gated — see "Common
-  Commands" for which vars enable which suites).
+  Commands" for which vars enable which suites). `tests/helpers/story-fixtures.ts`
+  sweeps orphaned overlay fixtures out of the REAL `data/stories/` tree before
+  either overlay suite runs: those two suites must build fixtures there, because
+  the verifier and the promotion tool resolve a story by slug under that root, and
+  their `afterEach` cannot run when a test times out or the process is killed. The
+  sweep deletes only a name matching the generator's exact shape AND whose owning
+  process id is gone, so a sibling worktree's in-flight run is never deleted out
+  from under it.
 - `scripts/dump-prompt.mjs`, `scripts/dump-validation.mjs`,
   `scripts/dump-kindroid-group-message.mjs` — command-line diagnostics.
   Used during v0.1.2 dogfooding to pin the few-shot-vs-rule cause
@@ -747,7 +754,7 @@ npm run typecheck      # tsc -p tsconfig.typecheck.json (src + tests)
 npm run lint           # eslint .
 npm run format         # prettier --write .
 npm run format:check   # prettier --check . (CI gates on this -- run before pushing)
-npm test               # vitest run (95 of 864 tests are env-gated; see below)
+npm test               # vitest run (95 of 871 tests are env-gated; see below)
 ```
 
 `npm test` green does **not** mean the integration surface ran. Every

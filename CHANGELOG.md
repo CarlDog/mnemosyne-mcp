@@ -7,6 +7,23 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 
 ### Added
 
+- **Orphaned test fixtures no longer accumulate in the real story tree.** Both
+  overlay suites build their fixtures inside `data/stories/`, because the
+  verifier and the promotion tool resolve a story by slug under that root and a
+  black-box test cannot point them elsewhere. Their `afterEach` removes what
+  they created, but it does not run when a test times out or the process is
+  killed, so orphans were left sitting among real stories — and since slice 3
+  seeded a `canon/_story.md` into every fixture, an orphan started showing up in
+  listings of declared stories. Each suite now sweeps before it runs, via
+  `tests/helpers/story-fixtures.ts`. Two rules make a recursive delete inside a
+  private data tree safe: the directory name must match the generator's exact
+  shape, process id and all, so a real slug or a near miss cannot match; and the
+  owning process must be gone, so a sibling worktree's in-flight run is skipped
+  rather than deleted out from under it. A recycled process id leaves an orphan
+  another day, which is the harmless direction. Seven tests, including one that
+  pins the wiring — without it the sweep could be deleted from either suite and
+  every other test would still pass. Four mutation checks, four caught.
+
 - **Genre declaration standard, slice 3: every story declares, and enforcement
   is on.** Ten stories gained a `canon/_story.md` (the eleventh, the pilot, had
   one), each carrying one to three dictionary terms broadest-first, a one-line
