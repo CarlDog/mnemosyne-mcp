@@ -15,6 +15,11 @@ export default [
       // Private operator records and helpers are not application source.
       // Their own validation runs separately from this repository's checks.
       "data/**",
+      // Worktrees a background task runs in: each is a full checkout, so
+      // without this a local `npm run lint` reports another session's
+      // in-progress code as an error in this tree. Same reason
+      // vitest.config.ts excludes it.
+      ".claude/**",
       // vendored git submodule (Atlas Cloud CLI) -- third-party CommonJS
       // code we don't lint. CI never sees it (checkout runs with
       // submodules: false), but a local `npm run lint` does.

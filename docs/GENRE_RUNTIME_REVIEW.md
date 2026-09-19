@@ -202,7 +202,9 @@ from the fresh read; a test that makes the search index lag distinguishes them.
 
 The completeness critic queried live OpenChronicle rather than estimating. Ten
 story markers exist: seven real stories, all at schema 3, and three leftover test
-projects. **Zero carry a genre line. Zero carry a content rating.** Every finding
+projects. **At the time of this review: zero carried a genre line, zero carried
+a content rating.** (Superseded 2026-09-19 by the content-policy sync, which set
+`Content-Rating: nsfw` on six of them; the genre count is unchanged.) Every finding
 in this review requires either a declared genre or a position spot, and no real
 story has either.
 

@@ -2,6 +2,47 @@
 
 **Last updated:** 2026-09-19.
 
+**Live content policy synced from canon (2026-09-19).** The first canon-to-live
+write of any kind, made on explicit operator direction and scoped to content
+policy alone. Three live stories carried a `[Rule] Content Framing` whose own
+closing note admitted its origin: the source material imposed a hard "PG-13
+visual presentation" platform constraint with self-censoring compliance logic,
+the scaffolding was dropped as a cloud-platform artifact, and "the craft it
+produced — implication over description — is kept deliberately." The ceiling was
+kept AS A RULE, so the platform's limit outlived the platform, and each story's
+own canon had already reversed it ("Rating Baseline: Mature / hard R … no
+automatic self-censorship or required fade to black"). A fourth defect, Blackwood
+only: `[Rule] Consent & Control` forbade depicting non-consensual activity, while
+its canon requires exactly that be depictable with the loss of agency named and
+its aftermath preserved — the live rule forbade what the canon requires be
+handled well.
+
+Star Wars: The Black Ledger needed nothing and served as the reference; both of
+its policy-bearing entities measured identical to canon apart from heading depth.
+Five entities were replaced and one created (Chaos Saga had none), every body
+lifted verbatim from that story's own canon — nothing authored. `Content-Rating:
+nsfw` was set on the five markers lacking it. **Consequence, by design:** all six
+stories now refuse generation on the `anthropic` generator (fixed `sfw`) rather
+than being silently sanitized; the local-Ollama route is unaffected.
+
+Excluded deliberately: Kimmy's Night Shift (its marker binds a live Kindroid
+group and its entities are a Twitch chat-mod tone and register — an operational
+persona, not fiction), and the two Miskatonic prequels (drafts-only, no canon
+tree, so a policy would be authored rather than synced). Full pre-change backups
+of all seven stories are under gitignored
+`data/cross-story/backups/2026-09-19-live-content-policy/`.
+
+One write went wrong and was repaired within the minute. Creating the Chaos Saga
+rule passed `story.project_id`, but `MnemoStory`'s OC project id is `id`; the
+undefined scope widened `saveEntity`'s dedupe search across every project, it
+matched Blackwood's identically-titled rule and overwrote it. The script's own
+read-back caught it — the write itself reported success. That exposed a real
+hazard: `saveEntity` never asserts its `storyId` is non-empty before searching,
+so any caller with a missing scope can overwrite another story's entity in
+place. Filed as its own task rather than widening that one. Verified end to end
+with `scripts/dump-prompt.mjs`: the new text reaches the system prompt and no
+occurrence of the old ceiling survives anywhere.
+
 **Marker write safety (2026-09-19).** The two marker findings the slice 2
 review recorded but did not fix were taken as a scoped phase before slice 3,
 on the sequencing argument that no marker carries a losable field today and
@@ -39,10 +80,11 @@ green, including the one that made the whole feature inert. All fixed, with
 Four findings are recorded and deliberately not fixed (concurrent marker
 writes losing fields, an older process erasing a declaration, the tool
 repointing the active story, no genre write path outside MCP). Exposure was
-measured rather than estimated: of ten live story markers, zero carry a genre
-line and zero carry a content rating, so the real exposure was nil and the
-trigger is the first genre write against a real story. Record:
-`docs/GENRE_RUNTIME_REVIEW.md`.
+measured rather than estimated: **at the time of the review** ten live story
+markers carried zero genre lines and zero content ratings, so the real exposure
+was nil and the trigger was the first genre write against a real story. That
+trigger has since fired — six markers carry a rating as of 2026-09-19 (see the
+content-policy entry above). Record: `docs/GENRE_RUNTIME_REVIEW.md`.
 
 **Genre declaration standard: slice 2 (runtime) shipped (2026-09-19).** The
 declaration now reaches the model. Story marker schema 7 carries it on four
@@ -5465,15 +5507,16 @@ consider only when real use exposes the corresponding pressure:
   belongs with the other web UI work in `docs/WEBUI_NOTES.md`, not as a
   patch.
 
-- **`content_rating` is optional, and no live story declares one, so the
-  content-routing gate currently protects nothing** (backlogged 2026-09-19,
-  measured during the slice 2 review). `dispatchGenerate` refuses only when
-  `contentRating === "nsfw" && port.contentCapability === "sfw"`; an
-  undeclared rating never fires it. Of ten live story markers, zero carry a
-  `Content-Rating:` line, and the configured generator is `anthropic`, whose
-  capability is fixed `sfw` with no override. The gate is built, correct and
-  wired to the one real dispatch site — it simply has no declared input on
-  any story. Slice 2 added a warning when an explicit GENRE meets an
+- **`content_rating` is optional, so an undeclared story still bypasses the
+  content-routing gate** (backlogged 2026-09-19; **half of this closed the
+  same day**). As originally written this said no live story declared a
+  rating, so the gate protected nothing. That is no longer true: the
+  2026-09-19 content-policy sync set `Content-Rating: nsfw` on all six
+  narrative stories, and the gate now fires for every one of them against the
+  `anthropic` generator, whose capability is fixed `sfw`. What REMAINS open is
+  the general rule, not the data — `dispatchGenerate` still refuses only when
+  `contentRating === "nsfw" && port.contentCapability === "sfw"`, so any
+  story created from now on is permissive until someone declares it. Slice 2 added a warning when an explicit GENRE meets an
   undeclared rating, which connects the two write paths for the one strongest
   signal, but the general question is `CONTENT_ROUTING_DESIGN`'s to answer:
   should a rating be required before generation, or is the undeclared case

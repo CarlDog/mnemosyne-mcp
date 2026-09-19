@@ -42,8 +42,13 @@ that exists, is readable, and holds at least one entity.
 
 Two standing operator instructions that outlive any sprint:
 
-- **Nothing is locked in as canon until explicitly directed.** No story's `canon/` has
-  been imported to live OC.
+- **Nothing is locked in as canon until explicitly directed.** No story's `canon/`
+  has been imported wholesale, and no story's canon is locked in. One narrow,
+  explicitly-directed exception exists (2026-09-19): each live story's
+  CONTENT-POLICY entities were synced from its own `canon/`, because the live
+  copies still carried a cloud platform's PG-13 ceiling their canon had already
+  reversed. Six entities across six stories; nothing else was imported. See
+  STATUS.md's newest entry.
 - **Promotion is set aside indefinitely** (2026-09-08). Do not propose or push toward
   promoting an overlay unless the operator raises it first.
 
@@ -235,14 +240,6 @@ Two standing operator instructions that outlive any sprint:
   `sanitizeToolArgsForLog`, which keeps narrative prose out of telemetry.
   It recurses into nested objects: an object used to fall through verbatim,
   which put a whole `genre_guidance` block into an INFO line.
-- `src/tools/helpers.ts` — `asyncRoute`-style tool wrappers plus
-  `sanitizeToolArgsForLog`, which keeps narrative prose out of telemetry.
-  It recurses into nested objects: an object used to fall through verbatim,
-  which put a whole `genre_guidance` block into an INFO line.
-- `src/tools/helpers.ts` — `asyncRoute`-style tool wrappers plus
-  `sanitizeToolArgsForLog`, which keeps narrative prose out of telemetry.
-  It recurses into nested objects: an object used to fall through verbatim,
-  which put a whole `genre_guidance` block into an INFO line.
 - `src/genre.ts` — the genre declaration at runtime: the dictionary (a typed
   JSON import, so `tsc` emits it into `dist/` and one tracked file serves both
   `tsx src/` and `node dist/`), the validation every write surface shares
@@ -428,20 +425,6 @@ Two standing operator instructions that outlive any sprint:
   failure landing after a successful position write was wrongly reported
   retry-safe; `advance`/`set_elapsed_hours` could drive elapsed_hours
   negative where `set_date` alone was guarded).
-- `docs/GENRE_RUNTIME_REVIEW.md` — the adversarial review of the genre
-  standard's runtime slice (2026-09-19): six dimension passes plus a
-  completeness critic, run AFTER the commit shipped, which the repository's
-  own pre-deploy rule says should have happened first. Records the blocker (a
-  newline in a marker value forged a genre declaration past both gates), the
-  correctness and cost findings, the 29-mutant campaign that found 20 escapes,
-  the findings deliberately recorded and not fixed, and the measured exposure.
-- `docs/GENRE_RUNTIME_REVIEW.md` — the adversarial review of the genre
-  standard's runtime slice (2026-09-19): six dimension passes plus a
-  completeness critic, run AFTER the commit shipped, which the repository's
-  own pre-deploy rule says should have happened first. Records the blocker (a
-  newline in a marker value forged a genre declaration past both gates), the
-  correctness and cost findings, the 29-mutant campaign that found 20 escapes,
-  the findings deliberately recorded and not fixed, and the measured exposure.
 - `docs/GENRE_RUNTIME_REVIEW.md` — the adversarial review of the genre
   standard's runtime slice (2026-09-19): six dimension passes plus a
   completeness critic, run AFTER the commit shipped, which the repository's
@@ -747,7 +730,7 @@ npm run typecheck      # tsc -p tsconfig.typecheck.json (src + tests)
 npm run lint           # eslint .
 npm run format         # prettier --write .
 npm run format:check   # prettier --check . (CI gates on this -- run before pushing)
-npm test               # vitest run (95 of 775 tests are env-gated; see below)
+npm test               # vitest run (95 of 843 tests are env-gated; see below)
 ```
 
 `npm test` green does **not** mean the integration surface ran. Every

@@ -17,6 +17,11 @@ export default defineConfig({
     // webui/src/*.test.tsx is never picked up by root `npm test`.
     // Private operator helpers may use other test runners. Their presence
     // must not change application test discovery in a local checkout.
-    exclude: ["webui/**", "node_modules/**", "data/**"],
+    // .claude/ holds the worktrees a background task runs in, each a full
+    // checkout with its own tests/. Without this, `npm test` in the main
+    // tree silently runs another session's IN-PROGRESS tests alongside its
+    // own and reports their failures as yours -- observed 2026-09-20 as 23
+    // failures and a test count of 1655 against this tree's real 836.
+    exclude: ["webui/**", "node_modules/**", "data/**", ".claude/**"],
   },
 });
