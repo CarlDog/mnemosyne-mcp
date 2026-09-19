@@ -41,11 +41,13 @@ describe("sweepStaleStoryFixtures", () => {
     const root = await storiesRoot([
       "verify-overlay-66904-1e70eab6",
       "promote-overlay-1234-deadbeef",
+      "compile-story-81688-a7991ad1",
     ]);
 
     const removed = await sweepStaleStoryFixtures(root, DEAD);
 
     expect(removed).toEqual([
+      "compile-story-81688-a7991ad1",
       "promote-overlay-1234-deadbeef",
       "verify-overlay-66904-1e70eab6",
     ]);
@@ -70,6 +72,12 @@ describe("sweepStaleStoryFixtures", () => {
       "star-wars-the-black-ledger",
       "the-noctis-veil",
       "_art-library",
+      // scaffold-story and config-data-dir build these as expected path
+      // STRINGS and compare them; nothing creates them. Their fixed names are
+      // indistinguishable from a real story, so the sweep must never take them
+      // even if that ever changes.
+      "stable-story",
+      "example-saga",
     ];
     const root = await storiesRoot(real);
 
@@ -110,7 +118,7 @@ describe("sweepStaleStoryFixtures", () => {
     ).resolves.toEqual([]);
   });
 
-  it("is actually called by both suites that build fixtures in the real tree", async () => {
+  it("is actually called by every suite that builds fixtures in the real tree", async () => {
     // Without this the sweep could be deleted from either beforeAll and every
     // test above would still pass: the helper would be correct and inert. The
     // read is asserted non-empty first, so a wrong path cannot satisfy this by
@@ -120,6 +128,7 @@ describe("sweepStaleStoryFixtures", () => {
     for (const suite of [
       "verify-draft-overlay.test.ts",
       "promote-overlay.test.ts",
+      "compile-story.test.ts",
     ]) {
       const source = await readFile(new URL(suite, here), "utf8");
       expect(source.length, `${suite} read as empty`).toBeGreaterThan(1000);

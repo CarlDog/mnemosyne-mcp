@@ -59,6 +59,18 @@ caught: liveness removed, shape loosened to a prefix, and each suite stopping
 sweeping. Verified live by planting two orphans with dead process ids and
 watching a suite run remove them.
 
+The first pass covered only the two suites already in hand and MISSED a third.
+`compile-story.test.ts` builds fixtures in the same root, and a real orphan of
+its making was sitting in the tree the whole time. Found by enumerating every
+fixture generator in `tests/` rather than the ones already known, which also
+established that the other three (`gated-*`, `mutating-validator-*`,
+`linked-story-*`) resolve under a `mkdtemp` directory and never reach the real
+root, and that `stable-story` and `example-saga` appear in scaffold-story and
+config-data-dir only as expected path strings that are compared, never created.
+Those two are worth remembering: their fixed names are indistinguishable from a
+real story, so the sweep must never take them. Seven mutation checks in total,
+seven caught, and the real orphan was swept by its own suite on the next run.
+
 Related, and already fixed by another session the same afternoon: the machine-
 global half of the same problem, where the verifier staged into `os.tmpdir()` and
 a sibling run's staging directories were misread as this run's leak. Each

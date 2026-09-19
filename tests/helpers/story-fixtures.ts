@@ -23,12 +23,19 @@
 import { readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 
-/** `verify-overlay-<pid>-<8 hex>` / `promote-overlay-<pid>-<8 hex>`, exactly.
- * Kept in one place so the two suites cannot drift from the generators in
- * `makeStoryRoot()` and promote-overlay's `seed()`. The gated-verifier
- * fixtures are deliberately absent: those live in a `mkdtemp` repo, never
- * under the real stories root. */
-const FIXTURE_SLUG = /^(?:verify-overlay|promote-overlay)-(\d+)-[0-9a-f]{8}$/;
+/** `<suite>-<pid>-<8 hex>`, exactly, for the three suites that build fixtures
+ * in the real stories root. Kept in one place so they cannot drift from the
+ * generators in `makeStoryRoot()`, promote-overlay's `seed()` and
+ * compile-story's own.
+ *
+ * Deliberately absent, each verified rather than assumed: `gated-*`,
+ * `mutating-validator-*` and `linked-story-*` all resolve under a `mkdtemp`
+ * directory, never here. `stable-story` and `example-saga` appear in
+ * scaffold-story and config-data-dir only as expected path STRINGS that are
+ * compared, never created -- and their fixed names are indistinguishable from
+ * a real story, so they must never be swept even if that changes. */
+const FIXTURE_SLUG =
+  /^(?:verify-overlay|promote-overlay|compile-story)-(\d+)-[0-9a-f]{8}$/;
 
 /** True when a pid is still on the machine. `kill(pid, 0)` sends no signal; it
  * throws ESRCH when there is no such process, and EPERM when one exists that

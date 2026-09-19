@@ -21,8 +21,15 @@ this file was introduced remains in [STATUS.md](STATUS.md).
   owning process must be gone, so a sibling worktree's in-flight run is skipped
   rather than deleted out from under it. A recycled process id leaves an orphan
   another day, which is the harmless direction. Seven tests, including one that
-  pins the wiring — without it the sweep could be deleted from either suite and
-  every other test would still pass. Four mutation checks, four caught.
+  pins the wiring — without it the sweep could be deleted from a suite and
+  every other test would still pass. Covers all THREE suites that build in
+  the real tree: the first pass missed `compile-story`, which was caught by
+  enumerating every fixture generator rather than the two already known.
+  The other generators (`gated-*`, `mutating-validator-*`, `linked-story-*`)
+  were each verified to resolve under a `mkdtemp` directory instead, and the
+  fixed names `stable-story` and `example-saga` appear only as expected path
+  strings that are compared, never created. Seven mutation checks, seven
+  caught.
 
 - **Genre declaration standard, slice 3: every story declares, and enforcement
   is on.** Ten stories gained a `canon/_story.md` (the eleventh, the pilot, had

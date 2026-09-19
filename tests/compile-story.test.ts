@@ -12,7 +12,9 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
+
+import { sweepStaleStoryFixtures } from "./helpers/story-fixtures.js";
 import { parseExportDocument, planImport } from "../src/import.js";
 // The compiler is deliberately an operator-facing Node ESM script rather than
 // part of the TypeScript server build. Its exported pure functions are the test
@@ -223,6 +225,13 @@ The tide exposed a second set of stairs.
     "---\nname: template\n---\n\nIgnored template.\n",
   );
 }
+
+// This suite builds fixtures in the REAL stories root, and afterEach cannot
+// run when the process is killed or a test times out. Sweep what earlier runs
+// abandoned, skipping anything whose owning process is still alive.
+beforeAll(async () => {
+  await sweepStaleStoryFixtures(STORIES_ROOT);
+});
 
 afterEach(async () => {
   await Promise.all(
