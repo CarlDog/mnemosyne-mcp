@@ -45,6 +45,13 @@ jobs:
       - name: Build
         run: npm run build
 
+      # The genre dictionary reaches the server as a typed JSON import, so the
+      # build must EMIT it and preserve the import attribute. Nothing else in
+      # this workflow ever executes dist/, so that load-bearing fact had no
+      # standing check -- it was verified once by hand.
+      - name: Smoke the build output
+        run: node -e "import('./dist/genre.js').then(m => { if (!m.isGenreTerm('mystery')) { throw new Error('dist/ did not load the genre dictionary'); } console.log('dist genre dictionary v' + m.GENRE_DICTIONARY_VERSION); })"
+
       - name: Test
         # Integration tests require OC_URL (OpenChronicle); the generator/validator
         # suites additionally require OLLAMA_GENERATOR_MODEL. OLLAMA_URL is NOT a

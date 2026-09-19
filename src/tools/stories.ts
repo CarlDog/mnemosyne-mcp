@@ -18,6 +18,7 @@ import {
   createStory,
   findStory,
   setKindroidTarget,
+  NO_LINE_BREAK_MESSAGE,
 } from "../stories.js";
 import {
   assertGenreDeclaration,
@@ -25,6 +26,7 @@ import {
   type GenreDeclaration,
   type GenreGuidance,
 } from "../genre.js";
+import type { ContentRating } from "../stories.js";
 import {
   describeInjectionSignals,
   OVERRIDE_FLAGGED_CONTENT_PARAM,
@@ -66,9 +68,23 @@ export function resolveGenreChange(
   if (requestedGenres === undefined && requestedGuidance === undefined) {
     return null;
   }
-  if (requestedGenres === null) return undefined;
+  if (requestedGenres === null) {
+    // Clearing the genres clears the guidance with them, so supplying new
+    // guidance in the same call is contradictory. Refuse it: the mirror
+    // case (guidance with no genres) already refuses, and honouring half
+    // of a contradictory request silently is worse than either.
+    if (requestedGuidance !== undefined && requestedGuidance !== null) {
+      throw new Error(
+        "genres=null clears the whole declaration, so genre_guidance cannot be set in the same call. Clear first, then set.",
+      );
+    }
+    return undefined;
+  }
   const genres = requestedGenres ?? current?.genres;
   if (!genres) {
+    // Clearing guidance on a story that has none is already true, so it
+    // succeeds as a no-op. Only SETTING guidance needs genres to exist.
+    if (requestedGuidance === null) return null;
     throw new Error(
       "genre_guidance needs genres: pass `genres` in the same call, or set them first.",
     );
@@ -90,8 +106,14 @@ export function resolveGenreChange(
  * caller explicitly overrides. Genre guidance is rendered verbatim into
  * every system prompt for this story, so it is a write surface with the
  * same exposure as an entity body -- this is the fourth tool to expose
- * OVERRIDE_FLAGGED_CONTENT_PARAM. Each string is scanned SEPARATELY, so a
- * signal cannot be split across two conventions to evade the scan.
+ * OVERRIDE_FLAGGED_CONTENT_PARAM.
+ *
+ * Each string is scanned separately because each is rendered on its own
+ * line. That is a LIMIT, not a defence: a phrase split across two
+ * conventions is never seen whole by the scanner and will not be caught.
+ * The practical payoff of such a split is weakened by the same
+ * per-line rendering, which breaks the phrase apart again in the prompt,
+ * but it is not eliminated. Do not read this as a guarantee.
  */
 export function assertGuidanceUnflagged(
   declaration: GenreDeclaration,
@@ -108,6 +130,39 @@ export function assertGuidanceUnflagged(
       );
     }
   }
+}
+
+/**
+ * Declaring an explicit-content genre says nothing to content routing: the
+ * two are separate by decision (docs/GENRE_DECLARATION_DESIGN.md, and the
+ * routing gate is content_rating checked at dispatchGenerate). That
+ * separation is right, but it leaves a gap nothing owned: declaring
+ * `erotica` is the single strongest signal that a rating should exist, and
+ * an undeclared rating never fires the gate at all. So this warns; it does
+ * not refuse, and it does not set the rating on the caller's behalf.
+ *
+ * One term deliberately, not a heuristic: `erotica` is the only dictionary
+ * entry whose definition is explicitly sexual content. If more terms ever
+ * warrant it, the scalable form is a per-term flag in the dictionary, not a
+ * longer list here.
+ */
+const CONTENT_SENSITIVE_GENRES = new Set(["erotica"]);
+
+function contentRatingWarning(
+  declaration: GenreDeclaration | undefined,
+  rating: ContentRating | undefined,
+): string | undefined {
+  if (!declaration || rating !== undefined) return undefined;
+  const flagged = declaration.genres.filter((term) =>
+    CONTENT_SENSITIVE_GENRES.has(term),
+  );
+  if (flagged.length === 0) return undefined;
+  return (
+    `This story declares ${flagged.join(", ")} but has no content_rating. ` +
+    "Content routing only refuses a mismatch for a story whose rating is " +
+    "declared, so generation will not be gated. Set content_rating=nsfw if " +
+    "that is what you mean."
+  );
 }
 
 export function registerStoryTools(
@@ -140,7 +195,11 @@ export function registerStoryTools(
       description:
         "Set the active story by name or OC project UUID. With create_if_missing=true, creates a new story (OC project + marker) if none matches. Persists the active story id to local config so it survives restarts.",
       inputSchema: {
-        name_or_id: z.string().min(1).describe("Story name or OC project UUID"),
+        name_or_id: z
+          .string()
+          .min(1)
+          .regex(/^[^\r\n]*$/, NO_LINE_BREAK_MESSAGE)
+          .describe("Story name or OC project UUID"),
         create_if_missing: z
           .boolean()
           .optional()
@@ -257,6 +316,20 @@ export function registerStoryTools(
             declaration ?? undefined,
           );
         } else {
+          // Resolve and validate the genre BEFORE any durable write. It is
+          // the only field here whose validation lives in the handler
+          // rather than in its own zod shape, so leaving it last meant an
+          // invalid declaration could reject the call with the three writes
+          // above already applied -- including content_rating, a routing
+          // gate -- while the caller saw a single error and every reason to
+          // believe nothing had happened.
+          const declaration = resolveGenreChange(
+            storyGenre(story),
+            args.genres,
+            args.genre_guidance,
+          );
+          if (declaration) assertGuidanceUnflagged(declaration, args);
+
           if (targetChangeRequested) {
             story = await setKindroidTarget(oc, story, requestedTarget);
           }
@@ -266,24 +339,30 @@ export function registerStoryTools(
           if (ratingChangeRequested) {
             story = await setContentRating(oc, story, requestedRating);
           }
-          const declaration = resolveGenreChange(
-            storyGenre(story),
-            args.genres,
-            args.genre_guidance,
-          );
           if (declaration !== null) {
-            if (declaration) assertGuidanceUnflagged(declaration, args);
-            await setGenre(oc, story, declaration);
-            // Re-fetch rather than trusting the returned object: the
-            // marker is rebuilt positionally from six other fields, and
-            // an in-memory spread would hide a line dropped on the way
+            // Keep the setter's own result: it is the correct in-memory
+            // echo, and the re-fetch below is allowed to fail. Without
+            // this assignment a missed re-fetch reported the PRE-write
+            // state as current, i.e. 'no genre' on a story just declared.
+            story = await setGenre(oc, story, declaration);
+            // Prefer a fresh read when we can get one: the marker is
+            // rebuilt positionally from six other fields, and a re-read is
+            // the only thing that would notice a line dropped on the way
             // out (docs/GENRE_DECLARATION_DESIGN.md §4).
             const refetched = await findStory(oc, story.id);
             if (refetched) story = refetched;
           }
         }
         await setCurrentStoryId(story.id);
-        return asText({ ...toStorySummary(story), current: true });
+        const ratingWarning = contentRatingWarning(
+          storyGenre(story),
+          story.content_rating,
+        );
+        return asText({
+          ...toStorySummary(story),
+          current: true,
+          ...(ratingWarning && { content_rating_warning: ratingWarning }),
+        });
       },
     ),
   );

@@ -17,7 +17,7 @@ import {
   MIN_GENERATION_TOKENS,
   MIN_TEMPERATURE,
 } from "../llm.js";
-import { combineKindroidTarget } from "../stories.js";
+import { combineKindroidTarget, NO_LINE_BREAK_MESSAGE } from "../stories.js";
 import {
   DEFAULT_GROUP_MAX_TURNS,
   MAX_GROUP_MAX_TURNS,
@@ -161,7 +161,10 @@ export function registerContinueTool(
               .string()
               .min(1)
               .describe("memory_id of a type:location entity."),
-            spot: z.string().optional(),
+            spot: z
+              .string()
+              .regex(/^[^\r\n]*$/, NO_LINE_BREAK_MESSAGE)
+              .optional(),
           })
           .optional()
           .describe(

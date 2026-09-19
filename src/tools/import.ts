@@ -152,6 +152,15 @@ export function registerImportTool(
                 "kindroid_target was NOT applied — bind it explicitly via " +
                 "mnemo_story_use (kindroid_kin / kindroid_group_id) if wanted.",
             }),
+            ...(parsed.genres && {
+              genres: parsed.genres,
+              ...(parsed.genreGuidance && {
+                genre_guidance: parsed.genreGuidance,
+              }),
+              genre_note:
+                "The genre declaration was NOT applied — set it explicitly via " +
+                "mnemo_story_use (genres / genre_guidance) if wanted.",
+            }),
           };
         } else {
           records = args.entities!;

@@ -29,6 +29,7 @@ import {
 import { storyDataDir } from "./config.js";
 import type { OcClient } from "./oc-client.js";
 import type { KindroidTarget, MnemoStory } from "./stories.js";
+import type { GenreGuidance } from "./genre.js";
 
 export const EXPORT_SCHEMA_VERSION = 1;
 
@@ -50,6 +51,11 @@ export interface StoryExportDocument {
     name: string;
     created_at: string;
     kindroid_target?: KindroidTarget;
+    /** The story's declared genre, so a backup round-trips. The import
+     * schema validates these against the dictionary; before this the
+     * server could validate a field it was unable to emit. */
+    genres?: string[];
+    genre_guidance?: GenreGuidance;
   };
   entities: ExportedEntity[];
 }
@@ -84,6 +90,15 @@ export function buildExportDocument(
       created_at: story.created_at,
       ...(story.kindroid_target && {
         kindroid_target: story.kindroid_target,
+      }),
+      // The import schema validates these against the dictionary, so a
+      // server that could not EMIT them made its own export/import cycle
+      // lossy: back up a declared story, restore it, and generation
+      // silently changes because the genre is gone. Import still only
+      // reports them; this just stops the round trip losing them.
+      ...(story.genres && { genres: story.genres }),
+      ...(story.genre_guidance && {
+        genre_guidance: story.genre_guidance,
       }),
     },
     entities: entities.map((e) => ({

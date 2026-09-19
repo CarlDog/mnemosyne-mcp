@@ -100,49 +100,62 @@ export type ImportRecord = z.infer<typeof importRecordSchema>;
 const exportDocumentSchema = z.object({
   mnemosyne_export: z.literal(1),
   exported_at: z.string(),
-  story: z.object({
-    name: z.string(),
-    created_at: z.string(),
-    kindroid_target: z
-      .object({ type: z.enum(["ai", "group"]), id: z.string().min(1) })
-      .optional(),
-    // The genre declaration (docs/GENRE_DECLARATION_DESIGN.md §4),
-    // validated here against the live dictionary and the length rules so
-    // an export cannot carry a term this server does not know. Like the
-    // Kindroid binding above, import REPORTS it and never applies it:
-    // setting a live story's genre is an explicit mnemo_story_use
-    // decision, so a re-import can never stomp a runtime edit.
-    genres: z
-      .array(z.string().min(1))
-      .superRefine((value, ctx) => {
-        try {
-          assertGenres(value);
-        } catch (error) {
-          ctx.addIssue({
-            code: "custom",
-            message: error instanceof Error ? error.message : String(error),
-          });
-        }
-      })
-      .optional(),
-    genre_guidance: z
-      .object({
-        lean: z.string().min(1),
-        conventions: z.array(z.string().min(1)).optional(),
-        avoid: z.array(z.string().min(1)).optional(),
-      })
-      .superRefine((value, ctx) => {
-        try {
-          assertGenreGuidance(value);
-        } catch (error) {
-          ctx.addIssue({
-            code: "custom",
-            message: error instanceof Error ? error.message : String(error),
-          });
-        }
-      })
-      .optional(),
-  }),
+  story: z
+    .object({
+      name: z.string(),
+      created_at: z.string(),
+      kindroid_target: z
+        .object({ type: z.enum(["ai", "group"]), id: z.string().min(1) })
+        .optional(),
+      // The genre declaration (docs/GENRE_DECLARATION_DESIGN.md §4),
+      // validated here against the live dictionary and the length rules so
+      // an export cannot carry a term this server does not know. Like the
+      // Kindroid binding above, import REPORTS it and never applies it:
+      // setting a live story's genre is an explicit mnemo_story_use
+      // decision, so a re-import can never stomp a runtime edit.
+      genres: z
+        .array(z.string().min(1))
+        .superRefine((value, ctx) => {
+          try {
+            assertGenres(value);
+          } catch (error) {
+            ctx.addIssue({
+              code: "custom",
+              message: error instanceof Error ? error.message : String(error),
+            });
+          }
+        })
+        .optional(),
+      genre_guidance: z
+        .object({
+          lean: z.string().min(1),
+          conventions: z.array(z.string().min(1)).optional(),
+          avoid: z.array(z.string().min(1)).optional(),
+        })
+        .superRefine((value, ctx) => {
+          try {
+            assertGenreGuidance(value);
+          } catch (error) {
+            ctx.addIssue({
+              code: "custom",
+              message: error instanceof Error ? error.message : String(error),
+            });
+          }
+        })
+        .optional(),
+    })
+    // Cross-field, so it lives on the object. Legal here (unlike an MCP
+    // inputSchema, where object-level refinements are silently dropped)
+    // because this schema is consumed with safeParse.
+    .refine(
+      (story) =>
+        story.genres !== undefined || story.genre_guidance === undefined,
+      {
+        message:
+          "story.genre_guidance requires story.genres: guidance without genres is a shape mnemo_story_use itself refuses.",
+        path: ["genre_guidance"],
+      },
+    ),
   entities: z.array(importRecordSchema),
 });
 
@@ -395,13 +408,19 @@ export interface ImportManifest {
   counts: Record<ImportStatus, number> | Record<string, number>;
   total_written: number;
   duration_ms: number;
-  /** Round-trip mode only: where the document came from, and its
-   * embedded kindroid_target if any (reported, never applied). */
+  /** Round-trip mode only: where the document came from, and the fields
+   * the document declared but import does NOT apply -- its kindroid_target
+   * and its genre declaration. Reporting them is the whole contract: the
+   * schema validates both, and without surfacing them here a caller has no
+   * way to learn the export carried them at all. */
   file?: {
     path: string;
     story_name: string;
     kindroid_target?: KindroidTarget;
+    genres?: string[];
+    genre_guidance?: GenreGuidance;
     note?: string;
+    genre_note?: string;
   };
 }
 

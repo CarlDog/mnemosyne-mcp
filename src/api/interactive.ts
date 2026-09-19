@@ -15,7 +15,11 @@ import {
   resolveSceneContextStrategies,
   type SceneContextStrategy,
 } from "../prompt.js";
-import { combineKindroidTarget, type KindroidTarget } from "../stories.js";
+import {
+  combineKindroidTarget,
+  NO_LINE_BREAK_MESSAGE,
+  type KindroidTarget,
+} from "../stories.js";
 import type { ContinueScene } from "../application/continue-scene.js";
 import type { RevalidateScenes } from "../application/revalidate-scenes.js";
 import type { ValidateStory } from "../application/validate-story.js";
@@ -77,7 +81,10 @@ const continueSchema = z.object({
   move_to: z
     .object({
       location: z.string().min(1),
-      spot: z.string().optional(),
+      spot: z
+        .string()
+        .regex(/^[^\r\n]*$/, NO_LINE_BREAK_MESSAGE)
+        .optional(),
     })
     .optional(),
 });

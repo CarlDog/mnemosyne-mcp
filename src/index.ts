@@ -39,6 +39,7 @@ import { createListStoryCatalog } from "./application/list-stories.js";
 import type { ApplicationUseCases } from "./application/use-cases.js";
 import { createReadinessProber } from "./readiness.js";
 import { MNEMOSYNE_VERSION } from "./version.js";
+import { GENRE_DICTIONARY_VERSION } from "./genre.js";
 import { INSTRUCTIONS } from "./instructions.js";
 // Importing this validates the environment and exits on a bad value; it must
 // come before anything that depends on a valid config.
@@ -212,6 +213,14 @@ log.info("startup", "ollama validator configured", {
   url: OLLAMA_URL,
   validator_model: ollamaValidatorModel,
   keep_alive: OLLAMA_KEEP_ALIVE_CLEAN,
+});
+// The dictionary the SERVER resolved, which is the emitted copy under
+// dist/ -- not necessarily the tracked src/ file the authoring scripts
+// read. Logging the version is the one cheap way a stale build becomes
+// visible: without it, an older dictionary silently reads every newer
+// term as undeclared and nothing anywhere says so.
+log.info("startup", "genre dictionary loaded", {
+  dictionary_version: GENRE_DICTIONARY_VERSION,
 });
 
 function warmupProvider(provider: LlmProvider, label: string): void {

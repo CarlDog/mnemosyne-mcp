@@ -37,25 +37,53 @@ type ToolHandler<A extends ToolArgs> = (
 //    through -- they're the diagnostic value of the line.
 //  - Arrays log only their element count (import's `entities` carries whole
 //    bodies).
+//  - NESTED OBJECTS get the same treatment, recursively. They used to fall
+//    through verbatim, which an adversarial review measured: a
+//    `genre_guidance` object put up to 1500 characters of authored story
+//    guidance into an INFO line, defeating this whole function on the one
+//    argument shape nobody had checked. An object is not a safe container.
 //  - The full-args debug line requires the explicit MNEMO_LOG_CONTENT=true
 //    opt-in (plus LOG_LEVEL=debug); it exists for short-lived content
 //    debugging, not as a default.
-const PROSE_FIELDS = new Set(["content", "direction"]);
+const PROSE_FIELDS = new Set(["content", "direction", "lean", "spot"]);
 const INFO_ARG_MAX_CHARS = 200;
+// Deep enough for every argument shape the tools accept, shallow enough that
+// a pathological input cannot make logging expensive.
+const MAX_SANITIZE_DEPTH = 4;
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.getPrototypeOf(value) === Object.prototype
+  );
+}
+
+function sanitizeValue(key: string, value: unknown, depth: number): unknown {
+  if (
+    typeof value === "string" &&
+    (PROSE_FIELDS.has(key) || value.length > INFO_ARG_MAX_CHARS)
+  ) {
+    return `(${value.length} chars)`;
+  }
+  if (Array.isArray(value)) return `(${value.length} items)`;
+  if (isPlainObject(value)) {
+    if (depth >= MAX_SANITIZE_DEPTH) return "(object)";
+    return Object.fromEntries(
+      Object.entries(value).map(([k, v]) => [
+        k,
+        sanitizeValue(k, v, depth + 1),
+      ]),
+    );
+  }
+  return value;
+}
 
 export function sanitizeToolArgsForLog(args: ToolArgs): ToolArgs {
   const out: ToolArgs = {};
   for (const [k, v] of Object.entries(args)) {
-    if (
-      typeof v === "string" &&
-      (PROSE_FIELDS.has(k) || v.length > INFO_ARG_MAX_CHARS)
-    ) {
-      out[k] = `(${v.length} chars)`;
-    } else if (Array.isArray(v)) {
-      out[k] = `(${v.length} items)`;
-    } else {
-      out[k] = v;
-    }
+    out[k] = sanitizeValue(k, v, 0) as ToolArgs[string];
   }
   return out;
 }

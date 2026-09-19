@@ -2,13 +2,9 @@
 // pinned marker memory of the form:
 //   [Mnemosyne Story] <name>
 //   Created: <iso-datetime>
-//   Schema: 6
+//   Schema: 7
 //   Kindroid-Target: ai:<id>        (optional; or "group:<id>")
 //   Narrator-Profile: <label>       (optional; schema 4, 2026-09-03)
-//   Genre: <term>, <term>           (optional; schema 7, 2026-09-19 --
-//   Genre-Lean: <one line>            docs/GENRE_DECLARATION_DESIGN.md)
-//   Genre-Convention: <one line>      (repeated, one per item)
-//   Genre-Avoid: <one line>           (repeated, one per item)
 //   Content-Rating: sfw|nsfw        (optional; schema 6, 2026-09-08 --
 //                                    docs/CONTENT_ROUTING_DESIGN.md)
 //   Epoch-Date: <iso-datetime>      (optional; schema 5, 2026-09-07 --
@@ -25,15 +21,25 @@
 // parse fine -- unknown lines are ignored and known ones are found by
 // prefix. Every write path bumps the Schema line to the current constant
 // regardless of whether position tracking or content rating is used, so a
-// A schema-7 marker with no Genre-* lines must parse identically in
-// meaning to a schema-6 marker, and every genre value is validated on
-// READ (see parseGenreDeclaration below), so a hand-edited marker can
-// never carry an arbitrary string into a prompt.
-//
 // schema-6 marker with no Content-Rating/Epoch-* lines must parse
 // identically in meaning to a schema-5 marker -- see
 // docs/POSITION_TRACKING_DESIGN.md's "Refinements added at implementation
-// time" §1 (the precedent this follows).
+// time" §1 (the precedent this follows). A schema-7 marker with no Genre-*
+// lines parses identically in meaning to a schema-6 marker on the same
+// rule.
+//
+// The genre lines (schema 7, 2026-09-19, docs/GENRE_DECLARATION_DESIGN.md)
+// are written after Content-Rating and before the Epoch-* block, and are
+// validated on READ, so a hand-edited marker can never carry an arbitrary
+// term or an oversized guidance string into a prompt:
+//   Genre: <term>, <term>           (1-3 dictionary terms, broadest first)
+//   Genre-Lean: <one line>
+//   Genre-Convention: <one line>    (repeated, one line per item)
+//   Genre-Avoid: <one line>         (repeated, one line per item)
+//
+// A value containing a newline is REFUSED at write time: see
+// buildMarkerContent's guard for why a line-based format cannot tolerate
+// one.
 //
 // The narrator profile is a LABEL naming which narrator kin persona a story
 // is written with (docs/KINDROID_NARRATOR_DESIGN.md S2): it rides the
@@ -69,6 +75,7 @@
 // OC projects exist. This avoids both N+1 latency and OC's rate limiter.
 
 import { type OcClient, type OcMemory } from "./oc-client.js";
+import { log } from "./log.js";
 import {
   assertGenreDeclaration,
   parseGenresValue,
@@ -109,6 +116,12 @@ const EPOCH_SPOT_PREFIX = "Epoch-Spot: ";
 const ELAPSED_HOURS_PREFIX = "Elapsed-Hours: ";
 const CURRENT_LOCATION_PREFIX = "Current-Location: ";
 const CURRENT_SPOT_PREFIX = "Current-Spot: ";
+
+/** Why every marker-bound free-text parameter rejects line breaks.
+ * Exported so each input boundary cites the same rule rather than
+ * inventing its own wording. */
+export const NO_LINE_BREAK_MESSAGE =
+  "Cannot contain a line break: this value is stored on the story marker, a line-based format where a newline would forge additional fields.";
 
 export type KindroidTargetType = "ai" | "group";
 
@@ -220,6 +233,28 @@ export function buildMarkerContent(
       lines.push(`${CURRENT_SPOT_PREFIX}${position.currentSpot}`);
     }
   }
+  // The marker is a LINE-BASED format: the parser re-splits the whole
+  // stored string on "\n" with no memory of which line came from which
+  // field. So a value containing a newline does not merely look odd, it
+  // forges additional marker fields, and the parser reads them as real.
+  // An adversarial review reproduced this end to end: a position `spot`
+  // carrying "pier\nGenre: drama\nGenre-Lean: <payload>" produced a story
+  // whose parsed genre declaration had passed neither the write-side
+  // validation nor the injection scan, and whose forged guidance rendered
+  // verbatim into every system prompt for that story.
+  //
+  // Guarding HERE, at the one place every marker value is written, closes
+  // it for every field at once -- including fields added later, which is
+  // the point. Callers that can carry free text guard their own input too,
+  // so the error names the parameter instead of the marker line.
+  for (const line of lines) {
+    if (/[\r\n]/.test(line)) {
+      const field = line.split(/[:\r\n]/, 1)[0];
+      throw new Error(
+        `${field}: a story marker value cannot contain a line break -- the marker is a line-based format and a newline would forge additional fields.`,
+      );
+    }
+  }
   return lines.join("\n");
 }
 
@@ -315,7 +350,16 @@ function parsePositionState(lines: string[]): PositionState | undefined {
  * un-declare a story's genre.
  */
 function parseGenreDeclaration(lines: string[]): GenreDeclaration | undefined {
-  const genres = parseGenresValue(lineValue(lines, GENRE_PREFIX));
+  // The reason text is ours and short (a term name or a length), never the
+  // guidance prose, so this stays inside the no-content-by-default rule.
+  const ignored = (field: string) => (reason: string) =>
+    log.warn("story-marker", `ignoring ${field} on a story marker`, {
+      reason,
+    });
+  const genres = parseGenresValue(
+    lineValue(lines, GENRE_PREFIX),
+    ignored("genre"),
+  );
   if (!genres) return undefined;
   const collect = (prefix: string): string[] =>
     lines
@@ -326,6 +370,7 @@ function parseGenreDeclaration(lines: string[]): GenreDeclaration | undefined {
     lineValue(lines, GENRE_LEAN_PREFIX),
     collect(GENRE_CONVENTION_PREFIX),
     collect(GENRE_AVOID_PREFIX),
+    ignored("genre guidance"),
   );
   return { genres, ...(guidance && { guidance }) };
 }

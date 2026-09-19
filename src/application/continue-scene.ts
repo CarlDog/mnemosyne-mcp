@@ -427,7 +427,14 @@ async function gatherAndPlan(
   let inputBudget: number | undefined;
   const window = await port.effectiveContextWindow(opts.model);
   if (typeof window === "number") inputBudget = window;
-  const emptyBundle = {
+  // The scaffold cost must include the blocks that bypass the plan's
+  // DROPPING tiers but still consume budget: position and genre. Bypassing
+  // the dropping is deliberate; bypassing the ACCOUNTING is not, and the
+  // protected rules/style tier is drop-exempt yet still counted. Measured:
+  // a genre declaration at its caps renders ~488 tokens against a 256-token
+  // margin, so omitting it let the plan report "complete" for a prompt the
+  // provider then refuses outright (it is sent with truncate disabled).
+  const scaffoldBundle = {
     rules: [],
     style: [],
     characters: [],
@@ -435,6 +442,8 @@ async function gatherAndPlan(
     scenes: [],
     lore: [],
     worldbuilding: [],
+    ...(context.position && { position: context.position }),
+    ...(context.genre && { genre: context.genre }),
   };
   const planResult = planContext(context.entries ?? [], {
     provider: port.generatorName,
@@ -442,7 +451,7 @@ async function gatherAndPlan(
     inputBudget,
     outputReserve: opts.maxTokens ?? port.defaultMaxTokens,
     estFixedTokens: estimateTokens(
-      port.buildSystemPrompt(mode, emptyBundle).length,
+      port.buildSystemPrompt(mode, scaffoldBundle).length,
     ),
     directionChars: opts.direction.length,
     marginTokens: port.contextMarginTokens,

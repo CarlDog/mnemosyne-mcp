@@ -89,6 +89,33 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 
 ### Fixed
 
+- Genre slice 2, after an adversarial review
+  (`docs/GENRE_RUNTIME_REVIEW.md`). **A newline in any story-marker value
+  forged marker lines**: the marker is line-based and its parser re-splits
+  the stored string, so a position `spot` (or a story name) containing a
+  newline wrote lines that parsed back as a real genre declaration,
+  bypassing both the write-side validation and the injection scan and
+  rendering verbatim into every system prompt. Reproduced end to end; fixed
+  at the builder, which now refuses any value containing a line break and
+  names the field, with the free-text input boundaries rejecting one too.
+  Also: `mnemo_story_use` validated the genre AFTER three durable marker
+  writes, so an invalid genre rejected the call with the content rating
+  already applied; `setGenre`'s return value was discarded, so a missed
+  re-fetch reported the pre-write state as current; import validated the
+  declaration and dropped it, and export could not emit it at all, making a
+  backup-and-restore lossy; the validator was handed the genre block but its
+  instruction never named genre as a constraint, and its copy of the block
+  omitted the frame-precedence rule the generator gets; clearing the genres
+  while supplying guidance silently discarded the guidance; the log
+  sanitizer did not recurse into objects, so `genre_guidance` prose reached
+  INFO lines verbatim; the context-admission budget omitted the genre and
+  position blocks, measured at 191% of the safety margin; an unrecognised
+  term was dropped with no log anywhere, hiding a stale build; and a comment
+  claimed separate scanning prevents a split signal when it is what allows
+  one. Test coverage: a 29-mutant campaign found 20 escaping, including one
+  that made the entire feature inert with the suite byte-identical to
+  baseline; 15 re-probed mutants are now all caught.
+
 - A nested profile failed the validator before it could be claimed, so its
   name was invisible to duplicate detection; it is now claimed like any other
   entity. The overlay verifier applied its Markdown bullet rule to frontmatter

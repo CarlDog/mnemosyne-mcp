@@ -8,7 +8,12 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
 import { getEntityByMemoryId } from "../entities.js";
-import { findStory, resolveStoryId, type PositionState } from "../stories.js";
+import {
+  findStory,
+  NO_LINE_BREAK_MESSAGE,
+  resolveStoryId,
+  type PositionState,
+} from "../stories.js";
 import { applyPositionUpdate, currentStoryDatetime } from "../position.js";
 import { asText, withLogging } from "./helpers.js";
 
@@ -148,6 +153,7 @@ export function registerPositionTool(server: McpServer, oc: OcClient): void {
           ),
         epoch_spot: z
           .string()
+          .regex(/^[^\r\n]*$/, NO_LINE_BREAK_MESSAGE)
           .optional()
           .describe(
             'Free-text sub-location within epoch_location (e.g. "the porch"). Pass "" to clear.',
@@ -175,6 +181,7 @@ export function registerPositionTool(server: McpServer, oc: OcClient): void {
           ),
         current_spot: z
           .string()
+          .regex(/^[^\r\n]*$/, NO_LINE_BREAK_MESSAGE)
           .optional()
           .describe(
             'Free-text sub-location within current_location. Pass "" to clear.',

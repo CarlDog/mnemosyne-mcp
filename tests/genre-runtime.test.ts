@@ -76,13 +76,27 @@ describe("genre dictionary parity between src/ and scripts/", () => {
     });
   });
 
-  it("agrees on the same term set and the same ancestry", () => {
+  // NOT a term-set comparison, which would be vacuous: both implementations
+  // read the SAME tracked file (the scripts by relative path, the server by
+  // a typed import that the compiler emits into dist/). There is no second
+  // term set to disagree with. What can genuinely diverge is the ancestry
+  // ALGORITHM, which is implemented twice, so that is what this pins -- and
+  // it asserts it examined something, because a check satisfiable by
+  // finding nothing is not a check.
+  it("implements the same ancestry algorithm on both sides", () => {
     const scriptDictionary = canonFrontmatter.loadGenreDictionary();
-    for (const term of Object.keys(scriptDictionary.terms)) {
-      expect(genreAncestors(term), term).toEqual(
-        canonFrontmatter.genreAncestors(term),
-      );
+    const terms = Object.keys(scriptDictionary.terms);
+    expect(terms.length).toBeGreaterThanOrEqual(30);
+    let withAncestors = 0;
+    for (const term of terms) {
+      const ours = genreAncestors(term);
+      expect(ours, term).toEqual(canonFrontmatter.genreAncestors(term));
+      if (ours.length > 0) withAncestors += 1;
     }
+    expect(
+      withAncestors,
+      "terms with a parent were actually compared",
+    ).toBeGreaterThan(0);
   });
 
   it("reaches the same verdict on every case in one shared table", () => {

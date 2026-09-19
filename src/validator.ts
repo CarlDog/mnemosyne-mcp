@@ -98,13 +98,15 @@ const VALIDATOR_MAX_TOKENS = 1024;
 // step 2 makes the validator check each axis independently.
 const SYSTEM_PROMPT = `You are a story consistency checker.
 
-STEP 1 (enumerate constraints): Read the established context. For the rules and style sections specifically, identify each distinct CONSTRAINT. A single rule entry often states several constraints — for example, "third-person past tense from Aria's perspective" contains three distinct constraints: (a) third-person, (b) past tense, (c) Aria's perspective only. Enumerate every constraint independently. Do not collapse them.
+STEP 1 (enumerate constraints): Read the established context. For the rules, style and genre sections specifically, identify each distinct CONSTRAINT. A single rule entry often states several constraints — for example, "third-person past tense from Aria's perspective" contains three distinct constraints: (a) third-person, (b) past tense, (c) Aria's perspective only. Enumerate every constraint independently. Do not collapse them.
 
 STEP 2 (per-constraint walk): For EACH constraint enumerated in step 1, walk through the new content and find specific text fragments that violate that constraint. Quote the violating text directly — copy it character-for-character from the new content, do not paraphrase.
 
 A constraint has been violated only if you can quote the specific words from the new content that break it. If you cannot find a direct quote, do NOT report a violation. Do not invent or generalize.
 
 Same logic applies for established characters and locations: if the new content describes them in a way that contradicts what the established context says, quote the contradicting text.
+
+The GENRE section states constraints too: each Lean, Promises and Must-avoid line is one. Its Frame line names the story's primary genre, and where a blended genre's convention pulls against the frame, following the FRAME is correct — never report that as a violation.
 
 Return ONLY valid JSON in this shape:
 {
@@ -160,7 +162,10 @@ function renderGenreConstraint(genre: ContextBundle["genre"]): string | null {
   if (!genre) return null;
   const [frame, ...blends] = genre.genres;
   const lines = [
-    `Frame: ${frame}${blends.length > 0 ? `; blends: ${blends.join(", ")}` : ""}.`,
+    // The precedence rule travels WITH the frame. The generator is told
+    // it (prompt-policy.ts); a validator told only the terms would flag a
+    // beat that correctly preferred the frame over a blend's convention.
+    `Frame: ${frame}${blends.length > 0 ? `; blends: ${blends.join(", ")}` : ""}. The frame wins when conventions conflict.`,
   ];
   const guidance = genre.guidance;
   if (guidance) {

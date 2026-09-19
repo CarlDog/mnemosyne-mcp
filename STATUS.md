@@ -2,6 +2,28 @@
 
 **Last updated:** 2026-09-19.
 
+**Genre slice 2 adversarially reviewed and remediated (2026-09-19).** The
+entry below shipped green and was pushed before anyone who had not written
+it looked at it, which the repository's own pre-deploy rule forbids. The
+review that should have come first found, among 30 confirmed findings: a
+reproducible prompt-injection path (a newline in a position spot forged a
+genre declaration that bypassed both the write-side validation and the
+injection scan and rendered verbatim into every prompt); genre validated
+after three durable marker writes, so an invalid genre rejected the call
+with the content-routing gate already flipped; guidance prose logged
+verbatim at INFO, defeating the rule that sanitizer exists to enforce; a
+context-budget miscount measured at 191% of the safety margin; and a test
+suite 20 of whose 29 probed behaviours could be deleted with every test
+green, including the one that made the whole feature inert. All fixed, with
+15 re-probed mutants now caught and every touched file restored byte-exactly.
+Four findings are recorded and deliberately not fixed (concurrent marker
+writes losing fields, an older process erasing a declaration, the tool
+repointing the active story, no genre write path outside MCP). Exposure was
+measured rather than estimated: of ten live story markers, zero carry a genre
+line and zero carry a content rating, so the real exposure was nil and the
+trigger is the first genre write against a real story. Record:
+`docs/GENRE_RUNTIME_REVIEW.md`.
+
 **Genre declaration standard: slice 2 (runtime) shipped (2026-09-19).** The
 declaration now reaches the model. Story marker schema 7 carries it on four
 optional lines through all five write sites; it is validated on READ, so a

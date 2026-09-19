@@ -204,6 +204,13 @@ export function genreGuidanceStrings(guidance: GenreGuidance): string[] {
 // and must never make a story unresolvable. Anything that does not validate
 // is dropped and the story reads as undeclared, matching how the narrator
 // profile and the content rating already parse.
+//
+// Dropping SILENTLY is the part that needed fixing: the same leniency that
+// is right for a hand edit also hides a stale build serving an older
+// dictionary, where a perfectly good declaration reads as undeclared and
+// nothing anywhere says so. Each parser takes an `onReject` so the caller
+// that has logging context can say what it ignored, without this module
+// taking a dependency on the logger.
 
 /**
  * Parses a `Genre:` marker value, or undefined when it does not validate.
@@ -213,6 +220,7 @@ export function genreGuidanceStrings(guidance: GenreGuidance): string[] {
  */
 export function parseGenresValue(
   raw: string | undefined,
+  onReject?: (reason: string) => void,
 ): string[] | undefined {
   if (!raw) return undefined;
   const genres = raw
@@ -222,7 +230,8 @@ export function parseGenresValue(
   try {
     assertGenres(genres);
     return genres;
-  } catch {
+  } catch (error) {
+    onReject?.(error instanceof Error ? error.message : String(error));
     return undefined;
   }
 }
@@ -233,6 +242,7 @@ export function parseGuidanceValues(
   lean: string | undefined,
   conventions: string[],
   avoid: string[],
+  onReject?: (reason: string) => void,
 ): GenreGuidance | undefined {
   if (!lean) return undefined;
   const guidance: GenreGuidance = {
@@ -243,7 +253,8 @@ export function parseGuidanceValues(
   try {
     assertGenreGuidance(guidance);
     return guidance;
-  } catch {
+  } catch (error) {
+    onReject?.(error instanceof Error ? error.message : String(error));
     return undefined;
   }
 }

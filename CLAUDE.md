@@ -231,6 +231,18 @@ Two standing operator instructions that outlive any sprint:
   throws an `isError` result's real message rather than returning error
   prose as a reply. Shared by the OC/Kindroid/Botify clients.
 - `src/version.ts` — package version, surfaced in the server banner.
+- `src/tools/helpers.ts` — `asyncRoute`-style tool wrappers plus
+  `sanitizeToolArgsForLog`, which keeps narrative prose out of telemetry.
+  It recurses into nested objects: an object used to fall through verbatim,
+  which put a whole `genre_guidance` block into an INFO line.
+- `src/tools/helpers.ts` — `asyncRoute`-style tool wrappers plus
+  `sanitizeToolArgsForLog`, which keeps narrative prose out of telemetry.
+  It recurses into nested objects: an object used to fall through verbatim,
+  which put a whole `genre_guidance` block into an INFO line.
+- `src/tools/helpers.ts` — `asyncRoute`-style tool wrappers plus
+  `sanitizeToolArgsForLog`, which keeps narrative prose out of telemetry.
+  It recurses into nested objects: an object used to fall through verbatim,
+  which put a whole `genre_guidance` block into an INFO line.
 - `src/genre.ts` — the genre declaration at runtime: the dictionary (a typed
   JSON import, so `tsc` emits it into `dist/` and one tracked file serves both
   `tsx src/` and `node dist/`), the validation every write surface shares
@@ -416,6 +428,27 @@ Two standing operator instructions that outlive any sprint:
   failure landing after a successful position write was wrongly reported
   retry-safe; `advance`/`set_elapsed_hours` could drive elapsed_hours
   negative where `set_date` alone was guarded).
+- `docs/GENRE_RUNTIME_REVIEW.md` — the adversarial review of the genre
+  standard's runtime slice (2026-09-19): six dimension passes plus a
+  completeness critic, run AFTER the commit shipped, which the repository's
+  own pre-deploy rule says should have happened first. Records the blocker (a
+  newline in a marker value forged a genre declaration past both gates), the
+  correctness and cost findings, the 29-mutant campaign that found 20 escapes,
+  the findings deliberately recorded and not fixed, and the measured exposure.
+- `docs/GENRE_RUNTIME_REVIEW.md` — the adversarial review of the genre
+  standard's runtime slice (2026-09-19): six dimension passes plus a
+  completeness critic, run AFTER the commit shipped, which the repository's
+  own pre-deploy rule says should have happened first. Records the blocker (a
+  newline in a marker value forged a genre declaration past both gates), the
+  correctness and cost findings, the 29-mutant campaign that found 20 escapes,
+  the findings deliberately recorded and not fixed, and the measured exposure.
+- `docs/GENRE_RUNTIME_REVIEW.md` — the adversarial review of the genre
+  standard's runtime slice (2026-09-19): six dimension passes plus a
+  completeness critic, run AFTER the commit shipped, which the repository's
+  own pre-deploy rule says should have happened first. Records the blocker (a
+  newline in a marker value forged a genre declaration past both gates), the
+  correctness and cost findings, the 29-mutant campaign that found 20 escapes,
+  the findings deliberately recorded and not fixed, and the measured exposure.
 - `docs/GENRE_DICTIONARY_SOURCE_REVIEW.md` — the adversarial review of
   `src/genre-dictionary.json` against external sources (2026-09-19): the book
   trade's BISAC fiction headings, the Library of Congress genre authority, the

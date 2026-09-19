@@ -259,6 +259,57 @@ why the acceptance test drives `continueScene` rather than the prompt builder al
 
 ## Revision notes
 
+- Slice 2 adversarially reviewed after the fact (2026-09-19), which it should
+  have been before. Six dimension passes plus a completeness critic found a
+  reproducible prompt-injection path (a newline in a position spot forged a
+  genre declaration that bypassed both the validation and the injection scan),
+  a partial-write hazard on the content-routing gate, a verbatim logging leak
+  of guidance prose, a context-budget miscount measured at 191% of the safety
+  margin, and a test suite 20 of whose 29 probed behaviours could be deleted
+  with every test green. Full record, including what was recorded and not
+  fixed: [GENRE_RUNTIME_REVIEW.md](GENRE_RUNTIME_REVIEW.md). Three design
+  statements changed as a result. The marker now REFUSES any value containing
+  a line break, at the builder, because a line-based format cannot tolerate
+  one. The validator is told in its own instruction that genre is a
+  constraint, and is given the frame-precedence rule the generator already
+  had, since a validator holding the block but not the rule flags a beat that
+  correctly preferred the frame. And the tool warns when an explicit genre
+  meets an undeclared content rating: the separation from content routing
+  stays, but nothing previously connected the two write paths.
+- Slice 2 adversarially reviewed after the fact (2026-09-19), which it should
+  have been before. Six dimension passes plus a completeness critic found a
+  reproducible prompt-injection path (a newline in a position spot forged a
+  genre declaration that bypassed both the validation and the injection scan),
+  a partial-write hazard on the content-routing gate, a verbatim logging leak
+  of guidance prose, a context-budget miscount measured at 191% of the safety
+  margin, and a test suite 20 of whose 29 probed behaviours could be deleted
+  with every test green. Full record, including what was recorded and not
+  fixed: [GENRE_RUNTIME_REVIEW.md](GENRE_RUNTIME_REVIEW.md). Three design
+  statements changed as a result. The marker now REFUSES any value containing
+  a line break, at the builder, because a line-based format cannot tolerate
+  one. The validator is told in its own instruction that genre is a
+  constraint, and is given the frame-precedence rule the generator already
+  had, since a validator holding the block but not the rule flags a beat that
+  correctly preferred the frame. And the tool warns when an explicit genre
+  meets an undeclared content rating: the separation from content routing
+  stays, but nothing previously connected the two write paths.
+- Slice 2 adversarially reviewed after the fact (2026-09-19), which it should
+  have been before. Six dimension passes plus a completeness critic found a
+  reproducible prompt-injection path (a newline in a position spot forged a
+  genre declaration that bypassed both the validation and the injection scan),
+  a partial-write hazard on the content-routing gate, a verbatim logging leak
+  of guidance prose, a context-budget miscount measured at 191% of the safety
+  margin, and a test suite 20 of whose 29 probed behaviours could be deleted
+  with every test green. Full record, including what was recorded and not
+  fixed: [GENRE_RUNTIME_REVIEW.md](GENRE_RUNTIME_REVIEW.md). Three design
+  statements changed as a result. The marker now REFUSES any value containing
+  a line break, at the builder, because a line-based format cannot tolerate
+  one. The validator is told in its own instruction that genre is a
+  constraint, and is given the frame-precedence rule the generator already
+  had, since a validator holding the block but not the rule flags a beat that
+  correctly preferred the frame. And the tool warns when an explicit genre
+  meets an undeclared content rating: the separation from content routing
+  stays, but nothing previously connected the two write paths.
 - Slice 2 shipped (2026-09-19), with seven refinements found while building it.
   (1) The server reads the dictionary as a typed JSON import, not through
   `readFileSync` + `import.meta.url` as section 1 said: `src/version.ts` can use
