@@ -24,6 +24,9 @@ The governing principle is:
 This is an editorial standard, not a replacement for the Mnemosyne export
 schema in [IMPORT_EXPORT_DESIGN.md](IMPORT_EXPORT_DESIGN.md). It governs the
 quality and authority of story content; the export schema governs interchange.
+The proposed [Playable Story Standard](PLAYABLE_STORY_STANDARD.md) defines the
+companion scenario layer for turning those references into interactive play
+without prewriting character choices or outcomes.
 
 ## Non-goals
 

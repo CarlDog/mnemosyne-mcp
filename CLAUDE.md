@@ -411,6 +411,11 @@ Two standing operator instructions that outlive any sprint:
   knowledge geometry, hook ecology, truth tiers, current-state extraction,
   provenance, mature-content/routing separation, and cross-story improvement
   without forced canon connections.
+- `docs/PLAYABLE_STORY_STANDARD.md` — proposed companion authoring standard for
+  turning a story bible into interactive play through agency boundaries,
+  actor/director knowledge separation, state-sensitive beats, independent
+  pressures, a live run ledger, and outcome axes rather than a prescribed
+  scene sequence.
 - `docs/WEBUI_NOTES.md` — design input for the shipped-but-incomplete web UI
   (explicitly not ratified beyond implemented slices): mode-adaptive layout,
   the storyline control plane, the retrieval-assembly panel, media in the beat

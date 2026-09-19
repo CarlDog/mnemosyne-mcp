@@ -3,8 +3,8 @@
 **Last updated:** 2026-09-18.
 
 **Nested character/3 profiles are readable by the tracked tooling
-(2026-09-18).** The 31 `character/3` profiles on disk (16 Adjustment Protocol
-drafts, 15 Midnight drafts) failed all three tracked consumers: the canon
+(2026-09-18).** The 31 `character/3` profiles on disk (16 in one story's drafts,
+15 in another's) failed all three tracked consumers: the canon
 validator, the story compiler and the draft-overlay verifier each hand-rolled
 a top-level-only frontmatter parser that died on the first indented line, and
 the verifier additionally rejected every nested profile at its frontmatter
@@ -18,7 +18,7 @@ compiler renders a nested profile as a YAML block above its Markdown body
 (interim; the final memory body is deferred until an import is wanted, and
 promotion stays set aside). Measured on the real trees before and after: the
 validator went from one unparseable line per character/3 file to 0 problems
-(Midnight 83 entities, Adjustment Protocol 121); the verifier went from
+(83 and 121 entities); the verifier went from
 failing at the first frontmatter pointer to exit 0 end to end with the
 import dry-run at writes=0 (83 and 122 planned creates). The plan was
 adversarially reviewed before implementation: 8 findings, 2 of them blockers
@@ -5096,6 +5096,15 @@ consider only when real use exposes the corresponding pressure:
   showing the retrieval assembly, media generation inside the beat
   flow, watch-companion watch parties, and a parked graphic-novel
   reading format.
+- **Playable Story Standard** (`docs/PLAYABLE_STORY_STANDARD.md`; Draft 1
+  proposed by an earlier session, Draft 2 on 2026-09-18 after an adversarial
+  review; pending operator acceptance, not scheduled). The authoring layer
+  between a story bible and interactive play: an agency contract, actor and
+  director knowledge separation, state-sensitive beats, independent pressures,
+  a live ledger, outcome axes. It requests no implementation and reopens none
+  of the section 8 exclusions; its run/canon separation and its context
+  partitions are named in the document as unbuilt dependencies, and its
+  records live under `drafts/_control/play/`.
 - ~~**Botify provider**~~ / ~~**Anthropic provider**~~ — **shipped
   2026-08-21** along with OpenAI, Gemini, and Atlas Cloud; see the Done
   log. Seven generators now sit behind `GENERATOR_PROVIDER`; the
