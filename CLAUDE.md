@@ -267,7 +267,12 @@ Two standing operator instructions that outlive any sprint:
   bytes equal promoted bytes.
 - `scripts/canon-frontmatter.mjs` — the canon frontmatter scalar format in one
   place (`toCanonScalar`/`fromCanonScalar`), imported by both the writer and
-  the reader so they cannot disagree about quoting again.
+  the reader so they cannot disagree about quoting again. Since 2026-09-18 it
+  also holds the nested `character/3` frontmatter parser and resolver
+  (`parseNestedFrontmatter`/`resolveEntityFields`, real YAML through the
+  `yaml` package) that the validator, compiler and overlay verifier share;
+  the flat path is untouched and a top-level `schema:` key is the only
+  discriminator.
 - `scripts/dist-preflight.mjs` — reports a missing `dist/` with a build hint.
   Import it statically, then reach for `dist/` with `await import(...)`: ESM
   resolves static imports before evaluating anything, so a static `dist/`
@@ -650,7 +655,7 @@ npm run typecheck      # tsc -p tsconfig.typecheck.json (src + tests)
 npm run lint           # eslint .
 npm run format         # prettier --write .
 npm run format:check   # prettier --check . (CI gates on this -- run before pushing)
-npm test               # vitest run (91 of 708 tests are env-gated; see below)
+npm test               # vitest run (95 of 753 tests are env-gated; see below)
 ```
 
 `npm test` green does **not** mean the integration surface ran. Every

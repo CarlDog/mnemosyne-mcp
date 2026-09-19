@@ -2,6 +2,37 @@
 
 **Last updated:** 2026-09-18.
 
+**Nested character/3 profiles are readable by the tracked tooling
+(2026-09-18).** The 31 `character/3` profiles on disk (16 Adjustment Protocol
+drafts, 15 Midnight drafts) failed all three tracked consumers: the canon
+validator, the story compiler and the draft-overlay verifier each hand-rolled
+a top-level-only frontmatter parser that died on the first indented line, and
+the verifier additionally rejected every nested profile at its frontmatter
+portrait pointer. `scripts/canon-frontmatter.mjs` now holds a shared nested
+parser (`yaml` 2.9.1, the one new runtime dependency) and a resolver mapping
+`names.display`, `names.aliases`, `meta.pinned` and `meta.tags` onto the flat
+names the consumers read; the three scripts branch on the top-level `schema:`
+key, which no flat file carries (counted: 2,261 canon and drafts files, 31
+with the key, all under `characters/`), so the flat path is unchanged. The
+compiler renders a nested profile as a YAML block above its Markdown body
+(interim; the final memory body is deferred until an import is wanted, and
+promotion stays set aside). Measured on the real trees before and after: the
+validator went from one unparseable line per character/3 file to 0 problems
+(Midnight 83 entities, Adjustment Protocol 121); the verifier went from
+failing at the first frontmatter pointer to exit 0 end to end with the
+import dry-run at writes=0 (83 and 122 planned creates). The plan was
+adversarially reviewed before implementation: 8 findings, 2 of them blockers
+(the compiler's closing-delimiter pre-scan would have changed the flat path's
+unclosed-frontmatter message; the catalog would have crashed on an integer
+YAML age), all absorbed. Tests: `tests/canon-frontmatter.test.ts` (6 cases)
+plus 3 validator, 2 compiler and 6 verifier cases; the full suite is 658
+passed with 95 env-gated skips of 753; 6 of 6 mutants caught (the nested
+branch, the renderer, the verifier exemption, the catalog's tier key, the
+name re-serialization, the one-line error). The untracked gallery catalog
+under `data/` got the same shape support (its suite: 20 passing). Deferred
+and named: the final nested memory body (stage 3) and `scaffold-story.mjs`
+emitting character/3.
+
 **Ollama thinking models no longer lose the beat (2026-09-18).**
 `OllamaProvider.generate()` now sends a fixed top-level `think: false` on
 every `/api/chat` generation request, the structured validator path

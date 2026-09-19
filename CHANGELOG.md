@@ -5,8 +5,34 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 
 ## Unreleased
 
+### Added
+
+- Nested `character/3` frontmatter (a top-level `schema:` key over real YAML:
+  folded scalars, flow maps, sequences, comments) is accepted by the canon
+  validator, the story compiler and the draft-overlay verifier.
+  `scripts/canon-frontmatter.mjs` gains the shared parser and the resolver
+  that maps `names.display`, `names.aliases`, `meta.pinned` and `meta.tags`
+  onto the flat names the consumers read; flat frontmatter takes the unchanged
+  path, and the discriminator is the `schema:` key, which no flat file carries.
+  The compiler renders a nested profile as a YAML block above its Markdown
+  body (interim; the final memory body for nested profiles is deferred until
+  an import is wanted). New runtime dependency: `yaml` (eemeli/yaml 2.9, ESM,
+  no dependencies), because the nested shape needs comments, folded scalars,
+  flow maps and sequences that the deliberately small flat scalar reader
+  cannot and should not parse. Pinned by `tests/canon-frontmatter.test.ts`
+  and new cases in the validator, compiler and verifier suites.
+
 ### Fixed
 
+- A nested profile failed the validator before it could be claimed, so its
+  name was invisible to duplicate detection; it is now claimed like any other
+  entity. The overlay verifier applied its Markdown bullet rule to frontmatter
+  values and rejected every nested profile at `references.portraits`;
+  frontmatter pointers are now checked as YAML values: a value that contains a
+  story image pointer must be exactly that pointer and then passes the same
+  existence, containment, sidecar and hash checks, inside the `references`
+  mapping every bare `references/` token must be such a pointer, and
+  provenance prose and cross-story pool paths are left alone.
 - Ollama provider: send a fixed top-level `think: false` on every generation
   request (the structured validator path included; `format` handling is
   untouched). A thinking-capable model (Qwen3.8, Gemma 4 and its fine-tunes)

@@ -65,7 +65,11 @@ import path from "node:path";
 import { clearTimeout, setTimeout } from "node:timers";
 import { TextDecoder } from "node:util";
 import { fileURLToPath } from "node:url";
-import { parseCanonScalar } from "./canon-frontmatter.mjs";
+import {
+  hasNestedSchema,
+  parseCanonScalar,
+  parseNestedFrontmatter,
+} from "./canon-frontmatter.mjs";
 import {
   DRAFT_MARKER,
   stripLeadingDraftBlockquote as stripDraftNotice,
@@ -84,6 +88,17 @@ const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
 const FRONTMATTER_KEY_RE = /^([a-z_][a-z0-9_]*):\s*(.*)$/;
 const IMAGE_POINTER_RE =
   /data\/stories\/[a-z0-9][a-z0-9_-]*\/references\/[A-Za-z0-9._~!$&'+,;=@%/-]+\.(?:png|jpe?g|webp|gif|avif)/gi;
+// A nested (character/3) profile keeps its image pointers inside frontmatter
+// values rather than on Markdown bullet lines: a value is a pointer only when
+// the whole value is one.
+const WHOLE_VALUE_IMAGE_POINTER_RE = new RegExp(
+  `^${IMAGE_POINTER_RE.source}$`,
+  "i",
+);
+// The references/ token rule for frontmatter values: a bare `references/`
+// segment, not `facial-references/` and the like, which name the cross-story
+// pool that the data standard keeps in one place.
+const FRONTMATTER_REFERENCES_TOKEN_RE = /(?<![\w-])references[\\/]/i;
 const RESIDUE_MARKERS = [DRAFT_MARKER, "DRAFT CONTROL RECORD"];
 
 class VerificationError extends Error {
@@ -823,6 +838,146 @@ function sourceLineNumber(text, index) {
   return line;
 }
 
+/**
+ * The Markdown visual-pointer rules: every image pointer must be the whole of
+ * a `- <path>` bullet line, and every `references/` token must belong to one.
+ * `lineOffset` is the number of lines that precede `text` in the file, so a
+ * nested profile's body reports its real line numbers.
+ */
+function scanMarkdownPointers(text, source, lineOffset, pointers) {
+  const matchedStarts = new Set();
+  IMAGE_POINTER_RE.lastIndex = 0;
+  for (const match of text.matchAll(IMAGE_POINTER_RE)) {
+    const matchStart = match.index;
+    const lineStart = text.lastIndexOf("\n", matchStart - 1) + 1;
+    const nextNewline = text.indexOf("\n", matchStart);
+    const lineEnd = nextNewline === -1 ? text.length : nextNewline;
+    const sourceLine = lineOffset + sourceLineNumber(text, matchStart);
+    const line = text.slice(lineStart, lineEnd).replace(/\r$/, "");
+    if (line.trim() !== `- ${match[0]}`) {
+      fail(
+        `${source}:${sourceLine}: malformed visual pointer; expected the ` +
+          `entire Markdown line to be ${JSON.stringify(`- ${match[0]}`)}`,
+      );
+    }
+    matchedStarts.add(
+      matchStart + match[0].toLowerCase().indexOf("references/"),
+    );
+    pointers.push({
+      source,
+      line: sourceLine,
+      path: match[0],
+    });
+  }
+
+  const referenceTokenRe = /references[\\/]/gi;
+  for (const token of text.matchAll(referenceTokenRe)) {
+    const sourceLine = lineOffset + sourceLineNumber(text, token.index);
+    if (token[0].endsWith("\\")) {
+      fail(
+        `${source}:${sourceLine}: visual pointer uses a backslash; ` +
+          "repo-relative pointers must use '/'",
+      );
+    }
+    if (!matchedStarts.has(token.index)) {
+      fail(
+        `${source}:${sourceLine}: unmatched or malformed references/ ` +
+          "occurrence; expected a supported image path on its own " +
+          "Markdown bullet line",
+      );
+    }
+  }
+}
+
+/**
+ * Split a nested (character/3) profile into its frontmatter and body. Null
+ * for anything else: a flat file, a file without a closing `---`, or one whose
+ * frontmatter has no top-level `schema:` line. `text` must already be
+ * newline-normalized.
+ */
+function splitNestedFrontmatter(text) {
+  if (!text.startsWith("---\n")) return null;
+  const lines = text.split("\n");
+  const closingLine = lines.indexOf("---", 1);
+  if (closingLine === -1) return null;
+  const frontmatterLines = lines.slice(1, closingLine);
+  if (!hasNestedSchema(frontmatterLines)) return null;
+  return {
+    text,
+    frontmatterText: frontmatterLines.join("\n"),
+    bodyStart: lines.slice(0, closingLine + 1).join("\n").length + 1,
+    lineOffset: closingLine + 1,
+  };
+}
+
+function* walkStringValues(value, keyPath = "") {
+  if (typeof value === "string") {
+    yield { value, keyPath };
+  } else if (Array.isArray(value)) {
+    for (const [index, item] of value.entries()) {
+      yield* walkStringValues(item, `${keyPath}[${index}]`);
+    }
+  } else if (value && typeof value === "object") {
+    for (const [key, item] of Object.entries(value)) {
+      yield* walkStringValues(item, keyPath ? `${keyPath}.${key}` : key);
+    }
+  }
+}
+
+/**
+ * The visual-pointer rules for a nested profile's frontmatter. A value that
+ * contains an image pointer must be exactly that pointer, and it then goes
+ * through the same existence, containment, sidecar and hash checks as a
+ * Markdown pointer (which also reject another story's slug). Inside the
+ * document's `references` mapping every bare `references/` token must be such
+ * a pointer. Values elsewhere (provenance prose, pool and archive paths) are
+ * not image pointers and are left alone.
+ */
+function scanFrontmatterPointers(nested, source, pointers) {
+  let document;
+  try {
+    document = parseNestedFrontmatter(nested.frontmatterText);
+  } catch (error) {
+    fail(`${source}: ${errorMessage(error)}`);
+  }
+  for (const { value, keyPath } of walkStringValues(document)) {
+    const valueIndex = nested.frontmatterText.indexOf(value);
+    const sourceLine =
+      valueIndex === -1
+        ? 1
+        : 1 + sourceLineNumber(nested.frontmatterText, valueIndex);
+    if (/references\\/i.test(value)) {
+      fail(
+        `${source}:${sourceLine}: frontmatter ${keyPath} uses a backslash; ` +
+          "repo-relative pointers must use '/'",
+      );
+    }
+    if (WHOLE_VALUE_IMAGE_POINTER_RE.test(value)) {
+      pointers.push({ source, line: sourceLine, path: value });
+      continue;
+    }
+    IMAGE_POINTER_RE.lastIndex = 0;
+    const containsPointer = IMAGE_POINTER_RE.test(value);
+    IMAGE_POINTER_RE.lastIndex = 0;
+    if (containsPointer) {
+      fail(
+        `${source}:${sourceLine}: malformed frontmatter visual pointer in ` +
+          `${keyPath}; expected the whole value to be the image path`,
+      );
+    }
+    if (
+      (keyPath === "references" || keyPath.startsWith("references.")) &&
+      FRONTMATTER_REFERENCES_TOKEN_RE.test(value)
+    ) {
+      fail(
+        `${source}:${sourceLine}: unmatched or malformed references/ ` +
+          `occurrence in frontmatter ${keyPath}; expected a supported image ` +
+          "path as the whole value",
+      );
+    }
+  }
+}
+
 async function verifyVisualPointers(stageRoot, storyRoot) {
   const referencesRoot = path.join(storyRoot, "references");
   const storySlug = path.basename(storyRoot);
@@ -842,48 +997,20 @@ async function verifyVisualPointers(stageRoot, storyRoot) {
       );
     }
     const source = toPosixRelative(stageRoot, file);
-    const matchedStarts = new Set();
-    IMAGE_POINTER_RE.lastIndex = 0;
-    for (const match of text.matchAll(IMAGE_POINTER_RE)) {
-      const matchStart = match.index;
-      const lineStart = text.lastIndexOf("\n", matchStart - 1) + 1;
-      const nextNewline = text.indexOf("\n", matchStart);
-      const lineEnd = nextNewline === -1 ? text.length : nextNewline;
-      const sourceLine = sourceLineNumber(text, matchStart);
-      const line = text.slice(lineStart, lineEnd).replace(/\r$/, "");
-      if (line.trim() !== `- ${match[0]}`) {
-        fail(
-          `${source}:${sourceLine}: malformed visual pointer; expected the ` +
-            `entire Markdown line to be ${JSON.stringify(`- ${match[0]}`)}`,
-        );
-      }
-      matchedStarts.add(
-        matchStart + match[0].toLowerCase().indexOf("references/"),
-      );
-      pointers.push({
+    const nested = splitNestedFrontmatter(text.replace(/\r\n/g, "\n"));
+    if (nested) {
+      // A nested (character/3) profile: the Markdown rules apply to the body
+      // only, and the frontmatter's values are checked as YAML values.
+      scanMarkdownPointers(
+        nested.text.slice(nested.bodyStart),
         source,
-        line: sourceLine,
-        path: match[0],
-      });
+        nested.lineOffset,
+        pointers,
+      );
+      scanFrontmatterPointers(nested, source, pointers);
+      continue;
     }
-
-    const referenceTokenRe = /references[\\/]/gi;
-    for (const token of text.matchAll(referenceTokenRe)) {
-      const sourceLine = sourceLineNumber(text, token.index);
-      if (token[0].endsWith("\\")) {
-        fail(
-          `${source}:${sourceLine}: visual pointer uses a backslash; ` +
-            "repo-relative pointers must use '/'",
-        );
-      }
-      if (!matchedStarts.has(token.index)) {
-        fail(
-          `${source}:${sourceLine}: unmatched or malformed references/ ` +
-            "occurrence; expected a supported image path on its own " +
-            "Markdown bullet line",
-        );
-      }
-    }
+    scanMarkdownPointers(text, source, 0, pointers);
   }
 
   const checked = new Set();

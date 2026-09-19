@@ -243,7 +243,13 @@ build.
   frontmatter delimiter). This changes only the *authoring* format — the
   compiler renders frontmatter fields back into the same flat-line
   shape already live in OC, so nothing downstream (recall, the validator,
-  prompt assembly) changes.
+  prompt assembly) changes. A character profile may instead carry the
+  nested `character/3` shape, declared by a top-level `schema:` key and
+  parsed as real YAML (folded scalars, flow maps, sequences); the validator,
+  compiler and overlay verifier accept both, the flat path unchanged, and
+  the compiler renders a nested profile as a YAML block above its body
+  (interim; the final memory body for nested profiles is deferred until an
+  import is wanted). Flat frontmatter never carries a `schema:` key.
 - **Owned by the operator/tooling, like `references/` and `art/`** — the
   server never writes here directly. `compile-story.mjs` reads `canon/` and
   produces or checks an importable export document; it does not connect to or

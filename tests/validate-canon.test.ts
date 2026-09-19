@@ -465,3 +465,115 @@ describe("validate-canon path authority", () => {
     );
   });
 });
+
+describe("validate-canon nested (character/3) frontmatter", () => {
+  function nestedCharacter(display: string): string {
+    return `---
+schema: "character/3"
+id: "test-story/${display.toLowerCase().replace(/[^a-z0-9]+/g, "-")}"
+
+names:
+  display: ${JSON.stringify(display)}
+  aliases: ["the Keeper"]
+
+tier: "recurring"
+
+# ---- card: the first block is the whole character ----
+card:
+  role: >-
+    Keeps the harbor key and the ledger that says
+    who may hold it.
+
+identity:
+  pronouns: "she/her"
+  age: 42
+
+physical:
+  measurements_cm: { bust: 89, waist: 61, hips: 90 }
+
+meta:
+  pinned: false
+  tags: ["keeper"]
+---
+
+> **DRAFT — NOT ACTIVE CANON**
+
+<!-- headshot-audit-test:start -->
+[Current selected headshot](../../art/anna.png).
+<!-- headshot-audit-test:end -->
+`;
+  }
+
+  it("accepts nested profiles beside flat ones and claims them for duplicate detection", async () => {
+    const root = await makeRoot();
+    await put(root, "characters/anna-vale.md", nestedCharacter("Anna Vale"));
+    await put(root, "characters/redacted.md", nestedCharacter("[Redacted]"));
+    await put(
+      root,
+      "characters/aria.md",
+      `---
+name: Aria
+---
+
+A cartographer.
+`,
+    );
+
+    const result = await runValidator("test-story", root);
+    expect(result.code, result.stdout + result.stderr).toBe(0);
+    expect(result.stdout).toContain("total entities claimed: 3");
+    expect(result.stdout).toContain("OK -- no structural problems found");
+  });
+
+  it("reports a nested profile whose display name another entity already claims", async () => {
+    const root = await makeRoot();
+    await put(root, "characters/anna-vale.md", nestedCharacter("Anna Vale"));
+    await put(root, "characters/anna-twin.md", nestedCharacter("Anna Vale"));
+
+    const result = await runValidator("test-story", root);
+    expect(result.code).toBe(1);
+    expect(result.stdout).toContain('DUPLICATE (character, "Anna Vale")');
+  });
+
+  it("reports malformed nested YAML as one problem line naming the file", async () => {
+    const root = await makeRoot();
+    await put(
+      root,
+      "characters/anna-vale.md",
+      `---
+schema: "character/3"
+names:
+  display: "Anna Vale"
+names:
+  display: "Impostor"
+---
+
+> **DRAFT — NOT ACTIVE CANON**
+
+Body.
+`,
+    );
+    await put(
+      root,
+      "characters/aria.md",
+      `---
+name: Aria
+---
+
+A cartographer.
+`,
+    );
+
+    const result = await runValidator("test-story", root);
+    expect(result.code).toBe(1);
+    expect(result.stdout).toContain("1 problem(s)");
+    const problemLines = result.stdout
+      .split("\n")
+      .filter((line) => line.startsWith("    - "));
+    expect(problemLines).toHaveLength(1);
+    expect(problemLines[0]).toContain("anna-vale.md");
+    expect(problemLines[0]).toContain(
+      "nested frontmatter is not valid YAML: Map keys must be unique",
+    );
+  });
+});

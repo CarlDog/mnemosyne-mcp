@@ -23,6 +23,12 @@ import path from "node:path";
 import process from "node:process";
 import { TextDecoder } from "node:util";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { stringify as stringifyYaml } from "yaml";
+import {
+  hasNestedSchema,
+  parseNestedFrontmatter,
+  resolveEntityFields,
+} from "./canon-frontmatter.mjs";
 
 const SCRIPT_FILE = fileURLToPath(import.meta.url);
 const REPO_ROOT = fileURLToPath(new URL("../", import.meta.url));
@@ -292,6 +298,30 @@ function parseFrontmatterValue(raw, label) {
   return value;
 }
 
+/**
+ * The nested (character/3) frontmatter shape, declared by a top-level
+ * `schema:` key and parsed as real YAML by the shared parser. Returns null
+ * for a flat file, and also when no closing `---` exists at all: the flat
+ * loop below reports an unclosed block exactly as it always has, so the flat
+ * path's behaviour is untouched by this pre-scan.
+ */
+function parseNestedCanonFrontmatter(lines, label) {
+  const closingLine = lines.indexOf("---", 1);
+  if (closingLine === -1) return null;
+  const frontmatterLines = lines.slice(1, closingLine);
+  if (!hasNestedSchema(frontmatterLines)) return null;
+  let document;
+  try {
+    document = parseNestedFrontmatter(frontmatterLines.join("\n"));
+  } catch (error) {
+    fail(`${label}: ${errorMessage(error)}`);
+  }
+  const bodyLines = lines.slice(closingLine + 1);
+  if (bodyLines[0] === "") bodyLines.shift();
+  const body = bodyLines.join("\n").trimEnd();
+  return { fields: resolveEntityFields(document), body, document };
+}
+
 export function parseCanonFrontmatter(rawText, label = "entity") {
   const text = normalizeNewlines(rawText);
   assertNoDraftResidue(text, label);
@@ -299,6 +329,8 @@ export function parseCanonFrontmatter(rawText, label = "entity") {
     fail(`${label}: does not start with YAML frontmatter`);
   }
   const lines = text.split("\n");
+  const nested = parseNestedCanonFrontmatter(lines, label);
+  if (nested) return nested;
   let closingLine = -1;
   const fields = new Map();
   for (let index = 1; index < lines.length; index++) {
@@ -433,8 +465,15 @@ function renderMetadataValue(value) {
   return Array.isArray(value) ? JSON.stringify(value) : String(value);
 }
 
-function renderEntityContent(fields, body, type) {
+function renderEntityContent(fields, body, type, document = null) {
   if (type === "scene") return body;
+  if (document) {
+    // A nested (character/3) profile keeps everything in its frontmatter, so
+    // the memory body is the whole document as readable YAML, then the
+    // Markdown body. This is the interim shape for nested profiles; the final
+    // memory-body design is deferred until an import is actually wanted.
+    return `${stringifyYaml(document, { lineWidth: 0 }).trimEnd()}\n\n${body}`;
+  }
   const metadata = [];
   for (const [key, value] of fields) {
     if (IMPORT_FIELDS.has(key)) continue;
@@ -516,7 +555,7 @@ async function collectMarkdownFiles(root, relativeDir) {
 async function compileOneFile(root, type, relativePath) {
   const label = toPosix(relativePath);
   const text = await readUtf8(path.join(root, relativePath), label);
-  const { fields, body } = parseCanonFrontmatter(text, label);
+  const { fields, body, document = null } = parseCanonFrontmatter(text, label);
   const name = requireStringField(fields, "name", label);
 
   if (type === "scene") {
@@ -530,7 +569,7 @@ async function compileOneFile(root, type, relativePath) {
     }
   }
 
-  const content = renderEntityContent(fields, body, type);
+  const content = renderEntityContent(fields, body, type, document);
   return makeRecord(type, name, content, fields, label, type === "scene");
 }
 

@@ -282,6 +282,15 @@ console.log("mutated disposable validator input");
     'console.log("fake merged import preflight passed");\n',
   );
   await mkdir(join(repo, "data", "stories"), { recursive: true });
+  // The copied scripts resolve their one runtime dependency (`yaml`, used by
+  // canon-frontmatter.mjs) from the real checkout's node_modules.
+  const modulesLink = join(repo, "node_modules");
+  await symlink(
+    join(REPO_ROOT, "node_modules"),
+    modulesLink,
+    process.platform === "win32" ? "junction" : "dir",
+  );
+  links.push(modulesLink);
   return { repo, verifier };
 }
 
@@ -556,5 +565,150 @@ name: Baseline Character
     expect(result.stderr).toContain("staged-canon integrity check failed");
     expect(await snapshot(fixture.root)).toEqual(storyBefore);
     expect(await stagingDirectories()).toEqual(stagesBefore);
+  });
+});
+
+describe("verify-draft-overlay nested (character/3) profiles", () => {
+  const POOL_POINTER =
+    "data/stories/_art-library/facial-references/sources/anna-source.jpg";
+
+  async function seedNestedProfile(
+    options: {
+      portraits?: string;
+      referencesExtra?: string | ((portrait: string) => string);
+      provenanceSource?: string;
+    } = {},
+  ): Promise<{ fixture: OverlayFixture; portrait: string }> {
+    const fixture = await seedOverlay(2);
+    const portrait = `data/stories/${fixture.slug}/references/characters/anna/portrait.png`;
+    const referencesExtra =
+      typeof options.referencesExtra === "function"
+        ? options.referencesExtra(portrait)
+        : (options.referencesExtra ?? "");
+    await put(
+      fixture.root,
+      "references/characters/anna/portrait.png",
+      "fixture image bytes",
+    );
+    await put(
+      fixture.root,
+      "references/characters/anna/portrait.json",
+      JSON.stringify({ model: "fixture-model" }),
+    );
+    const draft = `---
+schema: "character/3"
+id: "${fixture.slug}/anna-vale"
+
+names:
+  display: "Anna Vale"
+
+tier: "recurring"
+
+identity:
+  pronouns: "she/her"
+
+references:
+  facial_reference_id: "anna-source"
+  reference_headshot: "${POOL_POINTER}"
+  headshot: "data/stories/${fixture.slug}/art/anna-headshot.png"
+  portraits: ["${options.portraits ?? portrait}"]
+${referencesExtra}
+meta:
+  pinned: false
+  tags: ["keeper"]
+
+provenance:
+  - date: "2026-09-18"
+    source: "${options.provenanceSource ?? "PASS.md 2026-09-18"}"
+    fact: "built for the verifier test"
+---
+
+> **DRAFT — NOT ACTIVE CANON**
+
+<!-- headshot-audit-test:start -->
+[Current selected headshot](../../art/anna-headshot.png).
+<!-- headshot-audit-test:end -->
+`;
+    await put(fixture.root, "drafts/characters/anna-vale.md", draft);
+    fixture.manifest.files.push({
+      path: "characters/anna-vale.md",
+      operation: "add",
+      baseline_sha256: null,
+      draft_sha256: hash(draft),
+    });
+    await writeManifest(fixture);
+    return { fixture, portrait };
+  }
+
+  it("verifies a nested profile whose frontmatter names a story reference image", async () => {
+    const { fixture } = await seedNestedProfile();
+    const storyBefore = await snapshot(fixture.root);
+
+    const result = await runVerifier(fixture.slug);
+
+    expect(result.code, result.stderr).toBe(0);
+    expect(result.stdout).toContain("visual pointers: 1 occurrences, 1 unique");
+    expect(await snapshot(fixture.root)).toEqual(storyBefore);
+  });
+
+  it("still requires the frontmatter pointer's sidecar to exist", async () => {
+    const { fixture } = await seedNestedProfile();
+    await rm(join(fixture.root, "references/characters/anna/portrait.json"));
+
+    const result = await runVerifier(fixture.slug);
+
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("same-basename sidecar");
+  });
+
+  it("rejects a frontmatter pointer into another story's references tree", async () => {
+    const { fixture } = await seedNestedProfile({
+      portraits:
+        "data/stories/other-story/references/characters/anna/portrait.png",
+    });
+
+    const result = await runVerifier(fixture.slug);
+
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("unsafe visual pointer");
+  });
+
+  it("rejects a story-relative references/ path inside the references mapping", async () => {
+    const { fixture } = await seedNestedProfile({
+      referencesExtra:
+        '  face_source: "references/characters/anna/face-source.json"',
+    });
+
+    const result = await runVerifier(fixture.slug);
+
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain(
+      "unmatched or malformed references/ occurrence in frontmatter references.face_source",
+    );
+  });
+
+  it("rejects an image pointer buried inside a longer frontmatter value", async () => {
+    const { fixture } = await seedNestedProfile({
+      referencesExtra: (portrait) =>
+        `  headshot_note: "see ${portrait} for the face"`,
+    });
+
+    const result = await runVerifier(fixture.slug);
+
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain(
+      "malformed frontmatter visual pointer in references.headshot_note",
+    );
+  });
+
+  it("leaves provenance and pool paths outside the references mapping alone", async () => {
+    const { fixture } = await seedNestedProfile({
+      provenanceSource: "references/characters/anna/face-source.json",
+    });
+
+    const result = await runVerifier(fixture.slug);
+
+    expect(result.code, result.stderr).toBe(0);
+    expect(result.stdout).toContain("visual pointers: 1 occurrences, 1 unique");
   });
 });

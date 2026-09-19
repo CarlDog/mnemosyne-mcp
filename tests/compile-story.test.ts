@@ -533,3 +533,105 @@ describe("writeCompiledExport", () => {
     ).rejects.toMatchObject({ code: "ENOENT" });
   });
 });
+
+describe("compileCanonDirectory nested (character/3) frontmatter", () => {
+  const NESTED_PROFILE = `---
+schema: "character/3"
+id: "test-story/anna-vale"
+
+names:
+  display: "Anna Vale"
+  aliases: ["the Keeper"]
+
+tier: "recurring"
+status: "active"
+
+# ---- card: the first block is the whole character ----
+card:
+  role: >-
+    Keeps the harbor key and the ledger that says
+    who may hold it.
+
+identity:
+  pronouns: "she/her"
+  age: 42
+
+physical:
+  measurements_cm: { bust: 89, waist: 61, hips: 90 }
+
+meta:
+  created: "2026-09-18"
+  pinned: true
+  tags: ["keeper", "harbor"]
+---
+
+<!-- headshot-audit-test:start -->
+[Current selected headshot](../../art/anna.png).
+<!-- headshot-audit-test:end -->
+`;
+
+  it("compiles a nested profile into the same record shape as a flat one", async () => {
+    const root = await makeRoot();
+    await seedCompleteCanon(root);
+    await put(root, "characters/anna-vale.md", NESTED_PROFILE);
+
+    const compiled = await compileCanonDirectory({
+      slug: "test-story",
+      dir: root,
+    });
+    expect(compiled.counts.character).toBe(4);
+    const record = compiled.records.find(
+      (candidate: { name: string }) => candidate.name === "Anna Vale",
+    );
+    expect(record.type).toBe("character");
+    expect(record.pinned).toBe(true);
+    expect(record.tags).toEqual([
+      "mnemosyne",
+      "story",
+      "character",
+      "keeper",
+      "harbor",
+    ]);
+    expect(record).not.toHaveProperty("created_at");
+    expect(record.content).toContain("identity:");
+    expect(record.content).toContain("pronouns: she/her");
+    expect(record.content).toContain(
+      "Keeps the harbor key and the ledger that says who may hold it.",
+    );
+    expect(record.content).toContain("[Current selected headshot]");
+    expect(record.content).not.toContain("[object Object]");
+
+    const document = buildCompiledExportDocument({
+      records: compiled.records,
+      storyName: "Test Story",
+      storyCreatedAt: ISO,
+      exportedAt: ISO,
+    });
+    expect(
+      checkImportCompatibility(document, {
+        parseExportDocument,
+        planImport,
+      }),
+    ).toMatchObject({ dry_run: true, total_written: 0, records: 11 });
+  });
+
+  it("leaves the flat path untouched, including an unclosed frontmatter block", async () => {
+    const root = await makeRoot();
+    await seedCompleteCanon(root);
+    await put(
+      root,
+      "characters/aria.md",
+      `---
+name: Aria
+
+A cartographer.
+`,
+    );
+
+    await expect(
+      compileCanonDirectory({ slug: "test-story", dir: root }),
+    ).rejects.toThrow(
+      'characters/aria.md:4: invalid frontmatter line "A cartographer."',
+    );
+  });
+});

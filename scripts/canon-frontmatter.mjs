@@ -10,6 +10,17 @@
 // DUPLICATE / error message about it. 55 canon files use the quoted form.
 //
 // Both scripts now import from here so the pair cannot drift again.
+//
+// A second frontmatter shape exists beside the flat one: the nested
+// character/3 profile, declared by a top-level `schema:` key and parsed as
+// real YAML (folded scalars, flow maps, sequences, comments). The nested
+// parser and the resolver that maps its keys onto the flat names the
+// consumers read live here too, so the three scripts that read entity files
+// (validate-canon, compile-story, verify-draft-overlay) share one
+// implementation. Flat files never carry a `schema:` key, and the flat path
+// is untouched by any of this.
+
+import { parse as parseYaml } from "yaml";
 
 /**
  * Render a value as a frontmatter scalar.
@@ -204,4 +215,117 @@ function parseInlineArray(value) {
 
 function errorMessage(error) {
   return error instanceof Error ? error.message : String(error);
+}
+
+// ---- the nested (character/3) frontmatter shape ----
+
+const NESTED_SCHEMA_LINE_RE = /^schema:[ \t]*\S/;
+
+/**
+ * True when a frontmatter block (its lines, without the `---` delimiters)
+ * declares the nested shape with a top-level `schema:` key. Flat legacy
+ * frontmatter never carries one, so this is the discriminator every consumer
+ * branches on; an indented `schema:` under some parent does not count.
+ */
+export function hasNestedSchema(frontmatterLines) {
+  return frontmatterLines.some((line) => NESTED_SCHEMA_LINE_RE.test(line));
+}
+
+function isPlainObject(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isOneLineString(value) {
+  return typeof value === "string" && !/\r|\n/.test(value);
+}
+
+function isNonEmptyOneLineString(value) {
+  return isOneLineString(value) && value.trim() !== "";
+}
+
+/**
+ * Parse a nested frontmatter block (the text between the `---` lines) as
+ * YAML and check the few fields the consumers rely on. Everything else in
+ * the document is carried through untouched for the compiler to render.
+ *
+ * Throws an Error whose message is a single line: yaml's own errors carry a
+ * multi-line code frame, and the validator prints one problem per line.
+ */
+export function parseNestedFrontmatter(frontmatterText) {
+  let document;
+  try {
+    document = parseYaml(frontmatterText, { uniqueKeys: true });
+  } catch (error) {
+    const firstLine = errorMessage(error).split(/\r?\n/, 1)[0];
+    throw new Error(`nested frontmatter is not valid YAML: ${firstLine}`, {
+      cause: error,
+    });
+  }
+  if (!isPlainObject(document)) {
+    throw new Error("nested frontmatter must be a YAML mapping");
+  }
+  if (!isNonEmptyOneLineString(document.schema)) {
+    throw new Error(
+      "nested frontmatter schema must be a non-empty one-line string",
+    );
+  }
+  if (!isPlainObject(document.names)) {
+    throw new Error("nested frontmatter must have a names mapping");
+  }
+  if (!isNonEmptyOneLineString(document.names.display)) {
+    throw new Error(
+      "nested frontmatter names.display must be a non-empty one-line string",
+    );
+  }
+  const { aliases } = document.names;
+  if (
+    aliases !== undefined &&
+    !(Array.isArray(aliases) && aliases.every(isOneLineString))
+  ) {
+    throw new Error(
+      "nested frontmatter names.aliases must be an array of one-line strings",
+    );
+  }
+  const { meta } = document;
+  if (meta !== undefined) {
+    if (!isPlainObject(meta)) {
+      throw new Error("nested frontmatter meta must be a mapping");
+    }
+    if (meta.pinned !== undefined && typeof meta.pinned !== "boolean") {
+      throw new Error("nested frontmatter meta.pinned must be true or false");
+    }
+    if (
+      meta.tags !== undefined &&
+      !(Array.isArray(meta.tags) && meta.tags.every(isNonEmptyOneLineString))
+    ) {
+      throw new Error(
+        "nested frontmatter meta.tags must be an array of non-empty one-line strings",
+      );
+    }
+  }
+  return document;
+}
+
+/**
+ * Map a nested document onto the flat field names the consumers read:
+ * `name` (names.display), `aliases`, `pinned` and `tags` (only when present),
+ * plus the one-line identity strings `schema`, `id`, `tier` and `status`.
+ * Nothing else is flattened; the compiler renders the whole document.
+ */
+export function resolveEntityFields(document) {
+  const fields = new Map();
+  fields.set("name", document.names.display);
+  if (document.names.aliases !== undefined) {
+    fields.set("aliases", [...document.names.aliases]);
+  }
+  for (const key of ["schema", "id", "tier", "status"]) {
+    if (isOneLineString(document[key])) fields.set(key, document[key]);
+  }
+  if (document.meta?.pinned !== undefined) {
+    fields.set("pinned", document.meta.pinned);
+  }
+  if (document.meta?.tags !== undefined) {
+    fields.set("tags", [...document.meta.tags]);
+  }
+  return fields;
 }

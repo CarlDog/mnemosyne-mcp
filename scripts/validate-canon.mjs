@@ -16,7 +16,13 @@
 
 import { lstat, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
-import { parseCanonScalar } from "./canon-frontmatter.mjs";
+import {
+  hasNestedSchema,
+  parseCanonScalar,
+  parseNestedFrontmatter,
+  resolveEntityFields,
+  toCanonScalar,
+} from "./canon-frontmatter.mjs";
 import { fileURLToPath } from "node:url";
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
@@ -76,6 +82,29 @@ function parseFrontmatter(content, file) {
   }
   const fields = Object.create(null);
   const fmLines = lines.slice(1, closingLine);
+  if (hasNestedSchema(fmLines)) {
+    // The nested character/3 shape: real YAML, parsed by the shared parser.
+    // Its resolved string fields are re-serialized through toCanonScalar so
+    // the flat reader below the parse (parseStringScalar) reads `name`
+    // exactly as it reads a flat file, and the entity is claimed for
+    // duplicate detection like any other.
+    let document;
+    try {
+      document = parseNestedFrontmatter(fmLines.join("\n"));
+    } catch (error) {
+      return {
+        error: `${file}: ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
+    for (const [key, value] of resolveEntityFields(document)) {
+      if (typeof value === "string") fields[key] = toCanonScalar(value);
+    }
+    const nestedBody = lines
+      .slice(closingLine + 1)
+      .join("\n")
+      .trimStart();
+    return { fields, body: nestedBody };
+  }
   for (let index = 0; index < fmLines.length; index += 1) {
     const line = fmLines[index];
     if (!line.trim()) continue;
