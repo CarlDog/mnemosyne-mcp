@@ -2,6 +2,52 @@
 
 **Last updated:** 2026-09-19.
 
+**Genre declaration standard complete: slice 3 shipped (2026-09-20).** Every
+story with a canon tree now declares its genres, and enforcement is on.
+
+Ten declarations were drafted from each story's own canon and premise documents,
+then validated through the real `parseStoryBlock` before any file was written, so
+nothing proposed could fail on write. All eleven declared stories pass
+`validate-canon --require-story-block`, and the compiler carries a declaration
+into an export's story block end to end (verified on Wonderland: the genres and
+the full guidance block are present in the compiled artifact).
+
+Frames chosen, broadest-first: BattleChasers fantasy/action-adventure/romance;
+Brass & Nerve steampunk/mystery/romance; Chaos Saga romance/slice-of-life/erotica;
+Midnight Is a Suggestion fantasy/retelling/heist; Shadowflame fantasy/gothic/horror;
+Star Wars: The Black Ledger science-fiction/espionage/noir; The Adjustment Protocol
+science-fiction/horror/psychological; The Noctis Veil horror/paranormal/gothic;
+Trigun: Scarlet Mercy science-fiction/western/retelling; Wonderland
+horror/retelling/portal-fantasy.
+
+Two deliberate choices worth recording. Star Wars and Trigun both take
+`science-fiction` at the root rather than `space-opera`, because the former's own
+Post-Endor Human-Scale Focus rule exists to refuse interstellar spectacle and the
+latter is one hard planet rather than an interstellar stage. And `erotica` sits in
+`genres` only where the dictionary's own definition is true (Chaos Saga), and in
+`subgenres` elsewhere: the operator's standing ask that every story carry it "as a
+subgenre or by some other method" is met by the other method, since the 2026-09-19
+content-policy sync gave every story `content_rating: nsfw` plus a Content Framing
+rule that reaches the prompt. Paying a genre slot for it everywhere would cost each
+story a third of its actual genre identity for a fact routing already carries.
+
+The hardening commit turned `REQUIRE_STORY_BLOCK` on, and its blast radius was
+wider than the design predicted: not one gated test but the FIXTURES, in two files.
+`seedOverlay` and promote-overlay's `seed()` both built canon trees with no
+declaration, which after slice 3 represents no real story; both now seed one, with
+an explicit opt-out for the single test that needs an undeclared tree. The
+gated-verifier helper no longer rewrites the constant from off to on — it asserts
+the gate IS on and copies the verifier verbatim, which pins the direction that
+matters. Three mutation checks (gate off, each fixture stops declaring), three
+caught, every file restored byte-exactly.
+
+One diagnostic note for whoever hits it next: a failing run of
+`verify-draft-overlay.test.ts` leaves staging directories in the system temp
+directory, and those leftovers make the NEXT run fail tests that are actually fine.
+The failure count oscillated between one and four across runs until temp was
+cleared, and every count but the clean one was noise. Clear `mnemosyne-*` from temp
+before trusting a red result in that file.
+
 **Story-scope guards (2026-09-19).** OpenChronicle reads a missing
 `project_id` as EVERY project. Reproduced live the same day: a
 `saveEntity(oc, story.project_id, ...)` call passed `undefined` — `MnemoStory`'s

@@ -100,11 +100,29 @@ function replacementOperation(fixture: OverlayFixture): ManifestOperation {
   return operation;
 }
 
+// Slice 3 of docs/GENRE_DECLARATION_DESIGN.md declared every story and turned
+// the verifier's story-block gate on, so a canon tree WITHOUT a declaration no
+// longer represents any real story. The fixture therefore seeds one by
+// default; the one test that needs an undeclared tree opts out explicitly.
+const SEED_STORY_BLOCK = `---
+schema: "story/1"
+name: "Seeded Fixture Story"
+genres: ["mystery", "romance"]
+lean: "A harbor mystery whose clues are all favours owed."
+---
+
+Notes nothing reads.
+`;
+
 async function seedOverlay(
   schemaVersion: 1 | 2,
   location?: { slug: string; root: string },
+  options: { declare?: boolean } = {},
 ): Promise<OverlayFixture> {
   const { slug, root } = location ?? (await makeStoryRoot());
+  if (options.declare !== false) {
+    await put(root, "canon/_story.md", SEED_STORY_BLOCK);
+  }
   const baselineCharacter = `---
 name: Baseline Character
 ---
@@ -731,10 +749,13 @@ lean: "A harbor mystery whose clues are all favours owed."
     );
   }
 
-  // The real verifier with its hardening gate flipped on (the state slice 3
-  // of docs/GENRE_DECLARATION_DESIGN.md commits), beside copies of the real
-  // validator, compiler and helpers; the built import contract and the
-  // dependencies are reached through junctions, the dictionary is copied.
+  // The real verifier, beside copies of the real validator, compiler and
+  // helpers; the built import contract and the dependencies are reached
+  // through junctions, the dictionary is copied. Before slice 3 this rewrote
+  // the gate from off to on; the gate now ships on, so it copies the verifier
+  // verbatim and ASSERTS the gate is on instead. That assertion is the point:
+  // if someone turns the gate back off, this fails loudly here rather than
+  // letting the two tests below pass quietly against an ungated verifier.
   async function makeGatedVerifierRepo(): Promise<{
     repo: string;
     verifier: string;
@@ -754,10 +775,11 @@ lean: "A harbor mystery whose clues are all favours owed."
       );
     }
     const source = await readFile(VERIFIER, "utf8");
-    expect(source.split(GATE_OFF)).toHaveLength(2);
+    expect(source.split(GATE_ON)).toHaveLength(2);
+    expect(source).not.toContain(GATE_OFF);
     await writeFile(
       join(repo, "scripts", "verify-draft-overlay.mjs"),
-      source.replace(GATE_OFF, GATE_ON),
+      source,
       "utf8",
     );
     await mkdir(join(repo, "src"), { recursive: true });
@@ -781,11 +803,14 @@ lean: "A harbor mystery whose clues are all favours owed."
     };
   }
 
-  async function gatedFixture(repo: string): Promise<OverlayFixture> {
+  async function gatedFixture(
+    repo: string,
+    options: { declare?: boolean } = {},
+  ): Promise<OverlayFixture> {
     const slug = `gated-${randomBytes(4).toString("hex")}`;
     const root = join(repo, "data", "stories", slug);
     await mkdir(root, { recursive: true });
-    return seedOverlay(2, { slug, root });
+    return seedOverlay(2, { slug, root }, options);
   }
 
   it("with the gate on, passes an overlay revising one character on a declared canon and fails an undeclared one", async () => {
@@ -804,7 +829,7 @@ lean: "A harbor mystery whose clues are all favours owed."
       readFile(join(declared.root, "drafts", "_story.md")),
     ).rejects.toThrow();
 
-    const undeclared = await gatedFixture(repo);
+    const undeclared = await gatedFixture(repo, { declare: false });
     const fail = await runVerifier(undeclared.slug, verifier);
     expect(fail.code).toBe(1);
     expect(fail.stdout + fail.stderr).toContain(
@@ -813,13 +838,18 @@ lean: "A harbor mystery whose clues are all favours owed."
   });
 
   it("manifests a drafts/_story.md like any other draft file, and names an unknown term in it", async () => {
+    // REPLACE, not add: with the gate on, every canon carries a declaration,
+    // so an overlay that revises the story block is replacing the seeded one.
+    // An add would collide with it, and opting out of the seed instead would
+    // fail the baseline validator run for the missing declaration -- which is
+    // the gate working, not this test's subject.
     const valid = await seedOverlay(2);
     const validBlock = storyBlock('["mystery", "romance"]', true);
     await put(valid.root, "drafts/_story.md", validBlock);
     valid.manifest.files.push({
       path: "_story.md",
-      operation: "add",
-      baseline_sha256: null,
+      operation: "replace",
+      baseline_sha256: hash(SEED_STORY_BLOCK),
       draft_sha256: hash(validBlock),
     });
     await writeManifest(valid);
@@ -831,8 +861,8 @@ lean: "A harbor mystery whose clues are all favours owed."
     await put(invalid.root, "drafts/_story.md", badBlock);
     invalid.manifest.files.push({
       path: "_story.md",
-      operation: "add",
-      baseline_sha256: null,
+      operation: "replace",
+      baseline_sha256: hash(SEED_STORY_BLOCK),
       draft_sha256: hash(badBlock),
     });
     await writeManifest(invalid);

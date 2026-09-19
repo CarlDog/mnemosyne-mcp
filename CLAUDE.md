@@ -13,13 +13,15 @@ Status lives in [STATUS.md](STATUS.md) — read it first. This section names onl
 is in flight; it must never restate STATUS.md's Done log. (When the two disagree,
 STATUS.md is newer.)
 
-**In flight: the genre declaration standard (`docs/GENRE_DECLARATION_DESIGN.md`).**
-Slices 1 (tooling) and 2 (runtime) both shipped 2026-09-19. What remains is slice
-3: one question set per story, drafted by Claude and confirmed by the operator per
-story, written to that story's `canon/_story.md` under gitignored `data/`; then the
-one hardening commit that turns the verifier's `REQUIRE_STORY_BLOCK` gate on and
-updates the gated-verifier test that pins the constant's current value. Until that
-commit no story is required to carry a declaration, and no story declares one yet.
+**Nothing application-side is currently in flight.** The genre declaration standard
+(`docs/GENRE_DECLARATION_DESIGN.md`) is complete: slices 1 (tooling) and 2 (runtime)
+shipped 2026-09-19, and slice 3 closed 2026-09-20. Every story with a canon tree
+carries a declaration in its `canon/_story.md` under gitignored `data/` (eleven of
+them), and the verifier's `REQUIRE_STORY_BLOCK` gate is ON, so an undeclared canon
+now fails verification. The three drafts-only trees have no `canon/` at all, so the
+validator already refuses them for that reason and the gate changes nothing there.
+
+**Next up is the phase-end audit** (`phase-end-audit.md`), last run 2026-09-08.
 
 **Storyline state is deliberately not summarised here.** Per standing operator rule
 (2026-09-12), committed paths carry application material only: no storylines, drafts,
@@ -292,8 +294,8 @@ Two standing operator instructions that outlive any sprint:
   non-empty bodies. Content correctness still needs a human pass. Missing,
   unreadable, or empty trees exit 1. The story block `_story.md`
   (`docs/GENRE_DECLARATION_DESIGN.md`) is read explicitly at the canon root,
-  outside the entity walk: checked whenever it exists, required only under the
-  flag, which stays off until every story is declared (slice 3).
+  outside the entity walk: checked whenever it exists, required under the flag,
+  which the overlay verifier now passes (every story is declared, 2026-09-20).
 - `scripts/compile-story.mjs <slug> [--dir <canon-dir>] --check` — compiles a
   canon-shaped tree and runs the built server's real import schema/preflight
   with `writes=0`; `--out <file>` exclusively creates a checked export artifact
@@ -306,8 +308,8 @@ Two standing operator instructions that outlive any sprint:
   trees, and runs the merged import preflight without promotion or import.
   `--canon-only <slug>` checks active canon alone; `--manifest _control/<file>.json`
   verifies a subset manifest (the promotion tool's partial-promotion path).
-  `REQUIRE_STORY_BLOCK` (module constant, off until slice 3 of the genre
-  standard) passes `--require-story-block` to the active, baseline and merged
+  `REQUIRE_STORY_BLOCK` (module constant, ON since slice 3 of the genre standard,
+  2026-09-20) passes `--require-story-block` to the active, baseline and merged
   validator runs, never to the isolated drafts run: an overlay revising one
   character carries no story block of its own. A `drafts/_story.md` is
   manifested and promoted like any other draft file.
@@ -459,7 +461,8 @@ Two standing operator instructions that outlive any sprint:
   broadest first and never a term beside its own ancestor, plus a one-line
   lean and conventions/avoid lists capped to travel on the story marker, in
   `canon/_story.md` (authoring truth, slice 1) and on the marker (runtime,
-  slice 2). Enforcement is hard only once every story is declared (slice 3).
+  slice 2). Complete: slice 3 declared every story and turned enforcement on
+  (2026-09-20).
 - `docs/RESEARCH_DECISION_QUEUE.md` — the enumerated decision queue from the
   2026-08-28 research triage: every recommendation-table row of the four
   adoption assessments with its disposition (shipped / rejected at triage /

@@ -776,12 +776,16 @@ function runBoundedNodeScript(script, args, label) {
   });
 }
 
-// The story block gate (docs/GENRE_DECLARATION_DESIGN.md section 3): once
-// every story is declared, the hardening commit flips this to true and the
+// The story block gate (docs/GENRE_DECLARATION_DESIGN.md section 3): the
 // baseline and merged validator runs require canon/_story.md. The isolated
 // drafts run never does: an overlay that revises one character carries no
 // story block of its own.
-const REQUIRE_STORY_BLOCK = false;
+//
+// Turned ON 2026-09-20 by slice 3, once every story with a canon tree
+// carried a declaration (eleven of them; the three drafts-only trees have no
+// canon/ at all, so the validator already refuses them for that reason and
+// this gate changes nothing for them).
+const REQUIRE_STORY_BLOCK = true;
 
 function runCanonValidator(
   slug,

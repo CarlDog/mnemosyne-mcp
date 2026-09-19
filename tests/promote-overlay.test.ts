@@ -58,8 +58,14 @@ async function seed(): Promise<Fixture> {
   cleanups.push(root);
   const baselineCharacter = `---\nname: Baseline Character\n---\n\nOld state.\n`;
   const retiredLore = `---\nname: Retired Lore\n---\n\nRemovable.\n`;
+  // Promotion is verifier-gated, and slice 3 of
+  // docs/GENRE_DECLARATION_DESIGN.md turned the verifier's story-block gate
+  // on, so a canon tree without a declaration no longer passes the baseline
+  // run -- and no real story lacks one.
+  const storyBlock = `---\nschema: "story/1"\nname: "Seeded Fixture Story"\ngenres: ["mystery", "romance"]\nlean: "A harbor mystery whose clues are all favours owed."\n---\n\nNotes nothing reads.\n`;
   const replacementDraft = `---\nname: Baseline Character\n---\n\n> **DRAFT — NOT ACTIVE CANON**\n\nNew state.\n`;
   const additionDraft = `---\nname: New Harbor\n---\n\n> **DRAFT — NOT ACTIVE CANON**\n\nThree piers bracket a tidal basin.\n`;
+  await put(root, "canon/_story.md", storyBlock);
   await put(root, "canon/characters/baseline.md", baselineCharacter);
   await put(root, "canon/lore/retired.md", retiredLore);
   await put(root, "drafts/characters/baseline.md", replacementDraft);

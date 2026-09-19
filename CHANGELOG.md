@@ -7,6 +7,26 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 
 ### Added
 
+- **Genre declaration standard, slice 3: every story declares, and enforcement
+  is on.** Ten stories gained a `canon/_story.md` (the eleventh, the pilot, had
+  one), each carrying one to three dictionary terms broadest-first, a one-line
+  lean, and conventions/avoid lists. Every declaration was validated through the
+  real parser before it was written, all eleven pass `validate-canon
+  --require-story-block`, and the compiler carries one into an export's story
+  block end to end. The overlay verifier's `REQUIRE_STORY_BLOCK` gate is now ON,
+  so a canon tree with no declaration fails verification; the three drafts-only
+  trees have no `canon/` at all, so the validator already refused them and the
+  gate changes nothing there (verified: identical exit codes with and without
+  the flag). Declarations live under gitignored `data/`, so nothing about the
+  stories themselves enters this repository. Turning the gate on moved the test
+  FIXTURES rather than one gated test: `seedOverlay` and promote-overlay's
+  `seed()` both built canon trees with no declaration, which after slice 3
+  represents no real story, so both now seed one with an explicit opt-out for
+  the single test that needs an undeclared tree. The gated-verifier helper no
+  longer rewrites the constant from off to on — it asserts the gate IS on and
+  copies the verifier verbatim, pinning the direction that matters. Three
+  mutation checks, three caught.
+
 - Genre declaration standard, slice 1 (tooling) of
   `docs/GENRE_DECLARATION_DESIGN.md`: `src/genre-dictionary.json` (40
   parent-annotated terms) and the story block `canon/_story.md`
@@ -17,8 +37,9 @@ this file was introduced remains in [STATUS.md](STATUS.md).
   at the canon root, checks a present block always and requires one only under
   `--require-story-block`; the compiler carries it into the export as
   `story.genres` and `story.genre_guidance` and warns on a `story.json` name
-  mismatch; the overlay verifier's `REQUIRE_STORY_BLOCK` constant (off until
-  every story is declared) passes the flag to its active, baseline and merged
+  mismatch; the overlay verifier's `REQUIRE_STORY_BLOCK` constant (shipped off,
+  turned on by slice 3 once every story was declared) passes the flag to its
+  active, baseline and merged
   runs and never to the isolated drafts run; the scaffolder writes `_story.md`
   back from a declared export and refuses a half declaration before any target
   exists. Pinned by new cases in the frontmatter, validator, compiler, verifier

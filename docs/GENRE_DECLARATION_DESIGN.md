@@ -139,6 +139,12 @@ Rules the tooling enforces whenever the file exists:
 - Turning the gate on is one commit in slice 3, after every existing story is declared:
   the verifier starts passing the flag to its baseline and merged runs, and the
   validator's documented default invocation gains it.
+- **Done 2026-09-20.** Eleven stories declared, gate on. The predicted cost was one
+  gated test; the real cost was the test FIXTURES in two files, since both overlay
+  suites built canon trees with no declaration. Both now seed one, with an opt-out for
+  the single test that needs an undeclared tree. The three drafts-only trees have no
+  `canon/` at all, so the validator already refused them and the gate changes nothing
+  for them.
 
 ## 4. The compiled export and the runtime marker
 
