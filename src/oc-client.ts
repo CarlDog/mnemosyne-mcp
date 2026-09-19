@@ -19,6 +19,12 @@ import { MNEMOSYNE_VERSION } from "./version.js";
 import { extractStructuredOrParsed } from "./mcp-result.js";
 import { verifyRequiredTools } from "./mcp-discovery.js";
 import { RunOutcomeError } from "./run-outcome.js";
+import { assertStoryScope } from "./story-scope.js";
+
+/** Appended to an unscoped-search error so the one legitimate cross-project
+ * caller is discoverable from the message, not just from this file. */
+const ALL_PROJECTS_HINT =
+  "Pass allProjects: true to search every project on purpose.";
 
 /** Backoff sleep that rejects promptly when the run aborts -- a caller
  * disconnect or shutdown must not sit out up to 31s of retry sleeps
@@ -147,7 +153,18 @@ export interface OcMemorySaveOptions {
 
 export interface OcMemorySearchOptions {
   query: string;
+  /** The story (OC project) to search. Required unless `allProjects` says
+   * otherwise -- see the scope check in memorySearch. */
   projectId?: string;
+  /**
+   * Search EVERY project on purpose, with no project scope at all. Mutually
+   * exclusive with projectId, and the only way to get an unscoped search:
+   * omitting projectId throws instead (src/story-scope.ts). One caller sets
+   * it -- listStories, whose job is to find every story's marker, and each
+   * story is its own OC project. A flag makes that exception greppable,
+   * where a missing field is indistinguishable from a forgotten one.
+   */
+  allProjects?: true;
   tags?: string[];
   topK?: number;
   /** Search channel. Default (omitted) is OC's hybrid FTS+semantic RRF. */
@@ -332,6 +349,11 @@ export class OcClient {
   }
 
   async memorySave(opts: OcMemorySaveOptions): Promise<OcMemory> {
+    // A `project_id: undefined` here does not reach OC as null for it to
+    // reject -- JSON.stringify drops the key, so the write lands with no
+    // project at all. Both current callers pass a real id; this keeps a
+    // future one from orphaning an entity silently.
+    assertStoryScope(opts.projectId, "memorySave projectId");
     const args: Record<string, unknown> = {
       content: opts.content,
       project_id: opts.projectId,
@@ -345,6 +367,24 @@ export class OcClient {
   async memorySearch(
     opts: OcMemorySearchOptions,
   ): Promise<OcMemorySearchResult[]> {
+    // Scope is a choice, never an omission. OC reads a missing project_id as
+    // "every project", so the pre-guard `if (opts.projectId)` below silently
+    // widened an empty or undefined id into a whole-database search -- the
+    // mechanism behind the 2026-09-19 cross-story overwrite (story-scope.ts).
+    if (opts.allProjects) {
+      if (opts.projectId !== undefined) {
+        throw new Error(
+          "memorySearch: pass projectId or allProjects, not both -- a search " +
+            "is scoped to one story or deliberately across every project.",
+        );
+      }
+    } else {
+      assertStoryScope(
+        opts.projectId,
+        "memorySearch projectId",
+        ALL_PROJECTS_HINT,
+      );
+    }
     const args: Record<string, unknown> = { query: opts.query };
     if (opts.projectId) args.project_id = opts.projectId;
     if (opts.tags) args.tags = opts.tags;
@@ -370,6 +410,11 @@ export class OcClient {
     projectId: string;
     signal?: AbortSignal;
   }): Promise<OcMemory[]> {
+    // No allProjects counterpart: nothing needs a cross-project enumeration,
+    // and an unscoped list is worse than an unscoped search -- it has no
+    // ranking window to hide behind, so listAllEntities would hand an export
+    // every memory in the database as if it were this story's.
+    assertStoryScope(opts.projectId, "memoryList projectId");
     return this.callTool(
       "memory_list",
       { project_id: opts.projectId },
@@ -392,6 +437,7 @@ export class OcClient {
     projectId: string;
     signal?: AbortSignal;
   }): Promise<OcMemoryCompact[]> {
+    assertStoryScope(opts.projectId, "memoryListCompact projectId");
     return this.callTool(
       "memory_list",
       { project_id: opts.projectId, compact: true },

@@ -119,7 +119,10 @@ Two standing operator instructions that outlive any sprint:
   serve as static files + a SPA-fallback route. Dev: `npm --prefix webui
   run dev` runs Vite's own server, proxying `/api/*` to the Express
   server started via the root's `npm run dev`.
-- `src/oc-client.ts` — Streamable HTTP MCP client wrapper for OC.
+- `src/oc-client.ts` — Streamable HTTP MCP client wrapper for OC. Every
+  project-scoped method asserts its scope at the wire (see
+  `src/story-scope.ts`); `memorySearch` is the one that can opt out, and
+  only through an explicit `allProjects: true`.
 - `src/kindroid-client.ts` — Streamable HTTP MCP client wrapper for
   kindroid-mcp (same shape as `oc-client.ts`).
 - `src/config.ts` — local config (current story pointer; repo-local
@@ -224,6 +227,17 @@ Two standing operator instructions that outlive any sprint:
   (`src/tools/status.ts`) — a second independent instance per surface would
   mean two uncoordinated caches instead of one that actually bounds probe
   frequency across every caller.
+- `src/story-scope.ts` — `assertStoryScope()`: the one check that a story
+  (OC project) id is actually present. OpenChronicle reads a MISSING project
+  scope as every project, so an undefined or empty `storyId` silently widens
+  a search into the whole database — which on 2026-09-19 made `saveEntity`
+  overwrite an identically-named entity in an unrelated story and return a
+  success shape. Asserted twice: at each story-scoped entry point in
+  `src/entities.ts`, before its first OC call, and again on `OcClient`'s
+  `memorySearch`/`memoryList`/`memoryListCompact`/`memorySave`. The one
+  deliberate cross-project read (`listStories`) says so with a flag, so
+  every exception is greppable rather than inferred from a missing field.
+  Do not add a story-scoped path without the guard.
 - `src/service-url.ts` — the one parser every configured service endpoint
   passes through (NemoClaw §4): http(s)-only, no embedded
   credentials/fragment/query; private addresses deliberately allowed.
@@ -730,7 +744,7 @@ npm run typecheck      # tsc -p tsconfig.typecheck.json (src + tests)
 npm run lint           # eslint .
 npm run format         # prettier --write .
 npm run format:check   # prettier --check . (CI gates on this -- run before pushing)
-npm test               # vitest run (95 of 843 tests are env-gated; see below)
+npm test               # vitest run (95 of 864 tests are env-gated; see below)
 ```
 
 `npm test` green does **not** mean the integration surface ran. Every

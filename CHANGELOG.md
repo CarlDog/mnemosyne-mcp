@@ -89,6 +89,37 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 
 ### Fixed
 
+- **A missing story scope is now an error, not a search of every story.**
+  OpenChronicle reads an absent `project_id` as EVERY project, and nothing in
+  TypeScript stopped one from getting there: a `storyId: string` parameter is
+  a compile-time claim only, and a `{ project_id: undefined }` argument is
+  dropped by `JSON.stringify` rather than arriving as a null OC could reject.
+  Reproduced live 2026-09-19: a `saveEntity(oc, story.project_id, ...)` call
+  passed `undefined` (`MnemoStory`'s field is `id`), the unscoped dedupe
+  search matched a `[Rule] Content Framing` in an unrelated story, and
+  `saveEntity` took its overwrite branch and `memory_update`d that other
+  story's memory in place — returning `created: false`, a memory id, and no
+  error at all. It was caught only because the caller happened to read the
+  record back. New `src/story-scope.ts` holds the one check, and it runs
+  twice: at each story-scoped entry point in `src/entities.ts` before its
+  first OC call (`saveEntity`, `deleteEntity`, `recall`, `listAllEntities`,
+  `getEntityByMemoryId`), and again on `OcClient`'s `memorySearch`,
+  `memoryList`, `memoryListCompact` and `memorySave`. `saveEntity`'s guard
+  sits above the dedupe search rather than inside it, because
+  `SaveEntityArgs.existing` skips that search entirely and goes straight to
+  the write. An audit of the same surface found a second silent widen —
+  `memoryList` has no ranking window to blunt it, so an unscoped
+  `listAllEntities` would have handed an export every memory in the database
+  as this story's — and one function that already failed CLOSED rather than
+  widening (`getEntityByMemoryId`, whose `project_id` comparison makes every
+  unscoped lookup null; its guard replaces a misleading "not found" with the
+  cause). The one legitimate cross-project search, `listStories`, now declares
+  itself with `allProjects: true` instead of by omitting a field, so a
+  forgotten scope and a deliberate one are no longer the same bytes.
+  21 new tests in `tests/story-scope.test.ts`; 14 mutation checks, 14 caught.
+  The two-project test runs against a fake modelling OC's documented scoping,
+  so it pins mnemosyne's plumbing, not OC's behaviour — the live incident is
+  what established that.
 - **A marker write no longer erases values this build cannot parse.** Every
   write used to rebuild the marker from PARSED fields, so any stored value
   the current parser rejects vanished on the next unrelated write.

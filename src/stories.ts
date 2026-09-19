@@ -613,6 +613,11 @@ export function combineKindroidTarget(
 export async function listStories(oc: OcClient): Promise<MnemoStory[]> {
   const markers = await oc.memorySearch({
     query: STORY_MARKER_QUERY,
+    // The one deliberate cross-project search in the codebase: every story is
+    // its own OC project, so listing stories means searching all of them. The
+    // flag is what distinguishes this from a forgotten scope, which now
+    // throws instead of quietly searching everything (src/story-scope.ts).
+    allProjects: true,
     tags: STORY_MARKER_TAGS,
     topK: MAX_STORIES_PER_LIST,
   });

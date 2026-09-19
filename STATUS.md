@@ -2,6 +2,28 @@
 
 **Last updated:** 2026-09-19.
 
+**Story-scope guards (2026-09-19).** OpenChronicle reads a missing
+`project_id` as EVERY project. Reproduced live the same day: a
+`saveEntity(oc, story.project_id, ...)` call passed `undefined` — `MnemoStory`'s
+OC project id field is `id` — so the dedupe search ran unscoped, matched a
+`[Rule] Content Framing` belonging to a different story, and the overwrite
+branch replaced that other story's memory in place. It returned `created:
+false` and a memory id and nothing complained; it was caught only because the
+caller read the record back, and the data was repaired the same minute. The
+hole was never a missing type: a `storyId: string` parameter is a compile-time
+claim, and `{ project_id: undefined }` is dropped by `JSON.stringify` rather
+than arriving as a null OC would reject. The guard is now asserted twice —
+at each story-scoped entry point in `entities.ts` before its first OC call,
+and again at `OcClient`'s `memorySearch`/`memoryList`/`memoryListCompact`/
+`memorySave`. `saveEntity`'s sits above the dedupe search, since
+`SaveEntityArgs.existing` skips that search and writes directly. The audit
+found a second widen of the same shape (`memoryList` has no ranking window,
+so an unscoped `listAllEntities` would hand an export the whole database) and
+one function that already failed closed (`getEntityByMemoryId`). The single
+legitimate cross-project search, `listStories`, now says `allProjects: true`
+rather than omitting a field, so a forgotten scope and a deliberate one stop
+being the same bytes. Suite at 864 tests; 14 mutation checks, 14 caught.
+
 **Live content policy synced from canon (2026-09-19).** The first canon-to-live
 write of any kind, made on explicit operator direction and scoped to content
 policy alone. Three live stories carried a `[Rule] Content Framing` whose own
@@ -37,9 +59,10 @@ rule passed `story.project_id`, but `MnemoStory`'s OC project id is `id`; the
 undefined scope widened `saveEntity`'s dedupe search across every project, it
 matched Blackwood's identically-titled rule and overwrote it. The script's own
 read-back caught it — the write itself reported success. That exposed a real
-hazard: `saveEntity` never asserts its `storyId` is non-empty before searching,
-so any caller with a missing scope can overwrite another story's entity in
-place. Filed as its own task rather than widening that one. Verified end to end
+hazard: `saveEntity` never asserted its `storyId` is non-empty before searching,
+so any caller with a missing scope could overwrite another story's entity in
+place. Filed as its own task rather than widening that one, and CLOSED the same
+day — see "Story-scope guards" above. Verified end to end
 with `scripts/dump-prompt.mjs`: the new text reaches the system prompt and no
 occurrence of the old ceiling survives anywhere.
 

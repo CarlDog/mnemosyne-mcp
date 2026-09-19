@@ -67,7 +67,10 @@ describe("search option pass-through", () => {
       phrase: true,
       pinnedLimit: 0,
     });
-    await oc.memorySearch({ query: "aria" });
+    // Scoped even though scope is not what this test is about: an
+    // unscoped search now throws (src/story-scope.ts). "Omitted stays
+    // omitted" is still about mode/phrase/pinned_limit.
+    await oc.memorySearch({ query: "aria", projectId: STORY_ID });
     expect(calls[0]?.args).toMatchObject({
       query: "aria",
       mode: "keyword",
@@ -108,7 +111,7 @@ describe("relevance schema (captured per-mode wire shapes)", () => {
 
   it("parses every captured shape and preserves the object", async () => {
     const { oc } = stubbedOc(() => fixtures);
-    const rows = await oc.memorySearch({ query: "x" });
+    const rows = await oc.memorySearch({ query: "x", projectId: STORY_ID });
     expect(rows).toHaveLength(4);
     expect(rows[0]?.relevance?.rrf_score).toBe(0.032);
     expect(rows[1]?.relevance?.keyword_rank).toBe(2);

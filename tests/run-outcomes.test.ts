@@ -261,7 +261,11 @@ describe("lifecycle (slice 3)", () => {
     setTimeout(() => abort.abort(), 50);
     const start = Date.now();
     await expect(
-      oc.memorySearch({ query: "x", signal: abort.signal }),
+      oc.memorySearch({
+        query: "x",
+        projectId: STORY_ID,
+        signal: abort.signal,
+      }),
     ).rejects.toMatchObject({ outcome: "rejected_before_dispatch" });
     // First backoff sleep alone is 1000ms; prompt abort must beat it.
     expect(Date.now() - start).toBeLessThan(900);

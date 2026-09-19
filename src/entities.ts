@@ -31,6 +31,7 @@ import {
   type InjectionSignal,
 } from "./injection-scan.js";
 import { type OcClient, type OcMemory } from "./oc-client.js";
+import { assertStoryScope } from "./story-scope.js";
 
 // Thrown by saveEntity in place of a plain Error so a caller (a REST route,
 // in particular) can catch specifically this and translate it into a
@@ -171,6 +172,10 @@ function toKnownExisting(memory: OcMemory | null): KnownExistingEntity | null {
     : null;
 }
 
+// storyId is asserted by both callers (saveEntity, deleteEntity) before they
+// get here, deliberately rather than inside this function: saveEntity can skip
+// this search entirely via SaveEntityArgs.existing, so a guard here would not
+// cover its write. OcClient.memorySearch asserts again at the wire.
 async function findExistingEntity(
   oc: OcClient,
   storyId: string,
@@ -274,6 +279,12 @@ export async function saveEntity(
   storyId: string,
   args: SaveEntityArgs,
 ): Promise<SaveEntityResult> {
+  // Before anything, including the scan: an unscoped save is the write that
+  // silently overwrote another story's entity (src/story-scope.ts). The guard
+  // belongs here and not in findExistingEntity, because SaveEntityArgs.existing
+  // skips that search entirely (mnemo_import_story's preflight path) and goes
+  // straight to memorySave with this same storyId.
+  assertStoryScope(storyId, "saveEntity storyId");
   const signals = args.skipInjectionScan
     ? []
     : scanForInjectionSignals(args.body);
@@ -395,6 +406,7 @@ export async function deleteEntity(
   type: EntityType,
   name: string,
 ): Promise<DeleteEntityResult> {
+  assertStoryScope(storyId, "deleteEntity storyId");
   const existing = await findExistingEntity(oc, storyId, type, name);
   if (!existing) {
     throw new Error(
@@ -410,6 +422,7 @@ export async function recall(
   storyId: string,
   args: RecallArgs,
 ): Promise<RecalledEntity[]> {
+  assertStoryScope(storyId, "recall storyId");
   const limit = Math.min(
     Math.max(args.limit ?? DEFAULT_RECALL_LIMIT, 1),
     MAX_RECALL_LIMIT,
@@ -465,6 +478,7 @@ export async function listAllEntities(
   storyId: string,
   markerMemoryId: string,
 ): Promise<ListAllEntitiesResult> {
+  assertStoryScope(storyId, "listAllEntities storyId");
   const memories = await oc.memoryList({ projectId: storyId });
   const entities: RecalledEntity[] = [];
   const skipped: string[] = [];
@@ -487,12 +501,21 @@ export async function listAllEntities(
  * if the memory exists but isn't a well-formed entity (e.g. it's the
  * story marker itself) -- an unlikely but real case if a caller guesses a
  * marker's memory_id.
+ *
+ * Unlike the search- and list-backed functions above, this one already FAILED
+ * CLOSED on a missing story scope rather than widening: memoryGet is not
+ * project-scoped at all, so an absent storyId makes the `project_id !==
+ * storyId` comparison below always true and every lookup returns null. The
+ * guard is here to replace a misleading "not found" with the real cause, not
+ * to close a leak -- and deleteEntityByMemoryId inherits it, which is why that
+ * function has none of its own.
  */
 export async function getEntityByMemoryId(
   oc: OcClient,
   storyId: string,
   memoryId: string,
 ): Promise<RecalledEntity | null> {
+  assertStoryScope(storyId, "getEntityByMemoryId storyId");
   const memory = await oc.memoryGet(memoryId);
   if (!memory || memory.project_id !== storyId) return null;
   return memoryToRecalled(memory);
