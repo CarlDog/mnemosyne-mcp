@@ -2,12 +2,37 @@
 
 **Last updated:** 2026-09-19.
 
+**Genre dictionary reviewed against external sources and revised
+(2026-09-19).** The 39 terms shipped in slice 1 were written without any
+external check, so they were reviewed adversarially against the book trade's
+BISAC fiction headings (414 parsed from the live list), the Library of
+Congress genre authority (all 39 terms plus 31 coverage candidates resolved
+for broader terms and scope notes), the Encyclopedia of Science Fiction, and
+the romance, horror and historical-fiction bodies' own definitions. 30 of the
+39 had an exact cataloguing term. The review found 3 blockers, 12 major and 4
+minor findings; the operator accepted all of them, and raised a further one:
+two entries stated a content-policy boundary as though it were a genre
+convention, which is both misplaced (such a limit does not vary by genre, and
+naming it in one term implies the rest are exempt) and ineffective (dictionary
+text reaches a model as style guidance, while the enforced boundary is the
+story-level `content_rating` checked fail-closed at `dispatchGenerate()`).
+25 edits landed: 7 reparented, 13 rewritten, `action` and `adventure` merged,
+`alternate-history` and `folklore` added; 40 terms and 27 roots at
+dictionary version 2. Six of the reparentings were promotions to root because
+the former parent forbade a pairing a real story needs, verified mechanically:
+a contemporary western, a gothic beside horror, a dystopia beside political,
+and magical realism beside literary were all undeclarable before. `procedural`
+moved to `mystery` because it could not satisfy `crime`'s own definition. No
+story had been declared yet, so nothing needed migrating, and only one changed
+term appeared in any test. Evidence and sources:
+`docs/GENRE_DICTIONARY_SOURCE_REVIEW.md`.
+
 **Genre declaration standard: slice 1 (tooling) shipped (2026-09-19).** The
 operator asked for a standard under which every story declares its genre in
 frontmatter, multi-genre, against one common dictionary, so the story can be
 guided inside those conventions. `docs/GENRE_DECLARATION_DESIGN.md` (Draft 2:
 two adversarial passes, eight operator decisions recorded) fixes the shape:
-`src/genre-dictionary.json` holds 39 parent-annotated terms (20
+`src/genre-dictionary.json` holds 40 parent-annotated terms (27
 roots); `canon/_story.md` (`schema: "story/1"`) declares one to three of them
 broadest first, never a term beside its own ancestor, plus a one-line lean and
 conventions/avoid lists capped so the guidance can travel on the story marker

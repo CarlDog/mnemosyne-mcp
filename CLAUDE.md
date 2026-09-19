@@ -233,12 +233,14 @@ Two standing operator instructions that outlive any sprint:
   prose as a reply. Shared by the OC/Kindroid/Botify clients.
 - `src/version.ts` — package version, surfaced in the server banner.
 - `src/genre-dictionary.json` — the controlled genre vocabulary of
-  `docs/GENRE_DECLARATION_DESIGN.md` §1: 39 parent-annotated terms
-  (20 roots), each with a definition, what it promises and what it
+  `docs/GENRE_DECLARATION_DESIGN.md` §1: 40 parent-annotated terms
+  (27 roots), each with a definition, what it promises and what it
   avoids, plus the broadest-first rule. Read through `import.meta.url` (the
   way `src/version.ts` reads `package.json`) by the scripts today and by the
   server in slice 2, so no emitted copy exists to go stale. Pinned by
-  `tests/genre-dictionary.test.ts`.
+  `tests/genre-dictionary.test.ts`, which pins the `version` too, so a
+  revised term set cannot pass as the old shape. This file is the dictionary
+  of record: no document keeps a prose copy of the term list.
 - `tests/` — vitest, real OC + real Ollama (env-gated — see "Common
   Commands" for which vars enable which suites).
 - `scripts/dump-prompt.mjs`, `scripts/dump-validation.mjs`,
@@ -406,6 +408,13 @@ Two standing operator instructions that outlive any sprint:
   failure landing after a successful position write was wrongly reported
   retry-safe; `advance`/`set_elapsed_hours` could drive elapsed_hours
   negative where `set_date` alone was guarded).
+- `docs/GENRE_DICTIONARY_SOURCE_REVIEW.md` — the adversarial review of
+  `src/genre-dictionary.json` against external sources (2026-09-19): the book
+  trade's BISAC fiction headings, the Library of Congress genre authority, the
+  Encyclopedia of Science Fiction and the genre bodies' own definitions. Records
+  the findings, what the sources confirm as already correct, the coverage gaps,
+  what could not be verified, and the disposition of every finding. It is the
+  evidence for the dictionary's current shape, not a design document.
 - `docs/GENRE_DECLARATION_DESIGN.md` — the genre declaration standard (Draft 2,
   two adversarial passes, the operator's eight decisions recorded; slice 1
   shipped 2026-09-19): every story declares one to three dictionary genres,

@@ -8,7 +8,7 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 ### Added
 
 - Genre declaration standard, slice 1 (tooling) of
-  `docs/GENRE_DECLARATION_DESIGN.md`: `src/genre-dictionary.json` (39
+  `docs/GENRE_DECLARATION_DESIGN.md`: `src/genre-dictionary.json` (40
   parent-annotated terms) and the story block `canon/_story.md`
   (`schema: "story/1"`: one to three dictionary genres, broadest first and
   never a term beside its own ancestor; a one-line lean; conventions and avoid
@@ -38,6 +38,32 @@ this file was introduced remains in [STATUS.md](STATUS.md).
   flow maps and sequences that the deliberately small flat scalar reader
   cannot and should not parse. Pinned by `tests/canon-frontmatter.test.ts`
   and new cases in the validator, compiler and verifier suites.
+
+### Changed
+
+- Genre dictionary revised against external sources and bumped to version 2
+  after an adversarial review (`docs/GENRE_DICTIONARY_SOURCE_REVIEW.md`)
+  against BISAC's fiction headings, the Library of Congress genre authority,
+  the Encyclopedia of Science Fiction and the genre bodies' own definitions.
+  25 edits: `procedural` moved from `crime` to `mystery` (it could not satisfy
+  `crime`'s own "from inside it" definition, and the trade authority files it
+  under Mystery); `western`, `gothic`, `dystopian`, `psychological`,
+  `magical-realism` and `coming-of-age` promoted to roots (each former parent
+  forbade a pairing a real story needs, such as a contemporary western);
+  `romance` gained the genre body's defining promise of an optimistic ending;
+  `fantasy` no longer requires magic to be ruled and costly; `science-fiction`
+  no longer demands a rigour its own child `space-opera` is defined by
+  breaking; `mystery` no longer promises Golden Age fair play for the whole
+  genre; `paranormal` no longer excludes hidden societies; `action` and
+  `adventure` merged into `action-adventure` (one category in both
+  authorities, and their avoid lines were near-duplicates);
+  `alternate-history` and `folklore` added as the two coverage gaps not
+  expressible as blends. `erotica` and `romance` also carried content-policy
+  wording rather than genre description; both are now descriptive, since such
+  a boundary does not vary by genre and naming it in one term implied the
+  others were exempt. The enforced boundary is unchanged and lives where it is
+  actually checked, in content routing's fail-closed `dispatchGenerate()` gate.
+  No story had been declared yet, so nothing needed migrating.
 
 ### Fixed
 

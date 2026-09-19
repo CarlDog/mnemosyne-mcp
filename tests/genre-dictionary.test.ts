@@ -27,7 +27,9 @@ describe("genre dictionary", () => {
   const names = Object.keys(terms);
 
   it("is a versioned list of lowercase hyphenated terms with the rule stated", () => {
-    expect(dictionary.version).toBe(1);
+    // Pinned deliberately: a term set revised after publication bumps
+    // this, so a silent content change cannot pass as the old shape.
+    expect(dictionary.version).toBe(2);
     expect(dictionary.rule).toContain("broadest true term comes first");
     expect(names.length).toBeGreaterThanOrEqual(30);
     for (const name of names) {

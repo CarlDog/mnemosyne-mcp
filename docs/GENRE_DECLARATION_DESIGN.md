@@ -64,8 +64,10 @@ list has one right answer:
 > than a dictionary term goes in `subgenres`. A term never appears together with its own
 > parent or ancestor.**
 
-The validator rejects a redundant pair. The draft list is in Appendix A; the operator
-edits it before slice 1 ships.
+The validator rejects a redundant pair. The dictionary of record is the JSON file
+itself, never a copy in this document: see
+[GENRE_DICTIONARY_SOURCE_REVIEW.md](GENRE_DICTIONARY_SOURCE_REVIEW.md) for the
+external-source review that set its current shape.
 
 ## 2. The data-tree declaration (authoring truth)
 
@@ -252,9 +254,22 @@ why the acceptance test drives `continueScene` rather than the prompt builder al
 
 ## Revision notes
 
+- Dictionary revised against external sources (2026-09-19, dictionary version 2).
+  An adversarial review against the book trade's BISAC headings, the Library of
+  Congress genre authority, the Encyclopedia of Science Fiction and the genre
+  bodies' own definitions produced 25 edits: 7 reparented terms, 13 rewritten
+  entries, `action` and `adventure` merged, and `alternate-history` and `folklore`
+  added. Six terms became roots because their former parent forbade a pairing a
+  real story needs, and `procedural` moved to `mystery` because it could not
+  satisfy `crime`'s own definition. Two entries also carried content-policy
+  language rather than genre description; an age or consent boundary is not a
+  convention of one genre, it does not vary by genre, and stating it in a single
+  term implied the others were exempt. Both are now descriptive, and the real
+  boundary stays where it is enforced: the story-level `content_rating` checked
+  fail-closed at `dispatchGenerate()` (docs/CONTENT_ROUTING_DESIGN.md). Full
+  record and sources: [GENRE_DICTIONARY_SOURCE_REVIEW.md](GENRE_DICTIONARY_SOURCE_REVIEW.md).
 - Slice 1 shipped (2026-09-19). The dictionary of record is
-  `src/genre-dictionary.json` (39 terms); Appendix A is the draft it was
-  seeded from and is not updated when the file changes. The scaffolder refuses an
+  `src/genre-dictionary.json`; Appendix A is superseded and not maintained. The scaffolder refuses an
   export that carries only one of `story.genres` and `story.genre_guidance`
   rather than skipping the block silently, because a dropped declaration is the
   failure section 3 exists to prevent; the compiler's staged round trip in the
@@ -276,109 +291,13 @@ why the acceptance test drives `continueScene` rather than the prompt builder al
   the override; the rendering path is named down to the prompt policy literal; slice 3
   writes canon directly on confirmation and keeps every drafted block in `data/`.
 
-## Appendix A: draft dictionary (operator edits before slice 1)
+## Appendix A: the draft dictionary (superseded)
 
-Format: `term` (parent): definition; promises; avoids. Roots have no parent. Apply the
-broadest-first rule from section 1.
+This appendix held a prose copy of the 39-term draft list. It went stale within a
+day of slice 1 shipping, which is the drift this design warns about everywhere
+else, so it is deliberately not maintained here.
 
-- `action` (root): staged physical conflict as the spine; promises kinetic set pieces
-  with clear geography and cost; avoids fights without stakes or consequence.
-- `adventure` (root): a journey through escalating obstacles toward a goal; promises
-  momentum and competence under pressure; avoids stakes that reset between set pieces.
-- `comedy` (root): events arranged to produce laughter through timing, reversal and
-  character; promises jokes that arise from who people are; avoids cruelty without a
-  target.
-- `satire` (comedy): institutions and manners exaggerated to expose them; promises a
-  target and a point; avoids mockery with no object.
-- `crime` (root): the commission and consequence of a crime from inside it; promises
-  method, motive and cost; avoids a criminal world that runs on convenience.
-- `heist` (crime): a plan, a crew, an execution and its unravelling; promises
-  competence, timing and the plan surviving contact; avoids a plan that succeeds because
-  the author needs it to.
-- `noir` (crime): moral compromise in a world that stays corrupt; promises a case, a
-  compromised protagonist and an ending that costs; avoids tidy justice and unearned
-  redemption.
-- `procedural` (crime): the work is the plot: cases, shifts, protocols and the people who
-  keep them; promises fidelity to how the work is actually done; avoids expertise that
-  appears only when convenient.
-- `drama` (root): character conflict with serious stakes and no genre machinery; the
-  frame only when no other root is true; promises consequence and change; avoids
-  melodrama unearned by what came before.
-- `coming-of-age` (drama): a protagonist crossing into a new stage of life; promises an
-  irreversible change in how they see themselves; avoids a lesson stated instead of
-  lived.
-- `psychological` (drama): interior states drive events and perception cannot be fully
-  trusted; promises that what a character believes shapes what happens; avoids a twist
-  that invalidates everything the reader felt.
-- `tragedy` (drama): a fall that follows from character; promises inevitability that the
-  reader sees before the protagonist does; avoids a fall caused by accident alone.
-- `erotica` (root): sexual experience between adults as the subject; promises explicit,
-  consensual intimacy that reveals character and changes something; avoids intimacy
-  without consequence and any participant who is not an established adult.
-- `fantasy` (root): a world where magic is real, ruled and costly; promises wonder with
-  a price; avoids magic as a free solution.
-- `portal-fantasy` (fantasy): someone from the ordinary world enters the magical one;
-  promises the crossing to matter and to cost; avoids the ordinary world as a discarded
-  prologue.
-- `urban-fantasy` (fantasy): the mundane world with a hidden, rule-governed magical
-  society inside it; promises the rules of that layer and the cost of crossing it;
-  avoids the mundane world as a mere backdrop.
-- `historical` (root): a real period rendered with fidelity to its material life;
-  promises period-true constraint on what people can do and know; avoids modern
-  attitudes in period costume.
-- `western` (historical): frontier, law at the edge of reach, and the cost of violence;
-  promises land, distance and consequence; avoids the frontier as a costume.
-- `horror` (root): dread and the violation of safety; promises consequence and the
-  unknown kept unknown for as long as it can be; avoids explaining the threat early.
-- `cosmic-horror` (horror): the universe as indifferent and unknowable; promises scale
-  that dwarfs the characters and knowledge that damages; avoids a threat that can be
-  fought on human terms.
-- `gothic` (horror): decay, inheritance and a place that behaves like an antagonist;
-  promises atmosphere and buried history surfacing; avoids modern irony about its own
-  dread.
-- `literary` (root): interiority and language carry the weight; promises sentences that
-  earn their place and change that happens in perception; avoids plot as a pretext for
-  style.
-- `magical-realism` (literary): the impossible treated as ordinary by everyone in the
-  story; promises the marvel unremarked and meaningful; avoids explaining or systematising
-  it.
-- `mystery` (root): a question of fact answered by evidence; promises fair clues and a
-  solution a reader could have reasoned to; avoids a solution delivered by confession
-  alone.
-- `paranormal` (root): the supernatural intrudes on an otherwise ordinary world without a
-  hidden society or a rulebook; promises the intrusion to have terms of its own that are
-  learned by contact; avoids the supernatural as a scare with no reason.
-- `political` (root): power contested through institutions, factions and public claims;
-  promises that every move has a constituency and a cost; avoids villains without a
-  coalition.
-- `dystopian` (political): a society organised to oppress, seen by those it oppresses;
-  promises the system's logic and its cost; avoids a regime that exists only to be
-  toppled.
-- `retelling` (root): an existing tale or property retold with a changed frame; promises
-  recognisable beats knowingly subverted; avoids retelling the source beat for beat.
-- `romance` (root): the relationship is the plot; promises an emotionally earned
-  resolution of the central relationship between adults; avoids resolution by
-  declaration.
-- `science-fiction` (root): a change in what is possible, followed through with rigour;
-  promises consequences of the premise taken seriously; avoids the premise as scenery.
-- `cyberpunk` (science-fiction): high technology, low life, corporate power over bodies
-  and data; promises texture and a price paid for every augmentation; avoids technology
-  as decoration.
-- `post-apocalyptic` (science-fiction): life after the collapse of a civilisation;
-  promises scarcity as the shaping fact of every choice; avoids abundance appearing when
-  the plot needs it.
-- `space-opera` (science-fiction): interstellar scale, factions and spectacle; promises
-  grandeur with a human focus; avoids scale that erases individual stakes.
-- `steampunk` (science-fiction): an industrial-age world with anachronistic technology
-  and its social order; promises that the machinery has a maker and a cost; avoids brass
-  as decoration.
-- `slice-of-life` (root): ordinary days rendered closely, with small stakes that matter;
-  promises attention and texture; avoids importing a plot engine from another genre.
-- `superhero` (root): extraordinary ability under public scrutiny; promises power with a
-  code and consequences in a world that notices; avoids power without cost or witness.
-- `thriller` (root): escalating danger under a clock; promises rising stakes and
-  reversals; avoids stakes that reset.
-- `espionage` (thriller): secrets, tradecraft and divided loyalty; promises information
-  as the currency of power; avoids gadgets doing the work of judgement.
-- `war` (root): organised violence and the people inside it; promises the weight of
-  orders, losses and logistics; avoids combat as a highlight reel.
+The dictionary of record is `src/genre-dictionary.json` (40 terms, 27 roots).
+The original draft is in this file's history at the slice 1 commit. The evidence for
+every change since is
+[GENRE_DICTIONARY_SOURCE_REVIEW.md](GENRE_DICTIONARY_SOURCE_REVIEW.md).
