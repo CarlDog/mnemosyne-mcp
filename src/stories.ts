@@ -196,7 +196,7 @@ export function buildMarkerContent(
   const lines = [
     `[Mnemosyne Story] ${name}`,
     `Created: ${createdAt}`,
-    `Schema: ${STORY_MARKER_SCHEMA}`,
+    `${SCHEMA_PREFIX}${STORY_MARKER_SCHEMA}`,
   ];
   if (kindroidTarget) {
     lines.push(
@@ -233,20 +233,26 @@ export function buildMarkerContent(
       lines.push(`${CURRENT_SPOT_PREFIX}${position.currentSpot}`);
     }
   }
-  // The marker is a LINE-BASED format: the parser re-splits the whole
-  // stored string on "\n" with no memory of which line came from which
-  // field. So a value containing a newline does not merely look odd, it
-  // forges additional marker fields, and the parser reads them as real.
-  // An adversarial review reproduced this end to end: a position `spot`
-  // carrying "pier\nGenre: drama\nGenre-Lean: <payload>" produced a story
-  // whose parsed genre declaration had passed neither the write-side
-  // validation nor the injection scan, and whose forged guidance rendered
-  // verbatim into every system prompt for that story.
-  //
-  // Guarding HERE, at the one place every marker value is written, closes
-  // it for every field at once -- including fields added later, which is
-  // the point. Callers that can carry free text guard their own input too,
-  // so the error names the parameter instead of the marker line.
+  return assertMarkerLinesSafe(lines).join("\n");
+}
+
+/**
+ * The marker is a LINE-BASED format: the parser re-splits the whole stored
+ * string on "\n" with no memory of which line came from which field. So a
+ * value containing a newline does not merely look odd, it forges additional
+ * marker fields, and the parser reads them as real. An adversarial review
+ * reproduced this end to end: a position `spot` carrying
+ * "pier\nGenre: drama\nGenre-Lean: <payload>" produced a story whose parsed
+ * genre declaration had passed neither the write-side validation nor the
+ * injection scan, and whose forged guidance rendered verbatim into every
+ * system prompt for that story.
+ *
+ * Guarding at the one place every marker line is assembled closes it for
+ * every field at once, including fields added later, which is the point.
+ * Callers that carry free text guard their own input too, so the error names
+ * the parameter instead of the marker line.
+ */
+function assertMarkerLinesSafe(lines: string[]): string[] {
   for (const line of lines) {
     if (/[\r\n]/.test(line)) {
       const field = line.split(/[:\r\n]/, 1)[0];
@@ -255,7 +261,136 @@ export function buildMarkerContent(
       );
     }
   }
-  return lines.join("\n");
+  return lines;
+}
+
+const SCHEMA_PREFIX = "Schema: ";
+
+/** Every prefix this build writes, grouped by the field that owns it. A
+ * rewrite replaces exactly the groups it names and leaves everything else
+ * alone. The legacy kin prefix belongs to the target group so an upgrade
+ * still drops it rather than preserving a duplicate binding. */
+const OWNED_PREFIXES = {
+  kindroidTarget: [KINDROID_TARGET_PREFIX, LEGACY_KINDROID_KIN_PREFIX],
+  narratorProfile: [NARRATOR_PROFILE_PREFIX],
+  contentRating: [CONTENT_RATING_PREFIX],
+  genre: [
+    GENRE_PREFIX,
+    GENRE_LEAN_PREFIX,
+    GENRE_CONVENTION_PREFIX,
+    GENRE_AVOID_PREFIX,
+  ],
+  position: [
+    EPOCH_DATE_PREFIX,
+    EPOCH_LOCATION_PREFIX,
+    EPOCH_SPOT_PREFIX,
+    ELAPSED_HOURS_PREFIX,
+    CURRENT_LOCATION_PREFIX,
+    CURRENT_SPOT_PREFIX,
+  ],
+} as const;
+
+export type MarkerField = keyof typeof OWNED_PREFIXES;
+
+/** The lines one field contributes to a marker. */
+export function markerFieldLines(
+  field: MarkerField,
+  value:
+    | KindroidTarget
+    | string
+    | ContentRating
+    | GenreDeclaration
+    | PositionState
+    | undefined,
+): string[] {
+  if (value === undefined) return [];
+  if (field === "kindroidTarget") {
+    const target = value as KindroidTarget;
+    return [`${KINDROID_TARGET_PREFIX}${target.type}:${target.id}`];
+  }
+  if (field === "narratorProfile") {
+    return [`${NARRATOR_PROFILE_PREFIX}${value as string}`];
+  }
+  if (field === "contentRating") {
+    return [`${CONTENT_RATING_PREFIX}${value as ContentRating}`];
+  }
+  if (field === "genre") return genreLines(value as GenreDeclaration);
+  return positionLines(value as PositionState);
+}
+
+function genreLines(genre: GenreDeclaration): string[] {
+  const lines = [`${GENRE_PREFIX}${genre.genres.join(", ")}`];
+  if (genre.guidance) {
+    lines.push(`${GENRE_LEAN_PREFIX}${genre.guidance.lean}`);
+    for (const item of genre.guidance.conventions ?? []) {
+      lines.push(`${GENRE_CONVENTION_PREFIX}${item}`);
+    }
+    for (const item of genre.guidance.avoid ?? []) {
+      lines.push(`${GENRE_AVOID_PREFIX}${item}`);
+    }
+  }
+  return lines;
+}
+
+function positionLines(position: PositionState): string[] {
+  const lines = [
+    `${EPOCH_DATE_PREFIX}${position.epochDate}`,
+    `${EPOCH_LOCATION_PREFIX}${position.epochLocationId}`,
+  ];
+  if (position.epochSpot) {
+    lines.push(`${EPOCH_SPOT_PREFIX}${position.epochSpot}`);
+  }
+  lines.push(`${ELAPSED_HOURS_PREFIX}${position.elapsedHours}`);
+  lines.push(`${CURRENT_LOCATION_PREFIX}${position.currentLocationId}`);
+  if (position.currentSpot) {
+    lines.push(`${CURRENT_SPOT_PREFIX}${position.currentSpot}`);
+  }
+  return lines;
+}
+
+/**
+ * Rewrites a marker by LINE SURGERY rather than by rebuilding it from parsed
+ * fields. That difference is the whole point of this function.
+ *
+ * Rebuilding re-emits only what THIS build can parse, so any stored value
+ * this build rejects disappears on the next unrelated write. Reproduced
+ * before this existed: a story declaring a genre term that a later dictionary
+ * revision removed lost its genres AND all of its guidance the next time
+ * anyone set a narrator profile -- one binary, one session, no race. The same
+ * shape applies to a future content rating, a future Kindroid target type,
+ * and any field a newer build adds.
+ *
+ * Surgery instead: drop only the lines the caller owns, keep every other line
+ * exactly as stored. A value we cannot parse is a value we do not touch. This
+ * also means a concurrent write to a DIFFERENT field survives ours, without
+ * needing to reason about the race at all.
+ *
+ * A trailing carriage return is stripped from surviving lines: a partially
+ * CRLF marker parses today (only the first two lines are matched strictly),
+ * so a preserved "\r" would trip the line guard above and make the story
+ * permanently unwritable.
+ */
+export function rewriteMarkerLines(
+  content: string,
+  owned: readonly MarkerField[],
+  replacement: readonly string[],
+): string {
+  const ownedPrefixes = owned.flatMap((field) => [...OWNED_PREFIXES[field]]);
+  const lines = content.split("\n").map((line) => line.replace(/\r$/, ""));
+  const preserved = lines
+    .slice(2)
+    .filter((line) => line.trim().length > 0)
+    // Excluded BY PREFIX, not by line index: a hand-edited marker whose
+    // Schema line moved would otherwise be preserved and re-emitted beside
+    // the fresh one, forever.
+    .filter((line) => !line.startsWith(SCHEMA_PREFIX))
+    .filter((line) => !ownedPrefixes.some((prefix) => line.startsWith(prefix)));
+  return assertMarkerLinesSafe([
+    ...lines.slice(0, 2),
+    `${SCHEMA_PREFIX}${STORY_MARKER_SCHEMA}`,
+    ...replacement,
+    ...preserved,
+  ]).join("\n");
 }
 
 /** Reassembles the marker-shaped declaration from a story's two flat
@@ -542,6 +677,79 @@ export async function resolveStoryId(
   return story.id;
 }
 
+/** A requested marker change. The KEY's presence means "change this field";
+ * `value: undefined` means "clear it". Without the wrapper there is no way to
+ * distinguish "leave alone" from "clear", which is the distinction every one
+ * of these fields needs. */
+export interface MarkerChange<T> {
+  value: T | undefined;
+}
+
+export interface MarkerChanges {
+  kindroidTarget?: MarkerChange<KindroidTarget>;
+  narratorProfile?: MarkerChange<string>;
+  contentRating?: MarkerChange<ContentRating>;
+  genre?: MarkerChange<GenreDeclaration>;
+  position?: MarkerChange<PositionState>;
+}
+
+/**
+ * The one marker write path. Reads the marker fresh, applies every requested
+ * field in ONE rewrite, and writes once.
+ *
+ * Reading fresh matters for two different reasons. The caller's snapshot can
+ * be several round trips old, so writing from it would clobber whatever landed
+ * in between. And the rewrite is line surgery over the fresh bytes, so any
+ * value this build cannot parse is preserved rather than erased -- see
+ * rewriteMarkerLines for the failure that motivated it.
+ *
+ * `buildChanges` receives the FRESH story, not the caller's snapshot, so a
+ * change computed from existing state (the genre merge, which folds requested
+ * fields onto current ones) is computed against what is actually stored.
+ *
+ * Applying every field in one rewrite rather than one setter per field is
+ * also what pays for the extra read: mnemo_story_use setting four fields was
+ * six OC round trips and four independent chances to interleave, and is now
+ * two and one.
+ */
+export async function updateStoryMarker(
+  oc: OcClient,
+  story: MnemoStory,
+  buildChanges: (fresh: MnemoStory) => MarkerChanges,
+): Promise<MnemoStory> {
+  const memory = await oc.memoryGet(story.marker_memory_id);
+  if (!memory) {
+    throw new Error(
+      `This story's marker memory (${story.marker_memory_id}) no longer exists. ` +
+        "Refusing to recreate it, since that would silently make a second story.",
+    );
+  }
+  const fresh = markerToStory(memory);
+  if (!fresh) {
+    throw new Error(
+      `This story's marker memory (${story.marker_memory_id}) exists but no longer ` +
+        "parses as a story marker. Refusing to overwrite content that cannot be read; " +
+        "repair the marker by hand first.",
+    );
+  }
+  const changes = buildChanges(fresh);
+  const fields = Object.keys(changes) as MarkerField[];
+  if (fields.length === 0) return fresh;
+  const replacement = fields.flatMap((field) =>
+    markerFieldLines(field, changes[field]?.value),
+  );
+  const content = rewriteMarkerLines(memory.content, fields, replacement);
+  await oc.memoryUpdate({ memoryId: story.marker_memory_id, content });
+  const written = markerToStory({ ...memory, content });
+  if (!written) {
+    throw new Error(
+      "The rewritten story marker does not parse; the write was made but the " +
+        "result cannot be read back. This is a bug, not a data problem.",
+    );
+  }
+  return written;
+}
+
 export async function createStory(
   oc: OcClient,
   name: string,
@@ -596,17 +804,9 @@ export async function setKindroidTarget(
   story: MnemoStory,
   kindroidTarget: KindroidTarget | undefined,
 ): Promise<MnemoStory> {
-  const content = buildMarkerContent(
-    story.name,
-    story.created_at,
-    kindroidTarget,
-    story.narrator_profile,
-    story.position,
-    story.content_rating,
-    storyGenre(story),
-  );
-  await oc.memoryUpdate({ memoryId: story.marker_memory_id, content });
-  return { ...story, kindroid_target: kindroidTarget };
+  return updateStoryMarker(oc, story, () => ({
+    kindroidTarget: { value: kindroidTarget },
+  }));
 }
 
 /**
@@ -620,19 +820,9 @@ export async function setNarratorProfile(
   label: string | undefined,
 ): Promise<MnemoStory> {
   if (label !== undefined) assertNarratorProfile(label);
-  const content = buildMarkerContent(
-    story.name,
-    story.created_at,
-    story.kindroid_target,
-    label,
-    story.position,
-    story.content_rating,
-    storyGenre(story),
-  );
-  await oc.memoryUpdate({ memoryId: story.marker_memory_id, content });
-  const { narrator_profile: _dropped, ...rest } = story;
-  void _dropped;
-  return label === undefined ? rest : { ...rest, narrator_profile: label };
+  return updateStoryMarker(oc, story, () => ({
+    narratorProfile: { value: label },
+  }));
 }
 
 /**
@@ -646,19 +836,9 @@ export async function setContentRating(
   story: MnemoStory,
   rating: ContentRating | undefined,
 ): Promise<MnemoStory> {
-  const content = buildMarkerContent(
-    story.name,
-    story.created_at,
-    story.kindroid_target,
-    story.narrator_profile,
-    story.position,
-    rating,
-    storyGenre(story),
-  );
-  await oc.memoryUpdate({ memoryId: story.marker_memory_id, content });
-  const { content_rating: _dropped, ...rest } = story;
-  void _dropped;
-  return rating === undefined ? rest : { ...rest, content_rating: rating };
+  return updateStoryMarker(oc, story, () => ({
+    contentRating: { value: rating },
+  }));
 }
 
 /**
@@ -676,25 +856,9 @@ export async function setGenre(
   declaration: GenreDeclaration | undefined,
 ): Promise<MnemoStory> {
   if (declaration !== undefined) assertGenreDeclaration(declaration);
-  const content = buildMarkerContent(
-    story.name,
-    story.created_at,
-    story.kindroid_target,
-    story.narrator_profile,
-    story.position,
-    story.content_rating,
-    declaration,
-  );
-  await oc.memoryUpdate({ memoryId: story.marker_memory_id, content });
-  const { genres: _genres, genre_guidance: _guidance, ...rest } = story;
-  void _genres;
-  void _guidance;
-  if (declaration === undefined) return rest;
-  return {
-    ...rest,
-    genres: declaration.genres,
-    ...(declaration.guidance && { genre_guidance: declaration.guidance }),
-  };
+  return updateStoryMarker(oc, story, () => ({
+    genre: { value: declaration },
+  }));
 }
 
 // Position tracking's merge/arithmetic/validate-then-apply logic

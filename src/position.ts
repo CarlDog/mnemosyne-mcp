@@ -10,9 +10,8 @@
 import { type OcClient } from "./oc-client.js";
 import { getEntityByMemoryId } from "./entities.js";
 import {
-  buildMarkerContent,
   findStory,
-  storyGenre,
+  updateStoryMarker,
   type MnemoStory,
   type PositionState,
 } from "./stories.js";
@@ -203,18 +202,20 @@ export async function setPosition(
   story: MnemoStory,
   update: PositionUpdate,
 ): Promise<MnemoStory> {
+  // The merge base is deliberately the CALLER's snapshot, not the fresh read
+  // inside updateStoryMarker. applyPositionUpdate resolves an absolute
+  // elapsed-hours value against that same snapshot before calling here, so
+  // re-basing the merge alone would mix a fresh epoch with a stale delta and
+  // produce a silently wrong in-story date. Two concurrent `advance` calls
+  // can therefore still lose one advance -- recorded as out of scope for this
+  // phase in docs/GENRE_RUNTIME_REVIEW.md, because fixing it properly means
+  // moving the whole resolve-then-merge sequence inside the fresh read. What
+  // IS fixed here: position no longer erases anyone else's fields, and nobody
+  // else's write erases position's.
   const position = mergePositionUpdate(story.position, update);
-  const content = buildMarkerContent(
-    story.name,
-    story.created_at,
-    story.kindroid_target,
-    story.narrator_profile,
-    position,
-    story.content_rating,
-    storyGenre(story),
-  );
-  await oc.memoryUpdate({ memoryId: story.marker_memory_id, content });
-  return { ...story, position };
+  return updateStoryMarker(oc, story, () => ({
+    position: { value: position },
+  }));
 }
 
 /** Validates a caller-supplied memory_id actually resolves to a

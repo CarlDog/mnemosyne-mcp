@@ -2,6 +2,26 @@
 
 **Last updated:** 2026-09-19.
 
+**Marker write safety (2026-09-19).** The two marker findings the slice 2
+review recorded but did not fix were taken as a scoped phase before slice 3,
+on the sequencing argument that no marker carries a losable field today and
+every story would after. The plan was reviewed adversarially before any code,
+and the review earned its keep twice over. It showed the plan's stated
+justification was false: `mnemo_continue` does not hold a story object across
+a generation, and in fact never writes a marker at all, so the race window was
+two or three round trips rather than an entire generation. And it found a
+worse defect needing no concurrency: because every write rebuilt the marker
+from parsed fields, any stored value this build rejects was dropped on the
+next unrelated write. Reproduced — a story declaring a genre term that a later
+dictionary revision removed lost its genres and all of its guidance when a
+narrator profile was set, and that dictionary revision had already happened
+four commits earlier. Writes are now line surgery: drop only the lines you
+own, keep the rest byte for byte. `mnemo_story_use` makes one marker write
+instead of four, which pays for the added fresh read. The planned
+merge-detection warning was dropped: it would have fired on ordinary
+search-index lag. The position same-field race stays open and is recorded
+rather than implied. Suite at 843 tests; ten mutation checks, ten caught.
+
 **Genre slice 2 adversarially reviewed and remediated (2026-09-19).** The
 entry below shipped green and was pushed before anyone who had not written
 it looked at it, which the repository's own pre-deploy rule forbids. The
@@ -5419,6 +5439,47 @@ consider only when real use exposes the corresponding pressure:
   the 2026-08-28 verification record for the three shipped items.
 
 ## Known Gaps
+
+- **`mnemo_story_use` repoints the active story as a side effect of editing a
+  field** (backlogged 2026-09-19, from `docs/GENRE_RUNTIME_REVIEW.md`). The
+  tool's primary job is switching, and it has no per-call `story` override,
+  unlike every other story-touching tool. So setting story B's genre while
+  working on story A silently makes B current for every session sharing the
+  local pointer. Slice 2 added field editing to a tool whose name and purpose
+  are switching, which is where the mismatch comes from. **The question that
+  decides this:** is there ever a reason to edit one story's configuration
+  while working on another? If never, this closes unfixed and the current
+  behaviour is correct. If sometimes, the fix is either a per-call `story`
+  override or splitting the field edits into their own tool. Not a defect,
+  and deliberately not fixed unilaterally.
+
+- **There is no genre write path outside MCP** (backlogged 2026-09-19, same
+  source). `toStorySummary` carries `genres`/`genre_guidance`, so
+  `GET /api/stories` and the web UI can READ a declaration; nothing can set
+  one. `grep -rn "genre" webui/src/` returns nothing. This matters more than
+  it looks: ARCHITECTURE.md §4 makes the web UI the required surface for
+  explicit ("spicy") work, because the host LLM sits in the response path for
+  MCP, so the operator who most needs a declaration is the one who cannot
+  make it there. Workable today — declare over MCP, generate in the web UI —
+  and slice 3 writes declarations with the operator present either way. A fix
+  belongs with the other web UI work in `docs/WEBUI_NOTES.md`, not as a
+  patch.
+
+- **`content_rating` is optional, and no live story declares one, so the
+  content-routing gate currently protects nothing** (backlogged 2026-09-19,
+  measured during the slice 2 review). `dispatchGenerate` refuses only when
+  `contentRating === "nsfw" && port.contentCapability === "sfw"`; an
+  undeclared rating never fires it. Of ten live story markers, zero carry a
+  `Content-Rating:` line, and the configured generator is `anthropic`, whose
+  capability is fixed `sfw` with no override. The gate is built, correct and
+  wired to the one real dispatch site — it simply has no declared input on
+  any story. Slice 2 added a warning when an explicit GENRE meets an
+  undeclared rating, which connects the two write paths for the one strongest
+  signal, but the general question is `CONTENT_ROUTING_DESIGN`'s to answer:
+  should a rating be required before generation, or is the undeclared case
+  deliberately permissive? Not a genre question; recorded here so it is not
+  lost with the genre work.
+
 
 - ~~**`continueScene()`'s ~390-line body would benefit from named phase
   extraction.**~~ **Closed 2026-09-08**, same day, as a deliberately

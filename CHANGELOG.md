@@ -89,6 +89,32 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 
 ### Fixed
 
+- **A marker write no longer erases values this build cannot parse.** Every
+  write used to rebuild the marker from PARSED fields, so any stored value
+  the current parser rejects vanished on the next unrelated write.
+  Reproduced before the fix: a story declaring `Genre: action, romance` lost
+  its genres and all of its guidance when someone set a narrator profile.
+  `action` was a real dictionary v1 term that 2648765 merged into
+  `action-adventure` four commits earlier, so the trigger is an ordinary
+  dictionary revision — one binary, one session, no race. The same shape
+  applied to a future content rating, a future Kindroid target type, and any
+  field a newer build adds. Writes are now LINE SURGERY: a write drops only
+  the lines it owns and keeps every other line exactly as stored, so a value
+  we cannot parse is a value we do not touch. That also closes cross-field
+  concurrent loss without reasoning about races, since a write never touches
+  another field's lines. `mnemo_story_use` now makes ONE marker write for
+  every requested field instead of four sequential ones (two OC round trips
+  rather than six, one interleaving window rather than four, no partial apply
+  when a later field is invalid), and resolves the genre merge against the
+  fresh read rather than the caller's snapshot. A deleted or unparseable
+  marker now refuses the write instead of overwriting. The position
+  same-field race (two concurrent `advance` calls) is explicitly still open
+  and recorded in `docs/GENRE_RUNTIME_REVIEW.md`. Ten mutation checks, ten
+  caught. The plan for this work was itself reviewed before implementation
+  and was substantially wrong: its stated justification, that
+  `mnemo_continue` holds a story across a generation, does not exist in the
+  code.
+
 - Genre slice 2, after an adversarial review
   (`docs/GENRE_RUNTIME_REVIEW.md`). **A newline in any story-marker value
   forged marker lines**: the marker is line-based and its parser re-splits

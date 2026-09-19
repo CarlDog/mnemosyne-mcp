@@ -84,7 +84,19 @@ function markerStore(initial?: string) {
         : [],
     memoryListCompact: async () => [],
     memoryList: async () => [],
-    memoryGet: async () => null,
+    // Returns the STORED memory. It previously returned null, which would
+    // make every marker write report a deleted marker against a store that
+    // plainly holds it -- a correct-looking failure whose tempting "fix" is
+    // to soften the write path's not-found throw. Do not soften it.
+    memoryGet: async (memoryId: string) =>
+      memories.has(memoryId)
+        ? {
+            id: memoryId,
+            content: memories.get(memoryId),
+            project_id: PROJECT,
+            tags: ["mnemosyne", "story-marker"],
+          }
+        : null,
   } as unknown as OcClient;
   return { oc, marker: () => memories.get("marker-1") ?? "" };
 }

@@ -9,16 +9,15 @@ import type { ListStoryCatalog } from "../application/list-stories.js";
 import { toStorySummary } from "../application/catalog-policy.js";
 import type { StorySummary } from "../application/model.js";
 import {
+  assertNarratorProfile,
   combineKindroidTarget,
-  NARRATOR_PROFILE_PATTERN,
-  setNarratorProfile,
-  setContentRating,
-  setGenre,
-  storyGenre,
   createStory,
   findStory,
-  setKindroidTarget,
+  NARRATOR_PROFILE_PATTERN,
   NO_LINE_BREAK_MESSAGE,
+  storyGenre,
+  updateStoryMarker,
+  type MarkerChanges,
 } from "../stories.js";
 import {
   assertGenreDeclaration,
@@ -315,43 +314,52 @@ export function registerStoryTools(
             requestedRating,
             declaration ?? undefined,
           );
-        } else {
-          // Resolve and validate the genre BEFORE any durable write. It is
-          // the only field here whose validation lives in the handler
-          // rather than in its own zod shape, so leaving it last meant an
-          // invalid declaration could reject the call with the three writes
-          // above already applied -- including content_rating, a routing
-          // gate -- while the caller saw a single error and every reason to
-          // believe nothing had happened.
-          const declaration = resolveGenreChange(
-            storyGenre(story),
-            args.genres,
-            args.genre_guidance,
-          );
-          if (declaration) assertGuidanceUnflagged(declaration, args);
-
-          if (targetChangeRequested) {
-            story = await setKindroidTarget(oc, story, requestedTarget);
+        } else if (
+          targetChangeRequested ||
+          profileChangeRequested ||
+          ratingChangeRequested ||
+          args.genres !== undefined ||
+          args.genre_guidance !== undefined
+        ) {
+          if (requestedProfile !== undefined) {
+            assertNarratorProfile(requestedProfile);
           }
-          if (profileChangeRequested) {
-            story = await setNarratorProfile(oc, story, requestedProfile);
-          }
-          if (ratingChangeRequested) {
-            story = await setContentRating(oc, story, requestedRating);
-          }
-          if (declaration !== null) {
-            // Keep the setter's own result: it is the correct in-memory
-            // echo, and the re-fetch below is allowed to fail. Without
-            // this assignment a missed re-fetch reported the PRE-write
-            // state as current, i.e. 'no genre' on a story just declared.
-            story = await setGenre(oc, story, declaration);
-            // Prefer a fresh read when we can get one: the marker is
-            // rebuilt positionally from six other fields, and a re-read is
-            // the only thing that would notice a line dropped on the way
-            // out (docs/GENRE_DECLARATION_DESIGN.md §4).
-            const refetched = await findStory(oc, story.id);
-            if (refetched) story = refetched;
-          }
+          // ONE marker write for every requested field. Previously this was
+          // four sequential writes: six OC round trips, four independent
+          // chances for another session to interleave, and a transport
+          // failure partway through leaving some fields written and others
+          // not. It is now two round trips and one window.
+          //
+          // Every validation runs inside the closure, which executes before
+          // the write, so an invalid value rejects the whole call with
+          // nothing written -- including content_rating, a routing gate that
+          // an earlier arrangement could leave flipped behind a single error.
+          story = await updateStoryMarker(oc, story, (fresh) => {
+            const changes: MarkerChanges = {};
+            if (targetChangeRequested) {
+              changes.kindroidTarget = { value: requestedTarget };
+            }
+            if (profileChangeRequested) {
+              changes.narratorProfile = { value: requestedProfile };
+            }
+            if (ratingChangeRequested) {
+              changes.contentRating = { value: requestedRating };
+            }
+            // Resolved against the FRESH story, not the caller's snapshot:
+            // the genre merge folds requested fields onto current ones, so
+            // basing it on a stale read would silently drop guidance another
+            // session had just added.
+            const declaration = resolveGenreChange(
+              storyGenre(fresh),
+              args.genres,
+              args.genre_guidance,
+            );
+            if (declaration !== null) {
+              if (declaration) assertGuidanceUnflagged(declaration, args);
+              changes.genre = { value: declaration };
+            }
+            return changes;
+          });
         }
         await setCurrentStoryId(story.id);
         const ratingWarning = contentRatingWarning(

@@ -65,6 +65,15 @@ function fakeOc(): { oc: OcClient; marker: () => string } {
       content = opts.content;
       return { id: "marker-1" };
     },
+    // Every marker write now reads fresh before rewriting, so the fake must
+    // serve that read; without it the setters fail with "memoryGet is not a
+    // function".
+    memoryGet: async () => ({
+      id: "marker-1",
+      content,
+      project_id: "project-Harbour",
+      tags: ["mnemosyne", "story-marker"],
+    }),
   } as unknown as OcClient;
   return { oc, marker: () => content };
 }

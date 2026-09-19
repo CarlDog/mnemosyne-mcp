@@ -132,17 +132,62 @@ any standing check, so a CI step now executes the build output.
   characters of authored story guidance reached a log line, defeating the rule
   that function exists to enforce. It now recurses.
 
+## Findings 1 and 2: fixed 2026-09-19, and the plan was wrong first
+
+The two marker findings were taken as a scoped phase before slice 3, on the
+sequencing argument that no marker carries a losable field today and every
+story would after. The plan written for them was reviewed adversarially before
+any code, and the review changed it substantially.
+
+**The stated justification was false.** The plan claimed `mnemo_continue` holds
+a story object across a generation and then writes, making the race window
+enormous. It does not: there is no marker write anywhere in the generation path
+and that code never holds a story object. The real window is two or three round
+trips inside one handler.
+
+**A worse defect was found in its place, needing no concurrency at all.**
+Because every write rebuilt the marker from PARSED fields, any stored value
+this build's parser rejects was dropped on the next unrelated write.
+Reproduced: a story declaring `Genre: action, romance` lost its genres and all
+of its guidance when a narrator profile was set. `action` was a real dictionary
+v1 term that commit 2648765 merged into `action-adventure` four commits earlier,
+so the trigger is an ordinary dictionary revision. The same shape applied to a
+future content rating, a future Kindroid target type, and any field a newer
+build adds.
+
+**So the fix changed shape.** A write now performs line surgery: it drops only
+the lines it owns and keeps every other line exactly as stored. A value we
+cannot parse is a value we do not touch. That closes the erasure, and as a side
+effect closes cross-field concurrent loss without reasoning about races at all,
+because a write never touches another field's lines.
+
+Two further changes came from the review. `mnemo_story_use` now makes ONE
+marker write for every requested field instead of four sequential ones: two OC
+round trips rather than six, one interleaving window rather than four, and no
+partial apply when a later field is invalid. And the planned
+merge-detection warning was dropped entirely: it would have fired on ordinary
+search-index lag during normal single-session use, and was silent on the only
+loss that remains.
+
+**Explicitly still open: the position same-field race.** Two concurrent
+`advance` calls can still lose one, because `applyPositionUpdate` resolves an
+absolute elapsed-hours value against the caller's snapshot before the write
+path sees it. Re-basing only the merge would mix a fresh epoch with a stale
+delta and produce a silently wrong in-story date, which is worse; the correct
+fix moves the whole resolve-then-merge sequence inside the fresh read. Out of
+scope for this phase and recorded here rather than left implied. Position
+still gains the preservation half: it no longer erases anyone else's fields and
+nobody else's write erases it.
+
+Ten mutation checks, ten caught, every file restored byte-exactly. One escaped
+on the first run because the test could not distinguish the caller's snapshot
+from the fresh read; a test that makes the search index lag distinguishes them.
+
 ## Findings recorded, not fixed
 
-- **Concurrent marker writes lose fields.** Every write rebuilds the whole marker
-  from an in-memory snapshot with no compare-and-set, so two sessions racing can
-  erase a declaration silently. The shape is pre-existing and already applied to
-  the content rating and narrator profile; genre adds two more losable fields.
-  A real fix is a marker versioning scheme, which is its own piece of work.
-- **An older process is now an eraser, not just a blind reader.** The design
-  documented that an older server rewriting a newer marker drops the new lines.
-  That was an acceptable trade for a rating the operator retypes in seconds; it
-  is a different trade for authored guidance.
+- ~~Concurrent marker writes lose fields.~~ ~~An older process is now an eraser.~~
+  **Both closed 2026-09-19** by the line-surgery rewrite above, with the position
+  same-field race explicitly still open and recorded there.
 - **Setting a genre repoints the global active story**, because the tool's
   primary job is switching and it has no per-call story override. That is a
   design question about the tool's shape, not a defect to fix unilaterally.
