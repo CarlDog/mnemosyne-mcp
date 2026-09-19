@@ -5,6 +5,10 @@
 //   Schema: 6
 //   Kindroid-Target: ai:<id>        (optional; or "group:<id>")
 //   Narrator-Profile: <label>       (optional; schema 4, 2026-09-03)
+//   Genre: <term>, <term>           (optional; schema 7, 2026-09-19 --
+//   Genre-Lean: <one line>            docs/GENRE_DECLARATION_DESIGN.md)
+//   Genre-Convention: <one line>      (repeated, one per item)
+//   Genre-Avoid: <one line>           (repeated, one per item)
 //   Content-Rating: sfw|nsfw        (optional; schema 6, 2026-09-08 --
 //                                    docs/CONTENT_ROUTING_DESIGN.md)
 //   Epoch-Date: <iso-datetime>      (optional; schema 5, 2026-09-07 --
@@ -21,6 +25,11 @@
 // parse fine -- unknown lines are ignored and known ones are found by
 // prefix. Every write path bumps the Schema line to the current constant
 // regardless of whether position tracking or content rating is used, so a
+// A schema-7 marker with no Genre-* lines must parse identically in
+// meaning to a schema-6 marker, and every genre value is validated on
+// READ (see parseGenreDeclaration below), so a hand-edited marker can
+// never carry an arbitrary string into a prompt.
+//
 // schema-6 marker with no Content-Rating/Epoch-* lines must parse
 // identically in meaning to a schema-5 marker -- see
 // docs/POSITION_TRACKING_DESIGN.md's "Refinements added at implementation
@@ -60,6 +69,13 @@
 // OC projects exist. This avoids both N+1 latency and OC's rate limiter.
 
 import { type OcClient, type OcMemory } from "./oc-client.js";
+import {
+  assertGenreDeclaration,
+  parseGenresValue,
+  parseGuidanceValues,
+  type GenreDeclaration,
+  type GenreGuidance,
+} from "./genre.js";
 import { requireCurrentStoryId } from "./config.js";
 import {
   assertNarratorProfile,
@@ -73,13 +89,20 @@ export { assertNarratorProfile, NARRATOR_PROFILE_PATTERN, narratorTag };
 
 export const STORY_MARKER_TAGS = ["mnemosyne", "story-marker"];
 const STORY_MARKER_QUERY = "Mnemosyne Story";
-const STORY_MARKER_SCHEMA = 6;
+const STORY_MARKER_SCHEMA = 7;
 const MAX_STORIES_PER_LIST = 1000;
 const KINDROID_TARGET_PREFIX = "Kindroid-Target: ";
 // Schema 2, read-only compat: a bare kin line always meant an AI target.
 const LEGACY_KINDROID_KIN_PREFIX = "Kindroid-Kin: ";
 const NARRATOR_PROFILE_PREFIX = "Narrator-Profile: ";
 const CONTENT_RATING_PREFIX = "Content-Rating: ";
+const GENRE_PREFIX = "Genre: ";
+const GENRE_LEAN_PREFIX = "Genre-Lean: ";
+// Repeated lines, one item each, rather than one delimited line: a
+// guidance string is free prose and may contain any separator we could
+// pick, so a delimited form would silently corrupt on round trip.
+const GENRE_CONVENTION_PREFIX = "Genre-Convention: ";
+const GENRE_AVOID_PREFIX = "Genre-Avoid: ";
 const EPOCH_DATE_PREFIX = "Epoch-Date: ";
 const EPOCH_LOCATION_PREFIX = "Epoch-Location: ";
 const EPOCH_SPOT_PREFIX = "Epoch-Spot: ";
@@ -135,6 +158,12 @@ export interface MnemoStory {
   /** This story's in-story clock/place, if position tracking has been
    * started. See setPosition(). */
   position?: PositionState;
+  /** This story's declared genre, if set. Ordered, broadest term
+   * first. See setGenre() and docs/GENRE_DECLARATION_DESIGN.md. */
+  genres?: string[];
+  /** This story's own genre guidance, if set. Never present without
+   * `genres`. */
+  genre_guidance?: GenreGuidance;
 }
 
 /** Exported for the pure marker tests; production callers go through
@@ -146,6 +175,10 @@ export function buildMarkerContent(
   narratorProfile?: string,
   position?: PositionState,
   contentRating?: ContentRating,
+  // One object rather than two more positionals: this builder is called
+  // from five sites and already takes six arguments, and genres and their
+  // guidance must move together anyway.
+  genre?: GenreDeclaration,
 ): string {
   const lines = [
     `[Mnemosyne Story] ${name}`,
@@ -163,6 +196,18 @@ export function buildMarkerContent(
   if (contentRating) {
     lines.push(`${CONTENT_RATING_PREFIX}${contentRating}`);
   }
+  if (genre) {
+    lines.push(`${GENRE_PREFIX}${genre.genres.join(", ")}`);
+    if (genre.guidance) {
+      lines.push(`${GENRE_LEAN_PREFIX}${genre.guidance.lean}`);
+      for (const item of genre.guidance.conventions ?? []) {
+        lines.push(`${GENRE_CONVENTION_PREFIX}${item}`);
+      }
+      for (const item of genre.guidance.avoid ?? []) {
+        lines.push(`${GENRE_AVOID_PREFIX}${item}`);
+      }
+    }
+  }
   if (position) {
     lines.push(`${EPOCH_DATE_PREFIX}${position.epochDate}`);
     lines.push(`${EPOCH_LOCATION_PREFIX}${position.epochLocationId}`);
@@ -176,6 +221,17 @@ export function buildMarkerContent(
     }
   }
   return lines.join("\n");
+}
+
+/** Reassembles the marker-shaped declaration from a story's two flat
+ * fields. Every write site goes through this, so no site can carry the
+ * genres and drop the guidance (or the reverse). */
+export function storyGenre(story: MnemoStory): GenreDeclaration | undefined {
+  if (!story.genres) return undefined;
+  return {
+    genres: story.genres,
+    ...(story.genre_guidance && { guidance: story.genre_guidance }),
+  };
 }
 
 function parseKindroidTargetValue(value: string): KindroidTarget | undefined {
@@ -194,6 +250,7 @@ export interface ParsedMarker {
   narratorProfile?: string;
   contentRating?: ContentRating;
   position?: PositionState;
+  genre?: GenreDeclaration;
 }
 
 function parseMarker(memory: OcMemory): ParsedMarker | null {
@@ -247,6 +304,32 @@ function parsePositionState(lines: string[]): PositionState | undefined {
 }
 
 /** Exported for the pure marker tests. */
+/**
+ * Reads the genre lines, or undefined when they do not validate. Validation
+ * lives HERE, on the read path, not only at write time: a hand-edited marker
+ * must never carry an arbitrary term or an oversized guidance string into a
+ * prompt, and must never make the story unresolvable. An unusable value is
+ * dropped and the story simply reads as undeclared, exactly as a malformed
+ * narrator profile or content rating already does. Guidance is dropped
+ * independently of genres, so a bad convention line cannot silently
+ * un-declare a story's genre.
+ */
+function parseGenreDeclaration(lines: string[]): GenreDeclaration | undefined {
+  const genres = parseGenresValue(lineValue(lines, GENRE_PREFIX));
+  if (!genres) return undefined;
+  const collect = (prefix: string): string[] =>
+    lines
+      .filter((line) => line.startsWith(prefix))
+      .map((line) => line.slice(prefix.length).trim())
+      .filter((item) => item.length > 0);
+  const guidance = parseGuidanceValues(
+    lineValue(lines, GENRE_LEAN_PREFIX),
+    collect(GENRE_CONVENTION_PREFIX),
+    collect(GENRE_AVOID_PREFIX),
+  );
+  return { genres, ...(guidance && { guidance }) };
+}
+
 export function parseMarkerContent(content: string): ParsedMarker | null {
   const lines = content.split("\n");
   const nameMatch = lines[0]?.match(/^\[Mnemosyne Story\] (.+)$/);
@@ -289,6 +372,7 @@ export function parseMarkerContent(content: string): ParsedMarker | null {
   const contentRating = VALID_CONTENT_RATINGS.find((r) => r === ratingRaw);
 
   const position = parsePositionState(lines);
+  const genre = parseGenreDeclaration(lines);
 
   return {
     name: nameMatch[1],
@@ -297,6 +381,7 @@ export function parseMarkerContent(content: string): ParsedMarker | null {
     ...(narratorProfile && { narratorProfile }),
     ...(contentRating && { contentRating }),
     ...(position && { position }),
+    ...(genre && { genre }),
   };
 }
 
@@ -314,6 +399,12 @@ function markerToStory(marker: OcMemory): MnemoStory | null {
     }),
     ...(parsed.contentRating && { content_rating: parsed.contentRating }),
     ...(parsed.position && { position: parsed.position }),
+    ...(parsed.genre && {
+      genres: parsed.genre.genres,
+      ...(parsed.genre.guidance && {
+        genre_guidance: parsed.genre.guidance,
+      }),
+    }),
   };
 }
 
@@ -412,8 +503,10 @@ export async function createStory(
   kindroidTarget?: KindroidTarget,
   narratorProfile?: string,
   contentRating?: ContentRating,
+  genre?: GenreDeclaration,
 ): Promise<MnemoStory> {
   if (narratorProfile !== undefined) assertNarratorProfile(narratorProfile);
+  if (genre !== undefined) assertGenreDeclaration(genre);
   const project = await oc.projectCreate(name);
   const createdAt = new Date().toISOString();
   const marker = await oc.memorySave({
@@ -424,6 +517,7 @@ export async function createStory(
       narratorProfile,
       undefined,
       contentRating,
+      genre,
     ),
     projectId: project.id,
     tags: STORY_MARKER_TAGS,
@@ -437,6 +531,10 @@ export async function createStory(
     ...(kindroidTarget && { kindroid_target: kindroidTarget }),
     ...(narratorProfile && { narrator_profile: narratorProfile }),
     ...(contentRating && { content_rating: contentRating }),
+    ...(genre && {
+      genres: genre.genres,
+      ...(genre.guidance && { genre_guidance: genre.guidance }),
+    }),
   };
 }
 
@@ -460,6 +558,7 @@ export async function setKindroidTarget(
     story.narrator_profile,
     story.position,
     story.content_rating,
+    storyGenre(story),
   );
   await oc.memoryUpdate({ memoryId: story.marker_memory_id, content });
   return { ...story, kindroid_target: kindroidTarget };
@@ -483,6 +582,7 @@ export async function setNarratorProfile(
     label,
     story.position,
     story.content_rating,
+    storyGenre(story),
   );
   await oc.memoryUpdate({ memoryId: story.marker_memory_id, content });
   const { narrator_profile: _dropped, ...rest } = story;
@@ -508,11 +608,48 @@ export async function setContentRating(
     story.narrator_profile,
     story.position,
     rating,
+    storyGenre(story),
   );
   await oc.memoryUpdate({ memoryId: story.marker_memory_id, content });
   const { content_rating: _dropped, ...rest } = story;
   void _dropped;
   return rating === undefined ? rest : { ...rest, content_rating: rating };
+}
+
+/**
+ * Declares (or clears, when declaration is undefined) this story's genre,
+ * rewriting the marker in place the same way setKindroidTarget /
+ * setNarratorProfile / setContentRating do; every other field is preserved
+ * verbatim (docs/GENRE_DECLARATION_DESIGN.md §4). The declaration is
+ * validated before the write, so an invalid one never reaches the marker --
+ * the read-side leniency in parseGenreDeclaration exists for hand edits,
+ * not as a substitute for this.
+ */
+export async function setGenre(
+  oc: OcClient,
+  story: MnemoStory,
+  declaration: GenreDeclaration | undefined,
+): Promise<MnemoStory> {
+  if (declaration !== undefined) assertGenreDeclaration(declaration);
+  const content = buildMarkerContent(
+    story.name,
+    story.created_at,
+    story.kindroid_target,
+    story.narrator_profile,
+    story.position,
+    story.content_rating,
+    declaration,
+  );
+  await oc.memoryUpdate({ memoryId: story.marker_memory_id, content });
+  const { genres: _genres, genre_guidance: _guidance, ...rest } = story;
+  void _genres;
+  void _guidance;
+  if (declaration === undefined) return rest;
+  return {
+    ...rest,
+    genres: declaration.genres,
+    ...(declaration.guidance && { genre_guidance: declaration.guidance }),
+  };
 }
 
 // Position tracking's merge/arithmetic/validate-then-apply logic

@@ -21,6 +21,10 @@ export function toStorySummary(story: MnemoStory): StorySummary {
       narrator_profile: story.narrator_profile,
     }),
     ...(story.content_rating && { content_rating: story.content_rating }),
+    ...(story.genres && { genres: story.genres }),
+    ...(story.genre_guidance && {
+      genre_guidance: story.genre_guidance,
+    }),
   };
 }
 

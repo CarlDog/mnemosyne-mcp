@@ -2,6 +2,28 @@
 
 **Last updated:** 2026-09-19.
 
+**Genre declaration standard: slice 2 (runtime) shipped (2026-09-19).** The
+declaration now reaches the model. Story marker schema 7 carries it on four
+optional lines through all five write sites; it is validated on READ, so a
+hand-edited marker with an unknown term reads as undeclared instead of pushing
+an arbitrary string into a prompt, and unusable guidance is dropped without
+un-declaring the genres. `mnemo_story_use` gains `genres`, `genre_guidance` and
+`override_flagged_content`, with the guidance injection-scanned per string and
+the story re-fetched after a write so a dropped line cannot hide behind an
+in-memory object. Rendering is three-way: a structural block after the position
+line for direct providers, one terms-only line for companions, and the same
+block for the validator on the generation path only. The export schema validates
+the genre fields against the live dictionary and reports them without applying
+them. Seven refinements came out of building it, all recorded in the design's
+revision notes; the load-bearing one is that the server reads the dictionary as
+a typed JSON import rather than the path trick `src/version.ts` uses, because
+that trick only works for a file whose relative path is identical from `src/`
+and `dist/`, which the dictionary's is not. Measured, not assumed: the compiler
+emits the JSON into `dist/`. Suite at 806 tests (711 passing, 95 env-gated); 13
+mutation checks, 13 caught, and the first run earned its keep by showing the
+fence-neutralization test defended only one of the three guidance fields.
+Slice 3 remains: declare every story, then one hardening commit.
+
 **Genre dictionary reviewed against external sources and revised
 (2026-09-19).** The 39 terms shipped in slice 1 were written without any
 external check, so they were reviewed adversarially against the book trade's

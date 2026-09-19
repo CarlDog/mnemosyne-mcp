@@ -139,7 +139,40 @@ function constraintsBlock(context: ContextBundle): string {
   if (context.locations.length) {
     sections.push(`=== LOCATIONS ===\n${join(context.locations)}`);
   }
+  // The story's declared genre is a constraint the beat can break, so the
+  // validator is told it too (docs/GENRE_DECLARATION_DESIGN.md §4). It is
+  // present only when the bundle is a GENERATION context -- that is,
+  // mnemo_continue's optional validate pass, which reuses the bundle it
+  // already gathered. mnemo_validate and mnemo_revalidate_scenes gather
+  // with validationOnly, which deliberately skips the story-marker read;
+  // giving them the genre would cost one extra marker read per scene in the
+  // revalidate loop, the exact cost the position design refused.
+  const genreBlock = renderGenreConstraint(context.genre);
+  if (genreBlock) sections.push(genreBlock);
   return sections.join("\n\n");
+}
+
+/** The genre block as the validator sees it: the same content the direct
+ * providers get, neutralized the same way. Kept here rather than imported
+ * from prompt-policy so the validator's block can name the declaration as a
+ * checkable constraint instead of a story-state statement. */
+function renderGenreConstraint(genre: ContextBundle["genre"]): string | null {
+  if (!genre) return null;
+  const [frame, ...blends] = genre.genres;
+  const lines = [
+    `Frame: ${frame}${blends.length > 0 ? `; blends: ${blends.join(", ")}` : ""}.`,
+  ];
+  const guidance = genre.guidance;
+  if (guidance) {
+    lines.push(`Lean: ${neutralizeSectionDelimiters(guidance.lean)}`);
+    for (const item of guidance.conventions ?? []) {
+      lines.push(`Promises: ${neutralizeSectionDelimiters(item)}`);
+    }
+    for (const item of guidance.avoid ?? []) {
+      lines.push(`Must avoid: ${neutralizeSectionDelimiters(item)}`);
+    }
+  }
+  return `=== GENRE ===\n${lines.join("\n")}`;
 }
 
 /**

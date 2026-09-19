@@ -41,6 +41,11 @@ import {
 } from "./injection-scan.js";
 import type { OcClient } from "./oc-client.js";
 import type { KindroidTarget, MnemoStory } from "./stories.js";
+import {
+  assertGenreGuidance,
+  assertGenres,
+  type GenreGuidance,
+} from "./genre.js";
 
 // Single source of truth for the record shape — the tool's inputSchema
 // reuses this object so file mode and entities mode can never drift into
@@ -101,6 +106,42 @@ const exportDocumentSchema = z.object({
     kindroid_target: z
       .object({ type: z.enum(["ai", "group"]), id: z.string().min(1) })
       .optional(),
+    // The genre declaration (docs/GENRE_DECLARATION_DESIGN.md §4),
+    // validated here against the live dictionary and the length rules so
+    // an export cannot carry a term this server does not know. Like the
+    // Kindroid binding above, import REPORTS it and never applies it:
+    // setting a live story's genre is an explicit mnemo_story_use
+    // decision, so a re-import can never stomp a runtime edit.
+    genres: z
+      .array(z.string().min(1))
+      .superRefine((value, ctx) => {
+        try {
+          assertGenres(value);
+        } catch (error) {
+          ctx.addIssue({
+            code: "custom",
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+      })
+      .optional(),
+    genre_guidance: z
+      .object({
+        lean: z.string().min(1),
+        conventions: z.array(z.string().min(1)).optional(),
+        avoid: z.array(z.string().min(1)).optional(),
+      })
+      .superRefine((value, ctx) => {
+        try {
+          assertGenreGuidance(value);
+        } catch (error) {
+          ctx.addIssue({
+            code: "custom",
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+      })
+      .optional(),
   }),
   entities: z.array(importRecordSchema),
 });
@@ -113,6 +154,11 @@ export interface ParsedExportFile {
    * is an explicit mnemo_story_use decision, never an import side
    * effect. Surfaced so the caller knows it exists. */
   kindroidTarget?: KindroidTarget;
+  /** The story's declared genre, when the document carried one. Also
+   * reported and never applied, for the same reason as the binding
+   * above (docs/GENRE_DECLARATION_DESIGN.md §4). */
+  genres?: string[];
+  genreGuidance?: GenreGuidance;
 }
 
 /** Parse + validate an export document's raw text. Throws with a
@@ -148,6 +194,10 @@ export function parseExportDocument(raw: string): ParsedExportFile {
     storyName: result.data.story.name,
     ...(result.data.story.kindroid_target && {
       kindroidTarget: result.data.story.kindroid_target,
+    }),
+    ...(result.data.story.genres && { genres: result.data.story.genres }),
+    ...(result.data.story.genre_guidance && {
+      genreGuidance: result.data.story.genre_guidance,
     }),
   };
 }

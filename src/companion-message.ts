@@ -273,8 +273,12 @@ export function buildCompanionMessage(
     : [];
   const scenes = context ? parseFlattened(context.scenes) : [];
   const position = context?.position;
+  const genre = context?.genre;
   const hasContextBlock =
-    matched.length > 0 || scenes.length > 0 || position !== undefined;
+    matched.length > 0 ||
+    scenes.length > 0 ||
+    position !== undefined ||
+    genre !== undefined;
   // Characters specifically (not locations/lore/worldbuilding) -- the only
   // reference type that makes sense to address as "talk to each other" in
   // a group note. A second, narrower pass over the same matching logic
@@ -299,6 +303,19 @@ export function buildCompanionMessage(
         ? `[Story context -- background knowledge, not something to quote verbatim.${INERT_NOTICE}:`
         : "[Story context -- background knowledge, not something to quote verbatim:",
     ];
+    if (genre) {
+      // Terms only, never the lean, conventions or avoid lines: a kin's own
+      // persona carries tone and voice, not mnemosyne's prescriptive
+      // constraints (the 2026-09-03 narrator ruling; the genre design's §4
+      // keeps that boundary). Dictionary terms are validated kebab-case, so
+      // they are fence-safe by construction and need no neutralizing.
+      const [frame, ...blends] = genre.genres;
+      lines.push(
+        blends.length > 0
+          ? `Genre: ${frame}; blends: ${blends.join(", ")}`
+          : `Genre: ${frame}`,
+      );
+    }
     if (position) {
       // Neutralize name and spot SEPARATELY, before combining into "name
       // (spot)" -- a fence-forging spot only reaches column 0 of its own
@@ -320,7 +337,7 @@ export function buildCompanionMessage(
       );
     }
     if (scenes.length > 0) {
-      if (matched.length > 0 || position) lines.push("");
+      if (matched.length > 0 || position || genre) lines.push("");
       lines.push("Recent scenes:");
       for (const scene of scenes) {
         lines.push(`- ${neutralizeCompanionFence(scene.body || scene.name)}`);

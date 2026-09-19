@@ -39,6 +39,28 @@ this file was introduced remains in [STATUS.md](STATUS.md).
   cannot and should not parse. Pinned by `tests/canon-frontmatter.test.ts`
   and new cases in the validator, compiler and verifier suites.
 
+- Genre declaration standard, slice 2 (runtime) of
+  `docs/GENRE_DECLARATION_DESIGN.md`. Story marker schema 7 carries the
+  declaration on four optional lines, validated ON READ so a hand-edited
+  marker can never carry an arbitrary term into a prompt, and threaded
+  through all five `buildMarkerContent` write sites. `mnemo_story_use` gains
+  `genres`, `genre_guidance` and `override_flagged_content`: clearing the
+  genres clears the guidance with them, clearing the guidance keeps the
+  genres, guidance for a story with no genres is refused with the fix named,
+  the guidance is injection-scanned per string before it is written, and a
+  genre write re-fetches the story so a dropped marker line cannot hide
+  behind an in-memory object. The declaration joins `ContextBundle` beside
+  `position` at zero extra OC round trips, and renders three ways: a
+  structural `=== GENRE ===` block after the position line for direct
+  providers, one terms-only `Genre:` line for companion providers (a kin's
+  own persona still carries tone), and the same block for the validator on
+  the generation path. Every guidance string is neutralized separately before
+  it is combined, so a forged section fence cannot escape its own line. The
+  export schema validates `story.genres`/`story.genre_guidance` against the
+  live dictionary and reports them without ever applying them, so a re-import
+  cannot stomp a runtime edit. 28 new tests plus import cases; 13 mutation
+  checks, 13 caught.
+
 ### Changed
 
 - Genre dictionary revised against external sources and bumped to version 2

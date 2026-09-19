@@ -237,6 +237,63 @@ describe("parseExportDocument (pure)", () => {
     expect(parsed.records[0]!.type).toBe("character");
   });
 
+  it("surfaces a genre declaration, validated against the live dictionary, without applying it", () => {
+    const guidance = {
+      lean: "A harbor mystery whose clues are all favours owed.",
+      conventions: ["Every clue is something a character wanted hidden."],
+      avoid: ["No detective monologue."],
+    };
+    const doc = {
+      ...VALID_DOC,
+      story: {
+        ...VALID_DOC.story,
+        genres: ["mystery", "romance"],
+        genre_guidance: guidance,
+      },
+    };
+    const parsed = parseExportDocument(JSON.stringify(doc));
+    expect(parsed.genres).toEqual(["mystery", "romance"]);
+    expect(parsed.genreGuidance).toEqual(guidance);
+    // Reported only: planImport's records are untouched by the declaration,
+    // so a re-import can never stomp a runtime mnemo_story_use edit.
+    expect(parsed.records).toHaveLength(1);
+  });
+
+  it("rejects an export whose genre breaks a dictionary rule, naming the term", () => {
+    const cases: [unknown, RegExp][] = [
+      [
+        ["mystery", "spaghetti-western"],
+        /"spaghetti-western" is not a dictionary term/,
+      ],
+      [["crime", "heist"], /"heist" cannot appear with its parent or ancestor/],
+      [["action", "comedy", "drama", "horror"], /at most 3/],
+    ];
+    for (const [genres, message] of cases) {
+      const doc = { ...VALID_DOC, story: { ...VALID_DOC.story, genres } };
+      expect(
+        () => parseExportDocument(JSON.stringify(doc)),
+        String(genres),
+      ).toThrow(message);
+    }
+    const overlong = {
+      ...VALID_DOC,
+      story: {
+        ...VALID_DOC.story,
+        genres: ["mystery"],
+        genre_guidance: { lean: "x".repeat(201) },
+      },
+    };
+    expect(() => parseExportDocument(JSON.stringify(overlong))).toThrow(
+      /at most 200/,
+    );
+  });
+
+  it("parses an export with no genre fields exactly as before", () => {
+    const parsed = parseExportDocument(JSON.stringify(VALID_DOC));
+    expect(parsed.genres).toBeUndefined();
+    expect(parsed.genreGuidance).toBeUndefined();
+  });
+
   it("rejects a future schema version with a version-specific message", () => {
     expect(() =>
       parseExportDocument(

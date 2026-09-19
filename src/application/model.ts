@@ -40,6 +40,21 @@ export type KindroidTargetType = "ai" | "group";
  * generator port's capability descriptor. */
 export type ContentRating = "sfw" | "nsfw";
 
+/** A story's genre guidance and declaration, mirrored here rather than
+ * imported from src/genre.ts for the same reason ContentRating is: the
+ * application layer declares its own shapes and never depends on an
+ * adapter (tests/architecture-boundaries.test.ts enforces the direction). */
+export interface GenreGuidance {
+  lean: string;
+  conventions?: string[];
+  avoid?: string[];
+}
+
+export interface GenreDeclaration {
+  genres: string[];
+  guidance?: GenreGuidance;
+}
+
 export interface KindroidTarget {
   type: KindroidTargetType;
   id: string;
@@ -53,6 +68,8 @@ export interface MnemoStory {
   kindroid_target?: KindroidTarget;
   narrator_profile?: string;
   content_rating?: ContentRating;
+  genres?: string[];
+  genre_guidance?: GenreGuidance;
 }
 
 export interface StorySummary {
@@ -63,6 +80,8 @@ export interface StorySummary {
   kindroid_group_id?: string;
   narrator_profile?: string;
   content_rating?: ContentRating;
+  genres?: string[];
+  genre_guidance?: GenreGuidance;
 }
 
 export type Mode = "participant" | "director" | "audience";
@@ -110,6 +129,11 @@ export interface ContextBundle {
    * same story-marker fetch as `position` -- zero extra cost. Absent when
    * undeclared, or the context is validation-only. */
   content_rating?: ContentRating;
+  /** The story's declared genre (docs/GENRE_DECLARATION_DESIGN.md §4),
+   * resolved by the same story-marker fetch as `position` and
+   * `content_rating` -- zero extra cost. Absent when undeclared, or the
+   * context is validation-only. */
+  genre?: GenreDeclaration;
 }
 
 export interface GatherContextOptions {

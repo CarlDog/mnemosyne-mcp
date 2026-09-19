@@ -39,6 +39,7 @@ import { currentStoryDatetime } from "./position.js";
 import type {
   ContentRating,
   ContextBundle,
+  GenreDeclaration,
   PositionContext,
   SceneContextStrategy,
 } from "./application/model.js";
@@ -399,6 +400,7 @@ async function maybeEnrichReferenceQuery(
 interface ResolvedStoryFields {
   position?: PositionContext;
   contentRating?: ContentRating;
+  genre?: GenreDeclaration;
 }
 
 /** Resolves the two story-marker-derived ContextBundle fields (position,
@@ -413,6 +415,12 @@ async function resolveStoryFields(
   if (!story) return {};
   const result: ResolvedStoryFields = {};
   if (story.content_rating) result.contentRating = story.content_rating;
+  if (story.genres) {
+    result.genre = {
+      genres: story.genres,
+      ...(story.genre_guidance && { guidance: story.genre_guidance }),
+    };
+  }
   if (story.position) {
     const location = await getEntityByMemoryId(
       oc,
@@ -567,7 +575,10 @@ export async function gatherContext(
   // Generation-only (never validationOnly, handled by the early return
   // above) -- see resolveStoryFields's doc comment for the round-trip cost
   // and why it isn't signal-threaded.
-  const { position, contentRating } = await resolveStoryFields(oc, storyId);
+  const { position, contentRating, genre } = await resolveStoryFields(
+    oc,
+    storyId,
+  );
   return {
     rules: rules.map(flattenEntity),
     style: style.map(flattenEntity),
@@ -579,5 +590,6 @@ export async function gatherContext(
     entries,
     ...(position && { position }),
     ...(contentRating && { content_rating: contentRating }),
+    ...(genre && { genre }),
   };
 }

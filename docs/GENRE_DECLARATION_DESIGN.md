@@ -154,9 +154,14 @@ stomp a runtime edit.
 ```text
 Genre: <term>, <term>
 Genre-Lean: <one line>
-Genre-Conventions: <item> | <item>
-Genre-Avoid: <item> | <item>
+Genre-Convention: <one line>      (repeated, one line per item)
+Genre-Avoid: <one line>           (repeated, one line per item)
 ```
+
+The guidance lists get one line each rather than one delimited line: a
+guidance string is free prose and can contain any separator we could pick, so a
+delimited form corrupts silently on round trip. `Genre:` keeps comma separation
+because a dictionary term is validated kebab-case and can never contain one.
 
 Parsing validates on read, as the narrator profile and the content rating do: a term
 outside the dictionary is ignored and the story reads as undeclared, so a hand-edited
@@ -254,6 +259,34 @@ why the acceptance test drives `continueScene` rather than the prompt builder al
 
 ## Revision notes
 
+- Slice 2 shipped (2026-09-19), with seven refinements found while building it.
+  (1) The server reads the dictionary as a typed JSON import, not through
+  `readFileSync` + `import.meta.url` as section 1 said: `src/version.ts` can use
+  that pattern only because `../package.json` is the same path from `src/` and
+  `dist/`, which is not true of `src/genre-dictionary.json`, and a packaged
+  artifact ships `dist/` alone. Measured rather than assumed: `tsc` emits the
+  JSON into `dist/` under `resolveJsonModule`, so there is still one tracked
+  source and no hand-maintained copy. (2) The marker's guidance lists get one
+  repeated line per item instead of a delimited line, per the note in section 4.
+  (3) `buildMarkerContent` takes one `GenreDeclaration` object rather than two
+  more positionals: it already had six arguments and five call sites, and the
+  genres and their guidance must move together anyway. (4) The validator gets
+  the block only where its context is a GENERATION context, which is
+  `mnemo_continue`'s validate pass reusing the bundle it already gathered;
+  `mnemo_validate` and `mnemo_revalidate_scenes` gather with `validationOnly`,
+  which skips the marker read, and giving them the genre would cost one marker
+  read per scene in the revalidate loop -- the exact cost the position design
+  refused. (5) The dictionary rules exist twice, in `src/genre.ts` and
+  `scripts/canon-frontmatter.mjs`, because the scripts must run without a build
+  and `src/` is the compiler's `rootDir`; `tests/genre-runtime.test.ts` pins the
+  two against identical limits, identical ancestry for every term, and identical
+  verdicts on one shared table. (6) The tool refuses guidance for a story with
+  no genres with a message naming the fix, rather than letting the generic
+  declaration check notice it later and less usefully. (7) `application/model.ts`
+  declares its own genre types instead of importing the adapter's, mirroring
+  `ContentRating`, because `tests/architecture-boundaries.test.ts` enforces the
+  dependency direction. Thirteen mutation checks, thirteen caught; the first run
+  found the neutralization test defended only one of the three guidance fields.
 - Dictionary revised against external sources (2026-09-19, dictionary version 2).
   An adversarial review against the book trade's BISAC headings, the Library of
   Congress genre authority, the Encyclopedia of Science Fiction and the genre

@@ -12,6 +12,7 @@ import { getEntityByMemoryId } from "./entities.js";
 import {
   buildMarkerContent,
   findStory,
+  storyGenre,
   type MnemoStory,
   type PositionState,
 } from "./stories.js";
@@ -210,6 +211,7 @@ export async function setPosition(
     story.narrator_profile,
     position,
     story.content_rating,
+    storyGenre(story),
   );
   await oc.memoryUpdate({ memoryId: story.marker_memory_id, content });
   return { ...story, position };

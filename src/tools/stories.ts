@@ -13,10 +13,23 @@ import {
   NARRATOR_PROFILE_PATTERN,
   setNarratorProfile,
   setContentRating,
+  setGenre,
+  storyGenre,
   createStory,
   findStory,
   setKindroidTarget,
 } from "../stories.js";
+import {
+  assertGenreDeclaration,
+  genreGuidanceStrings,
+  type GenreDeclaration,
+  type GenreGuidance,
+} from "../genre.js";
+import {
+  describeInjectionSignals,
+  OVERRIDE_FLAGGED_CONTENT_PARAM,
+  scanForInjectionSignals,
+} from "../injection-scan.js";
 import { getCurrentStoryId, setCurrentStoryId } from "../config.js";
 import { asText, withLogging } from "./helpers.js";
 
@@ -32,6 +45,69 @@ function toAnnotated(
   currentId: string | undefined,
 ): AnnotatedStory {
   return { ...story, current: story.id === currentId };
+}
+
+/**
+ * Resolves the declaration to persist from the request and the story's
+ * current state, or `undefined` for "clear it", or `null` for "no change".
+ *
+ * Guidance cannot exist without genres, so clearing `genres` clears the
+ * whole declaration, while clearing `genre_guidance` leaves the genres in
+ * place. Setting guidance alone is only legal when the story already has
+ * genres (or the same call supplies them) -- otherwise there is nothing for
+ * the guidance to be guidance FOR, and assertGenreDeclaration would be the
+ * one to notice, too late and with a less useful message.
+ */
+export function resolveGenreChange(
+  current: GenreDeclaration | undefined,
+  requestedGenres: string[] | null | undefined,
+  requestedGuidance: GenreGuidance | null | undefined,
+): GenreDeclaration | undefined | null {
+  if (requestedGenres === undefined && requestedGuidance === undefined) {
+    return null;
+  }
+  if (requestedGenres === null) return undefined;
+  const genres = requestedGenres ?? current?.genres;
+  if (!genres) {
+    throw new Error(
+      "genre_guidance needs genres: pass `genres` in the same call, or set them first.",
+    );
+  }
+  const guidance =
+    requestedGuidance === null
+      ? undefined
+      : (requestedGuidance ?? current?.guidance);
+  const declaration: GenreDeclaration = {
+    genres,
+    ...(guidance && { guidance }),
+  };
+  assertGenreDeclaration(declaration);
+  return declaration;
+}
+
+/**
+ * Refuses a declaration whose guidance is instruction-shaped, unless the
+ * caller explicitly overrides. Genre guidance is rendered verbatim into
+ * every system prompt for this story, so it is a write surface with the
+ * same exposure as an entity body -- this is the fourth tool to expose
+ * OVERRIDE_FLAGGED_CONTENT_PARAM. Each string is scanned SEPARATELY, so a
+ * signal cannot be split across two conventions to evade the scan.
+ */
+export function assertGuidanceUnflagged(
+  declaration: GenreDeclaration,
+  args: { [OVERRIDE_FLAGGED_CONTENT_PARAM]?: boolean },
+): void {
+  if (args[OVERRIDE_FLAGGED_CONTENT_PARAM]) return;
+  if (!declaration.guidance) return;
+  for (const text of genreGuidanceStrings(declaration.guidance)) {
+    const signals = scanForInjectionSignals(text);
+    if (signals.length > 0) {
+      throw new Error(
+        `genre_guidance looks instruction-shaped and was not written. ${describeInjectionSignals(signals)} ` +
+          `Set ${OVERRIDE_FLAGGED_CONTENT_PARAM}=true to write it anyway.`,
+      );
+    }
+  }
 }
 
 export function registerStoryTools(
@@ -93,6 +169,30 @@ export function registerStoryTools(
           .describe(
             "Name the narrator persona this story is written with (1-64 chars of letters, digits, . _ -), e.g. the kin's persona label. A provenance label only: mnemo_continue echoes it and tags each saved scene narrator:<label> when the story's Kindroid binding is used. Pass null to clear. Omit to leave unchanged.",
           ),
+        genres: z
+          .array(z.string().min(1))
+          .nullable()
+          .optional()
+          .describe(
+            "Declare this story's genre as an ordered list of 1-3 dictionary terms, broadest true term FIRST; a term may never appear beside its own parent or ancestor. The frame (first term) wins when conventions conflict. Rendered into the system prompt for direct providers and as a terms-only line for companion providers. Pass null to clear the whole declaration (guidance included). Omit to leave unchanged.",
+          ),
+        genre_guidance: z
+          .object({
+            lean: z.string().min(1),
+            conventions: z.array(z.string().min(1)).optional(),
+            avoid: z.array(z.string().min(1)).optional(),
+          })
+          .nullable()
+          .optional()
+          .describe(
+            "This story's own take on its genres: a required one-line `lean` (<=200 chars) plus optional `conventions` and `avoid` lists (<=8 items of <=160 chars each, <=1500 chars of guidance in total, because it travels on the story marker and into every prompt). Needs `genres` to be set, in this call or already. Never sent to companion providers. Pass null to clear the guidance but keep the genres. Omit to leave unchanged.",
+          ),
+        [OVERRIDE_FLAGGED_CONTENT_PARAM]: z
+          .boolean()
+          .optional()
+          .describe(
+            "Genre guidance matching instruction-shaped phrasing (a prompt-injection signal) is refused by default -- nothing is written, and the error quotes the matched excerpt. Set true to write it anyway.",
+          ),
         content_rating: z
           .enum(["sfw", "nsfw"])
           .nullable()
@@ -111,6 +211,9 @@ export function registerStoryTools(
         kindroid_group_id?: string | null;
         narrator_profile?: string | null;
         content_rating?: "sfw" | "nsfw" | null;
+        genres?: string[] | null;
+        genre_guidance?: GenreGuidance | null;
+        [OVERRIDE_FLAGGED_CONTENT_PARAM]?: boolean;
       }) => {
         const { name_or_id, create_if_missing } = args;
         const profileChangeRequested = args.narrator_profile !== undefined;
@@ -138,12 +241,20 @@ export function registerStoryTools(
               { isError: true },
             );
           }
+          // A brand-new story has no current declaration to merge onto.
+          const declaration = resolveGenreChange(
+            undefined,
+            args.genres,
+            args.genre_guidance,
+          );
+          if (declaration) assertGuidanceUnflagged(declaration, args);
           story = await createStory(
             oc,
             name_or_id,
             requestedTarget,
             requestedProfile,
             requestedRating,
+            declaration ?? undefined,
           );
         } else {
           if (targetChangeRequested) {
@@ -154,6 +265,21 @@ export function registerStoryTools(
           }
           if (ratingChangeRequested) {
             story = await setContentRating(oc, story, requestedRating);
+          }
+          const declaration = resolveGenreChange(
+            storyGenre(story),
+            args.genres,
+            args.genre_guidance,
+          );
+          if (declaration !== null) {
+            if (declaration) assertGuidanceUnflagged(declaration, args);
+            await setGenre(oc, story, declaration);
+            // Re-fetch rather than trusting the returned object: the
+            // marker is rebuilt positionally from six other fields, and
+            // an in-memory spread would hide a line dropped on the way
+            // out (docs/GENRE_DECLARATION_DESIGN.md §4).
+            const refetched = await findStory(oc, story.id);
+            if (refetched) story = refetched;
           }
         }
         await setCurrentStoryId(story.id);

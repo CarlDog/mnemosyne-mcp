@@ -14,13 +14,12 @@ is in flight; it must never restate STATUS.md's Done log. (When the two disagree
 STATUS.md is newer.)
 
 **In flight: the genre declaration standard (`docs/GENRE_DECLARATION_DESIGN.md`).**
-Slice 1 (tooling) shipped 2026-09-19. Pending: slice 2 (runtime: marker schema 7
-through all five write sites, `mnemo_story_use`'s `genres`/`genre_guidance`/
-`override_flagged_content`, the direct-provider block and the companion terms-only
-line, the validator context) and slice 3 (one question set per story, drafted and
-confirmed per story, written to `canon/_story.md` under `data/`; then the hardening
-commit that turns the verifier's `REQUIRE_STORY_BLOCK` gate on). Until slice 3 no
-story is required to carry a declaration.
+Slices 1 (tooling) and 2 (runtime) both shipped 2026-09-19. What remains is slice
+3: one question set per story, drafted by Claude and confirmed by the operator per
+story, written to that story's `canon/_story.md` under gitignored `data/`; then the
+one hardening commit that turns the verifier's `REQUIRE_STORY_BLOCK` gate on and
+updates the gated-verifier test that pins the constant's current value. Until that
+commit no story is required to carry a declaration, and no story declares one yet.
 
 **Storyline state is deliberately not summarised here.** Per standing operator rule
 (2026-09-12), committed paths carry application material only: no storylines, drafts,
@@ -232,6 +231,15 @@ Two standing operator instructions that outlive any sprint:
   throws an `isError` result's real message rather than returning error
   prose as a reply. Shared by the OC/Kindroid/Botify clients.
 - `src/version.ts` — package version, surfaced in the server banner.
+- `src/genre.ts` — the genre declaration at runtime: the dictionary (a typed
+  JSON import, so `tsc` emits it into `dist/` and one tracked file serves both
+  `tsx src/` and `node dist/`), the validation every write surface shares
+  (`assertGenres`/`assertGenreGuidance`, 1-3 terms broadest-first with no
+  ancestor pair, the length caps), and the LENIENT read side the story marker
+  uses, where anything that does not validate is dropped and the story simply
+  reads as undeclared. Deliberately duplicates the rules in
+  `scripts/canon-frontmatter.mjs` (scripts must run without a build);
+  `tests/genre-runtime.test.ts` pins the two against one shared case table.
 - `src/genre-dictionary.json` — the controlled genre vocabulary of
   `docs/GENRE_DECLARATION_DESIGN.md` §1: 40 parent-annotated terms
   (27 roots), each with a definition, what it promises and what it

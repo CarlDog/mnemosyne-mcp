@@ -26,7 +26,7 @@ describe("story marker content (pure)", () => {
     expect(content.split("\n")).toEqual([
       "[Mnemosyne Story] Halvard",
       `Created: ${CREATED}`,
-      "Schema: 6",
+      "Schema: 7",
       "Kindroid-Target: ai:kin-1",
       "Narrator-Profile: storyteller-v1",
     ]);
@@ -121,7 +121,7 @@ describe("story marker content rating (pure)", () => {
     expect(content.split("\n")).toEqual([
       "[Mnemosyne Story] Halvard",
       `Created: ${CREATED}`,
-      "Schema: 6",
+      "Schema: 7",
       "Kindroid-Target: ai:kin-1",
       "Narrator-Profile: storyteller-v1",
       "Content-Rating: nsfw",
@@ -212,7 +212,7 @@ describe("story marker position block (pure)", () => {
     expect(content.split("\n")).toEqual([
       "[Mnemosyne Story] Halvard",
       `Created: ${CREATED}`,
-      "Schema: 6",
+      "Schema: 7",
       "Kindroid-Target: ai:kin-1",
       "Narrator-Profile: storyteller-v1",
       "Epoch-Date: 2026-10-01T00:00:00.000Z",
