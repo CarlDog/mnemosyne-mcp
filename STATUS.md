@@ -2,6 +2,21 @@
 
 **Last updated:** 2026-09-18.
 
+**History rewritten (2026-09-18): every commit SHA changed; re-clone or reset.**
+At the operator's direction, storyline and character names that had reached
+committed paths (the application-only rule of 2026-09-12; 469 findings across
+7 tracked files by the tracked-content audit, nearly all of them status history)
+were replaced throughout the whole history with neutral placeholders, in blob
+content and commit messages alike, and one compiled Python file that had once
+been committed was dropped from history entirely. Every branch and tag was
+rewritten and force-pushed, so no old SHA resolves any more: any existing clone
+must be re-cloned, or fetched and reset to `origin/main`, before its next push.
+Verified after the rewrite: the audit reports 0 findings on the tree, and a
+scan of every object on every ref against the full configured pattern list
+found no match. Known residue outside this repository's control: GitHub keeps
+the old commits reachable through its pull-request refs until GitHub Support
+purges them, and any fork or cache made before the rewrite still holds them.
+
 **Nested character/3 profiles are readable by the tracked tooling
 (2026-09-18).** The 31 `character/3` profiles on disk (16 in one story's drafts,
 15 in another's) failed all three tracked consumers: the canon
