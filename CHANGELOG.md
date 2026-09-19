@@ -7,6 +7,23 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 
 ### Added
 
+- Genre declaration standard, slice 1 (tooling) of
+  `docs/GENRE_DECLARATION_DESIGN.md`: `src/genre-dictionary.json` (39
+  parent-annotated terms) and the story block `canon/_story.md`
+  (`schema: "story/1"`: one to three dictionary genres, broadest first and
+  never a term beside its own ancestor; a one-line lean; conventions and avoid
+  lists within the caps that let the guidance travel on the story marker).
+  `scripts/canon-frontmatter.mjs` parses it; the validator reads it explicitly
+  at the canon root, checks a present block always and requires one only under
+  `--require-story-block`; the compiler carries it into the export as
+  `story.genres` and `story.genre_guidance` and warns on a `story.json` name
+  mismatch; the overlay verifier's `REQUIRE_STORY_BLOCK` constant (off until
+  every story is declared) passes the flag to its active, baseline and merged
+  runs and never to the isolated drafts run; the scaffolder writes `_story.md`
+  back from a declared export and refuses a half declaration before any target
+  exists. Pinned by new cases in the frontmatter, validator, compiler, verifier
+  and scaffold suites and by `tests/genre-dictionary.test.ts`. No runtime
+  change: the import schema, the marker and the prompts follow in slice 2.
 - Nested `character/3` frontmatter (a top-level `schema:` key over real YAML:
   folded scalars, flow maps, sequences, comments) is accepted by the canon
   validator, the story compiler and the draft-overlay verifier.

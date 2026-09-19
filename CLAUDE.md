@@ -13,7 +13,14 @@ Status lives in [STATUS.md](STATUS.md) — read it first. This section names onl
 is in flight; it must never restate STATUS.md's Done log. (When the two disagree,
 STATUS.md is newer.)
 
-**Nothing application-side is currently in flight.**
+**In flight: the genre declaration standard (`docs/GENRE_DECLARATION_DESIGN.md`).**
+Slice 1 (tooling) shipped 2026-09-19. Pending: slice 2 (runtime: marker schema 7
+through all five write sites, `mnemo_story_use`'s `genres`/`genre_guidance`/
+`override_flagged_content`, the direct-provider block and the companion terms-only
+line, the validator context) and slice 3 (one question set per story, drafted and
+confirmed per story, written to `canon/_story.md` under `data/`; then the hardening
+commit that turns the verifier's `REQUIRE_STORY_BLOCK` gate on). Until slice 3 no
+story is required to carry a declaration.
 
 **Storyline state is deliberately not summarised here.** Per standing operator rule
 (2026-09-12), committed paths carry application material only: no storylines, drafts,
@@ -225,6 +232,13 @@ Two standing operator instructions that outlive any sprint:
   throws an `isError` result's real message rather than returning error
   prose as a reply. Shared by the OC/Kindroid/Botify clients.
 - `src/version.ts` — package version, surfaced in the server banner.
+- `src/genre-dictionary.json` — the controlled genre vocabulary of
+  `docs/GENRE_DECLARATION_DESIGN.md` §1: 39 parent-annotated terms
+  (20 roots), each with a definition, what it promises and what it
+  avoids, plus the broadest-first rule. Read through `import.meta.url` (the
+  way `src/version.ts` reads `package.json`) by the scripts today and by the
+  server in slice 2, so no emitted copy exists to go stale. Pinned by
+  `tests/genre-dictionary.test.ts`.
 - `tests/` — vitest, real OC + real Ollama (env-gated — see "Common
   Commands" for which vars enable which suites).
 - `scripts/dump-prompt.mjs`, `scripts/dump-validation.mjs`,
@@ -236,21 +250,34 @@ Two standing operator instructions that outlive any sprint:
   for a story adopting the authoring layer. It skips generated scenes unless
   they are explicitly promoted and preserves the export entity key as a
   character's runtime identity even when its body contains a display/current
-  `Name:` field.
-- `scripts/validate-canon.mjs <slug> [--dir <canon-dir>]` — structural check of
-  active or staged canon: entity/frontmatter shape, duplicate identities,
-  scene catalog keys, reference/image containment, and non-empty bodies.
-  Content correctness still needs a human pass. Missing, unreadable, or empty
-  trees exit 1.
+  `Name:` field. An export carrying `story.genres` and `story.genre_guidance`
+  scaffolds `_story.md` as well, and the staged compile must reproduce the
+  declaration; one field without the other is refused before any target exists.
+- `scripts/validate-canon.mjs <slug> [--dir <canon-dir>] [--require-story-block]`
+  — structural check of active or staged canon: entity/frontmatter shape,
+  duplicate identities, scene catalog keys, reference/image containment, and
+  non-empty bodies. Content correctness still needs a human pass. Missing,
+  unreadable, or empty trees exit 1. The story block `_story.md`
+  (`docs/GENRE_DECLARATION_DESIGN.md`) is read explicitly at the canon root,
+  outside the entity walk: checked whenever it exists, required only under the
+  flag, which stays off until every story is declared (slice 3).
 - `scripts/compile-story.mjs <slug> [--dir <canon-dir>] --check` — compiles a
   canon-shaped tree and runs the built server's real import schema/preflight
   with `writes=0`; `--out <file>` exclusively creates a checked export artifact
-  but never imports it.
+  but never imports it. A present `_story.md` is carried into the export's
+  story block (`genres`, `genre_guidance`) and an invalid one fails the
+  compile; its absence never does, and a name differing from `story.json` is
+  a stderr warning only.
 - `scripts/verify-draft-overlay.mjs <slug>` — verifies a manifest-driven draft
   overlay's operation inventory and hashes, validates active/isolated/merged
   trees, and runs the merged import preflight without promotion or import.
   `--canon-only <slug>` checks active canon alone; `--manifest _control/<file>.json`
   verifies a subset manifest (the promotion tool's partial-promotion path).
+  `REQUIRE_STORY_BLOCK` (module constant, off until slice 3 of the genre
+  standard) passes `--require-story-block` to the active, baseline and merged
+  validator runs, never to the isolated drafts run: an overlay revising one
+  character carries no story block of its own. A `drafts/_story.md` is
+  manifested and promoted like any other draft file.
 - `scripts/promote-overlay.mjs <slug> --revision <label> (--all | --paths a,b)
   [--apply --approved-by <name>]` — the only path from `drafts/` into `canon/`:
   verifier-gated, content-backed-up, hash-rechecked, atomic-ordered, evidence to
@@ -272,7 +299,10 @@ Two standing operator instructions that outlive any sprint:
   (`parseNestedFrontmatter`/`resolveEntityFields`, real YAML through the
   `yaml` package) that the validator, compiler and overlay verifier share;
   the flat path is untouched and a top-level `schema:` key is the only
-  discriminator.
+  discriminator. Since 2026-09-19 it also holds the story block
+  (`parseStoryBlock`/`storyBlockExportFields`, with `loadGenreDictionary` and
+  `genreAncestors`) that the validator, compiler and scaffolder share for
+  `canon/_story.md`.
 - `scripts/dist-preflight.mjs` — reports a missing `dist/` with a build hint.
   Import it statically, then reach for `dist/` with `await import(...)`: ESM
   resolves static imports before evaluating anything, so a static `dist/`
@@ -376,6 +406,13 @@ Two standing operator instructions that outlive any sprint:
   failure landing after a successful position write was wrongly reported
   retry-safe; `advance`/`set_elapsed_hours` could drive elapsed_hours
   negative where `set_date` alone was guarded).
+- `docs/GENRE_DECLARATION_DESIGN.md` — the genre declaration standard (Draft 2,
+  two adversarial passes, the operator's eight decisions recorded; slice 1
+  shipped 2026-09-19): every story declares one to three dictionary genres,
+  broadest first and never a term beside its own ancestor, plus a one-line
+  lean and conventions/avoid lists capped to travel on the story marker, in
+  `canon/_story.md` (authoring truth, slice 1) and on the marker (runtime,
+  slice 2). Enforcement is hard only once every story is declared (slice 3).
 - `docs/RESEARCH_DECISION_QUEUE.md` — the enumerated decision queue from the
   2026-08-28 research triage: every recommendation-table row of the four
   adoption assessments with its disposition (shipped / rejected at triage /
@@ -660,7 +697,7 @@ npm run typecheck      # tsc -p tsconfig.typecheck.json (src + tests)
 npm run lint           # eslint .
 npm run format         # prettier --write .
 npm run format:check   # prettier --check . (CI gates on this -- run before pushing)
-npm test               # vitest run (95 of 753 tests are env-gated; see below)
+npm test               # vitest run (95 of 775 tests are env-gated; see below)
 ```
 
 `npm test` green does **not** mean the integration surface ran. Every

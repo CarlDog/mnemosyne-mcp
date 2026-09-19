@@ -20,6 +20,7 @@
 // implementation. Flat files never carry a `schema:` key, and the flat path
 // is untouched by any of this.
 
+import { readFileSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
 
 /**
@@ -328,4 +329,202 @@ export function resolveEntityFields(document) {
     fields.set("tags", [...document.meta.tags]);
   }
   return fields;
+}
+
+/**
+ * Parse a nested frontmatter block as a plain YAML mapping, with no shape
+ * checks beyond "it is a mapping". For consumers that only walk the values
+ * (the overlay verifier's pointer scan) and must accept every nested shape,
+ * the character/3 entity and the story/1 block alike.
+ */
+export function parseNestedDocument(frontmatterText) {
+  let document;
+  try {
+    document = parseYaml(frontmatterText, { uniqueKeys: true });
+  } catch (error) {
+    const firstLine = errorMessage(error).split(/\r?\n/, 1)[0];
+    throw new Error(`nested frontmatter is not valid YAML: ${firstLine}`, {
+      cause: error,
+    });
+  }
+  if (!isPlainObject(document)) {
+    throw new Error("nested frontmatter must be a YAML mapping");
+  }
+  return document;
+}
+
+// ---- the story block (story/1) and the genre dictionary ----
+//
+// docs/GENRE_DECLARATION_DESIGN.md. One dictionary file under src/, read
+// through import.meta.url the way src/version.ts reads package.json, so the
+// scripts and the server resolve the same file and no emitted copy can go
+// stale.
+
+const GENRE_DICTIONARY_URL = new URL(
+  "../src/genre-dictionary.json",
+  import.meta.url,
+);
+let cachedDictionary = null;
+
+export function loadGenreDictionary() {
+  if (cachedDictionary === null) {
+    cachedDictionary = JSON.parse(readFileSync(GENRE_DICTIONARY_URL, "utf-8"));
+  }
+  return cachedDictionary;
+}
+
+export const STORY_BLOCK_SCHEMA = "story/1";
+export const STORY_BLOCK_LIMITS = Object.freeze({
+  genresMax: 3,
+  leanMax: 200,
+  listMax: 8,
+  itemMax: 160,
+  guidanceMax: 1500,
+});
+
+/** Every ancestor of a term, nearest first; [] for a root or unknown term. */
+export function genreAncestors(term, dictionary = loadGenreDictionary()) {
+  const ancestors = [];
+  let cursor = dictionary.terms[term]?.parent ?? null;
+  while (cursor !== null && !ancestors.includes(cursor)) {
+    ancestors.push(cursor);
+    cursor = dictionary.terms[cursor]?.parent ?? null;
+  }
+  return ancestors;
+}
+
+function requireOneLineList(value, label, { max, itemMax, required }) {
+  if (value === undefined) {
+    if (required) throw new Error(`story block ${label} is required`);
+    return [];
+  }
+  if (!Array.isArray(value)) {
+    throw new Error(`story block ${label} must be a list of one-line strings`);
+  }
+  if (value.length > max) {
+    throw new Error(
+      `story block ${label} has ${value.length} entries; at most ${max}`,
+    );
+  }
+  value.forEach((item, index) => {
+    if (!isNonEmptyOneLineString(item)) {
+      throw new Error(
+        `story block ${label}[${index}] must be a non-empty one-line string`,
+      );
+    }
+    if (item.length > itemMax) {
+      throw new Error(
+        `story block ${label}[${index}] is ${item.length} characters; at most ${itemMax}`,
+      );
+    }
+  });
+  return [...value];
+}
+
+/**
+ * Parse and check a story block (the frontmatter of canon/_story.md):
+ * schema story/1, a one-line name, one to three dictionary genres with no
+ * term beside its own parent or ancestor, a required one-line lean, and
+ * optional conventions, avoid and subgenres lists, all within the limits
+ * the marker and the prompt can carry. Throws one-line errors that name the
+ * offending field or term.
+ */
+export function parseStoryBlock(
+  frontmatterText,
+  dictionary = loadGenreDictionary(),
+) {
+  const document = parseNestedDocument(frontmatterText);
+  if (document.schema !== STORY_BLOCK_SCHEMA) {
+    throw new Error(
+      `story block schema must be ${JSON.stringify(STORY_BLOCK_SCHEMA)}`,
+    );
+  }
+  if (!isNonEmptyOneLineString(document.name)) {
+    throw new Error("story block name must be a non-empty one-line string");
+  }
+  const { genres } = document;
+  if (!Array.isArray(genres) || genres.length === 0) {
+    throw new Error(
+      "story block genres must list one to three dictionary terms",
+    );
+  }
+  if (genres.length > STORY_BLOCK_LIMITS.genresMax) {
+    throw new Error(
+      `story block genres lists ${genres.length} terms; at most ${STORY_BLOCK_LIMITS.genresMax}`,
+    );
+  }
+  genres.forEach((term, index) => {
+    if (typeof term !== "string" || !Object.hasOwn(dictionary.terms, term)) {
+      throw new Error(
+        `story block genres[${index}] ${JSON.stringify(term)} is not a dictionary term`,
+      );
+    }
+    if (genres.indexOf(term) !== index) {
+      throw new Error(`story block genres repeats ${JSON.stringify(term)}`);
+    }
+  });
+  for (const term of genres) {
+    const ancestor = genreAncestors(term, dictionary).find((candidate) =>
+      genres.includes(candidate),
+    );
+    if (ancestor) {
+      throw new Error(
+        `story block genres: ${JSON.stringify(term)} cannot appear with its parent or ancestor ${JSON.stringify(ancestor)}`,
+      );
+    }
+  }
+  if (!isNonEmptyOneLineString(document.lean)) {
+    throw new Error("story block lean must be a non-empty one-line string");
+  }
+  if (document.lean.length > STORY_BLOCK_LIMITS.leanMax) {
+    throw new Error(
+      `story block lean is ${document.lean.length} characters; at most ${STORY_BLOCK_LIMITS.leanMax}`,
+    );
+  }
+  const listLimits = {
+    max: STORY_BLOCK_LIMITS.listMax,
+    itemMax: STORY_BLOCK_LIMITS.itemMax,
+    required: false,
+  };
+  const conventions = requireOneLineList(
+    document.conventions,
+    "conventions",
+    listLimits,
+  );
+  const avoid = requireOneLineList(document.avoid, "avoid", listLimits);
+  const subgenres = requireOneLineList(document.subgenres, "subgenres", {
+    max: STORY_BLOCK_LIMITS.listMax,
+    itemMax: STORY_BLOCK_LIMITS.itemMax,
+    required: false,
+  });
+  const guidanceLength =
+    document.lean.length +
+    conventions.reduce((sum, item) => sum + item.length, 0) +
+    avoid.reduce((sum, item) => sum + item.length, 0);
+  if (guidanceLength > STORY_BLOCK_LIMITS.guidanceMax) {
+    throw new Error(
+      `story block guidance (lean, conventions, avoid) is ${guidanceLength} characters; at most ${STORY_BLOCK_LIMITS.guidanceMax}`,
+    );
+  }
+  return {
+    schema: STORY_BLOCK_SCHEMA,
+    name: document.name,
+    genres: [...genres],
+    subgenres,
+    lean: document.lean,
+    conventions,
+    avoid,
+  };
+}
+
+/** The export document's story-block fields, from a parsed story block. */
+export function storyBlockExportFields(block) {
+  return {
+    genres: [...block.genres],
+    genre_guidance: {
+      lean: block.lean,
+      conventions: [...block.conventions],
+      avoid: [...block.avoid],
+    },
+  };
 }

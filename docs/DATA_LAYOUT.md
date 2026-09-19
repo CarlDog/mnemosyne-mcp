@@ -61,6 +61,7 @@ data/
 ├── stories/<slug>/
 │   ├── story.json              server: identity card (see below)
 │   ├── canon/                  PRIMARY — active canon: entities + README + _-prefixed docs, nothing else
+│   │   ├── _story.md               the genre declaration (schema story/1; docs/GENRE_DECLARATION_DESIGN.md)
 │   │   ├── _templates/<type>.md    authoring templates, one place per story
 │   │   ├── characters/<slug>.md, characters/_minor.md, locations/, lore/, lore/objects/,
 │   │   │   scenes/<key>--<slug>.md (established scenes + their own README, _catalog, _template),
@@ -300,9 +301,14 @@ performs the same schema/preflight proof and then creates one export document;
 its parent must already exist, the destination may not be inside the source
 tree, and an existing file is never overwritten. Neither mode performs a live
 import or grants promotion approval. README/control files and
-underscore-prefixed Markdown templates are ignored by compilation; draft
-markers, malformed metadata, duplicate `(type, name)` identities, and records
-beyond the OC content limit are hard failures.
+underscore-prefixed Markdown templates are ignored by compilation, with one
+named exception: `_story.md`, the story's genre declaration
+(`docs/GENRE_DECLARATION_DESIGN.md`), which the validator checks whenever it
+exists (and requires only under `--require-story-block`), the compiler carries
+into the export's story block as `genres` and `genre_guidance`, and the
+scaffolder writes back from an export that carries both fields. Draft
+markers, malformed metadata, duplicate `(type, name)` identities, records
+beyond the OC content limit, and an invalid `_story.md` are hard failures.
 
 Ignored underscore templates are not import records, but the overlay verifier
 still validates their frontmatter before reporting them as safe: keys must be

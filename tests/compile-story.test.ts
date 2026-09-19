@@ -1,3 +1,5 @@
+import { spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import {
   mkdir,
   mkdtemp,
@@ -9,6 +11,7 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { parseExportDocument, planImport } from "../src/import.js";
 // The compiler is deliberately an operator-facing Node ESM script rather than
@@ -26,6 +29,32 @@ const {
 
 const roots: string[] = [];
 const ISO = "2026-08-29T12:34:56.000Z";
+const REPO_ROOT = fileURLToPath(new URL("../", import.meta.url));
+const COMPILER = join(REPO_ROOT, "scripts", "compile-story.mjs");
+const STORIES_ROOT = join(REPO_ROOT, "data", "stories");
+
+async function runCompiler(
+  args: string[],
+): Promise<{ code: number | null; stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [COMPILER, ...args], {
+      cwd: REPO_ROOT,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk: string) => {
+      stdout += chunk;
+    });
+    child.stderr.on("data", (chunk: string) => {
+      stderr += chunk;
+    });
+    child.on("error", reject);
+    child.on("close", (code) => resolve({ code, stdout, stderr }));
+  });
+}
 
 async function makeRoot(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "mnemo-compile-story-"));
@@ -633,5 +662,146 @@ A cartographer.
     ).rejects.toThrow(
       'characters/aria.md:4: invalid frontmatter line "A cartographer."',
     );
+  });
+});
+
+describe("compileCanonDirectory story block (story/1)", () => {
+  const GUIDANCE = {
+    lean: "A harbor mystery whose clues are all favours owed.",
+    conventions: ["Every clue is something a character wanted hidden."],
+    avoid: ["No detective monologue."],
+  };
+
+  function storyBlock(genres: string, name = "Test Story"): string {
+    return `---
+schema: "story/1"
+name: "${name}"
+genres: ${genres}
+lean: "${GUIDANCE.lean}"
+conventions:
+  - "${GUIDANCE.conventions[0]}"
+avoid:
+  - "${GUIDANCE.avoid[0]}"
+---
+
+Notes nothing reads.
+`;
+  }
+
+  it("carries a declared block into the export's story fields, which the import contract accepts", async () => {
+    const root = await makeRoot();
+    await seedCompleteCanon(root);
+    await put(root, "_story.md", storyBlock('["mystery", "romance"]'));
+
+    const compiled = await compileCanonDirectory({
+      slug: "test-story",
+      dir: root,
+    });
+    expect(compiled.records).toHaveLength(10);
+    expect(compiled.storyBlock).toEqual({
+      schema: "story/1",
+      name: "Test Story",
+      genres: ["mystery", "romance"],
+      subgenres: [],
+      ...GUIDANCE,
+    });
+
+    const document = buildCompiledExportDocument({
+      records: compiled.records,
+      storyName: "Test Story",
+      storyCreatedAt: ISO,
+      exportedAt: ISO,
+      storyBlock: compiled.storyBlock,
+    });
+    expect(document.story).toEqual({
+      name: "Test Story",
+      created_at: ISO,
+      genres: ["mystery", "romance"],
+      genre_guidance: GUIDANCE,
+    });
+    expect(
+      checkImportCompatibility(document, { parseExportDocument, planImport }),
+    ).toMatchObject({ dry_run: true, total_written: 0, records: 10 });
+  });
+
+  it("compiles a tree without the file as before, with no story fields", async () => {
+    const root = await makeRoot();
+    await seedCompleteCanon(root);
+
+    const compiled = await compileCanonDirectory({
+      slug: "test-story",
+      dir: root,
+    });
+    expect(compiled.storyBlock).toBeNull();
+    for (const storyBlock of [undefined, null]) {
+      const document = buildCompiledExportDocument({
+        records: compiled.records,
+        storyName: "Test Story",
+        storyCreatedAt: ISO,
+        exportedAt: ISO,
+        storyBlock,
+      });
+      expect(document.story).toEqual({ name: "Test Story", created_at: ISO });
+    }
+  });
+
+  it("fails an invalid block before any output, naming the file and the term", async () => {
+    const cases: [string, string][] = [
+      [
+        storyBlock('["mystery", "spaghetti-western"]'),
+        '_story.md: story block genres[1] "spaghetti-western" is not a dictionary term',
+      ],
+      [
+        storyBlock('["crime", "heist"]'),
+        '_story.md: story block genres: "heist" cannot appear with its parent or ancestor "crime"',
+      ],
+      [
+        `---\nschema: "story/1"\nname: "Test Story"\ngenres: ["drama"]\nlean: "x"\n`,
+        "_story.md: frontmatter opened but never closed",
+      ],
+    ];
+    for (const [content, message] of cases) {
+      const root = await makeRoot();
+      await seedCompleteCanon(root);
+      await put(root, "_story.md", content);
+
+      await expect(
+        compileCanonDirectory({ slug: "test-story", dir: root }),
+      ).rejects.toThrow(message);
+    }
+  });
+
+  it("warns on a block name that differs from story.json and still succeeds", async () => {
+    // loadStoryIdentity reads data/stories/<slug>/story.json, so this one
+    // case runs the CLI against a disposable story under the real data tree,
+    // the way the overlay verifier's suite does.
+    const slug = `compile-story-${process.pid}-${randomBytes(4).toString("hex")}`;
+    const storyRoot = join(STORIES_ROOT, slug);
+    await mkdir(storyRoot, { recursive: true });
+    roots.push(storyRoot);
+    await writeFile(
+      join(storyRoot, "story.json"),
+      JSON.stringify({
+        mnemosyne_story: 1,
+        slug,
+        story: { name: "Identity Name", created_at: ISO },
+      }),
+      "utf8",
+    );
+    const canon = join(storyRoot, "canon");
+    await seedCompleteCanon(canon);
+    await put(canon, "_story.md", storyBlock('["drama"]', "Block Name"));
+
+    const differing = await runCompiler([slug, "--dir", canon, "--check"]);
+    expect(differing.code, differing.stdout + differing.stderr).toBe(0);
+    expect(differing.stdout).toContain("story block: drama");
+    expect(differing.stderr).toContain(
+      'compile-story: warning: _story.md name "Block Name" differs from story.json name "Identity Name"',
+    );
+
+    await put(canon, "_story.md", storyBlock('["drama"]', "Identity Name"));
+    const agreeing = await runCompiler([slug, "--dir", canon, "--check"]);
+    expect(agreeing.code, agreeing.stdout + agreeing.stderr).toBe(0);
+    expect(agreeing.stderr).not.toContain("warning");
   });
 });

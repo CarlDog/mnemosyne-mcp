@@ -153,3 +153,169 @@ describe("nested (character/3) frontmatter", () => {
     expect(parseCanonScalar("[Redacted]")).toEqual(["Redacted"]);
   });
 });
+
+const { genreAncestors, parseStoryBlock, storyBlockExportFields } = frontmatter;
+
+const STORY_BLOCK = `schema: "story/1"
+name: "Harbor Story"
+genres: ["mystery", "romance"]
+subgenres: ["cozy"]
+lean: "A harbor mystery whose clues are all favours owed."
+conventions:
+  - "Every clue is something a character wanted hidden."
+avoid:
+  - "No detective monologue."
+`;
+
+describe("story block (story/1)", () => {
+  it("parses a declared block into ordered genres and one-line guidance", () => {
+    const block = parseStoryBlock(STORY_BLOCK);
+    expect(block).toEqual({
+      schema: "story/1",
+      name: "Harbor Story",
+      genres: ["mystery", "romance"],
+      subgenres: ["cozy"],
+      lean: "A harbor mystery whose clues are all favours owed.",
+      conventions: ["Every clue is something a character wanted hidden."],
+      avoid: ["No detective monologue."],
+    });
+    expect(storyBlockExportFields(block)).toEqual({
+      genres: ["mystery", "romance"],
+      genre_guidance: {
+        lean: "A harbor mystery whose clues are all favours owed.",
+        conventions: ["Every clue is something a character wanted hidden."],
+        avoid: ["No detective monologue."],
+      },
+    });
+  });
+
+  it("defaults the optional lists to empty", () => {
+    const block = parseStoryBlock(
+      `schema: "story/1"\nname: "Bare"\ngenres: ["drama"]\nlean: "Quiet."\n`,
+    );
+    expect(block.subgenres).toEqual([]);
+    expect(block.conventions).toEqual([]);
+    expect(block.avoid).toEqual([]);
+    expect(storyBlockExportFields(block).genre_guidance).toEqual({
+      lean: "Quiet.",
+      conventions: [],
+      avoid: [],
+    });
+  });
+
+  it("walks a term's ancestors nearest first and finds none for a root or an unknown term", () => {
+    expect(genreAncestors("heist")).toEqual(["crime"]);
+    expect(genreAncestors("crime")).toEqual([]);
+    expect(genreAncestors("not-a-genre")).toEqual([]);
+    expect(
+      genreAncestors("leaf", {
+        terms: {
+          root: { parent: null },
+          branch: { parent: "root" },
+          leaf: { parent: "branch" },
+        },
+      }),
+    ).toEqual(["branch", "root"]);
+  });
+
+  it("rejects each rule breach with a one-line message naming the field or term", () => {
+    const lean200 = "x".repeat(200);
+    const item160 = "y".repeat(160);
+    const cases: [string, RegExp][] = [
+      [
+        STORY_BLOCK.replace('"story/1"', '"story/2"'),
+        /schema must be "story\/1"/,
+      ],
+      [
+        STORY_BLOCK.replace(
+          'genres: ["mystery", "romance"]',
+          'genres: ["mystery", "spaghetti-western"]',
+        ),
+        /genres\[1\] "spaghetti-western" is not a dictionary term/,
+      ],
+      [
+        STORY_BLOCK.replace(
+          'genres: ["mystery", "romance"]',
+          'genres: ["crime", "heist"]',
+        ),
+        /"heist" cannot appear with its parent or ancestor "crime"/,
+      ],
+      [
+        STORY_BLOCK.replace(
+          'genres: ["mystery", "romance"]',
+          'genres: ["mystery", "mystery"]',
+        ),
+        /genres repeats "mystery"/,
+      ],
+      [
+        STORY_BLOCK.replace(
+          'genres: ["mystery", "romance"]',
+          'genres: ["action", "comedy", "drama", "horror"]',
+        ),
+        /genres lists 4 terms; at most 3/,
+      ],
+      [
+        STORY_BLOCK.replace('genres: ["mystery", "romance"]', "genres: []"),
+        /genres must list one to three dictionary terms/,
+      ],
+      [
+        STORY_BLOCK.replace(/^lean: .*$/m, `lean: "${lean200}z"`),
+        /lean is 201 characters; at most 200/,
+      ],
+      [
+        STORY_BLOCK.replace(/^lean: .*\n/m, ""),
+        /lean must be a non-empty one-line string/,
+      ],
+      [
+        STORY_BLOCK.replace(/^name: .*$/m, 'name: ""'),
+        /name must be a non-empty one-line string/,
+      ],
+      [
+        STORY_BLOCK.replace(
+          '  - "No detective monologue."',
+          `  - "${item160}z"`,
+        ),
+        /avoid\[0\] is 161 characters; at most 160/,
+      ],
+      [
+        STORY_BLOCK.replace(
+          '  - "Every clue is something a character wanted hidden."',
+          Array.from({ length: 9 }, (_, i) => `  - "Convention ${i}"`).join(
+            "\n",
+          ),
+        ),
+        /conventions has 9 entries; at most 8/,
+      ],
+      [
+        STORY_BLOCK.replace(/^lean: .*$/m, `lean: "${lean200}`.concat('"'))
+          .replace(
+            '  - "Every clue is something a character wanted hidden."',
+            Array.from({ length: 8 }, () => `  - "${item160}"`).join("\n"),
+          )
+          .replace('  - "No detective monologue."', `  - "${item160}"`),
+        /guidance \(lean, conventions, avoid\) is 1640 characters; at most 1500/,
+      ],
+      [
+        STORY_BLOCK.replace(/^conventions:\n.*\n/m, "conventions: yes\n"),
+        /conventions must be a list/,
+      ],
+      [`schema: "story/1"\nname: [\n`, /not valid YAML/],
+    ];
+    for (const [text, message] of cases) {
+      expect(() => parseStoryBlock(text), text).toThrow(message);
+    }
+  });
+
+  it("checks terms against the dictionary it is given", () => {
+    const own = {
+      terms: { mystery: { parent: null }, romance: { parent: null } },
+    };
+    expect(parseStoryBlock(STORY_BLOCK, own).genres).toEqual([
+      "mystery",
+      "romance",
+    ]);
+    expect(() =>
+      parseStoryBlock(STORY_BLOCK, { terms: { mystery: { parent: null } } }),
+    ).toThrow(/"romance" is not a dictionary term/);
+  });
+});

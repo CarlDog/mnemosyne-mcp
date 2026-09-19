@@ -43,12 +43,17 @@ async function linkDirectory(target: string, link: string): Promise<void> {
 async function runValidator(
   slug: string,
   root: string,
+  extraArgs: string[] = [],
 ): Promise<{ code: number | null; stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [VALIDATOR, slug, "--dir", root], {
-      cwd: REPO_ROOT,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
+    const child = spawn(
+      process.execPath,
+      [VALIDATOR, slug, "--dir", root, ...extraArgs],
+      {
+        cwd: REPO_ROOT,
+        stdio: ["ignore", "pipe", "pipe"],
+      },
+    );
     let stdout = "";
     let stderr = "";
     child.stdout.setEncoding("utf8");
@@ -575,5 +580,100 @@ A cartographer.
     expect(problemLines[0]).toContain(
       "nested frontmatter is not valid YAML: Map keys must be unique",
     );
+  });
+});
+
+describe("validate-canon story block (story/1)", () => {
+  const ENTITY = `---
+name: Aria
+---
+
+A cartographer.
+`;
+
+  function storyBlock(genres: string, lean = "A harbor mystery."): string {
+    return `---
+schema: "story/1"
+name: "Test Story"
+genres: ${genres}
+lean: "${lean}"
+conventions:
+  - "Every clue is something a character wanted hidden."
+avoid:
+  - "No detective monologue."
+---
+
+Notes nothing reads.
+`;
+  }
+
+  it("passes a tree without the file, and fails it only under --require-story-block", async () => {
+    const root = await makeRoot();
+    await put(root, "characters/aria.md", ENTITY);
+
+    const lenient = await runValidator("test-story", root);
+    expect(lenient.code, lenient.stdout + lenient.stderr).toBe(0);
+    expect(lenient.stdout).toContain("story block: none (not required)");
+
+    const strict = await runValidator("test-story", root, [
+      "--require-story-block",
+    ]);
+    expect(strict.code).toBe(1);
+    expect(strict.stdout).toContain("story block: missing (required)");
+    expect(strict.stdout).toContain(
+      "- _story.md: the story has no genre declaration (canon/_story.md is required)",
+    );
+  });
+
+  it("accepts a valid block under the flag and prints its genres", async () => {
+    const root = await makeRoot();
+    await put(root, "characters/aria.md", ENTITY);
+    await put(root, "_story.md", storyBlock('["mystery", "romance"]'));
+
+    const result = await runValidator("test-story", root, [
+      "--require-story-block",
+    ]);
+    expect(result.code, result.stdout + result.stderr).toBe(0);
+    expect(result.stdout).toContain("story block: mystery, romance");
+    expect(result.stdout).toContain("OK -- no structural problems found");
+  });
+
+  it("names the file and the term for every rule breach, with or without the flag", async () => {
+    const cases: [string, string][] = [
+      [
+        storyBlock('["mystery", "spaghetti-western"]'),
+        '- _story.md: story block genres[1] "spaghetti-western" is not a dictionary term',
+      ],
+      [
+        storyBlock('["crime", "heist"]'),
+        '- _story.md: story block genres: "heist" cannot appear with its parent or ancestor "crime"',
+      ],
+      [
+        storyBlock('["action", "comedy", "drama", "horror"]'),
+        "- _story.md: story block genres lists 4 terms; at most 3",
+      ],
+      [
+        storyBlock('["drama"]', "x".repeat(300)),
+        "- _story.md: story block lean is 300 characters; at most 200",
+      ],
+      [
+        `---\nschema: "story/1"\nname: "Test Story"\ngenres: ["drama"]\nlean: "x"\n`,
+        "- _story.md: frontmatter opened but never closed",
+      ],
+      [
+        `schema: "story/1"\n`,
+        '- _story.md: does not start with a frontmatter block ("---")',
+      ],
+    ];
+    for (const [content, problem] of cases) {
+      const root = await makeRoot();
+      await put(root, "characters/aria.md", ENTITY);
+      await put(root, "_story.md", content);
+
+      const result = await runValidator("test-story", root);
+      expect(result.code, content).toBe(1);
+      expect(result.stdout, content).toContain("1 problem(s)");
+      expect(result.stdout, content).toContain(problem);
+    }
   });
 });

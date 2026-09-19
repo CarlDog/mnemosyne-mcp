@@ -20,6 +20,7 @@ import {
   hasNestedSchema,
   parseCanonScalar,
   parseNestedFrontmatter,
+  parseStoryBlock,
   resolveEntityFields,
   toCanonScalar,
 } from "./canon-frontmatter.mjs";
@@ -41,10 +42,19 @@ function normalizeNewlines(text) {
 function parseArgs(argv) {
   const [slug, ...rest] = argv;
   let dir = null;
+  // The story block (canon/_story.md, docs/GENRE_DECLARATION_DESIGN.md) is
+  // always validated when present; its absence fails only under this flag,
+  // which the overlay verifier passes to its baseline and merged runs once
+  // every story is declared, and never to its isolated-drafts run.
+  let requireStoryBlock = false;
   for (let i = 0; i < rest.length; i++) {
+    if (rest[i] === "--require-story-block" && !requireStoryBlock) {
+      requireStoryBlock = true;
+      continue;
+    }
     if (rest[i] !== "--dir" || dir !== null || !rest[i + 1]) {
       throw new Error(
-        "usage: node scripts/validate-canon.mjs <slug> [--dir <canon-dir>]",
+        "usage: node scripts/validate-canon.mjs <slug> [--dir <canon-dir>] [--require-story-block]",
       );
     }
     dir = rest[++i];
@@ -64,7 +74,55 @@ function parseArgs(argv) {
   const defaultDir = fileURLToPath(
     new URL(`../data/stories/${slug}/canon`, import.meta.url),
   );
-  return { slug, dir: dir ?? defaultDir };
+  return { slug, dir: dir ?? defaultDir, requireStoryBlock };
+}
+
+/**
+ * The story block: canon/_story.md, the story's genre declaration
+ * (docs/GENRE_DECLARATION_DESIGN.md). Neither entity walk reaches the canon
+ * root, so it is read here explicitly. Present, it is always checked;
+ * absent, it is a problem only when required.
+ */
+async function validateStoryBlock(dir, required, problems) {
+  const file = path.join(dir, "_story.md");
+  let fileStat;
+  try {
+    fileStat = await lstat(file);
+  } catch (err) {
+    if (err.code !== "ENOENT") {
+      problems.push(`_story.md: cannot stat (${err.code ?? err.message})`);
+      return null;
+    }
+    if (required) {
+      problems.push(
+        "_story.md: the story has no genre declaration (canon/_story.md is required)",
+      );
+    }
+    return null;
+  }
+  if (fileStat.isSymbolicLink() || !fileStat.isFile()) {
+    problems.push("_story.md: must be a regular file, not a link");
+    return null;
+  }
+  const content = normalizeNewlines(await readFile(file, "utf8"));
+  if (!content.startsWith("---\n")) {
+    problems.push('_story.md: does not start with a frontmatter block ("---")');
+    return null;
+  }
+  const lines = content.split("\n");
+  const closingLine = lines.indexOf("---", 1);
+  if (closingLine === -1) {
+    problems.push("_story.md: frontmatter opened but never closed");
+    return null;
+  }
+  try {
+    return parseStoryBlock(lines.slice(1, closingLine).join("\n"));
+  } catch (error) {
+    problems.push(
+      `_story.md: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return null;
+  }
 }
 
 function parseFrontmatter(content, file) {
@@ -274,7 +332,7 @@ function parseStringScalar(raw, file, field, problems) {
 }
 
 async function main() {
-  const { slug, dir } = parseArgs(process.argv.slice(2));
+  const { slug, dir, requireStoryBlock } = parseArgs(process.argv.slice(2));
 
   // A missing canon/ tree must FAIL, not pass vacuously. Before this guard the
   // script printed "OK -- no structural problems found" and exited 0 against a
@@ -474,9 +532,14 @@ async function main() {
     );
   }
 
+  const storyBlock = await validateStoryBlock(dir, requireStoryBlock, problems);
+
   console.log(`Validated ${slug} -> ${dir}`);
   console.log(`  total entities claimed: ${entityCount}`);
   console.log(`  unique (type, name) keys: ${seen.size}`);
+  console.log(
+    `  story block: ${storyBlock ? storyBlock.genres.join(", ") : requireStoryBlock ? "missing (required)" : "none (not required)"}`,
+  );
   if (problems.length === 0) {
     console.log("  OK -- no structural problems found");
     process.exit(0);

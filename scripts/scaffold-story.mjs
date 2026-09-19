@@ -41,7 +41,12 @@ import {
 import { Buffer } from "node:buffer";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { toCanonScalar } from "./canon-frontmatter.mjs";
+import { stringify as stringifyYaml } from "yaml";
+import {
+  STORY_BLOCK_SCHEMA,
+  parseStoryBlock,
+  toCanonScalar,
+} from "./canon-frontmatter.mjs";
 import {
   buildCompiledExportDocument,
   checkImportCompatibility,
@@ -522,6 +527,57 @@ function renderSimpleEntity(subdir, entity) {
   };
 }
 
+// The story block, canon/_story.md (docs/GENRE_DECLARATION_DESIGN.md): an
+// export that carries story.genres and story.genre_guidance scaffolds a tree
+// that declares them, so the round trip preserves the declaration. One field
+// without the other is an error rather than a silent skip, because a dropped
+// declaration is the failure the standard exists to prevent.
+export function renderStoryBlock(story) {
+  const genres = story?.genres;
+  const guidance = story?.genre_guidance;
+  if (genres === undefined && guidance === undefined) return null;
+  if (genres === undefined || guidance === undefined) {
+    throw new Error(
+      "export story carries only one of genres and genre_guidance; the story block needs both",
+    );
+  }
+  if (!Array.isArray(genres) || !isPlainObject(guidance)) {
+    throw new Error(
+      "export story genres must be a list and genre_guidance a mapping",
+    );
+  }
+  const block = {
+    schema: STORY_BLOCK_SCHEMA,
+    name: story.name,
+    genres,
+    lean: guidance.lean,
+  };
+  if (guidance.conventions?.length) block.conventions = guidance.conventions;
+  if (guidance.avoid?.length) block.avoid = guidance.avoid;
+  // lineWidth 0: never fold a long line; each guidance item stays one line.
+  const frontmatter = stringifyYaml(block, { lineWidth: 0 });
+  let parsed;
+  try {
+    parsed = parseStoryBlock(frontmatter);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`export story block: ${message}`, { cause: error });
+  }
+  return {
+    file: { relativePath: "_story.md", content: `---\n${frontmatter}---\n` },
+    expected: {
+      genres: parsed.genres,
+      lean: parsed.lean,
+      conventions: parsed.conventions,
+      avoid: parsed.avoid,
+    },
+  };
+}
+
+function isPlainObject(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
 function portableOutputKey(relativePath) {
   return relativePath.replaceAll("\\", "/").normalize("NFC").toLowerCase();
 }
@@ -538,7 +594,7 @@ function addPlannedFile(files, owners, file, owner) {
   files.push(file);
 }
 
-export function buildScaffoldPlan(baseMap, coreThreshold) {
+export function buildScaffoldPlan(baseMap, coreThreshold, story = null) {
   const files = [];
   const owners = new Map();
   const written = {
@@ -547,6 +603,7 @@ export function buildScaffoldPlan(baseMap, coreThreshold) {
     locations: [],
     lore: [],
     worldbuilding: [],
+    storyBlock: null,
   };
   const minorLines = [];
   const rulesLines = [];
@@ -632,6 +689,11 @@ export function buildScaffoldPlan(baseMap, coreThreshold) {
   if (files.length === 0) {
     throw new Error("export contains no scaffoldable canon entities");
   }
+  const storyBlock = renderStoryBlock(story);
+  if (storyBlock) {
+    addPlannedFile(files, owners, storyBlock.file, "story block");
+    written.storyBlock = storyBlock.expected.genres;
+  }
 
   files.sort((left, right) =>
     left.relativePath.localeCompare(right.relativePath, "en"),
@@ -643,6 +705,7 @@ export function buildScaffoldPlan(baseMap, coreThreshold) {
     styleCount: styleLines.length,
     expectedIdentities,
     expectedMetadata,
+    expectedStoryBlock: storyBlock ? storyBlock.expected : null,
   };
 }
 
@@ -719,11 +782,31 @@ async function preflightStagedTree(slug, stage, plan) {
     );
   }
 
+  if (plan.expectedStoryBlock) {
+    const actual = compiled.storyBlock;
+    const expected = plan.expectedStoryBlock;
+    const same =
+      actual &&
+      JSON.stringify(actual.genres) === JSON.stringify(expected.genres) &&
+      actual.lean === expected.lean &&
+      JSON.stringify(actual.conventions) ===
+        JSON.stringify(expected.conventions) &&
+      JSON.stringify(actual.avoid) === JSON.stringify(expected.avoid);
+    if (!same) {
+      throw new Error(
+        "staged story block mismatch: the compiled _story.md does not reproduce the export's declaration",
+      );
+    }
+  } else if (compiled.storyBlock) {
+    throw new Error("staged story block mismatch: unexpected _story.md");
+  }
+
   const document = buildCompiledExportDocument({
     records: compiled.records,
     storyName: humanizeSlug(slug),
     storyCreatedAt: CHECK_SENTINEL_TIME,
     exportedAt: CHECK_SENTINEL_TIME,
+    storyBlock: compiled.storyBlock,
   });
   return checkImportCompatibility(document, await loadBuiltImportContract());
 }
@@ -787,7 +870,7 @@ export async function scaffoldStory(options) {
     mergeReports.push({ source: mergeFile, ancestor: ancestorFile, ...report });
   }
 
-  const plan = buildScaffoldPlan(baseMap, opts.coreThreshold);
+  const plan = buildScaffoldPlan(baseMap, opts.coreThreshold, base.story);
   const importCheck = await publishPlanAtomically(opts.slug, opts.out, plan);
   return { ...plan, out: opts.out, mergeReports, importCheck };
 }
@@ -802,6 +885,9 @@ function printReport(opts, result) {
   console.log(`  lore: ${written.lore.length}`);
   console.log(`  worldbuilding: ${written.worldbuilding.length}`);
   console.log(`  rules: ${ruleCount}, style: ${styleCount}`);
+  console.log(
+    `  story block: ${written.storyBlock ? written.storyBlock.join(", ") : "none (export carries no genres)"}`,
+  );
   console.log(
     `  import contract: schema accepted; dry-run planned ${importCheck.records} creates; writes=0`,
   );

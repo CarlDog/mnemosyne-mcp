@@ -520,3 +520,93 @@ describe("scaffold-story safety", () => {
     expect(await readdir(nonemptyTarget)).toEqual(["keep.txt"]);
   });
 });
+
+describe("scaffold-story story block (story/1)", () => {
+  const ENTITIES: ExportEntity[] = [
+    {
+      type: "character",
+      name: "Rhea Voss",
+      content: "## Current State\n\nRhea is charting the flooded observatory.",
+    },
+  ];
+  const GUIDANCE = {
+    lean: "A harbor mystery whose clues are all favours owed.",
+    conventions: ["Every clue is something a character wanted hidden."],
+    avoid: ["No detective monologue."],
+  };
+
+  function declaredExport(fields: Record<string, unknown>) {
+    const document = exportDocument(ENTITIES);
+    return { ...document, story: { ...document.story, ...fields } };
+  }
+
+  it("scaffolds a declared export into _story.md, and compiling the tree reproduces the declaration", async () => {
+    const root = await makeRoot();
+    const base = join(root, "declared.json");
+    const out = join(root, "declared", "canon");
+    await writeJson(
+      base,
+      declaredExport({
+        genres: ["mystery", "romance"],
+        genre_guidance: GUIDANCE,
+      }),
+    );
+
+    const result = await scaffoldStory(options(base, out));
+    expect(result.written.storyBlock).toEqual(["mystery", "romance"]);
+    const file = await readFile(join(out, "_story.md"), "utf8");
+    expect(file.startsWith("---\nschema: story/1\nname: Safe Story\n")).toBe(
+      true,
+    );
+    expect(file).toContain(
+      "lean: A harbor mystery whose clues are all favours owed.",
+    );
+
+    const compiled = await compileCanonDirectory({
+      slug: "safe-story",
+      dir: out,
+    });
+    expect(compiled.storyBlock).toMatchObject({
+      name: "Safe Story",
+      genres: ["mystery", "romance"],
+      ...GUIDANCE,
+    });
+  });
+
+  it("scaffolds an undeclared export without a story block, as before", async () => {
+    const root = await makeRoot();
+    const base = join(root, "plain.json");
+    const out = join(root, "plain", "canon");
+    await writeExport(base, ENTITIES);
+
+    const result = await scaffoldStory(options(base, out));
+    expect(result.written.storyBlock).toBeNull();
+    expect(await exists(join(out, "_story.md"))).toBe(false);
+  });
+
+  it("refuses a half declaration or an unknown term before creating any target", async () => {
+    const cases: [unknown, RegExp][] = [
+      [
+        declaredExport({ genres: ["mystery"] }),
+        /only one of genres and genre_guidance/,
+      ],
+      [
+        declaredExport({
+          genres: ["mystery", "spaghetti-western"],
+          genre_guidance: GUIDANCE,
+        }),
+        /"spaghetti-western" is not a dictionary term/,
+      ],
+    ];
+    for (const [document, message] of cases) {
+      const root = await makeRoot();
+      const base = join(root, "refused.json");
+      const out = join(root, "refused", "canon");
+      await writeJson(base, document);
+
+      await expect(scaffoldStory(options(base, out))).rejects.toThrow(message);
+      expect(await exists(out)).toBe(false);
+      expect(await exists(dirname(out))).toBe(false);
+    }
+  });
+});

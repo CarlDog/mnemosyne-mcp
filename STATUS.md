@@ -1,6 +1,31 @@
 # Status
 
-**Last updated:** 2026-09-18.
+**Last updated:** 2026-09-19.
+
+**Genre declaration standard: slice 1 (tooling) shipped (2026-09-19).** The
+operator asked for a standard under which every story declares its genre in
+frontmatter, multi-genre, against one common dictionary, so the story can be
+guided inside those conventions. `docs/GENRE_DECLARATION_DESIGN.md` (Draft 2:
+two adversarial passes, eight operator decisions recorded) fixes the shape:
+`src/genre-dictionary.json` holds 39 parent-annotated terms (20
+roots); `canon/_story.md` (`schema: "story/1"`) declares one to three of them
+broadest first, never a term beside its own ancestor, plus a one-line lean and
+conventions/avoid lists capped so the guidance can travel on the story marker
+and into every prompt. Shipped: the shared parser in
+`scripts/canon-frontmatter.mjs`; the validator's explicit root read, always-on
+check of a present block and `--require-story-block` gate; the compiler's
+export fields (`story.genres`, `story.genre_guidance`) and `story.json` name
+warning; the verifier's per-run flag plumbing (`REQUIRE_STORY_BLOCK`, off, and
+never for the isolated drafts run); the scaffolder's round trip. Smoke-verified
+end to end on a throwaway tree (validator both ways, compile to export,
+scaffold back, compile again: the genres survive; a half declaration and an
+unknown term are refused with the term named) and pinned by new suite cases.
+Slice 1 deliberately touches no runtime code: the import schema, marker
+schema 7, the `mnemo_story_use` parameters and the prompt rendering are slice
+2, and slice 3 declares every existing story (one question set each, drafted
+and confirmed per story, written to `canon/_story.md` under gitignored `data/`)
+before the one hardening commit that turns the gate on. Until then no story
+is required to carry a declaration.
 
 **History rewritten (2026-09-18): every commit SHA changed; re-clone or reset.**
 At the operator's direction, storyline and character names that had reached

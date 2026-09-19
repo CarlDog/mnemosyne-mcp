@@ -27,7 +27,9 @@ import { stringify as stringifyYaml } from "yaml";
 import {
   hasNestedSchema,
   parseNestedFrontmatter,
+  parseStoryBlock,
   resolveEntityFields,
+  storyBlockExportFields,
 } from "./canon-frontmatter.mjs";
 
 const SCRIPT_FILE = fileURLToPath(import.meta.url);
@@ -830,7 +832,36 @@ export async function compileCanonDirectory({ slug, dir }) {
       ([, count]) => count > 0,
     ),
   );
-  return { slug, dir: root, records, counts };
+  const storyBlock = await compileStoryBlock(root);
+  return { slug, dir: root, records, counts, storyBlock };
+}
+
+/**
+ * The story block, canon/_story.md (docs/GENRE_DECLARATION_DESIGN.md). The
+ * entity walk never reaches the canon root, so it is read here explicitly.
+ * Absent, the compiler stays permissive (the scaffolder compiles a stage
+ * that has no declaration yet); present, it must be valid.
+ */
+async function compileStoryBlock(root) {
+  const file = path.join(root, "_story.md");
+  const fileStat = await lstatOrNull(file);
+  if (!fileStat) return null;
+  if (fileStat.isSymbolicLink() || !fileStat.isFile()) {
+    fail("_story.md: must be a regular file, not a link");
+  }
+  const text = normalizeNewlines(await readUtf8(file, "_story.md"));
+  if (!text.startsWith("---\n")) {
+    fail("_story.md: does not start with YAML frontmatter");
+  }
+  const lines = text.split("\n");
+  const closingLine = lines.indexOf("---", 1);
+  if (closingLine === -1)
+    fail("_story.md: frontmatter opened but never closed");
+  try {
+    return parseStoryBlock(lines.slice(1, closingLine).join("\n"));
+  } catch (error) {
+    fail(`_story.md: ${errorMessage(error)}`);
+  }
 }
 
 export function buildCompiledExportDocument({
@@ -838,6 +869,7 @@ export function buildCompiledExportDocument({
   storyName,
   storyCreatedAt,
   exportedAt,
+  storyBlock = null,
 }) {
   if (
     typeof storyName !== "string" ||
@@ -851,7 +883,13 @@ export function buildCompiledExportDocument({
   return {
     mnemosyne_export: 1,
     exported_at: exportedAt,
-    story: { name: storyName, created_at: storyCreatedAt },
+    story: {
+      name: storyName,
+      created_at: storyCreatedAt,
+      // The genre declaration rides the story block; import reports it and
+      // never applies it (docs/GENRE_DECLARATION_DESIGN.md section 4).
+      ...(storyBlock && storyBlockExportFields(storyBlock)),
+    },
     entities: records.map((record) => ({ ...record, tags: [...record.tags] })),
   };
 }
@@ -1030,6 +1068,17 @@ async function main() {
         "--story-name and --story-created-at",
     );
   }
+  if (
+    compiled.storyBlock &&
+    identity?.name &&
+    compiled.storyBlock.name !== identity.name
+  ) {
+    // story.json is server-owned and most trees have none; a mismatch is
+    // worth a look, never a failure (docs/GENRE_DECLARATION_DESIGN.md §2).
+    console.error(
+      `compile-story: warning: _story.md name ${JSON.stringify(compiled.storyBlock.name)} differs from story.json name ${JSON.stringify(identity.name)}`,
+    );
+  }
   const document = buildCompiledExportDocument({
     records: compiled.records,
     storyName: opts.storyName ?? identity?.name ?? humanizeSlug(opts.slug),
@@ -1038,6 +1087,7 @@ async function main() {
     exportedAt:
       opts.exportedAt ??
       (opts.check ? CHECK_SENTINEL_TIME : new Date().toISOString()),
+    storyBlock: compiled.storyBlock,
   });
   const contract = await loadBuiltImportContract();
   const check = checkImportCompatibility(document, contract);
@@ -1050,6 +1100,9 @@ async function main() {
     `${opts.check ? "Checked" : "Compiled"} ${opts.slug} -> ${compiled.dir}`,
   );
   console.log(`  entities: ${compiled.records.length}`);
+  if (compiled.storyBlock) {
+    console.log(`  story block: ${compiled.storyBlock.genres.join(", ")}`);
+  }
   for (const type of TYPE_ORDER) {
     const count = compiled.counts[type];
     if (count) console.log(`  ${type}: ${count}`);

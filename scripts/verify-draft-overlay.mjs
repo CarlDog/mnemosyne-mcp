@@ -68,7 +68,7 @@ import { fileURLToPath } from "node:url";
 import {
   hasNestedSchema,
   parseCanonScalar,
-  parseNestedFrontmatter,
+  parseNestedDocument,
 } from "./canon-frontmatter.mjs";
 import {
   DRAFT_MARKER,
@@ -776,8 +776,22 @@ function runBoundedNodeScript(script, args, label) {
   });
 }
 
-function runCanonValidator(slug, targetRoot, label) {
-  return runBoundedNodeScript(VALIDATOR, [slug, "--dir", targetRoot], label);
+// The story block gate (docs/GENRE_DECLARATION_DESIGN.md section 3): once
+// every story is declared, the hardening commit flips this to true and the
+// baseline and merged validator runs require canon/_story.md. The isolated
+// drafts run never does: an overlay that revises one character carries no
+// story block of its own.
+const REQUIRE_STORY_BLOCK = false;
+
+function runCanonValidator(
+  slug,
+  targetRoot,
+  label,
+  { requireStoryBlock = false } = {},
+) {
+  const args = [slug, "--dir", targetRoot];
+  if (requireStoryBlock) args.push("--require-story-block");
+  return runBoundedNodeScript(VALIDATOR, args, label);
 }
 
 function runCanonImportCheck(slug, targetRoot, label) {
@@ -934,9 +948,12 @@ function* walkStringValues(value, keyPath = "") {
  * not image pointers and are left alone.
  */
 function scanFrontmatterPointers(nested, source, pointers) {
+  // The pointer scan walks values only, so it accepts every nested shape
+  // (a character/3 entity, the story/1 block); the shape checks belong to
+  // the validator and the compiler.
   let document;
   try {
-    document = parseNestedFrontmatter(nested.frontmatterText);
+    document = parseNestedDocument(nested.frontmatterText);
   } catch (error) {
     fail(`${source}: ${errorMessage(error)}`);
   }
@@ -1163,6 +1180,7 @@ async function verifyCanonOnly(slug) {
       slug,
       stageRoot,
       "active canon validator",
+      { requireStoryBlock: REQUIRE_STORY_BLOCK },
     );
     const importCheck = await runCanonImportCheck(
       slug,
@@ -1360,6 +1378,7 @@ async function verifyOverlay(slug, manifestRelative = null) {
       slug,
       baselineCopyRoot,
       "active baseline validator",
+      { requireStoryBlock: REQUIRE_STORY_BLOCK },
     );
     // An overlay with no staged draft entities (empty between proposals, or
     // removals only) has nothing for the isolated validator to read; the
@@ -1376,6 +1395,7 @@ async function verifyOverlay(slug, manifestRelative = null) {
       slug,
       stageRoot,
       "merged overlay validator",
+      { requireStoryBlock: REQUIRE_STORY_BLOCK },
     );
     const mergedImportCheck = await runCanonImportCheck(
       slug,

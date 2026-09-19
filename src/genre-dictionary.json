@@ -1,0 +1,240 @@
+{
+  "version": 1,
+  "rule": "The broadest true term comes first; at most two blends follow; anything narrower than a dictionary term goes in subgenres. A term never appears together with its own parent or ancestor.",
+  "terms": {
+    "action": {
+      "parent": null,
+      "definition": "Staged physical conflict as the spine of the story.",
+      "promises": "Kinetic set pieces with clear geography and cost.",
+      "avoid": "Fights without stakes or consequence."
+    },
+    "adventure": {
+      "parent": null,
+      "definition": "A journey through escalating obstacles toward a goal.",
+      "promises": "Momentum and competence under pressure.",
+      "avoid": "Stakes that reset between set pieces."
+    },
+    "comedy": {
+      "parent": null,
+      "definition": "Events arranged to produce laughter through timing, reversal and character.",
+      "promises": "Jokes that arise from who people are.",
+      "avoid": "Cruelty without a target."
+    },
+    "satire": {
+      "parent": "comedy",
+      "definition": "Institutions and manners exaggerated to expose them.",
+      "promises": "A target and a point.",
+      "avoid": "Mockery with no object."
+    },
+    "crime": {
+      "parent": null,
+      "definition": "The commission and consequence of a crime from inside it.",
+      "promises": "Method, motive and cost.",
+      "avoid": "A criminal world that runs on convenience."
+    },
+    "heist": {
+      "parent": "crime",
+      "definition": "A plan, a crew, an execution and its unravelling.",
+      "promises": "Competence, timing and the plan surviving contact.",
+      "avoid": "A plan that succeeds because the author needs it to."
+    },
+    "noir": {
+      "parent": "crime",
+      "definition": "Moral compromise in a world that stays corrupt.",
+      "promises": "A case, a compromised protagonist and an ending that costs.",
+      "avoid": "Tidy justice and unearned redemption."
+    },
+    "procedural": {
+      "parent": "crime",
+      "definition": "The work is the plot: cases, shifts, protocols and the people who keep them.",
+      "promises": "Fidelity to how the work is actually done.",
+      "avoid": "Expertise that appears only when convenient."
+    },
+    "drama": {
+      "parent": null,
+      "definition": "Character conflict with serious stakes and no genre machinery; the frame only when no other root is true.",
+      "promises": "Consequence and change.",
+      "avoid": "Melodrama unearned by what came before."
+    },
+    "coming-of-age": {
+      "parent": "drama",
+      "definition": "A protagonist crossing into a new stage of life.",
+      "promises": "An irreversible change in how they see themselves.",
+      "avoid": "A lesson stated instead of lived."
+    },
+    "psychological": {
+      "parent": "drama",
+      "definition": "Interior states drive events and perception cannot be fully trusted.",
+      "promises": "What a character believes shapes what happens.",
+      "avoid": "A twist that invalidates everything the reader felt."
+    },
+    "tragedy": {
+      "parent": "drama",
+      "definition": "A fall that follows from character.",
+      "promises": "Inevitability that the reader sees before the protagonist does.",
+      "avoid": "A fall caused by accident alone."
+    },
+    "erotica": {
+      "parent": null,
+      "definition": "Sexual experience between adults as the subject.",
+      "promises": "Explicit, consensual intimacy that reveals character and changes something.",
+      "avoid": "Intimacy without consequence, and any participant who is not an established adult."
+    },
+    "fantasy": {
+      "parent": null,
+      "definition": "A world where magic is real, ruled and costly.",
+      "promises": "Wonder with a price.",
+      "avoid": "Magic as a free solution."
+    },
+    "portal-fantasy": {
+      "parent": "fantasy",
+      "definition": "Someone from the ordinary world enters the magical one.",
+      "promises": "The crossing matters and costs.",
+      "avoid": "The ordinary world as a discarded prologue."
+    },
+    "urban-fantasy": {
+      "parent": "fantasy",
+      "definition": "The mundane world with a hidden, rule-governed magical society inside it.",
+      "promises": "The rules of that layer and the cost of crossing it.",
+      "avoid": "The mundane world as a mere backdrop."
+    },
+    "historical": {
+      "parent": null,
+      "definition": "A real period rendered with fidelity to its material life.",
+      "promises": "Period-true constraint on what people can do and know.",
+      "avoid": "Modern attitudes in period costume."
+    },
+    "western": {
+      "parent": "historical",
+      "definition": "Frontier, law at the edge of reach, and the cost of violence.",
+      "promises": "Land, distance and consequence.",
+      "avoid": "The frontier as a costume."
+    },
+    "horror": {
+      "parent": null,
+      "definition": "Dread and the violation of safety.",
+      "promises": "Consequence, and the unknown kept unknown for as long as it can be.",
+      "avoid": "Explaining the threat early."
+    },
+    "cosmic-horror": {
+      "parent": "horror",
+      "definition": "The universe as indifferent and unknowable.",
+      "promises": "Scale that dwarfs the characters and knowledge that damages.",
+      "avoid": "A threat that can be fought on human terms."
+    },
+    "gothic": {
+      "parent": "horror",
+      "definition": "Decay, inheritance and a place that behaves like an antagonist.",
+      "promises": "Atmosphere and buried history surfacing.",
+      "avoid": "Modern irony about its own dread."
+    },
+    "literary": {
+      "parent": null,
+      "definition": "Interiority and language carry the weight.",
+      "promises": "Sentences that earn their place and change that happens in perception.",
+      "avoid": "Plot as a pretext for style."
+    },
+    "magical-realism": {
+      "parent": "literary",
+      "definition": "The impossible treated as ordinary by everyone in the story.",
+      "promises": "The marvel unremarked and meaningful.",
+      "avoid": "Explaining or systematising the marvel."
+    },
+    "mystery": {
+      "parent": null,
+      "definition": "A question of fact answered by evidence.",
+      "promises": "Fair clues and a solution a reader could have reasoned to.",
+      "avoid": "A solution delivered by confession alone."
+    },
+    "paranormal": {
+      "parent": null,
+      "definition": "The supernatural intrudes on an otherwise ordinary world without a hidden society or a rulebook.",
+      "promises": "The intrusion has terms of its own, learned by contact.",
+      "avoid": "The supernatural as a scare with no reason."
+    },
+    "political": {
+      "parent": null,
+      "definition": "Power contested through institutions, factions and public claims.",
+      "promises": "Every move has a constituency and a cost.",
+      "avoid": "Villains without a coalition."
+    },
+    "dystopian": {
+      "parent": "political",
+      "definition": "A society organised to oppress, seen by those it oppresses.",
+      "promises": "The system's logic and its cost.",
+      "avoid": "A regime that exists only to be toppled."
+    },
+    "retelling": {
+      "parent": null,
+      "definition": "An existing tale or property retold with a changed frame.",
+      "promises": "Recognisable beats knowingly subverted.",
+      "avoid": "Retelling the source beat for beat."
+    },
+    "romance": {
+      "parent": null,
+      "definition": "The relationship is the plot.",
+      "promises": "An emotionally earned resolution of the central relationship between adults.",
+      "avoid": "Resolution by declaration."
+    },
+    "science-fiction": {
+      "parent": null,
+      "definition": "A change in what is possible, followed through with rigour.",
+      "promises": "Consequences of the premise taken seriously.",
+      "avoid": "The premise as scenery."
+    },
+    "cyberpunk": {
+      "parent": "science-fiction",
+      "definition": "High technology, low life, corporate power over bodies and data.",
+      "promises": "Texture, and a price paid for every augmentation.",
+      "avoid": "Technology as decoration."
+    },
+    "post-apocalyptic": {
+      "parent": "science-fiction",
+      "definition": "Life after the collapse of a civilisation.",
+      "promises": "Scarcity as the shaping fact of every choice.",
+      "avoid": "Abundance appearing when the plot needs it."
+    },
+    "space-opera": {
+      "parent": "science-fiction",
+      "definition": "Interstellar scale, factions and spectacle.",
+      "promises": "Grandeur with a human focus.",
+      "avoid": "Scale that erases individual stakes."
+    },
+    "steampunk": {
+      "parent": "science-fiction",
+      "definition": "An industrial-age world with anachronistic technology and its social order.",
+      "promises": "The machinery has a maker and a cost.",
+      "avoid": "Brass as decoration."
+    },
+    "slice-of-life": {
+      "parent": null,
+      "definition": "Ordinary days rendered closely, with small stakes that matter.",
+      "promises": "Attention and texture.",
+      "avoid": "Importing a plot engine from another genre."
+    },
+    "superhero": {
+      "parent": null,
+      "definition": "Extraordinary ability under public scrutiny.",
+      "promises": "Power with a code, and consequences in a world that notices.",
+      "avoid": "Power without cost or witness."
+    },
+    "thriller": {
+      "parent": null,
+      "definition": "Escalating danger under a clock.",
+      "promises": "Rising stakes and reversals.",
+      "avoid": "Stakes that reset."
+    },
+    "espionage": {
+      "parent": "thriller",
+      "definition": "Secrets, tradecraft and divided loyalty.",
+      "promises": "Information as the currency of power.",
+      "avoid": "Gadgets doing the work of judgement."
+    },
+    "war": {
+      "parent": null,
+      "definition": "Organised violence and the people inside it.",
+      "promises": "The weight of orders, losses and logistics.",
+      "avoid": "Combat as a highlight reel."
+    }
+  }
+}

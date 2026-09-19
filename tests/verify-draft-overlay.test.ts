@@ -712,3 +712,134 @@ provenance:
     expect(result.stdout).toContain("visual pointers: 1 occurrences, 1 unique");
   });
 });
+
+describe("verify-draft-overlay story block (story/1)", () => {
+  const GATE_OFF = "const REQUIRE_STORY_BLOCK = false;";
+  const GATE_ON = "const REQUIRE_STORY_BLOCK = true;";
+
+  function storyBlock(genres: string, asDraft = false): string {
+    return (
+      `---
+schema: "story/1"
+name: "Test Story"
+genres: ${genres}
+lean: "A harbor mystery whose clues are all favours owed."
+---
+` +
+      (asDraft ? "\n> **DRAFT — NOT ACTIVE CANON**\n" : "") +
+      "\nNotes nothing reads.\n"
+    );
+  }
+
+  // The real verifier with its hardening gate flipped on (the state slice 3
+  // of docs/GENRE_DECLARATION_DESIGN.md commits), beside copies of the real
+  // validator, compiler and helpers; the built import contract and the
+  // dependencies are reached through junctions, the dictionary is copied.
+  async function makeGatedVerifierRepo(): Promise<{
+    repo: string;
+    verifier: string;
+  }> {
+    const repo = await mkdtemp(join(tmpdir(), "mnemo-gated-verifier-"));
+    storyRoots.push(repo);
+    await mkdir(join(repo, "scripts"), { recursive: true });
+    for (const name of [
+      "validate-canon.mjs",
+      "compile-story.mjs",
+      "canon-frontmatter.mjs",
+      "draft-notice.mjs",
+    ]) {
+      await copyFile(
+        join(REPO_ROOT, "scripts", name),
+        join(repo, "scripts", name),
+      );
+    }
+    const source = await readFile(VERIFIER, "utf8");
+    expect(source.split(GATE_OFF)).toHaveLength(2);
+    await writeFile(
+      join(repo, "scripts", "verify-draft-overlay.mjs"),
+      source.replace(GATE_OFF, GATE_ON),
+      "utf8",
+    );
+    await mkdir(join(repo, "src"), { recursive: true });
+    await copyFile(
+      join(REPO_ROOT, "src", "genre-dictionary.json"),
+      join(repo, "src", "genre-dictionary.json"),
+    );
+    for (const name of ["node_modules", "dist"]) {
+      const link = join(repo, name);
+      await symlink(
+        join(REPO_ROOT, name),
+        link,
+        process.platform === "win32" ? "junction" : "dir",
+      );
+      links.push(link);
+    }
+    await mkdir(join(repo, "data", "stories"), { recursive: true });
+    return {
+      repo,
+      verifier: join(repo, "scripts", "verify-draft-overlay.mjs"),
+    };
+  }
+
+  async function gatedFixture(repo: string): Promise<OverlayFixture> {
+    const slug = `gated-${randomBytes(4).toString("hex")}`;
+    const root = join(repo, "data", "stories", slug);
+    await mkdir(root, { recursive: true });
+    return seedOverlay(2, { slug, root });
+  }
+
+  it("with the gate on, passes an overlay revising one character on a declared canon and fails an undeclared one", async () => {
+    const { repo, verifier } = await makeGatedVerifierRepo();
+
+    const declared = await gatedFixture(repo);
+    await put(
+      declared.root,
+      "canon/_story.md",
+      storyBlock('["mystery", "romance"]'),
+    );
+    const pass = await runVerifier(declared.slug, verifier);
+    expect(pass.code, pass.stdout + pass.stderr).toBe(0);
+    // The drafts carry no block of their own: the isolated run is exempt.
+    await expect(
+      readFile(join(declared.root, "drafts", "_story.md")),
+    ).rejects.toThrow();
+
+    const undeclared = await gatedFixture(repo);
+    const fail = await runVerifier(undeclared.slug, verifier);
+    expect(fail.code).toBe(1);
+    expect(fail.stdout + fail.stderr).toContain(
+      "_story.md: the story has no genre declaration",
+    );
+  });
+
+  it("manifests a drafts/_story.md like any other draft file, and names an unknown term in it", async () => {
+    const valid = await seedOverlay(2);
+    const validBlock = storyBlock('["mystery", "romance"]', true);
+    await put(valid.root, "drafts/_story.md", validBlock);
+    valid.manifest.files.push({
+      path: "_story.md",
+      operation: "add",
+      baseline_sha256: null,
+      draft_sha256: hash(validBlock),
+    });
+    await writeManifest(valid);
+    const pass = await runVerifier(valid.slug);
+    expect(pass.code, pass.stdout + pass.stderr).toBe(0);
+
+    const invalid = await seedOverlay(2);
+    const badBlock = storyBlock('["mystery", "spaghetti-western"]', true);
+    await put(invalid.root, "drafts/_story.md", badBlock);
+    invalid.manifest.files.push({
+      path: "_story.md",
+      operation: "add",
+      baseline_sha256: null,
+      draft_sha256: hash(badBlock),
+    });
+    await writeManifest(invalid);
+    const fail = await runVerifier(invalid.slug);
+    expect(fail.code).toBe(1);
+    expect(fail.stdout + fail.stderr).toContain(
+      '"spaghetti-western" is not a dictionary term',
+    );
+  });
+});
