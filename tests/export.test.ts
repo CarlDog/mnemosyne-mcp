@@ -189,9 +189,7 @@ describe("storySlug (pure)", () => {
     expect(storySlug("The Example Archives: The Sample Case")).toBe(
       "example-archives-the-sample-case",
     );
-    expect(storySlug("Story 10")).toBe(
-      "story-10",
-    );
+    expect(storySlug("Story 10")).toBe("story-10");
   });
 
   it("shares the filename builder's id-prefix fallback", () => {
