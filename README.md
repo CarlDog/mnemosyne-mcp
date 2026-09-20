@@ -215,7 +215,7 @@ run as shown (no `--apply`) it only plans and writes nothing; add `--apply
 --approved-by <name>` to actually promote, which takes a content backup
 first and restores automatically on any failure.
 
-`npm test` green does **not** mean the integration surface ran. 91 of the 708
+`npm test` green does **not** mean the integration surface ran. 95 of the 871
 tests are env-gated and skip unless their variables are exported **into the
 shell** — `vitest.config.ts` loads no dotenv, so a populated `.env` does not
 enable them. Use `OC_URL=...` for the OpenChronicle suites, adding
