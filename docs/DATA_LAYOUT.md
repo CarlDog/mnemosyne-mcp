@@ -98,7 +98,10 @@ the tool named in the primary/derived table at the end.
 ## Archive — the one master of every original
 
 - **Owner:** the operator, through `scripts/intake.py` (`index`, `ingest`,
-  `verify` per source family; `snapshot` and `diff` for migration proofs).
+  `verify` per source family; `snapshot` and `diff` for migration proofs). That
+  path is relative to the data tree root: since 2026-09-20 the tool lives in the
+  private `mnemosyne-data` repository alongside `archive/`, not in the
+  application repository.
   Nothing else writes `archive/`. Consumers (`build_sources.py`, the extraction
   configs) read it and never the intake tool's inputs.
 - **Nothing is overwritten; the fixed name is always current.** A re-export or

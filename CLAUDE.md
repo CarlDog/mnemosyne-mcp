@@ -356,8 +356,12 @@ Two standing operator instructions that outlive any sprint:
 - `scripts/verify-references.mjs` — checks every story's `references/` and
   `art/` trees: sidecar per image, `image_sha256` matches, hash cross-links
   resolve (the data architecture standard's one-image-one-place rule).
-- `scripts/intake.py` — the only writer of `data/archive/` (index, ingest,
-  verify per source family; snapshot and diff for migration proofs).
+- `scripts/intake.py` — **moved out of this repository on 2026-09-20.** It is
+  the only writer of `data/archive/` (index, ingest, verify per source family;
+  snapshot and diff for migration proofs) and it writes nothing here, so it now
+  lives beside the tree it maintains: in the private `mnemosyne-data` repository
+  that `data/` is a junction to, at `scripts/intake.py` relative to the data tree
+  root. The two measurement scrapers that invoke it resolve it from that root.
 - `scripts/narrator-eval/` — the narrator evaluation (`docs/NARRATOR_EVAL.md`,
   narrator design S5): `corpus.json` (synthetic Halvard seed, twelve cases
   across the six rows, two of them advisory, plus a constant baseline),

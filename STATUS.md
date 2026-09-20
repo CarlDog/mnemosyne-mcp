@@ -1,6 +1,30 @@
 # Status
 
-**Last updated:** 2026-09-19.
+**Last updated:** 2026-09-20.
+
+**The archive writer moved to the data repository (2026-09-20).**
+`scripts/intake.py`, the only writer of `data/archive/`, was the last cross-repo
+dependency left by the data tree's move into the private `mnemosyne-data`
+repository. The two measurement scrapers invoke it, and after that move they could
+no longer reach it: they resolve it relative to their own root, which is now the
+data tree. Rather than have a script inside the data tree guess at a sibling
+checkout, the tool moved to sit beside the archive it maintains, at
+`scripts/intake.py` relative to the data tree root.
+
+Nothing here depended on it -- no test, no workflow, no npm script references it,
+and it writes nothing in this repository. Its own root derivation is deliberately
+left alone: it derives from `__file__` rather than the `.mnemo-data-root` marker
+every other data tool uses, because `os.path.relpath` is purely lexical, and
+deriving the root from the file's own location keeps the root and every path built
+from it in the same spelling whichever way the script was invoked. Three `data/`
+directory joins became plain joins, and `rel()` now emits the `data/` prefix as a
+stored namespace so every existing index row still matches.
+
+Verified by running `verify` for all five source families before and after the move
+and diffing the output: byte-identical in every case, including `operator: 195
+indexed, 0 bad`, which is what proves the stored paths still resolve and hash-match.
+The two sites `verify` does not reach, `WORKSPACE` and `default_trees()`, were
+exercised read-only (38 trees, all present).
 
 **Overlay verifier tests stage in their own temp root (2026-09-19).** The
 `verify-draft-overlay` suite asserted that a verifier run cleaned up after itself
