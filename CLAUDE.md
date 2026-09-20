@@ -21,14 +21,23 @@ them), and the verifier's `REQUIRE_STORY_BLOCK` gate is ON, so an undeclared can
 now fails verification. The three drafts-only trees have no `canon/` at all, so the
 validator already refuses them for that reason and the gate changes nothing there.
 
-**Next up is the phase-end audit** (`phase-end-audit.md`), last run 2026-09-08.
+**The phase-end audit ran 2026-09-20** (`phase-end-audit.md`); its findings and
+their disposition are in STATUS.md. Nothing application-side is in flight. The
+`character/3` fresh-build playbook continues per storyline inside gitignored
+`data/`, and by standing operator instruction (2026-09-20) the next audit waits
+until every storyline's run is complete.
 
 **Storyline state is deliberately not summarised here.** Per standing operator rule
 (2026-09-12), committed paths carry application material only: no storylines, drafts,
 characters, premises or story discussion, because this repository may be made public
 and its private narrative content must not travel with it. Story state, cross-story
 rulings, the hook register and deferred storyline research all live in the operator's
-local, gitignored `data/` tree:
+local, gitignored `data/` tree. Since 2026-09-20 that tree is a Windows directory
+junction to a separate private repository, `mnemosyne-data`, where the content is
+version-controlled on its own (Git LFS for media); this repository still ignores
+`data/` entirely, so its `git status` never shows any of it. Tooling inside the
+tree locates the root by walking up to a `.mnemo-data-root` marker rather than by
+counting parent directories, because `Path.resolve()` follows the junction:
 
 - `data/stories/<slug>/` — per-story canon, drafts, history and sources.
 - `data/cross-story/` — rulings that bind more than one story, the non-canon hook

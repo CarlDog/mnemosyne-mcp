@@ -2,6 +2,58 @@
 
 **Last updated:** 2026-09-20.
 
+**Phase-end audit (2026-09-20).** Run on the application repository at the
+operator's direction, twelve days and 28 commits after the last one. The standing
+instruction that the audit waits for every storyline's `character/3` run covers the
+storyline side; the operator scoped this one to the repository itself. Deterministic
+baseline clean going in: typecheck, lint, format, build, and `npm test` at 776 passed
+/ 95 skipped (871), the skip count matching CLAUDE.md's documented figure exactly, so
+nothing had been silently disabled. CI green on the head commit across all three
+workflows.
+
+Three doc-staleness findings, fixed one file per commit:
+
+1. **CLAUDE.md's Current Sprint pointed at this audit as "next up"** while it was
+   being run, and still described `data/` as merely "the operator's local, gitignored
+   tree" -- true but incomplete since 2026-09-20, when that tree became a junction to
+   the separate private `mnemosyne-data` repository. A session reading the orientation
+   section would not have learned the content is version-controlled elsewhere, nor
+   that tooling there finds the root by a `.mnemo-data-root` marker.
+2. **README claimed "91 of the 708" tests are env-gated.** The real figure is 95 of
+   871, which CLAUDE.md already stated -- so the project's two orientation documents
+   contradicted each other on the same number.
+3. **CHANGELOG had no entry for the archive writer's relocation**, the one commit in
+   the batch that removed a tracked file from this repository.
+
+Verified clean, no action: author and committer identity across all history are
+noreply forms; `gitleaks detect` over 423 commits found nothing; the deprived-env
+walkthrough exits 1 with a single ERROR line and zero stack frames; LICENSE's 2026 is
+correct for a repository whose first commit is 2026-05-11; package version, README's
+version, and the fifteen-tool count all agree; both schema-drift suites pass.
+
+Queued rather than fixed, needing a decision rather than an edit:
+
+- **Four open Dependabot PRs**, two of them thirteen days old, including a vitest
+  4 to 5 major bump that is a real judgement call rather than a routine merge.
+- **Nineteen values exported but referenced only inside their own file** -- the
+  public/private boundary item the 2026-09-08 audit queued for this one. That audit
+  estimated ~85; the honest actionable number is 19, because 54 of the 73 candidates
+  are types serving as an exported function's return or parameter type, which is a
+  legitimate reason to export. Three of the 19 sit in `src/shared/`, beside a file
+  this repository declares a verbatim fleet copy, so they should not move until
+  fleet parity is confirmed. `src/shared/mcp-environment.ts` is also absent from
+  CLAUDE.md's Layout list.
+- **`src/stories.ts` (874 lines) and `src/application/continue-scene.ts` (838)** are
+  well past the soft cap; both have already been split once, so the question is
+  whether what remains is cohesive or a junk drawer.
+- **CHANGELOG structure**: the file is a single `## Unreleased` section carrying
+  duplicated subsection headings -- three `### Added`, two `### Changed`, two
+  `### Fixed` -- so a reader must consult three separate Added lists. Consolidating
+  it is a restructure, deliberately not done mid-audit.
+- **CONTRIBUTING.md and CODE_OF_CONDUCT.md absent.** Flagged, not added: the audit
+  practice's own rule is to skip speculative community files on a solo project until
+  contributors appear.
+
 **The archive writer moved to the data repository (2026-09-20).**
 `scripts/intake.py`, the only writer of `data/archive/`, was the last cross-repo
 dependency left by the data tree's move into the private `mnemosyne-data`
