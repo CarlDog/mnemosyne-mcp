@@ -60,8 +60,11 @@ tmp/
 
 # Runtime data (current-story pointer + story exports). Repo-local so a
 # Docker deployment can bind-mount it as persistent storage; override
-# with MNEMO_DATA_DIR.
+# with MNEMO_DATA_DIR. Since 2026-09-21 this path is a junction to the
+# private mnemosyne-data repository; data.old is the pre-move copy, kept
+# until the migration is verified and then deleted.
 data/
+data.old/
 
 # Botify bot-definition exports; these may contain private or user-specific
 # character data and are intentionally kept out of version control.

@@ -827,13 +827,18 @@ async function assertRealDirectory(directory, label) {
 }
 
 async function resolveContainedStoryRoot(storyRoot) {
-  const [realRepoRoot, realStoriesRoot] = await Promise.all([
-    assertRealDirectory(REPO_ROOT, "repository root"),
-    assertRealDirectory(STORIES_ROOT, "stories root"),
-  ]);
-  if (!isWithin(realRepoRoot, realStoriesRoot)) {
-    fail(`stories root resolves outside the repository: ${realStoriesRoot}`);
-  }
+  // The stories tree is no longer required to live inside this repository. Until
+  // 2026-09-21 it did, and containment was checked against the repository root;
+  // `data/` is now a junction to the separate private data repository, so that
+  // check asserted a fact about layout rather than a safety property, and it
+  // refused every story. What matters is that nothing escapes the resolved
+  // stories root, which the checks below and the per-file walk still enforce:
+  // the stories root itself may not be a link, no story root or entry inside it
+  // may be a link, and every resolved path must fall within it.
+  const realStoriesRoot = await assertRealDirectory(
+    STORIES_ROOT,
+    "stories root",
+  );
 
   const storyStat = await lstatOrNull(storyRoot);
   if (!storyStat) fail(`story root does not exist: ${storyRoot}`);
