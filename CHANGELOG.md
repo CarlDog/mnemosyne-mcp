@@ -107,6 +107,17 @@ this file was introduced remains in [STATUS.md](STATUS.md).
   checks, 13 caught.
 
 ### Changed
+- **The archive writer moved out of this repository.** `scripts/intake.py`, the only
+  writer of `data/archive/`, now lives in the private `mnemosyne-data` repository that
+  `data/` is a junction to, at `scripts/intake.py` relative to the data tree root. It
+  writes nothing here and nothing here referenced it -- no test, no workflow, no npm
+  script -- while its only live callers, two collectors inside that tree, resolve it
+  relative to the data tree root, which no longer reaches this checkout. Verified by
+  running its `verify` mode for all five source families before and after the move and
+  diffing the output: byte-identical in every case. `CLAUDE.md` and
+  `docs/DATA_LAYOUT.md` now say where it lives; the bare `scripts/intake.py` in that
+  document's tree diagram and ownership tables was always written relative to the data
+  tree root and is now literally correct there.
 
 - Genre dictionary revised against external sources and bumped to version 2
   after an adversarial review (`docs/GENRE_DICTIONARY_SOURCE_REVIEW.md`)
