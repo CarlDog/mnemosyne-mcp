@@ -57,6 +57,7 @@ data/
 │   └── <family>/_index.jsonl   append-only, one row per file: path, sha256, bytes, received, indexed,
 │                               origin, stories (the one authority for which story an original serves), role
 ├── cross-story/                PRIMARY — rulings, art standards, reference assignments, rebuild plans and handoffs
+├── scripts/                    intake.py — the only writer of archive/ (index, ingest, verify, snapshot, diff)
 ├── stories/_art-library/       private local gallery helpers + primary selection records + derived snapshots
 ├── stories/<slug>/
 │   ├── story.json              server: identity card (see below)
