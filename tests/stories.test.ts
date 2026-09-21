@@ -14,6 +14,9 @@ import { OcClient } from "../src/oc-client.js";
 import { setCurrentStoryId } from "../src/config.js";
 import {
   combineKindroidTarget,
+  STORY_MARKER_TAGS,
+} from "../src/story-marker.js";
+import {
   createStory,
   findStory,
   findStoryByName,
@@ -22,7 +25,6 @@ import {
   setContentRating,
   setKindroidTarget,
   setNarratorProfile,
-  STORY_MARKER_TAGS,
 } from "../src/stories.js";
 import { setPosition } from "../src/position.js";
 import { isolateDataDirs, teardownStory, testStoryName } from "./helpers.js";

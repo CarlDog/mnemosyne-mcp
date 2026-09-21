@@ -27,7 +27,7 @@ import {
   type LlmProvider,
   type ModelUsage,
 } from "./llm.js";
-import type { ContentRating } from "./stories.js";
+import type { ContentRating } from "./story-marker.js";
 
 export interface OllamaConfig {
   url: string;

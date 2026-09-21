@@ -19,7 +19,7 @@ import {
 import { exportStory } from "../src/export.js";
 import { listAllEntities, saveEntity } from "../src/entities.js";
 import { createStory, findStory } from "../src/stories.js";
-import type { MnemoStory } from "../src/stories.js";
+import type { MnemoStory } from "../src/story-marker.js";
 import type { OcClient } from "../src/oc-client.js";
 import { setupTestStory, teardownStory, testStoryName } from "./helpers.js";
 

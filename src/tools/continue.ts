@@ -17,7 +17,10 @@ import {
   MIN_GENERATION_TOKENS,
   MIN_TEMPERATURE,
 } from "../llm.js";
-import { combineKindroidTarget, NO_LINE_BREAK_MESSAGE } from "../stories.js";
+import {
+  combineKindroidTarget,
+  NO_LINE_BREAK_MESSAGE,
+} from "../story-marker.js";
 import {
   DEFAULT_GROUP_MAX_TURNS,
   MAX_GROUP_MAX_TURNS,

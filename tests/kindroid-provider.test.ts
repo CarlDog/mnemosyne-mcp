@@ -31,7 +31,7 @@ import {
   selectCompanionMemoryIds,
 } from "../src/companion-message.js";
 import type { ContextBundle } from "../src/prompt.js";
-import type { KindroidTarget } from "../src/stories.js";
+import type { KindroidTarget } from "../src/story-marker.js";
 
 const EMPTY_CONTEXT: ContextBundle = {
   rules: [],

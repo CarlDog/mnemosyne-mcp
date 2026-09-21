@@ -12,14 +12,16 @@
 import { describe, expect, it } from "vitest";
 import {
   buildMarkerContent,
+  parseMarkerContent,
+  storyGenre,
+  type MnemoStory,
+} from "../src/story-marker.js";
+import {
   createStory,
   findStory,
-  parseMarkerContent,
   setContentRating,
   setGenre,
   setNarratorProfile,
-  storyGenre,
-  type MnemoStory,
 } from "../src/stories.js";
 import { setPosition } from "../src/position.js";
 import {

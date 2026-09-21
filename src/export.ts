@@ -28,7 +28,7 @@ import {
 } from "./entities.js";
 import { storyDataDir } from "./config.js";
 import type { OcClient } from "./oc-client.js";
-import type { KindroidTarget, MnemoStory } from "./stories.js";
+import type { KindroidTarget, MnemoStory } from "./story-marker.js";
 import type { GenreGuidance } from "./genre.js";
 
 const EXPORT_SCHEMA_VERSION = 1;

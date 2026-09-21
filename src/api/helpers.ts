@@ -9,7 +9,8 @@ import type {
 } from "express";
 import type { z } from "zod";
 import type { OcClient } from "../oc-client.js";
-import { findStory, type MnemoStory } from "../stories.js";
+import { type MnemoStory } from "../story-marker.js";
+import { findStory } from "../stories.js";
 import { log } from "../log.js";
 import { OUTCOME_HTTP_STATUS, RunOutcomeError } from "../run-outcome.js";
 

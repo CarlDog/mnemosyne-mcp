@@ -40,7 +40,7 @@ import {
   scanForInjectionSignals,
 } from "./injection-scan.js";
 import type { OcClient } from "./oc-client.js";
-import type { KindroidTarget, MnemoStory } from "./stories.js";
+import type { KindroidTarget, MnemoStory } from "./story-marker.js";
 import {
   assertGenreGuidance,
   assertGenres,

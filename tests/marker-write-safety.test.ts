@@ -13,16 +13,18 @@
 
 import { describe, expect, it } from "vitest";
 import {
-  createStory,
-  findStory,
   markerFieldLines,
   parseMarkerContent,
   rewriteMarkerLines,
+  type MnemoStory,
+} from "../src/story-marker.js";
+import {
+  createStory,
+  findStory,
   setContentRating,
   setGenre,
   setNarratorProfile,
   updateStoryMarker,
-  type MnemoStory,
 } from "../src/stories.js";
 import { registerStoryTools } from "../src/tools/stories.js";
 import type { OcClient } from "../src/oc-client.js";

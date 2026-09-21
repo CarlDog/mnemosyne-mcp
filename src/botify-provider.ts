@@ -22,7 +22,7 @@ import {
 } from "./companion-message.js";
 import type { BotifyClient } from "./botify-client.js";
 import type { GeneratedBeat, LlmGenerateOptions, LlmProvider } from "./llm.js";
-import type { ContentRating } from "./stories.js";
+import type { ContentRating } from "./story-marker.js";
 
 export interface BotifyProviderConfig {
   /** The dedicated storytelling chat (a Botify chat UUID -- an existing

@@ -34,7 +34,7 @@ import { RunOutcomeError } from "./run-outcome.js";
 import { selectCompanionMemoryIds } from "./companion-message.js";
 import type { GeneratedBeat, LlmGenerateOptions, LlmProvider } from "./llm.js";
 import type { ContextBundle } from "./prompt.js";
-import type { ContentRating, KindroidTarget } from "./stories.js";
+import type { ContentRating, KindroidTarget } from "./story-marker.js";
 
 export interface KindroidProviderConfig {
   /** The dedicated storytelling target (a single AI or a group chat) used

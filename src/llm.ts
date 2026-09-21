@@ -23,7 +23,7 @@
 // file, not ollama-provider.ts, is those consumers' actual dependency.
 
 import type { ContextBundle } from "./prompt.js";
-import type { ContentRating, KindroidTarget } from "./stories.js";
+import type { ContentRating, KindroidTarget } from "./story-marker.js";
 export {
   classifyOllamaHttpError,
   computeNumCtx,

@@ -19,14 +19,16 @@ import {
 } from "../src/genre.js";
 import {
   buildMarkerContent,
-  createStory,
   parseMarkerContent,
+  storyGenre,
+  type MnemoStory,
+} from "../src/story-marker.js";
+import {
+  createStory,
   setContentRating,
   setGenre,
   setKindroidTarget,
   setNarratorProfile,
-  storyGenre,
-  type MnemoStory,
 } from "../src/stories.js";
 import { setPosition } from "../src/position.js";
 import {

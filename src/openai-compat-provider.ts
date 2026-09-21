@@ -31,7 +31,7 @@ import type {
   LlmProvider,
   ModelUsage,
 } from "./llm.js";
-import type { ContentRating } from "./stories.js";
+import type { ContentRating } from "./story-marker.js";
 
 export interface OpenAICompatConfig {
   /** Provider name surfaced in logs/tool responses ("openai",

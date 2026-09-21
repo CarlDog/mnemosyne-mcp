@@ -5,7 +5,7 @@
 
 import { describe, it, expect } from "vitest";
 import { continueScene } from "./helpers/application.js";
-import { buildMarkerContent, STORY_MARKER_TAGS } from "../src/stories.js";
+import { buildMarkerContent, STORY_MARKER_TAGS } from "../src/story-marker.js";
 import type { LlmProvider } from "../src/llm.js";
 import type { OcClient, OcMemory } from "../src/oc-client.js";
 

@@ -27,7 +27,7 @@ import type {
   LlmProvider,
   ModelUsage,
 } from "./llm.js";
-import type { ContentRating } from "./stories.js";
+import type { ContentRating } from "./story-marker.js";
 
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com";
 

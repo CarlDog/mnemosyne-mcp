@@ -8,12 +8,8 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { OcClient } from "../oc-client.js";
 import { getEntityByMemoryId } from "../entities.js";
-import {
-  findStory,
-  NO_LINE_BREAK_MESSAGE,
-  resolveStoryId,
-  type PositionState,
-} from "../stories.js";
+import { NO_LINE_BREAK_MESSAGE, type PositionState } from "../story-marker.js";
+import { findStory, resolveStoryId } from "../stories.js";
 import { applyPositionUpdate, currentStoryDatetime } from "../position.js";
 import { asText, withLogging } from "./helpers.js";
 

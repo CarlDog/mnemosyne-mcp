@@ -20,7 +20,7 @@ import { renderAdmittedBundle, type ContextBundle } from "../src/prompt.js";
 import { continueScene } from "./helpers/application.js";
 import type { LlmProvider } from "../src/llm.js";
 import { OllamaProvider } from "../src/ollama-provider.js";
-import { buildMarkerContent, STORY_MARKER_TAGS } from "../src/stories.js";
+import { buildMarkerContent, STORY_MARKER_TAGS } from "../src/story-marker.js";
 import type { OcClient, OcMemory } from "../src/oc-client.js";
 
 const STORY_ID = "11111111-2222-4333-8444-555555555555";

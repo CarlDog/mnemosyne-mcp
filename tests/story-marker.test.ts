@@ -11,7 +11,7 @@ import {
   narratorTag,
   NARRATOR_PROFILE_PATTERN,
   parseMarkerContent,
-} from "../src/stories.js";
+} from "../src/story-marker.js";
 
 const CREATED = "2026-09-03T18:00:00.000Z";
 

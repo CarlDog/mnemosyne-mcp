@@ -27,7 +27,7 @@ import {
   VALID_CONTENT_RATINGS,
   type ContentRating,
   type KindroidTarget,
-} from "./stories.js";
+} from "./story-marker.js";
 import {
   DEFAULT_SCENE_CONTEXT_STRATEGY,
   SCENE_CONTEXT_STRATEGIES,

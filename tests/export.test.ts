@@ -19,7 +19,7 @@ import {
 import { listAllEntities, saveEntity } from "../src/entities.js";
 import { setKindroidTarget, findStory } from "../src/stories.js";
 import type { RecalledEntity } from "../src/entities.js";
-import type { MnemoStory } from "../src/stories.js";
+import type { MnemoStory } from "../src/story-marker.js";
 import type { OcClient } from "../src/oc-client.js";
 import { setupTestStory, teardownStory } from "./helpers.js";
 

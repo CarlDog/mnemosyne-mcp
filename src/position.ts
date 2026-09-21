@@ -9,12 +9,8 @@
 
 import { type OcClient } from "./oc-client.js";
 import { getEntityByMemoryId } from "./entities.js";
-import {
-  findStory,
-  updateStoryMarker,
-  type MnemoStory,
-  type PositionState,
-} from "./stories.js";
+import { type MnemoStory, type PositionState } from "./story-marker.js";
+import { findStory, updateStoryMarker } from "./stories.js";
 
 const HOURS_PER_DAY = 24;
 const HOURS_PER_WEEK = 168;

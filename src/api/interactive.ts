@@ -19,7 +19,7 @@ import {
   combineKindroidTarget,
   NO_LINE_BREAK_MESSAGE,
   type KindroidTarget,
-} from "../stories.js";
+} from "../story-marker.js";
 import type { ContinueScene } from "../application/continue-scene.js";
 import type { RevalidateScenes } from "../application/revalidate-scenes.js";
 import type { ValidateStory } from "../application/validate-story.js";

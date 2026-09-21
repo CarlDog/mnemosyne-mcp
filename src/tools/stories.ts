@@ -11,11 +11,13 @@ import type { StorySummary } from "../application/model.js";
 import {
   assertNarratorProfile,
   combineKindroidTarget,
-  createStory,
-  findStory,
   NARRATOR_PROFILE_PATTERN,
   NO_LINE_BREAK_MESSAGE,
   storyGenre,
+} from "../story-marker.js";
+import {
+  createStory,
+  findStory,
   updateStoryMarker,
   type MarkerChanges,
 } from "../stories.js";
@@ -25,7 +27,7 @@ import {
   type GenreDeclaration,
   type GenreGuidance,
 } from "../genre.js";
-import type { ContentRating } from "../stories.js";
+import type { ContentRating } from "../story-marker.js";
 import {
   describeInjectionSignals,
   OVERRIDE_FLAGGED_CONTENT_PARAM,

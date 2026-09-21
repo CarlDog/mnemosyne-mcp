@@ -4,7 +4,7 @@
 // write path is exercised via the tool tests instead.
 
 import { describe, it, expect } from "vitest";
-import { type PositionState } from "../src/stories.js";
+import { type PositionState } from "../src/story-marker.js";
 import {
   currentStoryDatetime,
   mergePositionUpdate,

@@ -2,6 +2,34 @@
 
 **Last updated:** 2026-09-20.
 
+**`src/stories.ts` split along the marker seam (2026-09-20).** The audit's verdict,
+acted on: 875 lines became 292 in `stories.ts` and 604 in the new
+`src/story-marker.ts`. The marker FORMAT -- build, parse, rewrite, field lines, the
+genre read, the Kindroid-target combiner, and the types every provider imports -- moved
+out; everything that talks to OpenChronicle stayed. `story-marker.ts` contains zero
+references to `OcClient`, so the separation is structural rather than a claim.
+
+The test suite had already made this split: `tests/story-marker.test.ts` (322 lines,
+pure) and `tests/stories.test.ts` (392, imports `OcClient`) were divided exactly along
+this line while both pointed at the one combined module. The first now imports the
+module it is named for.
+
+Call sites were migrated rather than hidden behind a re-export, because a barrel that
+re-exports what was just split is the shape the next audit flags. Twenty-eight files
+changed, import lines only. The migration resolved each specifier against its importing
+file rather than pattern-matching it, which is what kept `src/api/stories.ts`,
+`src/tools/stories.ts` and `application/list-stories.js` -- three different modules with
+confusable names -- untouched; eleven such imports were correctly left alone and are
+listed by the tool that skipped them.
+
+Behaviour-preserving by construction: bodies moved verbatim, only the header comment and
+the import blocks were authored, and `tsc` drove every remaining fix. Verified with
+typecheck, lint, format, a full build, the CI build-smoke command run locally, and the
+suite at 64 files / 776 tests passed with 95 skipped -- identical to before.
+
+`src/application/continue-scene.ts` was deliberately not touched; the audit's verdict
+that it is cohesive stands.
+
 **The audit's queued items, addressed (2026-09-20).** All five resolved the same
 day at the operator's direction.
 
@@ -21,7 +49,7 @@ removed, three left alone because `src/shared/mcp-environment.ts` is byte-identi
 kindroid-mcp's copy and narrowing it would be silent fleet drift; CLAUDE.md now records
 that the file is shared, which nothing in the repo previously said.
 
-**File sizes -- analysed, split deliberately not performed.** The audit practice is
+**File sizes -- analysed, split deliberately not performed** (the `stories.ts` split was then carried out the same day; see the entry above)**.** The audit practice is
 explicit that a real rework is queued as its own stage, never done "while we're in
 here", so this is a verdict rather than a change:
 
