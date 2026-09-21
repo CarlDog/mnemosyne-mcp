@@ -54,7 +54,8 @@ export interface GenreDeclaration {
   guidance?: GenreGuidance;
 }
 
-function isGenreTerm(term: string): boolean {
+/** Consumed by the CI build-smoke step via `dist/genre.js` — keep it exported. */
+export function isGenreTerm(term: string): boolean {
   return Object.hasOwn(TERMS, term);
 }
 
