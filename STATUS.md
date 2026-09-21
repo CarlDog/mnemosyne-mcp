@@ -2,6 +2,55 @@
 
 **Last updated:** 2026-09-20.
 
+**The audit's queued items, addressed (2026-09-20).** All five resolved the same
+day at the operator's direction.
+
+**Dependency PRs -- evaluated, deliberately not merged.** All four open Dependabot PRs
+last ran CI on 2026-09-19T05:07, before five commits landed on main, so every one is
+stale-green: their checks say nothing about the tree they would merge into. The major
+bump was tested rather than guessed. In an isolated worktree at current main, with only
+vitest moved to ^5.0.0 and the lock regenerated -- deliberately not the PR's own lock,
+which predates four package.json changes and would have reverted a hono bump -- vitest
+resolved to 5.0.1 and the suite reported 64 files and 776 tests passed with 95 skipped,
+identical to vitest 4 on the same commit; typecheck and lint both clean. So the upgrade
+is mechanically safe. The merge decision is still the operator's, and each PR needs a
+rebase immediately before merging rather than at some earlier convenient moment.
+
+**Public/private boundary -- fixed.** Sixteen values un-exported, one dead accessor
+removed, three left alone because `src/shared/mcp-environment.ts` is byte-identical to
+kindroid-mcp's copy and narrowing it would be silent fleet drift; CLAUDE.md now records
+that the file is shared, which nothing in the repo previously said.
+
+**File sizes -- analysed, split deliberately not performed.** The audit practice is
+explicit that a real rework is queued as its own stage, never done "while we're in
+here", so this is a verdict rather than a change:
+
+- `src/stories.ts` (874 lines) is a **junk drawer with a clean seam** at roughly line
+  599. Above it is the marker *format*: build, parse, rewrite, field lines, the
+  Kindroid-target combiner, the genre reader -- all pure, no OC. Below it is everything
+  OC-backed: list, find, resolve, update, create, and the four setters. The consumers
+  differ, which is the tell: the OC half is imported by six to ten `src/` files apiece,
+  while the pure half is imported by zero to three and is exercised mainly by tests,
+  one to six files apiece. It is an internal implementation detail plus a testing
+  surface, wearing the same file as the public one. `src/position.ts` was already
+  extracted from this very file by the 2026-09-08 audit, so the precedent and the
+  target name (`src/story-marker.ts`) both exist.
+- `src/application/continue-scene.ts` (838 lines) is **cohesive, and should be left
+  alone.** It exports three runtime symbols and holds ten *private* helpers, each a
+  named phase of one pipeline -- position application, context gathering, dispatch,
+  the two early-return responses, save, validate, retag. They share a single noun.
+  Splitting would scatter one algorithm across files and force its private phases into
+  exported surface, which is worse than the line count. Its phase decomposition was
+  itself deliberate work done at the 2026-09-08 audit's close.
+
+**CHANGELOG -- restructured.** Nine subsections to five, with 60 bullets and 597
+non-heading body lines identical before and after.
+
+**CONTRIBUTING.md / CODE_OF_CONDUCT.md -- cadence downgraded, not a finding.** Absent
+by choice on a solo project, and flagged by two consecutive audits without action. Per
+the practice's own anti-theater rule this check is now downgraded: **do not re-raise it
+until a contributor actually appears.**
+
 **Phase-end audit (2026-09-20).** Run on the application repository at the
 operator's direction, twelve days and 28 commits after the last one. The standing
 instruction that the audit waits for every storyline's `character/3` run covers the
