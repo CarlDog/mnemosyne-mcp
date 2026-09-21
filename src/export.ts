@@ -31,7 +31,7 @@ import type { OcClient } from "./oc-client.js";
 import type { KindroidTarget, MnemoStory } from "./stories.js";
 import type { GenreGuidance } from "./genre.js";
 
-export const EXPORT_SCHEMA_VERSION = 1;
+const EXPORT_SCHEMA_VERSION = 1;
 
 export interface ExportedEntity {
   type: EntityType;

@@ -91,6 +91,12 @@ Two standing operator instructions that outlive any sprint:
   of kindroid-mcp's own `src/shared/http-transport.ts` — bodies are identical; only the
   4-line provenance header differs, since each repo records where its own
   copy came from. Diff past line 4 when checking for fleet drift.
+- `src/shared/mcp-environment.ts` — the transport's env parsing and Host/Origin
+  helpers. Also a fleet-shared file, and **byte-identical** to kindroid-mcp's copy
+  (no provenance header, so there is no allowed diff at all — any difference is
+  drift). Its exported surface is therefore fixed: do not narrow or rename an
+  export here to satisfy a public/private boundary audit, the way the rest of
+  `src/` can be.
 - `src/api-security.ts` — `apiSecurity()`: the same Host/Origin allowlist
   + bearer-auth check as `shared/http-transport.ts`, reimplemented (not
   imported — that file's body must stay verbatim) as Express middleware

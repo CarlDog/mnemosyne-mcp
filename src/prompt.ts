@@ -106,7 +106,7 @@ async function pullByType(
 /** The rendered "name\nbody" flattening every consumer sees. chars in the
  * matching ContextEntry is exactly this string's length, so section-size
  * reporting and rendering agree by construction. */
-export function flattenEntity(e: RecalledEntity): string {
+function flattenEntity(e: RecalledEntity): string {
   return `${e.name}\n${e.body}`;
 }
 

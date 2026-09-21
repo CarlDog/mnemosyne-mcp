@@ -13,9 +13,9 @@ import { log } from "./log.js";
 // Cloud inference is fast relative to the CPU-NAS Ollama path (which
 // needs 5 minutes); 2 minutes is generous for a hosted API while still
 // failing well inside an MCP host's tool timeout.
-export const CLOUD_LLM_TIMEOUT_MS = 2 * 60 * 1000;
+const CLOUD_LLM_TIMEOUT_MS = 2 * 60 * 1000;
 
-export async function llmPostJson(opts: {
+async function llmPostJson(opts: {
   provider: string;
   url: string | URL;
   headers: Record<string, string>;

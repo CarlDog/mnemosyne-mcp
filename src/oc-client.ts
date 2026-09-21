@@ -127,7 +127,7 @@ export type OcProjectDeleteResult = z.infer<typeof OcProjectDeleteResultSchema>;
  * name-only tools/list -- zero tools/call) at connect(), which index.ts
  * awaits at startup: a deployed OC missing part of this contract fails
  * startup instead of surfacing as a confusing mid-story error. */
-export const OC_REQUIRED_TOOLS = [
+const OC_REQUIRED_TOOLS = [
   "project_create",
   "project_delete",
   "memory_save",

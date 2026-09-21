@@ -19,7 +19,7 @@ import {
   OpenChronicleStoryConstraintReader,
 } from "./story-validation.js";
 
-export class OpenChronicleSceneValidationStore implements SceneValidationStore {
+class OpenChronicleSceneValidationStore implements SceneValidationStore {
   constructor(private readonly oc: OcClient) {}
 
   async list(storyId: string): Promise<SceneValidationTarget[]> {
@@ -37,7 +37,7 @@ export class OpenChronicleSceneValidationStore implements SceneValidationStore {
   }
 }
 
-export class LogRevalidationObserver implements RevalidationObserver {
+class LogRevalidationObserver implements RevalidationObserver {
   sceneFailed(scene: SceneValidationTarget, error: string): void {
     log.warn("revalidateScenes", "scene revalidation failed", {
       name: scene.name,

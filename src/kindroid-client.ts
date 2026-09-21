@@ -50,7 +50,7 @@ export type AdvanceGroupResult = z.infer<typeof AdvanceGroupResultSchema>;
  * call -- so a renamed upstream tool fails before a direction is ever
  * posted to a real conversation, and a contract mismatch surfaces as
  * "provider unavailable" while OC-backed story browsing keeps working. */
-export const KINDROID_REQUIRED_TOOLS = [
+const KINDROID_REQUIRED_TOOLS = [
   "kindroid_send_message",
   "kindroid_advance_group",
   "kindroid_chat_break",

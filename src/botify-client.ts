@@ -40,7 +40,7 @@ export type BotifySendMessageResult = z.infer<
 /** Every botify-mcp tool this client calls. Verified (bounded, name-only
  * tools/list) at connect(), which runs lazily before the FIRST mutating
  * call -- same rationale as kindroid-client.ts. */
-export const BOTIFY_REQUIRED_TOOLS = ["send_message"] as const;
+const BOTIFY_REQUIRED_TOOLS = ["send_message"] as const;
 
 /** Default per-request timeout, overridable with BOTIFY_MCP_TIMEOUT_MS.
  * Matches kindroid-client's reasoning: erring long is the safe direction
@@ -48,7 +48,7 @@ export const BOTIFY_REQUIRED_TOOLS = ["send_message"] as const;
  * too-short timeout manufactures the ambiguous, retry-hazardous failure
  * (RUN_OUTCOMES_DESIGN: Botify timeout parity; a parity fix, not a
  * response to an observed Botify incident). */
-export const BOTIFY_DEFAULT_TIMEOUT_MS = 180_000;
+const BOTIFY_DEFAULT_TIMEOUT_MS = 180_000;
 
 /** Pull the bot's reply text out of a send_message result, or throw with
  * the most actionable message available. Pure -- unit-testable without a

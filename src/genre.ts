@@ -54,12 +54,8 @@ export interface GenreDeclaration {
   guidance?: GenreGuidance;
 }
 
-export function isGenreTerm(term: string): boolean {
+function isGenreTerm(term: string): boolean {
   return Object.hasOwn(TERMS, term);
-}
-
-export function genreTerm(term: string): GenreTerm | undefined {
-  return isGenreTerm(term) ? TERMS[term] : undefined;
 }
 
 /** Every ancestor of a term, nearest first; [] for a root or unknown term. */

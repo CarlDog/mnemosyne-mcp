@@ -59,7 +59,7 @@ function resolveSpot(
  * set_date/move_to on an untracked story all fail with the identical
  * message pointing at mnemo_position_set -- not whichever of the two
  * checks happened to run first for that particular param. */
-export const POSITION_NOT_STARTED_MESSAGE =
+const POSITION_NOT_STARTED_MESSAGE =
   "Position tracking hasn't started for this story yet -- the first " +
   "mnemo_position_set call must supply both epoch_date and " +
   "epoch_location together.";

@@ -41,7 +41,7 @@ if (!OC_URL) {
 
 // Unset means "ollama" -- the only backend v0 shipped with, so this is a
 // zero-behavior-change default for every existing deployment.
-export const GENERATOR_PROVIDERS = [
+const GENERATOR_PROVIDERS = [
   "ollama",
   "kindroid",
   "botify",
