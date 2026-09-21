@@ -106,160 +106,6 @@ this file was introduced remains in [STATUS.md](STATUS.md).
   cannot stomp a runtime edit. 28 new tests plus import cases; 13 mutation
   checks, 13 caught.
 
-### Changed
-- **The archive writer moved out of this repository.** `scripts/intake.py`, the only
-  writer of `data/archive/`, now lives in the private `mnemosyne-data` repository that
-  `data/` is a junction to, at `scripts/intake.py` relative to the data tree root. It
-  writes nothing here and nothing here referenced it -- no test, no workflow, no npm
-  script -- while its only live callers, two collectors inside that tree, resolve it
-  relative to the data tree root, which no longer reaches this checkout. Verified by
-  running its `verify` mode for all five source families before and after the move and
-  diffing the output: byte-identical in every case. `CLAUDE.md` and
-  `docs/DATA_LAYOUT.md` now say where it lives; the bare `scripts/intake.py` in that
-  document's tree diagram and ownership tables was always written relative to the data
-  tree root and is now literally correct there.
-
-- Genre dictionary revised against external sources and bumped to version 2
-  after an adversarial review (`docs/GENRE_DICTIONARY_SOURCE_REVIEW.md`)
-  against BISAC's fiction headings, the Library of Congress genre authority,
-  the Encyclopedia of Science Fiction and the genre bodies' own definitions.
-  25 edits: `procedural` moved from `crime` to `mystery` (it could not satisfy
-  `crime`'s own "from inside it" definition, and the trade authority files it
-  under Mystery); `western`, `gothic`, `dystopian`, `psychological`,
-  `magical-realism` and `coming-of-age` promoted to roots (each former parent
-  forbade a pairing a real story needs, such as a contemporary western);
-  `romance` gained the genre body's defining promise of an optimistic ending;
-  `fantasy` no longer requires magic to be ruled and costly; `science-fiction`
-  no longer demands a rigour its own child `space-opera` is defined by
-  breaking; `mystery` no longer promises Golden Age fair play for the whole
-  genre; `paranormal` no longer excludes hidden societies; `action` and
-  `adventure` merged into `action-adventure` (one category in both
-  authorities, and their avoid lines were near-duplicates);
-  `alternate-history` and `folklore` added as the two coverage gaps not
-  expressible as blends. `erotica` and `romance` also carried content-policy
-  wording rather than genre description; both are now descriptive, since such
-  a boundary does not vary by genre and naming it in one term implied the
-  others were exempt. The enforced boundary is unchanged and lives where it is
-  actually checked, in content routing's fail-closed `dispatchGenerate()` gate.
-  No story had been declared yet, so nothing needed migrating.
-
-### Fixed
-
-- **A missing story scope is now an error, not a search of every story.**
-  OpenChronicle reads an absent `project_id` as EVERY project, and nothing in
-  TypeScript stopped one from getting there: a `storyId: string` parameter is
-  a compile-time claim only, and a `{ project_id: undefined }` argument is
-  dropped by `JSON.stringify` rather than arriving as a null OC could reject.
-  Reproduced live 2026-09-19: a `saveEntity(oc, story.project_id, ...)` call
-  passed `undefined` (`MnemoStory`'s field is `id`), the unscoped dedupe
-  search matched a `[Rule] Content Framing` in an unrelated story, and
-  `saveEntity` took its overwrite branch and `memory_update`d that other
-  story's memory in place — returning `created: false`, a memory id, and no
-  error at all. It was caught only because the caller happened to read the
-  record back. New `src/story-scope.ts` holds the one check, and it runs
-  twice: at each story-scoped entry point in `src/entities.ts` before its
-  first OC call (`saveEntity`, `deleteEntity`, `recall`, `listAllEntities`,
-  `getEntityByMemoryId`), and again on `OcClient`'s `memorySearch`,
-  `memoryList`, `memoryListCompact` and `memorySave`. `saveEntity`'s guard
-  sits above the dedupe search rather than inside it, because
-  `SaveEntityArgs.existing` skips that search entirely and goes straight to
-  the write. An audit of the same surface found a second silent widen —
-  `memoryList` has no ranking window to blunt it, so an unscoped
-  `listAllEntities` would have handed an export every memory in the database
-  as this story's — and one function that already failed CLOSED rather than
-  widening (`getEntityByMemoryId`, whose `project_id` comparison makes every
-  unscoped lookup null; its guard replaces a misleading "not found" with the
-  cause). The one legitimate cross-project search, `listStories`, now declares
-  itself with `allProjects: true` instead of by omitting a field, so a
-  forgotten scope and a deliberate one are no longer the same bytes.
-  21 new tests in `tests/story-scope.test.ts`; 14 mutation checks, 14 caught.
-  The two-project test runs against a fake modelling OC's documented scoping,
-  so it pins mnemosyne's plumbing, not OC's behaviour — the live incident is
-  what established that.
-- **A marker write no longer erases values this build cannot parse.** Every
-  write used to rebuild the marker from PARSED fields, so any stored value
-  the current parser rejects vanished on the next unrelated write.
-  Reproduced before the fix: a story declaring `Genre: action, romance` lost
-  its genres and all of its guidance when someone set a narrator profile.
-  `action` was a real dictionary v1 term that 2648765 merged into
-  `action-adventure` four commits earlier, so the trigger is an ordinary
-  dictionary revision — one binary, one session, no race. The same shape
-  applied to a future content rating, a future Kindroid target type, and any
-  field a newer build adds. Writes are now LINE SURGERY: a write drops only
-  the lines it owns and keeps every other line exactly as stored, so a value
-  we cannot parse is a value we do not touch. That also closes cross-field
-  concurrent loss without reasoning about races, since a write never touches
-  another field's lines. `mnemo_story_use` now makes ONE marker write for
-  every requested field instead of four sequential ones (two OC round trips
-  rather than six, one interleaving window rather than four, no partial apply
-  when a later field is invalid), and resolves the genre merge against the
-  fresh read rather than the caller's snapshot. A deleted or unparseable
-  marker now refuses the write instead of overwriting. The position
-  same-field race (two concurrent `advance` calls) is explicitly still open
-  and recorded in `docs/GENRE_RUNTIME_REVIEW.md`. Ten mutation checks, ten
-  caught. The plan for this work was itself reviewed before implementation
-  and was substantially wrong: its stated justification, that
-  `mnemo_continue` holds a story across a generation, does not exist in the
-  code.
-
-- Genre slice 2, after an adversarial review
-  (`docs/GENRE_RUNTIME_REVIEW.md`). **A newline in any story-marker value
-  forged marker lines**: the marker is line-based and its parser re-splits
-  the stored string, so a position `spot` (or a story name) containing a
-  newline wrote lines that parsed back as a real genre declaration,
-  bypassing both the write-side validation and the injection scan and
-  rendering verbatim into every system prompt. Reproduced end to end; fixed
-  at the builder, which now refuses any value containing a line break and
-  names the field, with the free-text input boundaries rejecting one too.
-  Also: `mnemo_story_use` validated the genre AFTER three durable marker
-  writes, so an invalid genre rejected the call with the content rating
-  already applied; `setGenre`'s return value was discarded, so a missed
-  re-fetch reported the pre-write state as current; import validated the
-  declaration and dropped it, and export could not emit it at all, making a
-  backup-and-restore lossy; the validator was handed the genre block but its
-  instruction never named genre as a constraint, and its copy of the block
-  omitted the frame-precedence rule the generator gets; clearing the genres
-  while supplying guidance silently discarded the guidance; the log
-  sanitizer did not recurse into objects, so `genre_guidance` prose reached
-  INFO lines verbatim; the context-admission budget omitted the genre and
-  position blocks, measured at 191% of the safety margin; an unrecognised
-  term was dropped with no log anywhere, hiding a stale build; and a comment
-  claimed separate scanning prevents a split signal when it is what allows
-  one. Test coverage: a 29-mutant campaign found 20 escaping, including one
-  that made the entire feature inert with the suite byte-identical to
-  baseline; 15 re-probed mutants are now all caught.
-
-- A nested profile failed the validator before it could be claimed, so its
-  name was invisible to duplicate detection; it is now claimed like any other
-  entity. The overlay verifier applied its Markdown bullet rule to frontmatter
-  values and rejected every nested profile at `references.portraits`;
-  frontmatter pointers are now checked as YAML values: a value that contains a
-  story image pointer must be exactly that pointer and then passes the same
-  existence, containment, sidecar and hash checks, inside the `references`
-  mapping every bare `references/` token must be such a pointer, and
-  provenance prose and cross-story pool paths are left alone.
-- Ollama provider: send a fixed top-level `think: false` on every generation
-  request (the structured validator path included; `format` handling is
-  untouched). A thinking-capable model (Qwen3.8, Gemma 4 and its fine-tunes)
-  otherwise reasons into a `message.thinking` field the provider never reads,
-  charged against `num_predict` -- live-verified on Ollama 0.34.2 to return an
-  empty beat once the budget was spent. `false` is accepted by non-thinking
-  models and `true` is an HTTP 400 on them, so the value is fixed rather than
-  defaulted or model-sniffed. Warmup's empty-messages load never consults the
-  field and is unchanged. Pinned by `tests/ollama-think.test.ts`.
-- Exclude private `data/` helpers from root lint and test discovery. Their
-  presence in a local checkout no longer produces application lint errors or
-  loads tests intended for a different runner; private validation stays separate.
-
-### Documentation
-
-- Document private session handoffs and the optional unified local art library,
-  including primary backup inputs, live metadata refresh, offline snapshots and
-  draft headshot selection. Reconcile character-art roles, model selection and
-  seed provenance guidance; keep narrative records out of published docs.
-
-### Added
-
 - Position tracking: a pre-commit adversarial review of the finished
   slice 3+4 diff (`feature-dev:code-reviewer`, per the repo's standing
   pre-deploy-review practice) found and fixed two real bugs before
@@ -485,8 +331,6 @@ this file was introduced remains in [STATUS.md](STATUS.md).
   clear, inconclusive, clears. Inconclusive indicts the corpus, not the
   narrator: the canned beat currently passes every mechanical case.
 
-### Added
-
 - Narrator evaluation: `--ab` interleaves two message variants of one case and
   `repeat-rate.mjs` reports each arm with a 95% interval and applies a
   pre-registered overlap rule. Used to test whether an inert-data notice in the
@@ -494,7 +338,180 @@ this file was introduced remains in [STATUS.md](STATUS.md).
   intervals overlap, inconclusive, not shipped. The option exists in
   `companion-message.ts`, defaults off, and is wired to no provider.
 
+### Changed
+
+- **The archive writer moved out of this repository.** `scripts/intake.py`, the only
+  writer of `data/archive/`, now lives in the private `mnemosyne-data` repository that
+  `data/` is a junction to, at `scripts/intake.py` relative to the data tree root. It
+  writes nothing here and nothing here referenced it -- no test, no workflow, no npm
+  script -- while its only live callers, two collectors inside that tree, resolve it
+  relative to the data tree root, which no longer reaches this checkout. Verified by
+  running its `verify` mode for all five source families before and after the move and
+  diffing the output: byte-identical in every case. `CLAUDE.md` and
+  `docs/DATA_LAYOUT.md` now say where it lives; the bare `scripts/intake.py` in that
+  document's tree diagram and ownership tables was always written relative to the data
+  tree root and is now literally correct there.
+
+- Genre dictionary revised against external sources and bumped to version 2
+  after an adversarial review (`docs/GENRE_DICTIONARY_SOURCE_REVIEW.md`)
+  against BISAC's fiction headings, the Library of Congress genre authority,
+  the Encyclopedia of Science Fiction and the genre bodies' own definitions.
+  25 edits: `procedural` moved from `crime` to `mystery` (it could not satisfy
+  `crime`'s own "from inside it" definition, and the trade authority files it
+  under Mystery); `western`, `gothic`, `dystopian`, `psychological`,
+  `magical-realism` and `coming-of-age` promoted to roots (each former parent
+  forbade a pairing a real story needs, such as a contemporary western);
+  `romance` gained the genre body's defining promise of an optimistic ending;
+  `fantasy` no longer requires magic to be ruled and costly; `science-fiction`
+  no longer demands a rigour its own child `space-opera` is defined by
+  breaking; `mystery` no longer promises Golden Age fair play for the whole
+  genre; `paranormal` no longer excludes hidden societies; `action` and
+  `adventure` merged into `action-adventure` (one category in both
+  authorities, and their avoid lines were near-duplicates);
+  `alternate-history` and `folklore` added as the two coverage gaps not
+  expressible as blends. `erotica` and `romance` also carried content-policy
+  wording rather than genre description; both are now descriptive, since such
+  a boundary does not vary by genre and naming it in one term implied the
+  others were exempt. The enforced boundary is unchanged and lives where it is
+  actually checked, in content routing's fail-closed `dispatchGenerate()` gate.
+  No story had been declared yet, so nothing needed migrating.
+
+- Companion-chat context selection (Kindroid, Botify): a multi-word entity
+  name now matches on any distinctive word of itself, and locations are
+  always included alongside recent scenes. Before, a direction had to spell
+  the full name and an unnamed location was dropped, which let a narrator
+  kin invent its own setting. Ratified as `docs/KINDROID_NARRATOR_DESIGN.md`
+  S1.
+- Completed the hexagonal architecture migration across continuation,
+  standalone validation, bulk scene revalidation, and story/entity catalogs.
+- Added application-owned outbound ports and concrete OC/provider/persistence/
+  environment/clock/logging adapters assembled in `src/index.ts`.
+- Injected one bound `ApplicationUseCases` contract into the independent MCP
+  and REST inbound drivers; removed migration compatibility re-exports.
+- Replaced regex source checks with TypeScript-AST architecture enforcement for
+  driver independence, application dependency direction, port routing, and
+  composition-root ownership.
+- Moved boundary models and pure catalog, prompt-rendering, scene-strategy, and
+  Ollama request policy into focused modules; removed duplicate projections.
+- Upgraded the Web UI to ESLint 10-compatible plugins with zero-warning lint,
+  and declared the Node 24/npm 11.19.0 deterministic install baseline.
+- Upgraded the server dependency baseline to Express 5, Zod 4, and TypeScript
+  6 while keeping Node declarations aligned with the supported Node 24 runtime.
+- Deferred major `@types/node` Dependabot updates until the runtime and CI floor
+  advance in the same change.
+- Removed the stale confidence badge and refreshed setup and test-count docs.
+- Made architecture path-containment enforcement portable across Windows and
+  POSIX, with both path dialects covered by regression tests.
+- Deferred only TypeScript 7 in both Dependabot npm ecosystems until the
+  TypeScript ESLint peer range supports it; TypeScript 5/6 remain eligible.
+
 ### Fixed
+
+- **A missing story scope is now an error, not a search of every story.**
+  OpenChronicle reads an absent `project_id` as EVERY project, and nothing in
+  TypeScript stopped one from getting there: a `storyId: string` parameter is
+  a compile-time claim only, and a `{ project_id: undefined }` argument is
+  dropped by `JSON.stringify` rather than arriving as a null OC could reject.
+  Reproduced live 2026-09-19: a `saveEntity(oc, story.project_id, ...)` call
+  passed `undefined` (`MnemoStory`'s field is `id`), the unscoped dedupe
+  search matched a `[Rule] Content Framing` in an unrelated story, and
+  `saveEntity` took its overwrite branch and `memory_update`d that other
+  story's memory in place — returning `created: false`, a memory id, and no
+  error at all. It was caught only because the caller happened to read the
+  record back. New `src/story-scope.ts` holds the one check, and it runs
+  twice: at each story-scoped entry point in `src/entities.ts` before its
+  first OC call (`saveEntity`, `deleteEntity`, `recall`, `listAllEntities`,
+  `getEntityByMemoryId`), and again on `OcClient`'s `memorySearch`,
+  `memoryList`, `memoryListCompact` and `memorySave`. `saveEntity`'s guard
+  sits above the dedupe search rather than inside it, because
+  `SaveEntityArgs.existing` skips that search entirely and goes straight to
+  the write. An audit of the same surface found a second silent widen —
+  `memoryList` has no ranking window to blunt it, so an unscoped
+  `listAllEntities` would have handed an export every memory in the database
+  as this story's — and one function that already failed CLOSED rather than
+  widening (`getEntityByMemoryId`, whose `project_id` comparison makes every
+  unscoped lookup null; its guard replaces a misleading "not found" with the
+  cause). The one legitimate cross-project search, `listStories`, now declares
+  itself with `allProjects: true` instead of by omitting a field, so a
+  forgotten scope and a deliberate one are no longer the same bytes.
+  21 new tests in `tests/story-scope.test.ts`; 14 mutation checks, 14 caught.
+  The two-project test runs against a fake modelling OC's documented scoping,
+  so it pins mnemosyne's plumbing, not OC's behaviour — the live incident is
+  what established that.
+- **A marker write no longer erases values this build cannot parse.** Every
+  write used to rebuild the marker from PARSED fields, so any stored value
+  the current parser rejects vanished on the next unrelated write.
+  Reproduced before the fix: a story declaring `Genre: action, romance` lost
+  its genres and all of its guidance when someone set a narrator profile.
+  `action` was a real dictionary v1 term that 2648765 merged into
+  `action-adventure` four commits earlier, so the trigger is an ordinary
+  dictionary revision — one binary, one session, no race. The same shape
+  applied to a future content rating, a future Kindroid target type, and any
+  field a newer build adds. Writes are now LINE SURGERY: a write drops only
+  the lines it owns and keeps every other line exactly as stored, so a value
+  we cannot parse is a value we do not touch. That also closes cross-field
+  concurrent loss without reasoning about races, since a write never touches
+  another field's lines. `mnemo_story_use` now makes ONE marker write for
+  every requested field instead of four sequential ones (two OC round trips
+  rather than six, one interleaving window rather than four, no partial apply
+  when a later field is invalid), and resolves the genre merge against the
+  fresh read rather than the caller's snapshot. A deleted or unparseable
+  marker now refuses the write instead of overwriting. The position
+  same-field race (two concurrent `advance` calls) is explicitly still open
+  and recorded in `docs/GENRE_RUNTIME_REVIEW.md`. Ten mutation checks, ten
+  caught. The plan for this work was itself reviewed before implementation
+  and was substantially wrong: its stated justification, that
+  `mnemo_continue` holds a story across a generation, does not exist in the
+  code.
+
+- Genre slice 2, after an adversarial review
+  (`docs/GENRE_RUNTIME_REVIEW.md`). **A newline in any story-marker value
+  forged marker lines**: the marker is line-based and its parser re-splits
+  the stored string, so a position `spot` (or a story name) containing a
+  newline wrote lines that parsed back as a real genre declaration,
+  bypassing both the write-side validation and the injection scan and
+  rendering verbatim into every system prompt. Reproduced end to end; fixed
+  at the builder, which now refuses any value containing a line break and
+  names the field, with the free-text input boundaries rejecting one too.
+  Also: `mnemo_story_use` validated the genre AFTER three durable marker
+  writes, so an invalid genre rejected the call with the content rating
+  already applied; `setGenre`'s return value was discarded, so a missed
+  re-fetch reported the pre-write state as current; import validated the
+  declaration and dropped it, and export could not emit it at all, making a
+  backup-and-restore lossy; the validator was handed the genre block but its
+  instruction never named genre as a constraint, and its copy of the block
+  omitted the frame-precedence rule the generator gets; clearing the genres
+  while supplying guidance silently discarded the guidance; the log
+  sanitizer did not recurse into objects, so `genre_guidance` prose reached
+  INFO lines verbatim; the context-admission budget omitted the genre and
+  position blocks, measured at 191% of the safety margin; an unrecognised
+  term was dropped with no log anywhere, hiding a stale build; and a comment
+  claimed separate scanning prevents a split signal when it is what allows
+  one. Test coverage: a 29-mutant campaign found 20 escaping, including one
+  that made the entire feature inert with the suite byte-identical to
+  baseline; 15 re-probed mutants are now all caught.
+
+- A nested profile failed the validator before it could be claimed, so its
+  name was invisible to duplicate detection; it is now claimed like any other
+  entity. The overlay verifier applied its Markdown bullet rule to frontmatter
+  values and rejected every nested profile at `references.portraits`;
+  frontmatter pointers are now checked as YAML values: a value that contains a
+  story image pointer must be exactly that pointer and then passes the same
+  existence, containment, sidecar and hash checks, inside the `references`
+  mapping every bare `references/` token must be such a pointer, and
+  provenance prose and cross-story pool paths are left alone.
+- Ollama provider: send a fixed top-level `think: false` on every generation
+  request (the structured validator path included; `format` handling is
+  untouched). A thinking-capable model (Qwen3.8, Gemma 4 and its fine-tunes)
+  otherwise reasons into a `message.thinking` field the provider never reads,
+  charged against `num_predict` -- live-verified on Ollama 0.34.2 to return an
+  empty beat once the budget was spent. `false` is accepted by non-thinking
+  models and `true` is an HTTP 400 on them, so the value is fixed rather than
+  defaulted or model-sniffed. Warmup's empty-messages load never consults the
+  field and is unchanged. Pinned by `tests/ollama-think.test.ts`.
+- Exclude private `data/` helpers from root lint and test discovery. Their
+  presence in a local checkout no longer produces application lint errors or
+  loads tests intended for a different runner; private validation stays separate.
 
 - `scripts/scene-extraction/extract_scenes.py` (2026-09-08): three tooling
   defects the 2026-09-02 gap audits reported. `location_basis` no longer
@@ -602,36 +619,12 @@ this file was introduced remains in [STATUS.md](STATUS.md).
   verdicts and the operator rulings each stops for, and `CLAUDE.md` documents
   `scripts/scene-extraction/` and the two engine defects the audits found.
 
-### Changed
+### Documentation
 
-- Companion-chat context selection (Kindroid, Botify): a multi-word entity
-  name now matches on any distinctive word of itself, and locations are
-  always included alongside recent scenes. Before, a direction had to spell
-  the full name and an unnamed location was dropped, which let a narrator
-  kin invent its own setting. Ratified as `docs/KINDROID_NARRATOR_DESIGN.md`
-  S1.
-- Completed the hexagonal architecture migration across continuation,
-  standalone validation, bulk scene revalidation, and story/entity catalogs.
-- Added application-owned outbound ports and concrete OC/provider/persistence/
-  environment/clock/logging adapters assembled in `src/index.ts`.
-- Injected one bound `ApplicationUseCases` contract into the independent MCP
-  and REST inbound drivers; removed migration compatibility re-exports.
-- Replaced regex source checks with TypeScript-AST architecture enforcement for
-  driver independence, application dependency direction, port routing, and
-  composition-root ownership.
-- Moved boundary models and pure catalog, prompt-rendering, scene-strategy, and
-  Ollama request policy into focused modules; removed duplicate projections.
-- Upgraded the Web UI to ESLint 10-compatible plugins with zero-warning lint,
-  and declared the Node 24/npm 11.19.0 deterministic install baseline.
-- Upgraded the server dependency baseline to Express 5, Zod 4, and TypeScript
-  6 while keeping Node declarations aligned with the supported Node 24 runtime.
-- Deferred major `@types/node` Dependabot updates until the runtime and CI floor
-  advance in the same change.
-- Removed the stale confidence badge and refreshed setup and test-count docs.
-- Made architecture path-containment enforcement portable across Windows and
-  POSIX, with both path dialects covered by regression tests.
-- Deferred only TypeScript 7 in both Dependabot npm ecosystems until the
-  TypeScript ESLint peer range supports it; TypeScript 5/6 remain eligible.
+- Document private session handoffs and the optional unified local art library,
+  including primary backup inputs, live metadata refresh, offline snapshots and
+  draft headshot selection. Reconcile character-art roles, model selection and
+  seed provenance guidance; keep narrative records out of published docs.
 
 ### Verification
 
