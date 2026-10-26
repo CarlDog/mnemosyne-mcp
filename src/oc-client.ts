@@ -343,7 +343,8 @@ export class OcClient {
       return parsed.data;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      if (retriesLeft > 0 && /rate limit/i.test(msg)) {
+      const rateLimited = /rate limit/i.test(msg);
+      if (retriesLeft > 0 && rateLimited) {
         const attempt = MAX_RATE_LIMIT_RETRIES - retriesLeft + 1;
         const delayMs = RATE_LIMIT_BASE_BACKOFF_MS * 2 ** (attempt - 1);
         log.warn("oc-client", "rate limited; backing off", {
@@ -359,7 +360,11 @@ export class OcClient {
         await sleepUnlessAborted(delayMs, signal);
         return this.callTool(name, args, schema, signal, retriesLeft - 1);
       }
-      const safeError = sanitizeOcError(err, this.authToken);
+      const safeError = sanitizeOcError(
+        err,
+        this.authToken,
+        rateLimited ? "rate-limit" : undefined,
+      );
       log.error("oc-client", "tool error", {
         tool: name,
         ms: Date.now() - start,

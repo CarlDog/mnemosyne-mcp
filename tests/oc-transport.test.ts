@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StreamableHTTPError } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
 import { OcClient } from "../src/oc-client.js";
 import { z } from "zod";
@@ -572,6 +573,48 @@ describe("real OC client against an offline authenticated endpoint", () => {
         "rate limited; backing off",
       );
       assertSecretAbsent(stderr.mock.calls.flat().join(" "), token);
+    } finally {
+      await client.close();
+    }
+  });
+
+  it("preserves the authored HTTP429 status and backoff after retry exhaustion", async () => {
+    const stderr = vi.spyOn(console, "error").mockImplementation(() => {});
+    let calls = 0;
+    const requests = mockMcp({
+      requiredToken: TOKEN,
+      tools: REQUIRED_TOOLS,
+      post: (message) => {
+        if (message.method !== "tools/call") return undefined;
+        calls++;
+        return new Response(`rate limit reflected ${TOKEN}`, { status: 429 });
+      },
+    });
+    const client = new OcClient(ENDPOINT, TOKEN);
+    try {
+      await client.connect();
+      vi.useFakeTimers();
+      const result = rejected(client.memoryGet("offline-memory"));
+      await vi.advanceTimersByTimeAsync(31_000);
+      const error = await result;
+      expect(error).toBeInstanceOf(StreamableHTTPError);
+      expect(error).toHaveProperty("code", 429);
+      expect(error.message).toContain("OpenChronicle rate limit (HTTP 429)");
+      expect(sanitizeOcError(error, TOKEN)).toBe(error);
+      expect(calls).toBe(6);
+      expect(requests.filter((r) => r.rpcMethod === "tools/call")).toHaveLength(
+        6,
+      );
+      expect(
+        stderr.mock.calls
+          .flat()
+          .join(" ")
+          .match(/backing off/g),
+      ).toHaveLength(5);
+      assertSecretAbsent(error.stack, TOKEN);
+      assertSecretAbsent(stderr.mock.calls.flat().join(" "), TOKEN);
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(calls).toBe(6);
     } finally {
       await client.close();
     }

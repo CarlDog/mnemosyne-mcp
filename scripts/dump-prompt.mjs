@@ -82,21 +82,28 @@ if (!ocUrl) {
   process.exit(2);
 }
 
+const ocAuthToken = process.env.OC_MCP_AUTH_TOKEN;
+const authenticated = Boolean(ocAuthToken?.trim());
 let ocUrlParsed;
 try {
   ocUrlParsed = new URL(ocUrl);
 } catch {
-  console.error(`dump-prompt: OC_URL is not a valid URL: ${ocUrl}`);
+  console.error(
+    authenticated
+      ? "dump-prompt: OC_URL is not a valid URL"
+      : `dump-prompt: OC_URL is not a valid URL: ${ocUrl}`,
+  );
   process.exit(1);
 }
-const oc = new OcClient(ocUrlParsed);
+let oc;
 try {
+  oc = new OcClient(ocUrlParsed, ocAuthToken);
   await oc.connect();
 } catch (err) {
   // Naming OC explicitly matters: the raw failure is a bare "fetch failed"
   // plus undici frames that never mention which service was unreachable.
   console.error(
-    `dump-prompt: could not reach OpenChronicle at ${ocUrl} -- ${err.message}`,
+    `dump-prompt: could not reach OpenChronicle${authenticated ? "" : ` at ${ocUrl}`} -- ${err.message}`,
   );
   process.exit(1);
 }
