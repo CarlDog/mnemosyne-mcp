@@ -45,12 +45,12 @@ import { INSTRUCTIONS } from "./instructions.js";
 // come before anything that depends on a valid config.
 import {
   MNEMO_USER_NAME,
-  OC_URL,
   OLLAMA_KEEP_ALIVE_CLEAN,
   OLLAMA_URL,
   SCENE_CONTEXT_FALLBACK_STRATEGY,
   SCENE_CONTEXT_STRATEGY,
   generatorConfig,
+  ocAuthToken,
   ocUrl,
   ollamaContentCapability,
   ollamaGeneratorModel,
@@ -67,12 +67,11 @@ try {
   process.exit(1);
 }
 
-const oc = new OcClient(ocUrl);
+const oc = new OcClient(ocUrl, ocAuthToken);
 try {
   await oc.connect();
 } catch (err) {
   log.error("startup", "failed to connect to OpenChronicle", {
-    url: OC_URL,
     msg: (err as Error).message,
   });
   process.exit(1);

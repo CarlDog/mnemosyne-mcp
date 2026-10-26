@@ -7,6 +7,12 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 
 ### Added
 
+- Optional `OC_MCP_AUTH_TOKEN` for authenticated OpenChronicle connections.
+  The token stays separate from the service URL, redirects are refused for
+  authenticated requests, and errors use authored diagnostics instead of
+  untrusted server prose or HTTP error bodies. Unset or blank preserves
+  unauthenticated use.
+
 - **Orphaned test fixtures no longer accumulate in the real story tree.** Both
   overlay suites build their fixtures inside `data/stories/`, because the
   verifier and the promotion tool resolve a story by slug under that root and a

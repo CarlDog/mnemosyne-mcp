@@ -11,7 +11,6 @@
 // stays a deliberate OC-side action).
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { z } from "zod";
 import { log } from "./log.js";
 import { describeServiceUrl } from "./service-url.js";
@@ -20,6 +19,11 @@ import { extractStructuredOrParsed } from "./mcp-result.js";
 import { verifyRequiredTools } from "./mcp-discovery.js";
 import { RunOutcomeError } from "./run-outcome.js";
 import { assertStoryScope } from "./story-scope.js";
+import {
+  createOcTransport,
+  parseOcAuthToken,
+  sanitizeOcError,
+} from "./oc-transport.js";
 
 /** Appended to an unscoped-search error so the one legitimate cross-project
  * caller is discoverable from the message, not just from this file. */
@@ -208,15 +212,33 @@ function unwrapResult<T>(value: unknown): T {
   return value as T;
 }
 
+// Retain the not-found control signal even when redacting a token that
+// happens to overlap the upstream message. No upstream fields are retained.
+class OcMemoryNotFoundError extends Error {}
+
 export class OcClient {
   private client: Client;
   private connected = false;
+  private readonly authToken?: string;
 
-  constructor(private readonly url: URL) {
+  constructor(
+    private readonly url: URL,
+    authToken?: string,
+  ) {
+    this.authToken = parseOcAuthToken(authToken);
     this.client = new Client(
       { name: "mnemosyne-mcp", version: MNEMOSYNE_VERSION },
       { capabilities: {} },
     );
+    if (this.authToken) {
+      // SSE parsing failures can arrive asynchronously rather than reject
+      // a request. Keep this event boundary as safe as the promise boundary.
+      this.client.onerror = (err) => {
+        log.warn("oc-client", "transport error", {
+          msg: sanitizeOcError(err, this.authToken).message,
+        });
+      };
+    }
   }
 
   /** Single-flight (RUN_OUTCOMES_DESIGN slice 3): concurrent first calls
@@ -235,17 +257,33 @@ export class OcClient {
 
   private async doConnect(): Promise<void> {
     if (this.connected) return;
-    const transport = new StreamableHTTPClientTransport(this.url);
-    await this.client.connect(transport);
-    await verifyRequiredTools(this.client, "OpenChronicle", OC_REQUIRED_TOOLS);
-    this.connected = true;
-    log.info("oc-client", "connected", { url: describeServiceUrl(this.url) });
+    try {
+      const transport = createOcTransport(this.url, this.authToken);
+      await this.client.connect(transport);
+      await verifyRequiredTools(
+        this.client,
+        "OpenChronicle",
+        OC_REQUIRED_TOOLS,
+      );
+      this.connected = true;
+      log.info("oc-client", "connected", {
+        url: this.authToken
+          ? "configured OC_URL"
+          : describeServiceUrl(this.url),
+      });
+    } catch (err) {
+      throw sanitizeOcError(err, this.authToken);
+    }
   }
 
   async close(): Promise<void> {
     if (!this.connected) return;
-    await this.client.close();
-    this.connected = false;
+    try {
+      await this.client.close();
+      this.connected = false;
+    } catch (err) {
+      throw sanitizeOcError(err, this.authToken);
+    }
   }
 
   /** Non-mutating readiness probe: a fresh bounded tools/list round-trip
@@ -253,8 +291,16 @@ export class OcClient {
    * contract -- the startup check does not prove continued availability
    * (docs/NEMOCLAW_ADOPTION_ASSESSMENT.md §3). */
   async checkReady(): Promise<void> {
-    await this.connect();
-    await verifyRequiredTools(this.client, "OpenChronicle", OC_REQUIRED_TOOLS);
+    try {
+      await this.connect();
+      await verifyRequiredTools(
+        this.client,
+        "OpenChronicle",
+        OC_REQUIRED_TOOLS,
+      );
+    } catch (err) {
+      throw sanitizeOcError(err, this.authToken);
+    }
   }
 
   private async callTool<T>(
@@ -296,7 +342,7 @@ export class OcClient {
       }
       return parsed.data;
     } catch (err) {
-      const msg = (err as Error).message;
+      const msg = err instanceof Error ? err.message : String(err);
       if (retriesLeft > 0 && /rate limit/i.test(msg)) {
         const attempt = MAX_RATE_LIMIT_RETRIES - retriesLeft + 1;
         const delayMs = RATE_LIMIT_BASE_BACKOFF_MS * 2 ** (attempt - 1);
@@ -313,12 +359,20 @@ export class OcClient {
         await sleepUnlessAborted(delayMs, signal);
         return this.callTool(name, args, schema, signal, retriesLeft - 1);
       }
+      const safeError = sanitizeOcError(err, this.authToken);
       log.error("oc-client", "tool error", {
         tool: name,
         ms: Date.now() - start,
-        msg,
+        msg: safeError.message,
       });
-      throw err;
+      if (
+        this.authToken &&
+        name === "memory_get" &&
+        /Memory not found: /.test(msg)
+      ) {
+        throw new OcMemoryNotFoundError(safeError.message);
+      }
+      throw safeError;
     }
   }
 
@@ -475,7 +529,10 @@ export class OcClient {
         signal,
       );
     } catch (err) {
-      if (/Memory not found: /.test((err as Error).message)) {
+      if (
+        err instanceof OcMemoryNotFoundError ||
+        /Memory not found: /.test((err as Error).message)
+      ) {
         return null;
       }
       throw err;

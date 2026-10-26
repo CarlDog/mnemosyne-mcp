@@ -23,6 +23,7 @@ import {
   MIN_GROUP_MAX_TURNS,
 } from "./kindroid-provider.js";
 import { DEFAULT_USER_NAME } from "./companion-message.js";
+import { parseOcAuthToken } from "./oc-transport.js";
 import {
   VALID_CONTENT_RATINGS,
   type ContentRating,
@@ -36,6 +37,17 @@ import {
 export const OC_URL = process.env.OC_URL;
 if (!OC_URL) {
   log.error("startup", "OC_URL environment variable is required");
+  process.exit(1);
+}
+
+// Optional outbound OC bearer token, distinct from this server's inbound
+// MCP_AUTH_TOKEN. Reject malformed headers before any connection attempt;
+// configuration errors never include the supplied value.
+export let ocAuthToken: string | undefined;
+try {
+  ocAuthToken = parseOcAuthToken(process.env.OC_MCP_AUTH_TOKEN);
+} catch (err) {
+  log.error("startup", (err as Error).message);
   process.exit(1);
 }
 
@@ -163,11 +175,13 @@ export const SCENE_CONTEXT_FALLBACK_STRATEGY = parseEnvEnum(
 export let ocUrl: URL;
 try {
   ocUrl = parseServiceUrl("OC_URL", OC_URL);
-} catch (err) {
-  log.error("startup", "OC_URL is not a valid URL", {
-    value: OC_URL,
-    msg: (err as Error).message,
-  });
+} catch {
+  // A pasted credential can appear anywhere in an invalid URL, including
+  // its protocol. Neither the raw value nor parser diagnostics are safe.
+  log.error(
+    "startup",
+    "OC_URL must be an http(s) endpoint without embedded credentials, a query string or a fragment",
+  );
   process.exit(1);
 }
 
