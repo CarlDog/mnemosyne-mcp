@@ -5,6 +5,8 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
 import { OcClient } from "../src/oc-client.js";
 import * as ocTransport from "../src/oc-transport.js";
+import { continueScene } from "./helpers/application.js";
+import type { LlmProvider } from "../src/llm.js";
 
 const TOKEN = "test-only.oc+/fake-token==";
 const ENCODED_TOKEN = encodeURIComponent(TOKEN);
@@ -351,6 +353,111 @@ describe("authenticated OC tool failures", () => {
     await result;
     expect(sdk.callTool).toHaveBeenCalledTimes(2);
   });
+
+  it.each(["MCP", "tool"])(
+    "preserves an authored rate-limit rejection after all %s retries are exhausted",
+    async (kind) => {
+      vi.useFakeTimers();
+      const message = `rate limit; ${REMOTE_PROSE}; ${TOKEN}; ${ENCODED_TOKEN}`;
+      if (kind === "MCP") {
+        sdk.callTool.mockRejectedValue(
+          new McpError(ErrorCode.InternalError, message),
+        );
+      } else {
+        sdk.callTool.mockResolvedValue({
+          isError: true,
+          content: [{ type: "text", text: message }],
+        });
+      }
+      const result = rejectedError(
+        new OcClient(endpoint(), TOKEN).projectCreate("offline-example"),
+      );
+      for (const [index, delay] of [1000, 2000, 4000, 8000, 16000].entries()) {
+        await vi.advanceTimersByTimeAsync(delay - 1);
+        expect(sdk.callTool).toHaveBeenCalledTimes(index + 1);
+        await vi.advanceTimersByTimeAsync(1);
+        expect(sdk.callTool).toHaveBeenCalledTimes(index + 2);
+      }
+      const error = await result;
+      expectSafeError(error, "OpenChronicle rate limit");
+      expect(ocTransport.sanitizeOcError(error, TOKEN)).toBe(error);
+      expectSafeStderr();
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(sdk.callTool).toHaveBeenCalledTimes(6);
+    },
+  );
+
+  it("keeps the original exhausted rate-limit error without authentication", async () => {
+    vi.useFakeTimers();
+    const original = new Error("rate limit: ordinary offline rejection");
+    sdk.callTool.mockRejectedValue(original);
+    const result = rejectedError(
+      new OcClient(endpoint()).projectCreate("offline-example"),
+    );
+    await vi.advanceTimersByTimeAsync(31_000);
+    expect(await result).toBe(original);
+    expect(sdk.callTool).toHaveBeenCalledTimes(6);
+  });
+
+  it.each(["rate limit", "socket hang up"])(
+    "preserves saveBeat write-outcome semantics for an authenticated %s failure",
+    async (failure) => {
+      vi.useFakeTimers();
+      sdk.callTool.mockRejectedValue(leakingError(failure));
+      const oc = new OcClient(endpoint(), TOKEN);
+      // Keep the real authenticated memorySave/callTool boundary. Context and
+      // generation stay synthetic, so no story, provider or remote write runs.
+      const contextOc = {
+        memorySearch: async () => [],
+        memoryList: async () => [],
+        memorySave: oc.memorySave.bind(oc),
+      } as unknown as OcClient;
+      const generate = vi.fn(async () => ({
+        text: "Synthetic completed beat.",
+      }));
+      const generator: LlmProvider = {
+        name: "offline-generator",
+        contentCapability: "sfw",
+        generate,
+      };
+      const resultPromise = continueScene(
+        contextOc,
+        generator,
+        generator,
+        "offline-project",
+        {
+          direction: "go on",
+          sceneStrategy: "query-ranked",
+          reinvokeHint: "call again",
+        },
+      );
+      await vi.advanceTimersByTimeAsync(31_000);
+      const result = await resultPromise;
+      const rateLimited = failure === "rate limit";
+      expect(result.beat_text).toBe("Synthetic completed beat.");
+      expect(result.save_error).toBe(
+        rateLimited
+          ? "OpenChronicle rate limit"
+          : "OpenChronicle request failed",
+      );
+      expect(result.canon_write_outcome).toBe(
+        rateLimited ? undefined : "unknown",
+      );
+      expect(generate).toHaveBeenCalledTimes(1);
+      expect(sdk.callTool).toHaveBeenCalledTimes(rateLimited ? 6 : 1);
+      expect(
+        sdk.callTool.mock.calls.every(
+          ([request]) => request.name === "memory_save",
+        ),
+      ).toBe(true);
+      expect(JSON.stringify(result)).not.toContain(TOKEN);
+      expect(JSON.stringify(result)).not.toContain(ENCODED_TOKEN);
+      expect(JSON.stringify(result)).not.toContain(REMOTE_PROSE);
+      expectSafeStderr();
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(sdk.callTool).toHaveBeenCalledTimes(rateLimited ? 6 : 1);
+    },
+  );
 
   it("preserves prompt abort and replay-safety during rate-limit backoff", async () => {
     vi.useFakeTimers();

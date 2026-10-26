@@ -5,6 +5,16 @@ this file was introduced remains in [STATUS.md](STATUS.md).
 
 ## Unreleased
 
+### Fixed
+
+- Authenticated OpenChronicle MCP/tool rate-limit rejections retain a
+  secret-safe rate-limit diagnostic after the existing retries are exhausted,
+  so a rejected scene save is not reported as an unknown write outcome.
+  HTTP 429 backoff and unauthenticated errors keep their existing behavior.
+- The prompt, validation, and Kindroid group-message diagnostic commands
+  forward optional `OC_MCP_AUTH_TOKEN` and keep authenticated connection
+  diagnostics free of raw endpoint values and upstream error prose.
+
 ### Added
 
 - Optional `OC_MCP_AUTH_TOKEN` for authenticated OpenChronicle connections.

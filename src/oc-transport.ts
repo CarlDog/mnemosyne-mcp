@@ -24,11 +24,21 @@ export function parseOcAuthToken(raw?: string): string | undefined {
 
 /** Authenticated upstream prose is untrusted in every encoding. Keep only
  * authored diagnostics or typed categories, never the original payload/stack. */
-export function sanitizeOcError(error: unknown, authToken?: string): Error {
+export function sanitizeOcError(
+  error: unknown,
+  authToken?: string,
+  category?: "rate-limit",
+): Error {
   const token = authToken?.trim();
   if (!token) return error instanceof Error ? error : new Error(String(error));
   if (error instanceof OcSafeError || error instanceof OcSafeHttpError)
     return error;
+
+  // callTool supplies its existing control-flow classification after the
+  // retry budget is exhausted. Preserve only that category, never the remote
+  // prose, so callers can still recognize a rejected, pre-dispatch save.
+  if (category === "rate-limit")
+    return new OcSafeError("OpenChronicle rate limit");
 
   // JSON parsers and schema validators can include arbitrary response snippets,
   // keys or escaped values. Do not try to redact those diagnostic formats.
