@@ -145,6 +145,16 @@ put them in the `env` block of the server entry in your MCP client config:
 The minimum is `OC_URL` plus a generator model. [.env.example](.env.example)
 is the full reference and states what each provider additionally requires.
 
+For an OC endpoint that requires a bearer token, optionally supply
+`OC_MCP_AUTH_TOKEN` through the same private environment configuration. Use the
+raw token without a `Bearer ` prefix; unset or blank preserves unauthenticated
+connections. Keep it separate from `OC_URL` and this server's inbound
+`MCP_AUTH_TOKEN`. Authenticated OC requests refuse redirects. Error diagnostics
+use fixed status/protocol categories instead of untrusted server error text,
+including HTTP error bodies. Use HTTPS across untrusted networks because HTTP
+sends the token in clear text. This supports a static bearer token, not OAuth
+discovery, login or refresh.
+
 **Transports.** With `MCP_PORT` unset the server speaks stdio — the default,
 and what an MCP client expects. Set `MCP_PORT` and it serves Streamable HTTP
 instead, plus a REST API and the web UI at that port. Read
